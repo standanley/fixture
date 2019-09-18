@@ -1,0 +1,8 @@
+README.md
+setup.py
+facet/__init__.py
+facet/templates.py
+facet.egg-info/PKG-INFO
+facet.egg-info/SOURCES.txt
+facet.egg-info/dependency_links.txt
+facet.egg-info/top_level.txt

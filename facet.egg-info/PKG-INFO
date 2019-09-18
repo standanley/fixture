@@ -1,0 +1,16 @@
+Metadata-Version: 2.1
+Name: facet
+Version: 0.0.1
+Summary: Tools for creating digital models of analog things
+Home-page: https://github.com/standanley/facet
+Author: Daniel Stanley
+Author-email: dstanley@Stanford.edu
+License: UNKNOWN
+Description: # facet
+        Library of templates for analog blocks and strategies to model them in a digital environment
+        
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown

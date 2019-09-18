@@ -1,0 +1,24 @@
+header
+"PSFversion" "1.00"
+"simulator" "HSPICE"
+"version" "M-2017.03-SP2"
+"rundate" "10:29:02 09/06/2019"
+"runtitle" "* automatically generated file.                                   "
+"runtype" "logFile"
+TYPE
+"analysisInst" STRUCT(
+"analysisType" STRING *
+"dataFile" STRING *
+"format" STRING *
+"parent" STRING *
+"sweepVariable" ARRAY ( * ) STRING *
+"description" STRING * )
+VALUE
+"timeSweep" "analysisInst" (
+"Transient Analysis"
+"/home/dstanley/research/facet/build/out.psf"
+"PSF"
+""
+()
+"Transient Analysis"
+)

@@ -1,0 +1,12 @@
+# DESCRIPTION: Verilator output: Timestamp data for --skip-identical.  Delete at will.
+C "-Wall -Wno-INCABSPATH -Wno-DECLFILENAME --cc MyAmpInterface.v --exe MyAmpInterface_driver.cpp --top-module MyAmpInterface"
+S   5279832  5523763  1562350816   997669902  1519110675           0 "/usr/bin/verilator_bin"
+S       244  6817302  1567816448   682567472  1567816448   682567472 "MyAmpInterface.v"
+T      4262  6817306  1567816448   815678644  1567816448   815678644 "obj_dir/VMyAmpInterface.cpp"
+T      2533  6817305  1567816448   812940338  1567816448   812940338 "obj_dir/VMyAmpInterface.h"
+T      1855  6817308  1567816448   820806125  1567816448   820806125 "obj_dir/VMyAmpInterface.mk"
+T       570  6817304  1567816448   810226072  1567816448   810226072 "obj_dir/VMyAmpInterface__Syms.cpp"
+T       767  6817303  1567816448   807559752  1567816448   807559752 "obj_dir/VMyAmpInterface__Syms.h"
+T       282  6817309  1567816448   823248983  1567816448   823248983 "obj_dir/VMyAmpInterface__ver.d"
+T         0        0  1567816448   829145700  1567816448   829145700 "obj_dir/VMyAmpInterface__verFiles.dat"
+T      1183  6817307  1567816448   818383142  1567816448   818383142 "obj_dir/VMyAmpInterface_classes.mk"

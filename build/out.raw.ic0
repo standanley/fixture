@@ -1,0 +1,23 @@
+* "simulator" "HSPICE" 
+* "version" "M-2017.03-SP2 linux64"
+* "format" "HSP"
+* "rundate" "10:29:02 09/06/2019 "
+* "netlist" "/home/dstanley/research/facet/build/myamp_tb.sp "
+* "runtitle" "* automatically generated file."
+* time =    0.            
+* temperature =   25.0000        
+*** BEGIN: Saved Operating Point ***                     
+.option 
++ gmindc=   1.0000p       
+.nodeset
++ __in__s =   1.0000        
++ __in__v =   0.            
++ __vdd_s =   1.0000        
++ __vdd_v =   0.            
++ __vss_s =   1.0000        
++ __vss_v =   0.            
++ in_ =   0.            
++ out =   0.            
++ vdd =   0.            
++ vss =   0.            
+***   END: Saved Operating Point ***                     

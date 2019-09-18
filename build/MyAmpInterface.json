@@ -1,0 +1,23 @@
+{"top":"global.MyAmpInterface",
+"namespaces":{
+  "global":{
+    "modules":{
+      "MyAmpInterface":{
+        "type":["Record",[
+          ["my_in","BitIn"],
+          ["my_out","Bit"]
+        ]],
+        "instances":{
+          "not_inst0":{
+            "modref":"corebit.not"
+          }
+        },
+        "connections":[
+          ["self.my_in","not_inst0.in"],
+          ["self.my_out","not_inst0.out"]
+        ]
+      }
+    }
+  }
+}
+}
