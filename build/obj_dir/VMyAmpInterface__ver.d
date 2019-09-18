@@ -1,1 +1,0 @@
-obj_dir/VMyAmpInterface.cpp obj_dir/VMyAmpInterface.h obj_dir/VMyAmpInterface.mk obj_dir/VMyAmpInterface__Syms.cpp obj_dir/VMyAmpInterface__Syms.h obj_dir/VMyAmpInterface__ver.d obj_dir/VMyAmpInterface_classes.mk  : /usr/bin/verilator_bin   /usr/bin/verilator_bin MyAmpInterface.v 
