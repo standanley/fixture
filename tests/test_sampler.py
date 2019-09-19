@@ -1,4 +1,4 @@
-from facet import Sampler
+from fixture import Sampler
 import pytest
 import random
 

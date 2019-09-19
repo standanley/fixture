@@ -1,4 +1,4 @@
-from facet import *
+from fixture import *
 from magma import *
 import pytest
 

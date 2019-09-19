@@ -1,4 +1,4 @@
-from facet import LinearRegression, LinearRegressionSM
+from fixture import LinearRegression, LinearRegressionSM
 import random
 
 def gen_data(ivs, dvs, N, fun, noisy=True):
@@ -31,9 +31,9 @@ def test_simple():
     test = LinearRegressionSM(iv_names, dv_names, (ivs, dvs))
     test.run()
     #print(test.get_statistics())
-    print(test.suggest_model_using_confidence_interval())
+    #print(test.suggest_model_using_confidence_interval())
     test.run()
-    print(test.get_statistics())
+    #print(test.get_statistics())
 
 
 
