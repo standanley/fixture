@@ -1,0 +1,43 @@
+# largely borrowed from https://github.com/leonardt/fault/blob/master/.travis.yml
+
+matrix:
+  include:
+  - os: linux
+    addons:
+      apt:
+        sources:
+        - ubuntu-toolchain-r-test
+        packages:
+        - g++-7
+        - libgmp-dev
+        - libmpfr-dev
+        - libmpc-dev
+        - verilator
+    env:
+    - CC=gcc-7
+    - CXX=g++-7
+# osx has a problem with python 3.7, could fix it by using conda like fault does
+#  - os: osx
+#    osx_image: xcode10.2
+#    addons:
+#      homebrew:
+#        packages:
+#          - verilator
+
+language: python
+python: 3.7
+
+install: 
+    - ./install_coreir.sh
+    - ./install_fault.sh
+    - pip install -r requirements.txt
+    - pip install pytest
+    - pip install -e .
+    - sudo apt-get install ngspice
+
+script:
+    - pytest
+
+notifications:
+    email: false
+
