@@ -218,6 +218,7 @@ class LinearRegressionSM(LinearRegression):
     return dict( [(d, '+'.join(dv_iv_map[d])) for d in dv_iv_map.keys()] )
 
   def _create_model(self, ignore_usermodel=False):
+    print('top of create_model, ignore is ', ignore_usermodel)
     # write formula of regression model
 #    if ignore_usermodel: # ignore user model
 #      opt_formula = ('polynomial', 1, True, {})
@@ -227,6 +228,7 @@ class LinearRegressionSM(LinearRegression):
     # [basis (unused), order, interaction, user_model]
     opt_formula = [None, 3, True, {}]
     formula = self._make_formula(self.dv_iv_map, *opt_formula)
+    print('just made formula from scratch, it is', formula)
 #    self._logger.debug(mcode.WARN_017 % formula)
 
     # run regression

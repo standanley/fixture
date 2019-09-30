@@ -8,9 +8,9 @@ def gen_data(ivs, dvs, N, fun, noisy=True):
     for i in range(N):
         x = [random.random() for _ in range(dims)]
         ivs.append(x)
-        dvs.append(fun(*x))
+        dvs.append(list(fun(*x)))
         if noisy:
-            for i in len(dvs[-1]):
+            for i in range(len(dvs[-1])):
                 dvs[-1][i] += random.random()*.2
     return ivs, dvs
 
@@ -31,9 +31,10 @@ def test_simple():
     test = LinearRegressionSM(iv_names, dv_names, (ivs, dvs))
     test.run()
     #print(test.get_statistics())
-    #print(test.suggest_model_using_confidence_interval())
+    print('suggested model:')
+    print(test.suggest_model_using_confidence_interval())
     test.run()
-    #print(test.get_statistics())
+    print(test.get_statistics())
 
 
 
