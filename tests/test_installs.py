@@ -45,6 +45,48 @@ def test_ngspice():
     tester = fault.Tester(MyAmp)
     tester.poke(MyAmp.vss, 0)
     tester.poke(MyAmp.vdd, 1.2)
+    tester.poke(MyAmp.in_, 0.76)
+    tester.expect(MyAmp.out, None, above=0.64, below=0.65)
+    tester.expect(MyAmp.out, 0, save_for_later=True)
+
+    tester.poke(MyAmp.in_, 0.84)
+    tester.expect(MyAmp.out, None, above=0.37, below=0.38)
+    tester.expect(MyAmp.out, 0, save_for_later=True)
+
+    tester.compile_and_run('spice',
+        simulator='ngspice', 
+        model_paths = [Path('tests/spice/myamp.sp').resolve()]
+    )
+
+    vals = tester.targets['spice'].saved_for_later
+    print(vals)
+
+def test_ngspice2():
+    import magma as m
+    import fault
+
+#    MyAmp = m.DeclareCircuit(
+#        'myamp',
+#        'in_', fault.RealIn,
+#        'out', fault.RealOut,
+#        'vdd', fault.RealIn,
+#        'vss', fault.RealIn
+#    )
+    class MyAmp(m.Circuit):
+        # hopefully if the name matches the spice model,
+        # magma can figure out the io from the spice ?
+        name = 'myamp'
+        IO = [
+            'in_', fault.RealIn,
+            'out', fault.RealOut,
+            'vdd', fault.RealIn,
+            'vss', fault.RealIn
+        ]
+
+
+    tester = fault.Tester(MyAmp)
+    tester.poke(MyAmp.vss, 0)
+    tester.poke(MyAmp.vdd, 1.2)
     tester.poke(MyAmp.in_, 0.7)
     tester.expect(MyAmp.out, .81, above=0.81, below=0.82)
 
@@ -55,3 +97,7 @@ def test_ngspice():
         simulator='ngspice', 
         model_paths = [Path('tests/spice/myamp.sp').resolve()]
     )
+
+
+if __name__ == '__main__':
+    test_ngspice()
