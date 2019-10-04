@@ -23,6 +23,7 @@ class TemplateKind(circuit.DefineCircuitKind):
             cls.mapping(cls)
             # check that all the required ports actually got associated
             cls.check_required_ports(cls)
+            #cls.sort_ports(cls)
 
 
         return cls
@@ -40,3 +41,32 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
     def check_required_ports(self):
         for port_name in self.required_ports:
             assert hasattr(self, port_name), 'Did not associate port %s'%port_name
+
+#    def sort_ports(self):
+#        # we want to sort ports into inputs/outputs/analog/digital/pinned/ranged, etc
+#
+#        for name, port in self.IO.items():
+#            if port.isinput():
+#                if isinstance(port, TupleKind):
+#                    TODO
+#                else:
+#                    if isinstance(port, fault.RealKind):
+#                        if hasattr(port, 'limits'):
+#                            limits = port.limits
+#                            try:
+#                                pin = float(limits)
+#                                inputs_pinned.append((port, pin))
+#                            except TypeError:
+#                                if len(limits) == 2:
+#                                    inputs_ranged.append((port, tuple(limits)))
+#                                else:
+#                                    assert false
+#
+#                        print(name, 'is real')
+#                    else:
+#                        print(name, 'is not real')
+#            elif port.isoutput():
+#                pass
+#            else:
+#                # TODO deal with inouts?
+#                raise NotImplemetedError()
