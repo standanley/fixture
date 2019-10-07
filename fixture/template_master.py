@@ -74,6 +74,7 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
                                     else:
                                         assert False
                         else:
+                            # TODO I believe this case is not covered in the test
                             inputs_unspecified.append(name)
 
                     elif isinstance(port, magma.BitKind):
@@ -95,3 +96,13 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
             else:
                 # TODO deal with inouts?
                 raise NotImplemetedError()
+
+        # Save results
+
+        self.inputs_pinned = inputs_pinned
+        self.inputs_ranged = inputs_ranged
+        self.inputs_unspecified = inputs_unspecified
+        self.inputs_digital = inputs_digital
+        self.inputs_dai = inputs_dai
+        self.outputs_analog = outputs_analog
+        self.outputs_digital = outputs_digital

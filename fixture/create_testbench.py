@@ -11,29 +11,29 @@ def add_vectors(tester, vectors):
     dut = tester.circuit.circuit
     io = dut.IO
 
-    # parse io to find inputs and outputs
-    inputs = [x for x in io.items() if x[1].isinput()]
-    inputs.sort()
-    outputs = [x for x in io.items() if x[1].isoutput()]
-    inputs_ranged, inputs_pinned = [], []
-    for i in inputs:
-        assert hasattr(i[1], 'limits'), f'input {i[0]} is missing annotation of limits'
-        #print(f'input {i} has range {i[1].limits}')
-        if type(i[1].limits)==tuple:
-           inputs_ranged.append((i, i[1].limits))
-        else:
-            inputs_pinned.append((i, i[1].limits))
+    ## parse io to find inputs and outputs
+    #inputs = [x for x in io.items() if x[1].isinput()]
+    #inputs.sort()
+    #outputs = [x for x in io.items() if x[1].isoutput()]
+    #inputs_ranged, inputs_pinned = [], []
+    #for i in inputs:
+    #    assert hasattr(i[1], 'limits'), f'input {i[0]} is missing annotation of limits'
+    #    #print(f'input {i} has range {i[1].limits}')
+    #    if type(i[1].limits)==tuple:
+    #       inputs_ranged.append((i, i[1].limits))
+    #    else:
+    #        inputs_pinned.append((i, i[1].limits))
 
-    for i in inputs_pinned:
-        (port_name, port_type), pin = i
+    for i in dut.inputs_pinned:
+        port_name, pin = i
         port = getattr(dut, port_name)
         tester.poke(port, pin)
 
     vectors_scaled = []
     for vec in vectors:
         vec_scaled = []
-        for val, input_ in zip(vec, inputs_ranged):
-            (port_name, port_type), limits = input_
+        for val, input_ in zip(vec, dut.inputs_ranged):
+            port_name, limits = input_
             val_ranged = scale_within_limits(limits, val)
             vec_scaled.append(val_ranged)
             port = getattr(dut, port_name)
@@ -42,8 +42,9 @@ def add_vectors(tester, vectors):
 
         #tester.eval()
 
+        outputs = dut.outputs_analog + dut.outputs_digital
         for out in outputs:
-            port_name, port_type = out
+            port_name = out
             port = getattr(dut, port_name)
             tester.expect(port, None, save_for_later=True)
 
@@ -60,6 +61,6 @@ def add_vectors(tester, vectors):
             results.append((input_vec, output_vec))
         return results
 
-    return ((inputs_ranged, outputs), callback)
+    return ((dut.inputs_ranged, outputs), callback)
 
 
