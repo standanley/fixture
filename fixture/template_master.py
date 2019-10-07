@@ -23,7 +23,7 @@ class TemplateKind(circuit.DefineCircuitKind):
             cls.mapping(cls)
             # check that all the required ports actually got associated
             cls.check_required_ports(cls)
-            #cls.sort_ports(cls)
+            cls.sort_ports(cls)
 
 
         return cls
@@ -42,31 +42,56 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         for port_name in self.required_ports:
             assert hasattr(self, port_name), 'Did not associate port %s'%port_name
 
-#    def sort_ports(self):
-#        # we want to sort ports into inputs/outputs/analog/digital/pinned/ranged, etc
-#
-#        for name, port in self.IO.items():
-#            if port.isinput():
-#                if isinstance(port, TupleKind):
-#                    TODO
-#                else:
-#                    if isinstance(port, fault.RealKind):
-#                        if hasattr(port, 'limits'):
-#                            limits = port.limits
-#                            try:
-#                                pin = float(limits)
-#                                inputs_pinned.append((port, pin))
-#                            except TypeError:
-#                                if len(limits) == 2:
-#                                    inputs_ranged.append((port, tuple(limits)))
-#                                else:
-#                                    assert false
-#
-#                        print(name, 'is real')
-#                    else:
-#                        print(name, 'is not real')
-#            elif port.isoutput():
-#                pass
-#            else:
-#                # TODO deal with inouts?
-#                raise NotImplemetedError()
+    def sort_ports(self):
+        # we want to sort ports into inputs/outputs/analog/digital/pinned/ranged, etc
+        inputs_pinned = []
+        inputs_ranged = []
+        inputs_unspecified = []
+        inputs_digital = []
+        inputs_dai = []
+        outputs_analog =[]
+        outputs_digital = []
+
+        for name, port in self.IO.items():
+            if port.isinput():
+                if isinstance(port, TupleKind):
+                    TODO
+                else:
+                    if isinstance(port, fault.RealKind):
+                        if hasattr(port, 'limits'):
+                            limits = port.limits
+                            if limits == None:
+                                inputs_unspecified.append(name)
+                            else:
+                                try:
+                                    pin = float(limits)
+                                    inputs_pinned.append((name, pin))
+                                except TypeError:
+                                    if len(limits) == 2:
+                                        #inputs_ranged.append((name, tuple(limits)))
+                                        # magma overloads the name "tuple"
+                                        inputs_ranged.append((name, limits))
+                                    else:
+                                        assert False
+                        else:
+                            inputs_unspecified.append(name)
+
+                    elif isinstance(port, magma.BitKind):
+                        inputs_digital.append(name)
+                    else:
+                        # maybe it's dai? 
+                        TODO
+            elif port.isoutput():
+                if isinstance(port, TupleKind):
+                    TODO
+                else:
+                    if isinstance(port, fault.RealKind):
+                        outputs_analog.append(name)
+                    elif isinstance(port, magma.BitKind):
+                        outputs_digital.append(name)
+                    else:
+                        assert False, "Only analog and digital outputs are supported"
+
+            else:
+                # TODO deal with inouts?
+                raise NotImplemetedError()
