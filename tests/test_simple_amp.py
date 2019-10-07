@@ -21,6 +21,8 @@ def get_tf(stats):
     return tf
 
 def plot(results, tf):
+    if __name__ != '__main__':
+        return
     import matplotlib.pyplot as plt
     xs, ys = zip(*results)
     xs = [x[0] for x in xs]
