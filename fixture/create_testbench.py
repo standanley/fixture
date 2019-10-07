@@ -11,18 +11,7 @@ def add_vectors(tester, vectors):
     dut = tester.circuit.circuit
     io = dut.IO
 
-    ## parse io to find inputs and outputs
-    #inputs = [x for x in io.items() if x[1].isinput()]
-    #inputs.sort()
-    #outputs = [x for x in io.items() if x[1].isoutput()]
-    #inputs_ranged, inputs_pinned = [], []
-    #for i in inputs:
-    #    assert hasattr(i[1], 'limits'), f'input {i[0]} is missing annotation of limits'
-    #    #print(f'input {i} has range {i[1].limits}')
-    #    if type(i[1].limits)==tuple:
-    #       inputs_ranged.append((i, i[1].limits))
-    #    else:
-    #        inputs_pinned.append((i, i[1].limits))
+    assert len(dut.inputs_unspecified) == 0, f"Must specify acceptable inputs for {dut.inputs_unspecified}"
 
     for i in dut.inputs_pinned:
         port_name, pin = i
