@@ -26,11 +26,15 @@ def test_simple():
 
     dv_iv = {'out':['a', 'b']}
     f = temp._make_formula(dv_iv, None, 3, True, {})
-    #print(f)
+    print('\n\n')
+    print(f)
+    print(ivs)
+    print(dvs)
 
     test = LinearRegressionSM(iv_names, dv_names, (ivs, dvs))
     test.run()
     #print(test.get_statistics())
+
     print('suggested model:')
     print(test.suggest_model_using_confidence_interval())
     test.run()
