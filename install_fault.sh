@@ -1,6 +1,6 @@
 #!/bin/bash
 pushd ..
-git clone https://github.com/leonardt/fault.git
+git clone https://github.com/standanley/fault.git
 cd fault
 pip install -e .
 popd
