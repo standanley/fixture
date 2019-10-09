@@ -22,22 +22,13 @@ def test_simple():
 
     ivs, dvs = gen_data(iv_names, dv_names, 15, fun)
 
-    #temp = LinearRegression(None, None, None)
-
-    #dv_iv = {'out':['a', 'b']}
-    #f = temp._make_formula(dv_iv, None, 3, True, {})
-    #print('\n\n')
-    #print(f)
-    #print(ivs)
-    #print(dvs)
-
     test = LinearRegressionSM(dv_names, iv_names, (ivs, dvs))
     test.run()
     summary = test.get_summary()
     for dv in summary:
         print(dv, '\n', summary[dv])
 
-    print('\n\nsuggested model:')
+    print('\n\nSuggested model:')
     suggested_formula = test.suggest_model_using_confidence_interval()
     print(suggested_formula)
     test.run(suggested_formula)

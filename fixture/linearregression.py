@@ -220,11 +220,10 @@ class LinearRegressionSM(LinearRegression):
     return dict( [(d, '+'.join(dv_iv_map[d])) for d in dv_iv_map.keys()] )
 
   def _create_model(self, formula=None):
-    print('top of create_model, formula is ', formula)
     if formula == None:
         opt_formula = [None, 3, True, {}]
         formula = self._make_formula(self.dv_iv_map, *opt_formula)
-        print('just made formula from scratch, it is', formula)
+        #print('just made formula from scratch, it is', formula)
         #self._logger.debug(mcode.WARN_017 % formula)
     self._formula = formula
 
