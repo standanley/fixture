@@ -165,9 +165,9 @@ class LinearRegressionSM(LinearRegression):
       'coef_t_statistic': lambda coefficients: coefficients[:,2], 
       'coef_p_value'    : lambda coefficients: coefficients[:,3] 
                                            }
-  def run(self):
+  def run(self, formula=None):
     ''' Run OLS linear regression '''
-    self._create_model(ignore_usermodel=False)
+    self._create_model(formula=formula)
 
   def suggest_model_using_sensitivity(self):
     '''
@@ -214,24 +214,21 @@ class LinearRegressionSM(LinearRegression):
 
 
   def _make_suggested_formula(self, dv_iv_map):
+    #print('in make_suggested_formula')
+    #print('dv_iv_map', dv_iv_map)
     ''' make formula from given terms '''
     return dict( [(d, '+'.join(dv_iv_map[d])) for d in dv_iv_map.keys()] )
 
-  def _create_model(self, ignore_usermodel=False):
-    # write formula of regression model
-#    if ignore_usermodel: # ignore user model
-#      opt_formula = ('polynomial', 1, True, {})
-#    else:
-#      opt_formula = self._get_model_build_option()
-
-    # [basis (unused), order, interaction, user_model]
-    opt_formula = [None, 3, True, {}]
-    formula = self._make_formula(self.dv_iv_map, *opt_formula)
-#    self._logger.debug(mcode.WARN_017 % formula)
+  def _create_model(self, formula=None):
+    if formula == None:
+        opt_formula = [None, 3, True, {}]
+        formula = self._make_formula(self.dv_iv_map, *opt_formula)
+        #print('just made formula from scratch, it is', formula)
+        #self._logger.debug(mcode.WARN_017 % formula)
+    self._formula = formula
 
     # run regression
     self.iv_ols, self.model_ols, self.df_ols, self.exog, self.endog, self.xnames = self._run_regression(formula) 
-    self._formula = formula
 
     # build/get statistics from the linear regression model, and calculate normalized input sensitivity
     self.ols_stat = self._build_statistics(self.model_ols) 
