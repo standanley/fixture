@@ -140,8 +140,6 @@ def test_simple_parameterized():
     print('Plotting results')
     plot(results, tf)
 
-
-
     
 if __name__ == '__main__':
     test_simple()

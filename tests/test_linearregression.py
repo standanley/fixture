@@ -8,10 +8,10 @@ def gen_data(ivs, dvs, N, fun, noisy=True):
     for i in range(N):
         x = [random.random() for _ in range(dims)]
         ivs.append(x)
-        dvs.append(fun(*x))
+        dvs.append(list(fun(*x)))
         if noisy:
-            for i in len(dvs[-1]):
-                dvs[-1][i] += random.random()*.2
+            for i in range(len(dvs[-1])):
+                dvs[-1][i] += random.random()*.05
     return ivs, dvs
 
 def test_simple():
@@ -22,18 +22,19 @@ def test_simple():
 
     ivs, dvs = gen_data(iv_names, dv_names, 15, fun)
 
-    temp = LinearRegression(None, None, None)
-
-    dv_iv = {'out':['a', 'b']}
-    f = temp._make_formula(dv_iv, None, 3, True, {})
-    #print(f)
-
-    test = LinearRegressionSM(iv_names, dv_names, (ivs, dvs))
+    test = LinearRegressionSM(dv_names, iv_names, (ivs, dvs))
     test.run()
-    print(test.get_statistics())
-    #print(test.suggest_model_using_confidence_interval())
-    test.run()
-    #print(test.get_statistics())
+    summary = test.get_summary()
+    for dv in summary:
+        print(dv, '\n', summary[dv])
+
+    print('\n\nSuggested model:')
+    suggested_formula = test.suggest_model_using_confidence_interval()
+    print(suggested_formula)
+    test.run(suggested_formula)
+    summary = test.get_summary()
+    for dv in summary:
+        print(dv, '\n', summary[dv])
 
 
 
