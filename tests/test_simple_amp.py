@@ -1,5 +1,7 @@
 import fixture
+from fixture.real_types import LinearBitKind
 import fault
+import magma
 from pathlib import Path
 
 def reformat(results):
@@ -95,35 +97,59 @@ def test_simple_parameterized():
             'my_out', fault.RealOut,
             'vdd', fixture.RealIn(1.2),
             'vss', fixture.RealIn(0.0),
-            'adi', fixture.LinearBits(2),
+            'adi', magma.Array[4, magma.In(fixture.LinearBit)],
             'adj', fixture.RealIn((.45,.55)),
-            'ctrl', magma.Bits(2)
+            'ctrl', magma.In(magma.Bits[2]),
+            'vdd_internal', fault.RealOut
         ]
         def mapping(self):
             self.in_single = self.my_in
             self.out_single = self.my_out
+
+
 
     # The name and IO here match the spice model in spice/myamp.sp
     # Since we include that file in compile_and_run, they get linked
     class MyAmp(UserAmpInterface):
         name = 'myamp_params'
 
+    #temp = MyAmp.adi
+    #print(temp.name)
+    #print(type(temp.name))
+    #print(type(temp))
+    ###print(type(temp.port))
+    #print(temp[1].name)
+    #print(type(temp[1].name))
+    #print(type(temp[1]))
+    #print()
+    #print(temp[1].name.array.name)
+    #print(temp[1].name.index)
+    ##print(type(temp[1].port))
+    #exit()
+
     print('Creating test bench')
     # auto-create vectors for 1 analog dimension
-    vectors = fixture.Sampler.get_orthogonal_samples(1, 0, 20)
+    vectors =  fixture.Sampler.get_samples_for_circuit(MyAmp, 20)
+
+    #print(f'length of vectors {len(vectors)}\nvectors[0][0] = {vectors[0][0]}')
 
     tester = fault.Tester(MyAmp)
     inputs_outputs, analysis_callback = fixture.add_vectors(tester, vectors)
 
+
     print(f'Running sim, {len(vectors)} test vectors')
     tester.compile_and_run('spice',
         simulator='ngspice',
-        model_paths = [Path('tests/spice/myamp.sp').resolve()]
+        model_paths = [Path('tests/spice/myamp_params.sp').resolve()]
     )
 
     print('Analyzing results')
     results = analysis_callback(tester)
-    #print(results)
+
+    print('printing results')
+    for r in results:
+        print(r)
+    return
     results_reformatted = reformat(results)
     #print(results_reformatted)
 
@@ -142,5 +168,5 @@ def test_simple_parameterized():
 
     
 if __name__ == '__main__':
-    test_simple()
+    test_simple_parameterized()
 

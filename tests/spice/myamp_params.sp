@@ -4,7 +4,8 @@
 .model EENMOS NMOS (VTO=0.4 KP=432E-6 GAMMA=0.2 PHI=.88)
 .model EEPMOS PMOS (VTO=-0.4 KP=122E-6 GAMMA=0.2 PHI=.88)
 
-.subckt myamp_params my_in vdd vss adj ctrl<0> ctrl<1>  adi<0> adi<1> adi<2> adi<3> myout vdd_internal 
+*.subckt myamp_params my_in vdd vss adj ctrl<0> ctrl<1>  adi<0> adi<1> adi<2> adi<3> my_out vdd_internal 
+.subckt myamp_params adi<3> adi<2> adi<1> adi<0> adj ctrl<1> ctrl<0> my_in my_out vdd vdd_internal vss
 
 M1 my_out my_in vss vss EENMOS w=0.4u l=0.1u
 R1 vdd_internal N001 8k
