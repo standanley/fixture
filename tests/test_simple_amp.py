@@ -10,16 +10,18 @@ def reformat(results):
     for result in results:
         iv, dv = result
         ivs.append(iv)
-        dvs.append([float(dv_component) for dv_component in dv])
+        #dvs.append([float(dv_component) for dv_component in dv])
+        dvs.append(dv)
     return ivs, dvs
 
-def get_tf(stats):
-    coefs = list(stats['coef_gain']['in_'])
+def get_tf(stats, ivs):
     def tf(x):
         y = 0
-        for order, coef in enumerate(coefs):
-            y += coef * x**order
-        return y
+        for iv in ivs:
+            coefs = list(stats['coef_gain'][iv])
+            for order, coef in enumerate(coefs):
+                y += coef * x**order
+            return y
     return tf
 
 def plot(results, tf):
@@ -129,7 +131,7 @@ def test_simple_parameterized():
 
     print('Creating test bench')
     # auto-create vectors for 1 analog dimension
-    vectors =  fixture.Sampler.get_samples_for_circuit(MyAmp, 20)
+    vectors =  fixture.Sampler.get_samples_for_circuit(MyAmp, 80)
 
     #print(f'length of vectors {len(vectors)}\nvectors[0][0] = {vectors[0][0]}')
 
@@ -145,26 +147,32 @@ def test_simple_parameterized():
 
     print('Analyzing results')
     results = analysis_callback(tester)
-
-    print('printing results')
-    for r in results:
-        print(r)
-    return
+    #print(inputs_outputs)
+    #print(results[0])
     results_reformatted = reformat(results)
+
+    #print('printing results')
+    #for r in results:
+    #    print(r)
+    #print('\nA')
     #print(results_reformatted)
 
-    iv_names = ['in_']
-    dv_names = ['out']
-    formula = {'out':'in_ + I(in_**2) + I(in_**3)'}
+    iv_names, dv_names = inputs_outputs
+    #formula = {'out':'in_ + I(in_**2) + I(in_**3)'}
+    print('\nB')
     regression = fixture.LinearRegressionSM(iv_names, dv_names, results_reformatted)
+    print('\nC')
     regression.run()
+    print('\nD')
 
     stats = regression.get_statistics()
-    print(regression.get_summary()['in_'])
-    tf = get_tf(stats)
+    for dv in ['my_out', 'vdd_internal']:
+        print(f'Stats for {dv}')
+        print(regression.get_summary()[dv])
+    #tf = get_tf(stats)
 
-    print('Plotting results')
-    plot(results, tf)
+    #print('Plotting results')
+    #plot(results, tf)
 
     
 if __name__ == '__main__':

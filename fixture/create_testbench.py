@@ -36,7 +36,7 @@ def add_vectors(tester, vectors):
 
     num_digital = len(dut.inputs_digital)
     num_ranged = len(dut.inputs_ranged)
-    vectors_scaled = []
+    input_vectors = []
     modes = product(range(2), repeat=num_digital)
     for mode, vectors_mode in zip(modes, vectors):
         # poke digital ports (set mode)
@@ -45,10 +45,11 @@ def add_vectors(tester, vectors):
         num = sum(2**i*c for i,c in enumerate(mode))
         print('setting ctrl to', num)
         poke('ctrl', num)
-        vectors_scaled.append(list(mode))
 
         # loop through all the vectors for this mode
         for vec in vectors_mode:
+            input_vec = list(mode)
+
             # poke analog ports
             vec_scaled = []
             for val, input_ in zip(vec[:num_ranged], dut.inputs_ranged):
@@ -56,14 +57,14 @@ def add_vectors(tester, vectors):
                 val_ranged = scale_within_limits(limits, val)
                 vec_scaled.append(val_ranged)
                 poke(port_name, val_ranged) 
-            vectors_scaled[-1] += vec_scaled
+            input_vec += vec_scaled
 
             # poke binary analog ports
             for val, input_ in zip(vec[num_ranged:], dut.inputs_dai):
                 poke(input_, val)
-            vectors_scaled[-1] += vec[num_ranged:]
+            input_vec += vec[num_ranged:]
 
-            #print('added vector', vectors_scaled[-1])
+            input_vectors.append(input_vec)
 
             #tester.eval()
 
@@ -75,25 +76,22 @@ def add_vectors(tester, vectors):
                 # TODO support buses?
                 port = getattr(dut, port_name)
                 tester.expect(port, 0, save_for_later=True)
-                print('saving for later', port)
 
 
     def callback(tester):
         results_raw = tester.targets['spice'].saved_for_later
-        print('got results')
-        print(len(results_raw))
-        #print(len(results_raw[0]))
-        print(str(results_raw)[:100])
         i = 0
         results = []
-        for input_vec in vectors_scaled:
+        for input_vec in input_vectors:
             output_vec = []
             for out in outputs:
-                output_vec.append(results_raw[i])
+                output_vec.append(float(results_raw[i]))
                 i += 1
             results.append((input_vec, output_vec))
         return results
 
-    return ((dut.inputs_ranged, outputs), callback)
+    ranged_input_names = [x[0] for x in dut.inputs_ranged]
+    inputs = dut.inputs_digital + ranged_input_names + dut.inputs_dai
+    return ((inputs, outputs), callback)
 
 
