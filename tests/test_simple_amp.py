@@ -60,7 +60,7 @@ def test_simple():
 
     print('Creating test bench')
     # auto-create vectors for 1 analog dimension
-    vectors = fixture.Sampler.get_orthogonal_samples(1, 0, 20)
+    vectors = fixture.Sampler.get_samples_for_circuit(MyAmp, 20)
 
     tester = fault.Tester(MyAmp)
     inputs_outputs, analysis_callback = fixture.add_vectors(tester, vectors)
@@ -84,8 +84,8 @@ def test_simple():
     regression.run()
 
     stats = regression.get_statistics()
-    print(regression.get_summary()['in_'])
-    tf = get_tf(stats)
+    print(regression.get_summary()['out'])
+    tf = get_tf(stats, ['in_'])
 
     print('Plotting results')
     plot(results, tf)
@@ -176,5 +176,6 @@ def test_simple_parameterized():
 
     
 if __name__ == '__main__':
-    test_simple_parameterized()
+    test_simple()
+    #test_simple_parameterized()
 

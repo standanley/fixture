@@ -40,11 +40,11 @@ def add_vectors(tester, vectors):
     modes = product(range(2), repeat=num_digital)
     for mode, vectors_mode in zip(modes, vectors):
         # poke digital ports (set mode)
-        #for val, input_ in zip(mode, dut.inputs_digital):
-        #        poke(input_, val)
-        num = sum(2**i*c for i,c in enumerate(mode))
-        print('setting ctrl to', num)
-        poke('ctrl', num)
+        for val, input_ in zip(mode, dut.inputs_digital):
+                poke(input_, val)
+        #num = sum(2**i*c for i,c in enumerate(mode))
+        #print('setting ctrl to', num)
+        #poke('ctrl', num)
 
         # loop through all the vectors for this mode
         for vec in vectors_mode:
