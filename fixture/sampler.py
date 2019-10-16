@@ -1,6 +1,7 @@
 import math
 import itertools
 import random
+from .template_master import TemplateKind
 
 class Sampler:
     def rand():
@@ -93,6 +94,37 @@ class Sampler:
             points.append(point)
         return points
 
+    @classmethod
+    def get_samples_for_circuit(cls, circuit, num_samples):
+        '''Generate orthogonal samples based on circuit IO.
+        Returns a triply-nested list like the following
+        for each 2^D true digital combination:
+            for each N/(2^D) vector allocated to that combo:
+                for each input in (analog + dai):
+                    random sample
+        Example for dig=1, analog=2, dai=3, N=3:
+        [[[.5, .7, 1, 1, 0],
+         ], # end digital=0
+         [[.2, .9, 1, 0, 0],
+          [.1, .3, 0, 1, 1],
+         ] # end digital=1
+        ]
+        '''
+        assert isinstance(circuit, TemplateKind), 'For now, can only get samples for a templatized circuit'
+        num_analog = len(circuit.inputs_ranged)
+        num_dai = len(circuit.inputs_dai)
+        num_digital = len(circuit.inputs_digital)
+        input_vectors = []
+        modes = 2**num_digital
+        for i in range(modes):
+            N = num_samples // modes + (2*i)//modes 
+            print(N)
+            ss = cls.get_orthogonal_samples(num_analog, num_dai, N)
+            input_vectors.append(ss)
+        return input_vectors
+
+
+
     def assert_lhs(samples):
         # print('samples', samples)
         N = len(samples)
@@ -172,10 +204,6 @@ if __name__ == '__main__':
     Sampler.assert_fifty_fifty(digital_samples)
     Sampler.assert_lhs(analog_samples)
     visualize(samples)
-
-
-    
-
 
 
 

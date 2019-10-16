@@ -51,20 +51,20 @@ def simple_amp_tester(vectors):
     return results
 
 def test_tiny():
-
-    vectors = [(0.7,), (0.8,)]
+    # one list of vectors for each digital mode
+    vectors = [[(0.7,), (0.8,)]]
     results = simple_amp_tester(vectors)
     print(results)
 
 def test_many():
-    vectors = [(random.random(),) for _ in range(20)]
+    vectors = [[(random.random(),) for _ in range(20)]]
     results = simple_amp_tester(vectors)
     #print(results[:10])
     #print(results)
     plot(results)
 
 def test_with_sampler():
-    vectors = fixture.Sampler.get_orthogonal_samples(1, 0, 20)
+    vectors = [fixture.Sampler.get_orthogonal_samples(1, 0, 20)]
     print(vectors)
     #exit()
     results = simple_amp_tester(vectors)

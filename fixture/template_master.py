@@ -1,6 +1,6 @@
 from magma import *
 import fault
-
+from .real_types import LinearBit, LinearBitKind
 
 class TemplateKind(circuit.DefineCircuitKind):
 
@@ -52,10 +52,11 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         outputs_analog =[]
         outputs_digital = []
 
-        for name, port in self.IO.items():
+        def sort_port(name, port):
             if port.isinput():
-                if isinstance(port, TupleKind):
-                    TODO
+                if isinstance(port, ArrayKind):
+                    for i in range(len(port)):
+                        sort_port(f'{name}<{i}>', port.T)
                 else:
                     if isinstance(port, fault.RealKind):
                         if hasattr(port, 'limits'):
@@ -77,10 +78,13 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
                             # TODO I believe this case is not covered in the test
                             inputs_unspecified.append(name)
 
+                    elif isinstance(port, LinearBitKind):
+                        inputs_dai.append(name)
                     elif isinstance(port, magma.BitKind):
                         inputs_digital.append(name)
                     else:
-                        # maybe it's dai? 
+                        print(name)
+                        print(port)
                         TODO
             elif port.isoutput():
                 if isinstance(port, TupleKind):
@@ -97,7 +101,17 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
                 # TODO deal with inouts?
                 raise NotImplemetedError()
 
+        for name, port in self.IO.items():
+            sort_port(name, port)
+
         # Save results
+        #print(inputs_pinned)
+        #print(inputs_ranged)
+        #print(inputs_unspecified)
+        #print(inputs_digital)
+        #print(inputs_dai)
+        #print(outputs_analog)
+        #print(outputs_digital)
 
         self.inputs_pinned = inputs_pinned
         self.inputs_ranged = inputs_ranged
