@@ -85,7 +85,8 @@ def test_simple():
 
     stats = regression.get_statistics()
     print(regression.get_summary()['out'])
-    tf = get_tf(stats, ['in_'])
+    tf = get_tf(stats, dv_names)
+    tf(5)
 
     print('Plotting results')
     plot(results, tf)
