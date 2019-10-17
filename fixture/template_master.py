@@ -52,59 +52,67 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         outputs_analog =[]
         outputs_digital = []
 
-        def sort_port(name, port):
-            if port.isinput():
-                if isinstance(port, ArrayKind):
-                    for i in range(len(port)):
-                        sort_port(f'{name}<{i}>', port.T)
-                else:
-                    if isinstance(port, fault.RealKind):
-                        if hasattr(port, 'limits'):
-                            limits = port.limits
-                            if limits == None:
-                                inputs_unspecified.append(name)
-                            else:
-                                try:
-                                    pin = float(limits)
-                                    inputs_pinned.append((name, pin))
-                                except TypeError:
-                                    if len(limits) == 2:
-                                        #inputs_ranged.append((name, tuple(limits)))
-                                        # magma overloads the name "tuple"
-                                        inputs_ranged.append((name, limits))
-                                    else:
-                                        assert False
-                        else:
-                            # TODO I believe this case is not covered in the test
-                            inputs_unspecified.append(name)
 
-                    elif isinstance(port, LinearBitKind):
-                        inputs_dai.append(name)
-                    elif isinstance(port, magma.BitKind):
-                        inputs_digital.append(name)
+        def sort_port(port):
+            if isinstance(port, Array):
+                for i in range(len(port)):
+                    sort_port(port[i])
+                return
+
+            port_type = type(port)
+            if port.isinout():
+                raise NotImplementedError
+            if not port.isinput():
+                # NOTE: I'm not sure why I need the "not" above,
+                # and magma.Flip does not work on port
+                if isinstance(port_type, fault.RealKind):
+                    if hasattr(port, 'limits'):
+                        limits = port.limits
+                        if limits == None:
+                            inputs_unspecified.append(port)
+                        else:
+                            try:
+                                pin = float(limits)
+                                inputs_pinned.append(port)
+                            except TypeError:
+                                if len(limits) == 2:
+                                    #inputs_ranged.append((name, tuple(limits)))
+                                    # magma overloads the name "tuple"
+                                    inputs_ranged.append(port)
+                                else:
+                                    # TODO put a better message here
+                                    assert False, 'Limits must be 1 or 2 values'
                     else:
-                        print(name)
-                        print(port)
-                        TODO
-            elif port.isoutput():
-                if isinstance(port, TupleKind):
-                    TODO
+                        # TODO I believe this case is not covered in the test
+                        inputs_unspecified.append(port)
+
+                elif isinstance(port_type, LinearBitKind):
+                    inputs_dai.append(port)
+                elif isinstance(port_type, magma.BitKind):
+                    inputs_digital.append(port)
                 else:
-                    if isinstance(port, fault.RealKind):
-                        outputs_analog.append(name)
-                    elif isinstance(port, magma.BitKind):
-                        outputs_digital.append(name)
-                    else:
-                        assert False, "Only analog and digital outputs are supported"
+                    print(port)
+                    assert NotImplementedError
+            elif not port.isoutput():
+                if isinstance(port_type, fault.RealKind):
+                    outputs_analog.append(port)
+                elif isinstance(port_type, magma.BitKind):
+                    outputs_digital.append(port)
+                else:
+                    assert False, "Only analog and digital outputs are supported"
 
             else:
-                # TODO deal with inouts?
-                raise NotImplemetedError()
+                # TODO deal with unspecified input/output ?
+                print(port)
+                raise NotImplementedError
 
-        for name, port in self.IO.items():
-            sort_port(name, port)
+        for name, _ in self.IO.items():
+            print('Sorting', name)
+            port = getattr(self, name)
+            sort_port(port)
 
         # Save results
+        #print()
         #print(inputs_pinned)
         #print(inputs_ranged)
         #print(inputs_unspecified)
