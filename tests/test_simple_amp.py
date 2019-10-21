@@ -33,12 +33,13 @@ def plot(results, tf):
     if __name__ != '__main__':
         return
     import matplotlib.pyplot as plt
-    xs, ys = zip(*results)
-    xs = [x[0] for x in xs]
-    ys = [y[0] for y in ys]
+    #xs, ys = zip(*results)
+    #xs = [x[0] for x in xs]
+    #ys = [y[0] for y in ys]
+    xs, ys = results
     plt.plot(xs, ys, '*')
     xs.sort()
-    plt.plot(xs, [tf(x) for x in xs], '--')
+    plt.plot(xs, [tf(x[0]) for x in xs], '--')
     plt.grid()
     plt.show()
 
@@ -49,7 +50,7 @@ def test_simple():
     class UserAmpInterface(fixture.templates.SimpleAmpTemplate):
         name = 'my_simple_amp_interface'
         IO = [
-            'in_', fixture.RealIn((.5,1.0)),
+            'in_', fixture.RealIn((0.4, 1.0)),
             'out', fault.RealOut,
             'vdd', fixture.RealIn(1.2),
             'vss', fixture.RealIn(0.0)
@@ -65,7 +66,7 @@ def test_simple():
 
     print('Creating test bench')
     # auto-create vectors for 1 analog dimension
-    vectors = fixture.Sampler.get_samples_for_circuit(MyAmp, 5)
+    vectors = fixture.Sampler.get_samples_for_circuit(MyAmp, 50)
 
     tester = fault.Tester(MyAmp)
     testbench = fixture.Testbench(tester)
@@ -80,9 +81,8 @@ def test_simple():
 
     print('Analyzing results')
     results = testbench.get_results()
-    print(results)
-    results_reformatted = results#reformat2(results)[0]
-    print(results_reformatted)
+    ins, outs = results
+    results_reformatted = [ins[0], outs[0]]
 
     iv_names = ['in_']
     dv_names = ['out']
@@ -96,7 +96,7 @@ def test_simple():
     tf(5)
 
     print('Plotting results')
-    plot(results, tf)
+    plot(results_reformatted, tf)
 
     
 def test_simple_parameterized():

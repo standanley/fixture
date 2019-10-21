@@ -10,9 +10,7 @@ class SimpleAmpTemplate(TemplateMaster):
     def run_single_test(self, tester):
         # For now we treat the input the same as the other analog inputs
         # so we don't need any pokes of our own
-        print('Doing expect')
-        tester.expect(getattr(self, 'in_single'), 0, save_for_later=True)
-        #tester.expect(getattr(self, 'in_'), 0, save_for_later=True)
+        tester.expect(getattr(self, 'out_single'), 0, save_for_later=True)
 
     @classmethod
     def process_single_test(self, tester):

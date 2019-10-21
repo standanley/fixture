@@ -30,10 +30,9 @@ class Testbench():
             vectors_scaled.append(scaled)
         return vectors_scaled
 
-
+    '''
     def add_vectors(tester, vectors):
         def poke(port_name, value):
-            '''
             #p = re.compile('[^<>]+|<([0-9])+>')
             if port_name[-1] == '>':
                 bus = re.match('[^<>]+', port_name).group()
@@ -45,7 +44,6 @@ class Testbench():
             else:
                 port = getattr(self.dut, port_name)
             #print('poking', port, value)
-            '''
             tester.poke(port, value)
 
 
@@ -121,6 +119,7 @@ class Testbench():
         ranged_input_names = [x[0] for x in dut.inputs_ranged]
         inputs = dut.inputs_digital + ranged_input_names + dut.inputs_dai
         return ((inputs, outputs), callback)
+    '''
 
     '''
     def make_testbench(tester, N):
@@ -132,6 +131,11 @@ class Testbench():
         else:
             extra_analog = 0
     '''
+
+    def set_pinned_inputs(self):
+        for input_ in self.dut.inputs_pinned:
+            val = input_.limits
+            self.tester.poke(input_, val)
 
     def set_digital_mode(self, mode):
         for input_, val in zip(mode, self.dut.inputs_digital):
@@ -156,8 +160,6 @@ class Testbench():
 
     def apply_linear_inputs(self, test_vector):
         # poke analog ports
-        print(test_vector)
-        print(self.dut.inputs_ranged)
         zipped = zip(self.dut.inputs_ranged, test_vector[:self.num_ranged])
         for input_, val in zipped:
             self.tester.poke(input_, val) 
@@ -184,14 +186,13 @@ class Testbench():
     def create_test_bench(self):
         #self.startup()
         self.result_processing_list = []
+        self.set_pinned_inputs()
         for digital_mode in self.test_vectors_by_mode:
             self.set_digital_mode(digital_mode)
             test_vectors = self.test_vectors_by_mode[digital_mode]
             for test_vector in test_vectors:
                 callback = self.run_test_vector(test_vector)
                 self.result_processing_list.append((digital_mode, test_vector, callback))
-        print('processing list')
-        print(len(self.result_processing_list))
 
     def get_results(self):
         ''' Return results in the following format:
@@ -201,8 +202,6 @@ class Testbench():
         self.results_raw = [float(x) for x in self.results_raw]
         inputs_by_mode = {m:[] for m in self.test_vectors_by_mode}
         outputs_by_mode = {m:[] for m in self.test_vectors_by_mode}
-        print('results empty', outputs_by_mode)
-        print(self.test_vectors_by_mode)
         self.result_counter = 0
         for m, v, fun in self.result_processing_list:
             result = fun(self)
@@ -213,10 +212,6 @@ class Testbench():
             outputs_by_mode[m].append(result)
         inputs = [x for m,x in inputs_by_mode.items()]
         outputs = [x for m,x in outputs_by_mode.items()]
-        print('inputs')
-        print(inputs)
-        print('outupts')
-        print(outputs)
         self.results = (inputs, outputs)
         return self.results
 
