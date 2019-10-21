@@ -29,6 +29,29 @@ def get_tf(stats, ivs):
             return y
     return tf
 
+def plot_errors(x, y1, y2):
+    #print('plotting errors')
+    #print(x)
+    #print(y1)
+    #print(y2)
+    import matplotlib.pyplot as plt
+    for a,b,c in zip(x, y1, y2):
+        d = '-g' if c > b else '-r'
+        plt.plot([a, a], [b, c], d)
+    plt.grid()
+    plt.show()
+
+def plot2(results, statsmodels, in_dim=0):
+    xs, ys = results
+    xs = [x[in_dim] for x in xs]
+    ys = [y[0] for y in ys]
+    estimated = statsmodels.fittedvalues
+    print('lengths of stuff')
+    print(len(xs), len(ys), len(estimated))
+    plot_errors(xs, ys, estimated)
+
+    
+
 def plot(results, tf):
     if __name__ != '__main__':
         return
@@ -96,7 +119,11 @@ def test_simple():
     tf(5)
 
     print('Plotting results')
-    plot(results_reformatted, tf)
+    #plot(results_reformatted, tf)
+    temp = regression.model_ols
+    print(temp)
+    temp = temp['out']
+    plot2(results_reformatted, temp, in_dim=5)
 
     
 def test_simple_parameterized():
@@ -125,54 +152,15 @@ def test_simple_parameterized():
 
     io = MyAmp.IO
 
-    '''
-    from magma import ArrayKind, Array, Flip
-    from fault import RealKind
-    print(io.items())
-    for name, port in io.items():
-        print('\n'+name)
-        #print('name type', type(name))
-        #print('port type', type(port))
-        #print('port:', port)
-        thing = getattr(MyAmp, name)
-        print('thing type', type(thing))
-        print('thing:', thing)
-        #print()
-        #print(isinstance(port, RealKind))
-        #print(isinstance(type(thing), RealKind))
-        #print(hasattr(port, 'limits'))
-        #print(hasattr(thing, 'limits'))
-        #print(isinstance(port, ArrayKind))
-        #print(isinstance(thing, Array))
-        #print(Flip(thing).isinput())
-        #print(thing.isinput())
-        #print(Flip(port).isinput())
-        print(getattr(thing, 'limits', 'no limits'))
-    '''
-
-
-    #temp = MyAmp.ba
-    #print(temp.name)
-    #print(type(temp.name))
-    #print(type(temp))
-    ###print(type(temp.port))
-    #print(temp[1].name)
-    #print(type(temp[1].name))
-    #print(type(temp[1]))
-    #print()
-    #print(temp[1].name.array.name)
-    #print(temp[1].name.index)
-    ##print(type(temp[1].port))
-    #exit()
-
     print('Creating test bench')
     # auto-create vectors for 1 analog dimension
-    vectors =  fixture.Sampler.get_samples_for_circuit(MyAmp, 80)
-
-    #print(f'length of vectors {len(vectors)}\nvectors[0][0] = {vectors[0][0]}')
+    vectors =  fixture.Sampler.get_samples_for_circuit(MyAmp, 500)
 
     tester = fault.Tester(MyAmp)
-    inputs_outputs, analysis_callback = fixture.add_vectors(tester, vectors)
+    testbench = fixture.Testbench(tester)
+    testbench.set_test_vectors(vectors)
+    testbench.create_test_bench()
+    inputs_outputs = testbench.get_input_output_names()
 
 
     print(f'Running sim, {len(vectors)} test vectors')
@@ -182,10 +170,12 @@ def test_simple_parameterized():
     )
 
     print('Analyzing results')
-    results = analysis_callback(tester)
-    #print(inputs_outputs)
-    #print(results[0])
-    results_reformatted = reformat(results)
+    results = testbench.get_results()
+    ins, outs = results
+    mode = 0
+    results_reformatted = [ins[mode], outs[mode]]
+    #print('outs reformatted')
+    #print(results_reformatted[1])
 
     #print('printing results')
     #for r in results:
@@ -202,16 +192,29 @@ def test_simple_parameterized():
     print('\nD')
 
     stats = regression.get_statistics()
-    for dv in ['my_out', 'vdd_internal']:
-        print(f'Stats for {dv}')
-        print(regression.get_summary()[dv])
+
+    #for dv in ['my_out', 'vdd_internal']:
+    #    print(f'Stats for {dv}')
+    #    print(regression.get_summary()[dv])
     #tf = get_tf(stats)
 
     #print('Plotting results')
     #plot(results, tf)
 
+
+    print(regression.get_summary()['my_out'])
+    #print(regression.get_summary()['vdd_internal'])
+
+    print('Plotting results')
+    #plot(results_reformatted, tf)
+    temp = regression.model_ols
+    #print(temp)
+    temp = temp['my_out']
+    print(iv_names)
+    plot2(results_reformatted, temp, in_dim=0)
+
     
 if __name__ == '__main__':
-    test_simple()
-    #test_simple_parameterized()
+    #test_simple()
+    test_simple_parameterized()
 

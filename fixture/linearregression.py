@@ -132,7 +132,7 @@ class LinearRegressionSM(LinearRegression):
       TODO: How to extract covariance
     '''
     def clean_chars(w):
-        return w.replace('<','_').replace('>','_')
+        return w.replace('[','_').replace(']','_')
     dvs = [clean_chars(x) for x in dvs]
     ivs = [clean_chars(x) for x in ivs]
 
@@ -145,8 +145,8 @@ class LinearRegressionSM(LinearRegression):
     
     #print('data\n')
     #print(data)
-    #print('transpose of data[0]')
-    #print(transpose(data[0]))
+    #print('transpose of data[1]')
+    #print(transpose(data[1]))
     
     self.iv = {iv:xs for iv, xs in zip(ivs, transpose(data[0]))}
     self.dv = {dv:ys for dv, ys in zip(dvs, transpose(data[1]))}
@@ -466,6 +466,10 @@ class LinearRegressionSM(LinearRegression):
         predictors = {} # key: dep. var, value: list of variables in the formula
     '''
     df = pd.DataFrame(dict(list(self.iv.items())+list(self.dv.items()))) # data frame in pandas
+    #print('dataframe')
+    #print(df)
+    #print('dv')
+    #print(self.dv)
     model = dict([ (dv, sm.ols(formula='%s ~ %s' %(dv, formula[dv]), data=df).fit()) for dv in self.dv_iv_map.keys() ])
     predictors = dict([ (dv, list(model[dv].params.keys())) for dv in self.dv_iv_map.keys() ])
     exog  = dict([ (dv, model[dv].model.data.orig_exog) for dv in self.dv_iv_map.keys() ])

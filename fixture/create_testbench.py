@@ -138,7 +138,7 @@ class Testbench():
             self.tester.poke(input_, val)
 
     def set_digital_mode(self, mode):
-        for input_, val in zip(mode, self.dut.inputs_digital):
+        for input_, val in zip(self.dut.inputs_digital, mode):
             self.tester.poke(input_, val)
 
     def set_test_vectors(self, vectors, prescaled = False):
@@ -167,7 +167,7 @@ class Testbench():
         # poke binary analog ports
         zipped = zip(self.dut.inputs_ba, test_vector[self.num_ranged:])
         for input_, val in zipped:
-            poke(input_, val)
+            self.tester.poke(input_, val)
 
 
 
@@ -214,6 +214,19 @@ class Testbench():
         outputs = [x for m,x in outputs_by_mode.items()]
         self.results = (inputs, outputs)
         return self.results
+
+    def get_input_output_names(self):
+        inputs = self.dut.inputs_ranged + self.dut.inputs_ba
+        outputs = self.dut.outputs_analog + self.dut.outputs_digital
+        def clean(x):
+            w = str(x)
+            return w.split('.')[-1]
+        input_names = [clean(x) for x in inputs]
+        output_names = [clean(x) for x in outputs]
+        print('returning', input_names, output_names)
+        return input_names, output_names
+
+
 
 
 
