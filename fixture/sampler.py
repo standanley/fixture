@@ -100,9 +100,9 @@ class Sampler:
         Returns a triply-nested list like the following
         for each 2^D true digital combination:
             for each N/(2^D) vector allocated to that combo:
-                for each input in (analog + dai):
+                for each input in (analog + ba):
                     random sample
-        Example for dig=1, analog=2, dai=3, N=3:
+        Example for dig=1, analog=2, ba=3, N=3:
         [[[.5, .7, 1, 1, 0],
          ], # end digital=0
          [[.2, .9, 1, 0, 0],
@@ -112,14 +112,14 @@ class Sampler:
         '''
         assert isinstance(circuit, TemplateKind), 'For now, can only get samples for a templatized circuit'
         num_analog = len(circuit.inputs_ranged)
-        num_dai = len(circuit.inputs_dai)
+        num_ba = len(circuit.inputs_ba)
         num_digital = len(circuit.inputs_digital)
         input_vectors = []
         modes = 2**num_digital
         for i in range(modes):
             N = num_samples // modes + (2*i)//modes 
             print(N)
-            ss = cls.get_orthogonal_samples(num_analog, num_dai, N)
+            ss = cls.get_orthogonal_samples(num_analog, num_ba, N)
             input_vectors.append(ss)
         return input_vectors
 

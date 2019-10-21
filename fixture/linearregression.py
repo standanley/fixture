@@ -142,6 +142,12 @@ class LinearRegressionSM(LinearRegression):
         return list(zip(*xs))
     LinearRegression.__init__(self, ivs, dvs, data)
     self.dv_iv_map = {dv:ivs for dv in dvs}
+    
+    print('data\n')
+    print(data)
+    print('transpose of data[0]')
+    print(transpose(data[0]))
+    
     self.iv = {iv:xs for iv, xs in zip(ivs, transpose(data[0]))}
     self.dv = {dv:ys for dv, ys in zip(dvs, transpose(data[1]))}
 

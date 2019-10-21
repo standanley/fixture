@@ -48,7 +48,7 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         inputs_ranged = []
         inputs_unspecified = []
         inputs_digital = []
-        inputs_dai = []
+        inputs_ba = []
         outputs_analog =[]
         outputs_digital = []
 
@@ -87,7 +87,7 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
                         inputs_unspecified.append(port)
 
                 elif isinstance(port_type, LinearBitKind):
-                    inputs_dai.append(port)
+                    inputs_ba.append(port)
                 elif isinstance(port_type, magma.BitKind):
                     inputs_digital.append(port)
                 else:
@@ -117,7 +117,7 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         #print(inputs_ranged)
         #print(inputs_unspecified)
         #print(inputs_digital)
-        #print(inputs_dai)
+        #print(inputs_ba)
         #print(outputs_analog)
         #print(outputs_digital)
 
@@ -125,6 +125,6 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         self.inputs_ranged = inputs_ranged
         self.inputs_unspecified = inputs_unspecified
         self.inputs_digital = inputs_digital
-        self.inputs_dai = inputs_dai
+        self.inputs_ba = inputs_ba
         self.outputs_analog = outputs_analog
         self.outputs_digital = outputs_digital

@@ -14,6 +14,11 @@ def reformat(results):
         dvs.append(dv)
     return ivs, dvs
 
+def reformat2(results):
+    # was for [in,out]: for mode: for vec: for pin: x
+    # we swap the first two axes
+    return list(zip(*list(results)))
+
 def get_tf(stats, ivs):
     def tf(x):
         y = 0
@@ -60,22 +65,24 @@ def test_simple():
 
     print('Creating test bench')
     # auto-create vectors for 1 analog dimension
-    vectors = fixture.Sampler.get_samples_for_circuit(MyAmp, 20)
+    vectors = fixture.Sampler.get_samples_for_circuit(MyAmp, 5)
 
     tester = fault.Tester(MyAmp)
-    inputs_outputs, analysis_callback = fixture.add_vectors(tester, vectors)
+    testbench = fixture.Testbench(tester)
+    testbench.set_test_vectors(vectors)
+    testbench.create_test_bench()
 
-    print(f'Running sim, {len(vectors)} test vectors')
+    print(f'Running sim, {len(vectors[0])} test vectors')
     tester.compile_and_run('spice',
         simulator='ngspice',
         model_paths = [Path('tests/spice/myamp.sp').resolve()]
     )
 
     print('Analyzing results')
-    results = analysis_callback(tester)
-    #print(results)
-    results_reformatted = reformat(results)
-    #print(results_reformatted)
+    results = testbench.get_results()
+    print(results)
+    results_reformatted = results#reformat2(results)[0]
+    print(results_reformatted)
 
     iv_names = ['in_']
     dv_names = ['out']
@@ -100,7 +107,7 @@ def test_simple_parameterized():
             'my_out', fault.RealOut,
             'vdd', fixture.RealIn(1.2),
             'vss', fixture.RealIn(0.0),
-            'adi', magma.Array[4, magma.In(fixture.LinearBit)],
+            'ba', magma.Array[4, magma.In(fixture.LinearBit)],
             'adj', fixture.RealIn((.45,.55)),
             'ctrl', magma.In(magma.Bits[2]),
             'vdd_internal', fault.RealOut
@@ -116,7 +123,35 @@ def test_simple_parameterized():
     class MyAmp(UserAmpInterface):
         name = 'myamp_params'
 
-    #temp = MyAmp.adi
+    io = MyAmp.IO
+
+    '''
+    from magma import ArrayKind, Array, Flip
+    from fault import RealKind
+    print(io.items())
+    for name, port in io.items():
+        print('\n'+name)
+        #print('name type', type(name))
+        #print('port type', type(port))
+        #print('port:', port)
+        thing = getattr(MyAmp, name)
+        print('thing type', type(thing))
+        print('thing:', thing)
+        #print()
+        #print(isinstance(port, RealKind))
+        #print(isinstance(type(thing), RealKind))
+        #print(hasattr(port, 'limits'))
+        #print(hasattr(thing, 'limits'))
+        #print(isinstance(port, ArrayKind))
+        #print(isinstance(thing, Array))
+        #print(Flip(thing).isinput())
+        #print(thing.isinput())
+        #print(Flip(port).isinput())
+        print(getattr(thing, 'limits', 'no limits'))
+    '''
+
+
+    #temp = MyAmp.ba
     #print(temp.name)
     #print(type(temp.name))
     #print(type(temp))

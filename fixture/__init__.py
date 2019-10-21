@@ -4,5 +4,5 @@ from .linearregression import LinearRegression, LinearRegressionSM
 #from .templates.simple_amp import SimpleAmpTemplate
 from .templates import *
 from .real_types import RealIn, LinearBit
-from .create_testbench import add_vectors
+from .create_testbench import Testbench
 
