@@ -185,7 +185,8 @@ class LinearRegressionSM(LinearRegression):
       Select terms from a full expansion list by observing the Normalized Input Sensitivity (NIS) in [%]
       NIS >= threhold in [%]
     '''
-    threshold = self._option[self._tenv.regression_sval_threshold]
+    # TODO a new way to do options
+    threshold = 0.01 #self._option[self._tenv.regression_sval_threshold]
     norm_s = self.get_normalized_sensitivity()
     dv = self.get_response()
     predictors = self.get_predictors()

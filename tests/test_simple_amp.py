@@ -30,10 +30,6 @@ def get_tf(stats, ivs):
     return tf
 
 def plot_errors(x, y1, y2):
-    #print('plotting errors')
-    #print(x)
-    #print(y1)
-    #print(y2)
     import matplotlib.pyplot as plt
     for a,b,c in zip(x, y1, y2):
         d = '-g' if c > b else '-r'
@@ -46,8 +42,6 @@ def plot2(results, statsmodels, in_dim=0):
     xs = [x[in_dim] for x in xs]
     ys = [y[0] for y in ys]
     estimated = statsmodels.fittedvalues
-    print('lengths of stuff')
-    print(len(xs), len(ys), len(estimated))
     plot_errors(xs, ys, estimated)
 
     
@@ -115,15 +109,13 @@ def test_simple():
 
     stats = regression.get_statistics()
     print(regression.get_summary()['out'])
-    tf = get_tf(stats, dv_names)
-    tf(5)
 
     print('Plotting results')
-    #plot(results_reformatted, tf)
-    temp = regression.model_ols
-    print(temp)
-    temp = temp['out']
-    plot2(results_reformatted, temp, in_dim=5)
+    tf = get_tf(stats, dv_names)
+    plot(results_reformatted, tf)
+    #temp = regression.model_ols
+    #temp = temp['out']
+    #plot2(results_reformatted, temp, in_dim=5)
 
     
 def test_simple_parameterized():
@@ -174,43 +166,21 @@ def test_simple_parameterized():
     ins, outs = results
     mode = 0
     results_reformatted = [ins[mode], outs[mode]]
-    #print('outs reformatted')
-    #print(results_reformatted[1])
-
-    #print('printing results')
-    #for r in results:
-    #    print(r)
-    #print('\nA')
-    #print(results_reformatted)
 
     iv_names, dv_names = inputs_outputs
-    #formula = {'out':'in_ + I(in_**2) + I(in_**3)'}
-    print('\nB')
     regression = fixture.LinearRegressionSM(iv_names, dv_names, results_reformatted)
-    print('\nC')
     regression.run()
-    print('\nD')
+    suggested_formula = regression.suggest_model_using_sensitivity()
+    regression.run(suggested_formula)
 
     stats = regression.get_statistics()
-
-    #for dv in ['my_out', 'vdd_internal']:
-    #    print(f'Stats for {dv}')
-    #    print(regression.get_summary()[dv])
-    #tf = get_tf(stats)
-
-    #print('Plotting results')
-    #plot(results, tf)
-
 
     print(regression.get_summary()['my_out'])
     #print(regression.get_summary()['vdd_internal'])
 
     print('Plotting results')
-    #plot(results_reformatted, tf)
     temp = regression.model_ols
-    #print(temp)
     temp = temp['my_out']
-    print(iv_names)
     plot2(results_reformatted, temp, in_dim=0)
 
     

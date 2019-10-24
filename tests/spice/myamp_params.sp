@@ -9,14 +9,14 @@
 
 M1 my_out my_in vss vss EENMOS w=0.4u l=0.1u
 R1 vdd_internal N001 8k
-R2 N001 N002 0k
+R2 N001 N002 1k
 M6 vdd ctrl<0> vdd_internal vdd_internal EEPMOS w=4u l=.1u
 M7 my_out adj N005 N005 EENMOS w=0.4u l=0.1u
 M8 N005 ctrl<1> vss vss EENMOS w=4u l=0.1u
 M2 N001 ba<0> N002 N002 EEPMOS w=1u l=.1u
-R3 N002 N003 0k
+R3 N002 N003 1k
 M3 N002 ba<1> N003 N003 EEPMOS w=1u l=.1u
-R4 N003 N004 0k
+R4 N003 N004 2k
 M4 N003 ba<2> N004 N004 EEPMOS w=1u l=.1u
 R5 N004 my_out 4k
 M5 N004 ba<3> my_out my_out EEPMOS w=1u l=.1u

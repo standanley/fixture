@@ -117,7 +117,7 @@ class Sampler:
         input_vectors = []
         modes = 2**num_digital
         for i in range(modes):
-            N = num_samples // modes + (2*i)//modes 
+            N = num_samples // modes + ((num_samples%modes)*i)//modes 
             print(N)
             ss = cls.get_orthogonal_samples(num_analog, num_ba, N)
             input_vectors.append(ss)
