@@ -3,11 +3,15 @@ import fault
 from pathlib import Path
 import random
 
+def transpose(x):
+    return list(zip(*list(x)))
+
 def transpose_special(vecs):
-    xss, yss = zip(*vecs)
-    yss_temp = [[float(y) for y in ys] for ys in yss]
-    yss = list(zip(*yss_temp))
-    xss = list(zip(*xss))
+    # comes in as  (TODO: the comment in create_testbench is wrong!)
+    # [in,out]: mode: vec: pin: x
+    ins, outs = vecs
+    xss = transpose(ins[0])
+    yss = transpose(outs[0])
     return [xss, yss]
 
 def plot(results):
@@ -41,30 +45,32 @@ def simple_amp_tester(vectors):
 
 
     tester = fault.Tester(MyAmp)
-    inputs_outputs, callback = fixture.add_vectors(tester, vectors)
+    testbench = fixture.Testbench(tester)
+    testbench.set_test_vectors(vectors)
+    testbench.create_test_bench()
     tester.compile_and_run('spice',
         simulator='ngspice',
         model_paths = [Path('tests/spice/myamp.sp').resolve()]
     )
-    results = callback(tester)
+    results = testbench.get_results()
     #print(inputs_outputs)
     return results
 
 def test_tiny():
-
-    vectors = [(0.7,), (0.8,)]
+    # one list of vectors for each digital mode
+    vectors = [[(0.7,), (0.8,)]]
     results = simple_amp_tester(vectors)
     print(results)
 
 def test_many():
-    vectors = [(random.random(),) for _ in range(20)]
+    vectors = [[(random.random(),) for _ in range(20)]]
     results = simple_amp_tester(vectors)
     #print(results[:10])
     #print(results)
     plot(results)
 
 def test_with_sampler():
-    vectors = fixture.Sampler.get_orthogonal_samples(1, 0, 20)
+    vectors = [fixture.Sampler.get_orthogonal_samples(1, 0, 20)]
     print(vectors)
     #exit()
     results = simple_amp_tester(vectors)
