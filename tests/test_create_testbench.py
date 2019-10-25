@@ -7,11 +7,6 @@ def transpose(x):
     return list(zip(*list(x)))
 
 def transpose_special(vecs):
-    print('TRANSPOSE')
-    print(len(vecs))
-    print(len(vecs[0]))
-    print(len(vecs[0][0]))
-    print(len(vecs[0][0][0]))
     # comes in as  (TODO: the comment in create_testbench is wrong!)
     # [in,out]: mode: vec: pin: x
     ins, outs = vecs
