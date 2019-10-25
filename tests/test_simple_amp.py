@@ -38,6 +38,8 @@ def plot_errors(x, y1, y2):
     plt.show()
 
 def plot2(results, statsmodels, in_dim=0):
+    if __name__ != '__main__':
+        return
     xs, ys = results
     xs = [x[in_dim] for x in xs]
     ys = [y[0] for y in ys]
