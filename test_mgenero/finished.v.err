@@ -1,0 +1,124 @@
+
+@{
+execfile("/home/dstanley/research/DaVE/dave/mgenero/api_mgenero.py")}@
+
+@{
+lm_param = {'test1': {'slice_point': [{'mode': {'dummy_digitalmode': 0}, 'coef': {'offset': 0.65}}]}}
+
+def mode_exists(testname): # return False if there is only 'dummy_digitalmode' in a test, testname
+  param = globals()['lm_param']
+  response = param[testname][param[testname].keys()[0]][0]
+  if response['mode'].keys()==['dummy_digitalmode']:
+    return False
+  else:
+    return True
+
+def get_lm_coef(testname, dv, iv, mode={'dummy_digitalmode':0}):
+  ''' 
+      testname: test name
+      dv: generic output response name (metric) 
+      iv: generic analog control input in test.cfg
+      mode: dict of true digital input vector in test.cfg
+  '''
+  param = globals()['lm_param']
+  if dv in param[testname].keys():
+    for v in param[testname][dv]:
+      if v['mode']==mode:
+        if iv in v['coef'].keys():
+          return v['coef'][iv]
+        else:
+          return None
+    return None
+  else:
+    return None
+
+def get_terms(testname, dv, mode={'dummy_digitalmode':0}):
+  ''' return a list of terms for dependent variable dv 
+      Note that A, B, A:B are all different terms
+  '''
+  param = globals()['lm_param']
+  if dv in param[testname].keys():
+    for v in param[testname][dv]:
+      if v['mode']==mode:
+        return v['coef'].keys()
+    return None
+  else:
+    return None
+
+def get_lm_equation_modes(testname, dv):
+  ''' return a list of a dictionary where the dictionary is a mode '''
+  param = globals()['lm_param'][testname][dv]
+  return [k['mode'] for k in param]
+
+def replace_lm_variable_name(t):
+  ''' replace variable name in linear equation by looking up variable_map if exists '''
+  if t in variable_map.keys():
+    return variable_map[t]
+  elif Pin.is_exist(t):
+    if Pin.datatype(t) == 'pwl':
+      return PWL.get_real(t)
+    else:
+      return t
+  else:
+    return t
+
+def get_lm_equation(testname, dv, mode={'dummy_digitalmode':0}, default='0.0'):
+  ''' return a linear equation of dv as a function of inputs
+      note that there is a suffix of '_r' for every independent variable in the resultant equation
+      of which pin has a datatype of pwl
+  '''
+  try:
+    import re
+    from dave.common.misc import flatten_list
+    param = globals()['lm_param']
+    _terms = get_terms(testname, dv, mode) # terms from linear regression
+    _coefs = [get_lm_coef(testname, dv, iv, mode) for iv in _terms]
+  
+    def get_unit_terms(term):
+      ''' extact variables. For example, ctl1*ctl2 will produce [ctl1,ctl2] '''
+      return [f for f in term.split('*') if len(f) >0 and f[0].isalpha()]
+  
+    _port = sorted(list(set(flatten_list([get_unit_terms(t) for t in _terms]))-set(['offset']))) # all the unit independent variables from linear regression results
+    _varl = [replace_lm_variable_name(t) for t in _port]
+  
+    equation = '+'.join(['%s*%s' %(str(_coefs[i]),t) if t!='offset' else str(_coefs[i]) for i,t in enumerate(_terms)]).replace('+-','-')
+    for i,v in enumerate(_port):
+      equation = re.sub(r'\b%s\b' % v, _varl[i], equation)
+    return equation
+  except:
+    return default
+
+
+}@
+/***********
+* template made quickly by Daniel
+* For demoing the rx with a slicer
+***********/
+
+// the declaratino comes straight from one of Byong's templates
+module @(Module.name()) #(
+// parameters here
+  @(Module.parameters())
+) (
+  @(Module.pins())
+);
+
+`get_timeunit
+PWLMethod pm=new;
+
+@Pin.print_map() @# map between user pin names and generic ones
+
+
+// now parts that Daniel wrote
+
+real slice_point = @get_lm_equation('test1', 'slice_point');
+real in_real;
+
+pwl2real converter(
+	.in(in_),
+	.out(out)
+);
+
+always @@(*) begin
+	out <= in_real < slice_point;
+end
