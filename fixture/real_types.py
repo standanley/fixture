@@ -4,12 +4,31 @@ from magma.port import Port, INPUT, OUTPUT, INOUT
 
 
 # this is a little strange since the types are actually classes, not instances
+# When the user says Thing(args) they feel like they're instantiating a class
+# Really they want to be instantiating a metaclass
+# But really really they're just calling a generator function
 
+class RealKind2(fault.RealKind):
+    # TODO we should probably override qualify as well
+    def flip(cls):
+        if cls.isoriented(INPUT):
+            return RealOut(getattr(cls, 'limits', None))
+        elif cls.isoriented(OUTPUT):
+            return RealIn(getattr(cls, 'limits', None))
+        return cls
 
 def RealIn(limits=None):
-    temp = fault.real_type.MakeReal(direction=magma.port.INPUT)
+    kwargs = {'direction':magma.port.INPUT}
+    temp = RealKind2('Real', (fault.real_type.RealType,), kwargs)
     temp.limits = limits
     return temp
+
+def RealOut(limits=None):
+    kwargs = {'direction':magma.port.OUTPUT}
+    temp = RealKind2('Real', (fault.real_type.RealType,), kwargs)
+    temp.limits = limits
+    return temp
+
 
 '''
 class LinearBit(magma.Bit):
@@ -32,12 +51,12 @@ class LinearBitKind(magma.BitKind):
             return LinearBitInOut
         return cls
 
-def flip(cls):
-    if cls.isoriented(INPUT):
-        return LinearBitOut
-    elif cls.isoriented(OUTPUT):
-        return LinearBitIn
-    return cls
+    def flip(cls):
+        if cls.isoriented(INPUT):
+            return LinearBitOut
+        elif cls.isoriented(OUTPUT):
+            return LinearBitIn
+        return cls
 
 
 def MakeLinearBit(**kwargs):
