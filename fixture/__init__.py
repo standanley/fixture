@@ -5,4 +5,4 @@ from .linearregression import LinearRegression, LinearRegressionSM
 from .templates import *
 from .real_types import RealIn, LinearBit
 from .create_testbench import Testbench
-
+from .dump_yaml import dummy_dump

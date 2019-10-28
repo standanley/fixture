@@ -111,6 +111,11 @@ def test_simple():
     trip = fixture.templates.ContinuousComparatorTemplate.get_tripping_point((my_ins, my_outs))
     print('Measured trip point is', trip)
 
+    trip_expression = {'coef':{'offset':trip}}
+    params = {'slice_point':[trip_expression]}
+    filename = 'test_comparator_output.yaml'
+    fixture.dummy_dump(params, filename)
+
     #iv_names = ['in_']
     #dv_names = ['out']
     #formula = {'out':'in_ + I(in_**2) + I(in_**3)'}
