@@ -212,8 +212,8 @@ class Testbench():
             outputs_by_mode[m].append(result)
         inputs = [x for m,x in inputs_by_mode.items()]
         outputs = [x for m,x in outputs_by_mode.items()]
-        self.results = (inputs, outputs)
-        print('Number of modes is', len(inputs_by_mode))
+        self.results = list(zip(inputs, outputs))
+        print('Number of modes is', len(self.results))
         return self.results
 
     def get_input_output_names(self):

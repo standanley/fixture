@@ -100,8 +100,7 @@ def test_simple():
 
     print('Analyzing results')
     results = testbench.get_results()
-    ins, outs = results
-    results_reformatted = [ins[0], outs[0]]
+    results_reformatted = results[0]
 
     iv_names = ['in_']
     dv_names = ['out']
@@ -165,9 +164,8 @@ def test_simple_parameterized():
 
     print('Analyzing results')
     results = testbench.get_results()
-    ins, outs = results
     mode = 0
-    results_reformatted = [ins[mode], outs[mode]]
+    results_reformatted = results[mode]
 
     iv_names, dv_names = inputs_outputs
     regression = fixture.LinearRegressionSM(iv_names, dv_names, results_reformatted)
