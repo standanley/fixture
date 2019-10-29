@@ -7,11 +7,11 @@ def transpose(x):
     return list(zip(*list(x)))
 
 def transpose_special(vecs):
-    # comes in as  (TODO: the comment in create_testbench is wrong!)
-    # [in,out]: mode: vec: pin: x
-    ins, outs = vecs
-    xss = transpose(ins[0])
-    yss = transpose(outs[0])
+    # comes in as
+    # mode: [in,out]: vec: pin: x
+    ins, outs = vecs[0] # only use 0th mode
+    xss = transpose(ins)
+    yss = transpose(outs)
     return [xss, yss]
 
 def plot(results):
