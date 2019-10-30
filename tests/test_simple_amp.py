@@ -1,5 +1,4 @@
 import fixture
-from fixture.real_types import LinearBitKind
 import fault
 import magma
 from pathlib import Path
@@ -127,7 +126,7 @@ def test_simple_parameterized():
             'my_out', fault.RealOut,
             'vdd', fixture.RealIn(1.2),
             'vss', fixture.RealIn(0.0),
-            'ba', magma.Array[4, magma.In(fixture.LinearBit)],
+            'ba', magma.Array[4, magma.In(fixture.BinaryAnalog())],
             'adj', fixture.RealIn((.45,.55)),
             'ctrl', magma.In(magma.Bits[2]),
             'vdd_internal', fault.RealOut

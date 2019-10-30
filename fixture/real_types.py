@@ -50,7 +50,7 @@ def Real(limits=None):
 
 
 '''
-class LinearBit(magma.Bit):
+class BinaryAnalog(magma.Bit):
     # this doesn't work because init is never called
     #def __init__(self, *largs, **kwargs):
     #    super().__init(largs, kwargs)
@@ -58,41 +58,51 @@ class LinearBit(magma.Bit):
     pass
 '''
 
-class LinearBitKind(magma.BitKind):
+class BinaryAnalogKind(magma.BitKind):
     def qualify(cls, direction):
         if direction is None:
-            return LinearBit
+            return BinaryAnalog
         elif direction == INPUT:
-            return LinearBitIn
+            return BinaryAnalogIn
         elif direction == OUTPUT:
-            return LinearBitOut
+            return BinaryAnalogOut
         elif direction == INOUT:
-            return LinearBitInOut
+            return BinaryAnalogInOut
         return cls
 
     def flip(cls):
         if cls.isoriented(INPUT):
-            return LinearBitOut
+            return BinaryAnalogOut
         elif cls.isoriented(OUTPUT):
-            return LinearBitIn
+            return BinaryAnalogIn
         return cls
 
 
-def MakeLinearBit(**kwargs):
-    return LinearBitKind('LinearBit', (magma.BitType,), kwargs)
+def MakeBinaryAnalog(**kwargs):
+    return BinaryAnalogKind('BinaryAnalog', (magma.BitType,), kwargs)
 
 
-LinearBit = MakeLinearBit()
-LinearBitIn = MakeLinearBit(direction=INPUT)
-LinearBitOut = MakeLinearBit(direction=OUTPUT)
-LinearBitInOut = MakeLinearBit(direction=INOUT)
+# TODO this is ugly now because BinaryAnalog is a funciton to return the type,
+# while BinaryAnalogIn is just the type itself
+def BinaryAnalog(limits=None):
+    assert limits==None, 'Bit type cannot have limits'
+    return MakeBinaryAnalog()
+
+#BinaryAnalog = MakeBinaryAnalog()
+BinaryAnalogIn = MakeBinaryAnalog(direction=INPUT)
+BinaryAnalogOut = MakeBinaryAnalog(direction=OUTPUT)
+BinaryAnalogInOut = MakeBinaryAnalog(direction=INOUT)
 
 def Bit(limits=None):
     assert limits==None, 'Bit type cannot have limits'
     return magme.Bit
+
+def Array(n, t):
+    return magma.Array[n, t]
 
 ''' Make more acceptable type names for .yaml files '''
 bit = Bit
 real = Real
 input = magma.In
 output = magma.Out
+binary_analog = BinaryAnalog
