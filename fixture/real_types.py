@@ -95,7 +95,7 @@ BinaryAnalogInOut = MakeBinaryAnalog(direction=INOUT)
 
 def Bit(limits=None):
     assert limits==None, 'Bit type cannot have limits'
-    return magme.Bit
+    return magma.Bit
 
 def Array(n, t):
     return magma.Array[n, t]

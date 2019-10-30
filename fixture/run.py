@@ -26,16 +26,15 @@ def edit_paths(config_dict, config_filename, params):
         config_dict[param] = new
         print('changed path', old, 'to', new)
 
-def run(circuit_config_filename):
+def run(circuit_config_filename, test_config_filename):
     with open(circuit_config_filename) as f:
         circuit_config_dict = yaml.safe_load(f)
+    with open(test_config_filename) as f:
+        test_config_dict = yaml.safe_load(f)
     edit_paths(circuit_config_dict, circuit_config_filename, ['filepath'])
-    #for p in circuit_config_dict['pin']:
-    #    print(p)
-    #    print(circuit_config_dict['pin'][p])
-    _run(circuit_config_dict)
+    _run(circuit_config_dict, test_config_dict)
 
-def _run(circuit_config_dict):
+def _run(circuit_config_dict, test_config_dict):
     template = getattr(templates, circuit_config_dict['template'])
 
     # generate IO
@@ -60,8 +59,7 @@ def _run(circuit_config_dict):
                 if 'template_pin' in p:
                     setattr(self, p['template_pin'], getattr(self, name))
 
-    vectors = sampler.Sampler.get_samples_for_circuit(UserCircuit, 5)
-    print(vectors)
+    vectors = sampler.Sampler.get_samples_for_circuit(UserCircuit, 200)
 
     tester = fault.Tester(UserCircuit)
     testbench = create_testbench.Testbench(tester)
@@ -69,8 +67,8 @@ def _run(circuit_config_dict):
     testbench.create_test_bench()
 
     print(f'Running sim, {len(vectors[0])} test vectors')
-    tester.compile_and_run('spice',
-        simulator='ngspice',
+    tester.compile_and_run(test_config_dict['target'],
+        simulator=test_config_dict['simulator'],
         model_paths = [Path(circuit_config_dict['filepath']).resolve()]
     )
 
@@ -90,5 +88,6 @@ def _run(circuit_config_dict):
 if __name__ == '__main__':
     args = sys.argv
     circuit_config_filename = args[1]
-    run(circuit_config_filename)
+    test_config_filename = args[2]
+    run(circuit_config_filename, test_config_filename)
 

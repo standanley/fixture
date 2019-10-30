@@ -23,6 +23,10 @@ pin:
         direction: input
         datatype: binary_analog
         width: 4
+    ctrl:
+        direction: input
+        datatype: bit
+        width: 2
     out:
         direction: output
         datatype: real
