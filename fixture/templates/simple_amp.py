@@ -5,6 +5,7 @@ from fixture import TemplateMaster
 class SimpleAmpTemplate(TemplateMaster):
     __name__ = 'abc123'
     required_ports = ['in_single', 'out_single']
+    parameter_algebra = 'out_single ~ gain:in_single + offset'
 
     @classmethod
     def run_single_test(self, tester):
@@ -22,4 +23,6 @@ class SimpleAmpTemplate(TemplateMaster):
             tester.result_counter += 1
         # for an amp, for now, no post-processing is required
         return results
+
+    
 

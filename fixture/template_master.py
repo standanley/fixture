@@ -1,6 +1,7 @@
 from magma import *
 import fault
 from .real_types import BinaryAnalogKind
+import re
 
 class TemplateKind(circuit.DefineCircuitKind):
 
@@ -128,3 +129,29 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         self.inputs_ba = inputs_ba
         self.outputs_analog = outputs_analog
         self.outputs_digital = outputs_digital
+
+    @classmethod
+    def parse_parameter_algebra(self, f):
+        #prog = re.compile('.*~((\w+(:.+)?)\+?)+')
+        prog = re.compile('\s*(\+|~)\s*')
+        tokens = re.split(prog, f)
+        assert len(tokens)>=3, 'Equation "%s" is incomplete' % f
+        assert tokens[1]=='~', 'Equation "%s" missing/misplaced "~"' % f
+
+        lhs = tokens[0]
+        rhs = {}
+        for i in range(2, len(tokens)):
+            if i%2 == 1:
+                assert tokens[i] == '+', 'Equation "%s" missing/misplaced "+"' % f
+                continue
+            term = re.split('\s*:\s*', tokens[i], 1)
+            p = term[0]
+            assert re.match('\w+', p), 'Term to the left of ":" should be param in "%s' % p
+            if len(term) == 1:
+                rhs['1'] = term[0]
+            else:
+                rhs[term[1]] = term[0]
+        return (lhs, rhs)
+
+
+
