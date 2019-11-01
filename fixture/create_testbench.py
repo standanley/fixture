@@ -196,23 +196,26 @@ class Testbench():
 
     def get_results(self):
         ''' Return results in the following format:
-        for mode: for [in, out]: for vector: for pin: x
+        for mode: for [in, out]: {pin:[x1, x2, x3, ...], }
         '''
+
+        input_names, output_names = self.get_input_output_names()
+        def append_vector(orig, data, pins):
+            for x, p in zip(data, pins):
+                orig[p] = orig.get(p, []) + [x]
+
         self.results_raw = self.tester.targets['spice'].saved_for_later
         self.results_raw = [float(x) for x in self.results_raw]
-        inputs_by_mode = {m:[] for m in self.test_vectors_by_mode}
-        outputs_by_mode = {m:[] for m in self.test_vectors_by_mode}
+        results_by_mode = {m:({}, {}) for m in self.test_vectors_by_mode}
         self.result_counter = 0
         for m, v, fun in self.result_processing_list:
             result = fun(self)
             if not isinstance(result, collections.Sequence):
                 result = [result]
                 # TODO I think we should assert fail here rather than try to fix it
-            inputs_by_mode[m].append(v)
-            outputs_by_mode[m].append(result)
-        inputs = [x for m,x in inputs_by_mode.items()]
-        outputs = [x for m,x in outputs_by_mode.items()]
-        self.results = list(zip(inputs, outputs))
+            append_vector(results_by_mode[m][0], v, input_names)
+            append_vector(results_by_mode[m][1], result, output_names)
+        self.results = [x for m,x in results_by_mode.items()]
         print('Number of modes is', len(self.results))
         return self.results
 

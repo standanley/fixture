@@ -3,20 +3,8 @@ import fault
 import magma
 from pathlib import Path
 
-def reformat(results):
-    ivs = []
-    dvs = []
-    for result in results:
-        iv, dv = result
-        ivs.append(iv)
-        #dvs.append([float(dv_component) for dv_component in dv])
-        dvs.append(dv)
-    return ivs, dvs
-
-def reformat2(results):
-    # was for [in,out]: for mode: for vec: for pin: x
-    # we swap the first two axes
-    return list(zip(*list(results)))
+def transpose(x):
+    return list(zip(*list(x)))
 
 def get_tf(stats, ivs):
     def tf(x):
@@ -40,8 +28,10 @@ def plot2(results, statsmodels, in_dim=0):
     if __name__ != '__main__':
         return
     xs, ys = results
-    xs = [x[in_dim] for x in xs]
-    ys = [y[0] for y in ys]
+    x_key = list(xs)[in_dim]
+    y_key = list(ys)[0]
+    xs = xs[x_key]
+    ys = ys[y_key]
     estimated = statsmodels.fittedvalues
     plot_errors(xs, ys, estimated)
 
@@ -51,10 +41,9 @@ def plot(results, tf):
     if __name__ != '__main__':
         return
     import matplotlib.pyplot as plt
-    #xs, ys = zip(*results)
-    #xs = [x[0] for x in xs]
-    #ys = [y[0] for y in ys]
     xs, ys = results
+    xs = transpose([x[k] for k in x])
+    ys = transpose([y[k] for k in y])
     plt.plot(xs, ys, '*')
     xs.sort()
     plt.plot(xs, [tf(x[0]) for x in xs], '--')
