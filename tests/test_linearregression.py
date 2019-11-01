@@ -1,17 +1,20 @@
 from fixture import LinearRegression, LinearRegressionSM
 import random
 
-def gen_data(ivs, dvs, N, fun, noisy=True):
-    dims = len(ivs)
-    ivs = []
-    dvs = []
+def gen_data(iv_names, dv_names, N, fun, noisy=True):
+    dims = len(iv_names)
+    ivs = {n:[] for n in iv_names}
+    dvs = {n:[] for n in dv_names}
     for i in range(N):
-        x = [random.random() for _ in range(dims)]
-        ivs.append(x)
-        dvs.append(list(fun(*x)))
+        xs = [random.random() for _ in range(dims)]
+        for iv, x in zip(iv_names, xs):
+            ivs[iv].append(x) 
+        ys = list(fun(*xs))
         if noisy:
-            for i in range(len(dvs[-1])):
-                dvs[-1][i] += random.random()*.05
+            for i in range(len(ys)):
+                ys[i] += random.random()*.05
+        for dv, y in zip(dv_names, ys):
+            dvs[dv].append(y) 
     return ivs, dvs
 
 def test_simple():

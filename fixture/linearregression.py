@@ -133,8 +133,11 @@ class LinearRegressionSM(LinearRegression):
     '''
     def clean_chars(w):
         return w.replace('[','_').replace(']','_')
+    def clean_dict(d):
+        return {clean_chars(k):v for k,v in d.items()}
     dvs = [clean_chars(x) for x in dvs]
     ivs = [clean_chars(x) for x in ivs]
+    data = (clean_dict(data[0]), clean_dict(data[1]))
 
     regression_cint_threshold = 0.95
 
@@ -148,8 +151,10 @@ class LinearRegressionSM(LinearRegression):
     #print('transpose of data[1]')
     #print(transpose(data[1]))
     
-    self.iv = {iv:xs for iv, xs in zip(ivs, transpose(data[0]))}
-    self.dv = {dv:ys for dv, ys in zip(dvs, transpose(data[1]))}
+    #self.iv = {iv:xs for iv, xs in zip(ivs, transpose(data[0]))}
+    #self.dv = {dv:ys for dv, ys in zip(dvs, transpose(data[1]))}
+    self.iv = {iv:xs for iv, xs in data[0].items()}
+    self.dv = {dv:ys for dv, ys in data[1].items()}
 
 #    self._ph = port_handler
 

@@ -8,17 +8,17 @@ def transpose(x):
 
 def transpose_special(vecs):
     # comes in as
-    # mode: [in,out]: vec: pin: x
+    # mode: [in,out]: {pin: [x1, ...]}
     ins, outs = vecs[0] # only use 0th mode
-    xss = transpose(ins)
-    yss = transpose(outs)
+    xss = ins['in_']
+    yss = outs['out']
     return [xss, yss]
 
 def plot(results):
     if __name__ == '__main__':
         import matplotlib.pyplot as plt
         res = transpose_special(results)
-        plt.plot(res[0][0], res[1][0], '*')
+        plt.plot(res[0], res[1], '*')
         plt.show()
 
 
