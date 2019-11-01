@@ -1,6 +1,6 @@
 from magma import *
 import fault
-from .real_types import LinearBit, LinearBitKind
+from .real_types import BinaryAnalogKind
 
 class TemplateKind(circuit.DefineCircuitKind):
 
@@ -86,7 +86,7 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
                         # TODO I believe this case is not covered in the test
                         inputs_unspecified.append(port)
 
-                elif isinstance(port_type, LinearBitKind):
+                elif isinstance(port_type, BinaryAnalogKind):
                     inputs_ba.append(port)
                 elif isinstance(port_type, magma.BitKind):
                     inputs_digital.append(port)

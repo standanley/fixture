@@ -1,7 +1,7 @@
 import math
 import itertools
 import random
-from .template_master import TemplateKind
+from fixture.template_master import TemplateKind
 
 class Sampler:
     def rand():
