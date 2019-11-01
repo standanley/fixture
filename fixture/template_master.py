@@ -132,26 +132,59 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
 
     @classmethod
     def parse_parameter_algebra(self, f):
-        #prog = re.compile('.*~((\w+(:.+)?)\+?)+')
-        prog = re.compile('\s*(\+|~)\s*')
-        tokens = re.split(prog, f)
-        assert len(tokens)>=3, 'Equation "%s" is incomplete' % f
-        assert tokens[1]=='~', 'Equation "%s" missing/misplaced "~"' % f
-
-        lhs = tokens[0]
+        ''' Parse a formula to find coefficients of params.
+        I didn't want to write my own parser but we do need to understand
+        parentheses so regex isn't good enough, and patsy won't parse it
+        unless it knows all the variable names ahead of time.
+        Ex:
+        input : 'out_single ~ gain:in_single + offset'
+        output: ('out_single', {'in_single': 'gain', '1': 'offset'})
+        '''
+        depth = 0
+        prev = 0
+        STATE = 'lhs'
         rhs = {}
-        for i in range(2, len(tokens)):
-            if i%2 == 1:
-                assert tokens[i] == '+', 'Equation "%s" missing/misplaced "+"' % f
-                continue
-            term = re.split('\s*:\s*', tokens[i], 1)
-            p = term[0]
-            assert re.match('\w+', p), 'Term to the left of ":" should be param in "%s' % p
-            if len(term) == 1:
-                rhs['1'] = term[0]
-            else:
-                rhs[term[1]] = term[0]
-        return (lhs, rhs)
+        
+        def get_param():
+            param = f[prev+1:i].strip()
+            # TODO: check for non \w chars
+            return param
 
+        for i, char in enumerate(f + '+'):
+            if char == '(':
+                depth += 1
+            elif char == ')':
+                depth -= 1
+            if depth != 0:
+                continue
+
+            if STATE == 'lhs':
+                if char == '~':
+                    lhs = f[:i].strip()
+                    prev = i
+                    STATE = 'param'
+                    print('going to param after', lhs)
+            elif STATE == 'param':
+                if char == ':':
+                    param = get_param()
+                    prev = i
+                    STATE = 'expr'
+                    print('going to expr after', param)
+                elif char == '+':
+                    param = get_param()
+                    rhs['1'] = param
+                    prev = i
+                    print('staying param after', param)
+            elif STATE == 'expr':
+                if char == '+':
+                    expr = f[prev+1:i].strip()
+                    prev = i
+                    rhs[expr] = param
+                    STATE = 'param'
+                    print('giong to param after ', expr)
+        assert depth == 0, 'Unmatched paren in formula "%s"' % f
+        assert STATE == 'param', 'Unexpected end while parsing formula "%s"' % f
+
+        return (lhs, rhs)
 
 
