@@ -9,7 +9,12 @@ from magma.port import Port, INPUT, OUTPUT, INOUT
 # But really really they're just calling a generator function
 
 class RealKind2(fault.RealKind):
+    def __init__(cls, name, bases, dct):
+        super().__init__(name, bases, dct)
+        print('in eralkind init')
+
     def flip(cls):
+        print('My FLIP')
         if cls.isoriented(INPUT):
             return RealOut(getattr(cls, 'limits', None))
         elif cls.isoriented(OUTPUT):
@@ -17,6 +22,7 @@ class RealKind2(fault.RealKind):
         return cls
 
     def qualify(cls, direction):
+        print('My QUALIFY')
         if direction is None:
             return Real(getattr(cls, 'limits', None))
         elif direction == INPUT:
@@ -27,23 +33,31 @@ class RealKind2(fault.RealKind):
             raise NotImplementedError
             #return RealInOut(getattr(cls, 'limits', None))
         return cls
+    def __eq__(self, rhs):
+        print('MY COMPARISON')
+        return True
+
+class RealType2(fault.real_type.RealType):
+    def __eq__(self, rhs):
+        return self.name == rhs.name
 
 def RealIn(limits=None):
     kwargs = {'direction':magma.port.INPUT}
-    temp = RealKind2('Real', (fault.real_type.RealType,), kwargs)
+    temp = RealKind2('Real', (RealType2,), kwargs)
+    print('made temp, type is', type(temp))
     temp.limits = limits
     return temp
 
 def RealOut(limits=None):
     kwargs = {'direction':magma.port.OUTPUT}
-    temp = RealKind2('Real', (fault.real_type.RealType,), kwargs)
+    temp = RealKind2('Real', (RealType2,), kwargs)
     temp.limits = limits
     return temp
 
 def Real(limits=None):
     print('creating a real with no direction and limits', limits)
     kwargs = {}
-    temp = RealKind2('Real', (fault.real_type.RealType,), kwargs)
+    temp = RealKind2('Real', (RealType2,), kwargs)
     temp.limits = limits
     return temp
 

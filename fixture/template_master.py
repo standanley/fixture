@@ -37,6 +37,7 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         # maybe expect the template creator to override this?
         return '\n'.join([str(port) for port in self.required_ports])
 
+
     # gets called when someone subclasses a template, checks that all of
     # required_ports got mapped to in mapping
     def check_required_ports(self):
@@ -53,8 +54,15 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         outputs_analog =[]
         outputs_digital = []
 
+        required_mappings = [getattr(self, r).name for r in self.required_ports]
 
         def sort_port(port):
+            print('PORT IS', port)
+            #if any(port == getattr(self, required) for required in self.required_ports):
+            #if any(port.name == required for required in self.required_ports):
+            if any(port.name == rn for rn in required_mappings):
+                # required ports don't go into these lists
+                return
             if isinstance(port, Array):
                 for i in range(len(port)):
                     sort_port(port[i])
