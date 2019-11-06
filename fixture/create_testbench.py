@@ -215,7 +215,6 @@ class Testbench():
             if not isinstance(result, collections.Sequence):
                 result = [result]
                 # TODO I think we should assert fail here rather than try to fix it
-            print('I have result', result)
             append_vector(results_by_mode[m][0], v, input_names)
             append_vector(results_by_mode[m][1], result, output_names)
         self.results = [x for m,x in results_by_mode.items()]

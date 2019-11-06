@@ -72,7 +72,7 @@ def test_many():
     plot(results)
 
 def test_with_sampler():
-    vectors = [fixture.Sampler.get_orthogonal_samples(1, 0, 5)]
+    vectors = [fixture.Sampler.get_orthogonal_samples(1, 0, 20)]
     print('About to print vectors')
     print(vectors)
     #exit()

@@ -111,7 +111,7 @@ class Sampler:
         ]
         '''
         assert isinstance(circuit, TemplateKind), 'For now, can only get samples for a templatized circuit'
-        num_analog = len(circuit.inputs_ranged)
+        num_analog = len(circuit.inputs_test) + len(circuit.inputs_ranged)
         num_ba = len(circuit.inputs_ba)
         num_digital = len(circuit.inputs_digital)
         input_vectors = []

@@ -9,6 +9,20 @@ class SimpleBufTemplate(TemplateMaster):
     __name__ = 'abc123'
     required_ports = ['in_single', 'out_single']
 
+    @classmethod
+    def specify_test_inputs(self):
+        return []
+    @classmethod
+    def specify_test_outputs(self):
+        return []
+    @classmethod
+    def run_single_test(self, tester, value):
+        pass
+    @classmethod
+    def process_single_test(self, tester):
+        return []
+    
+
 def test_require_required_ports():
     with pytest.raises(AssertionError):
         class BadAmpTemplate(TemplateMaster):
@@ -27,6 +41,29 @@ def test_require_good_mapping():
             def mapping(self):
                 self.in_single = self.my_a
                 # forgot to assign out_single
+
+#def test_require_test_inputs():
+#    with pytest.raises(AssertionError):
+#        class BadInterface(SimpleBufTemplate):
+#            name = 'MyBufInterface'
+#            IO = ['my_in', In(Bit), 'my_out', Out(Bit)]
+#            def mapping(self):
+#                self.in_single = self.my_in
+#                self.out_single = self.my_out
+#            def specify_test_outputs():
+#                return []
+#        
+#def test_require_test_outputs():
+#    with pytest.raises(AssertionError):
+#        class BadInterface(SimpleBufTemplate):
+#            name = 'MyBufInterface'
+#            IO = ['my_in', In(Bit), 'my_out', Out(Bit)]
+#            def mapping(self):
+#                self.in_single = self.my_in
+#                self.out_single = self.my_out
+#            def specify_test_inputs():
+#                return []
+        
 
 def test_required_port_info():
     text = SimpleBufTemplate.required_port_info()
