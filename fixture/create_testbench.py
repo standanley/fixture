@@ -158,7 +158,7 @@ class Testbench():
 
 
 
-    def apply_linear_inputs(self, test_vector):
+    def apply_optional_inputs(self, test_vector):
         # poke analog ports
         zipped = zip(self.dut.inputs_ranged, test_vector[:self.num_ranged])
         for input_, val in zipped:
@@ -169,14 +169,23 @@ class Testbench():
         for input_, val in zipped:
             self.tester.poke(input_, val)
 
+    def read_optional_outputs(self):
+        for port in self.dut.outputs_analog + self.dut.outputs_digital:
+            self.tester.expect(port, 0, save_for_later = True)
 
+    def process_optional_outputs(self):
+        results = []
+        for port in self.dut.outputs_analog + self.dut.outputs_digital:
+            results.append(self.results_raw[self.result_counter])
+            self.result_counter += 1
+        return results
 
     def run_test_vector(self, test_vector):
         num_required = len(self.dut.inputs_test)
         v_required, v_optional = test_vector[:num_required], test_vector[num_required:]
-        self.apply_linear_inputs(v_optional)
+        self.apply_optional_inputs(v_optional)
         self.dut.run_single_test(self.tester, v_required)
-        #self.result_processing_list.append(self.dut.process_single_test)
+        self.read_optional_outputs()
         return self.dut.process_single_test
     
     '''
@@ -215,6 +224,7 @@ class Testbench():
             if not isinstance(result, collections.Sequence):
                 result = [result]
                 # TODO I think we should assert fail here rather than try to fix it
+            result += self.process_optional_outputs()
             append_vector(results_by_mode[m][0], v, input_names)
             append_vector(results_by_mode[m][1], result, output_names)
         self.results = [x for m,x in results_by_mode.items()]
