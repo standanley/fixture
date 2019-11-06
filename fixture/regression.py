@@ -49,7 +49,7 @@ class Regression():
                     #print('going to expr after', param)
                 elif char == '+':
                     param = get_param()
-                    rhs['1'] = param
+                    rhs['constant_ones'] = param
                     prev = i
                     #print('staying param after', param)
             elif STATE == 'expr':
@@ -84,7 +84,7 @@ class Regression():
         interaction_a_ba = False
         interaction_ba_ba = False
 
-        terms = []
+        terms = ['constant_ones']
         for a_port in dut.inputs_ranged:
             a = cls.get_spice_name(a_port)
             for i in range(1, analog_order + 1):
@@ -113,21 +113,41 @@ class Regression():
         return ' + '.join(terms)
 
 
+    @classmethod
+    def clean_string(self, s):
+        return s.replace('<', '_').replace('>', '_')
 
-    def __init__(self, data, params_algebra):
+    def __init__(self, dut, data):
         '''
         Incoming data should be of the form 
         for [in, out]: {pin:[x1, ...], ...}
         '''
         data = {**data[0], **data[1]}
+        data['constant_ones'] = [1 for _ in list(data.values())[0]]
+        data = {self.clean_string(k):v for k,v in data.items()}
         self.df = pandas.DataFrame(data)
+        print(self.df)
 
-        lhs, rhs = Regression.parse_parameter_algebra(params_algebra)
+        params_algebra = dut.parameter_algebra
+        lhs, rhs = self.parse_parameter_algebra(params_algebra)
+        optional_pin_expr = self.get_optional_pin_expression(dut)
+
+        formula = self.make_formula(lhs, rhs, optional_pin_expr)
+        formula = 'amp_output ~ amp_input + adj^2'
+
+        print(formula)
+
+        stats_model = smf.ols(formula, data)
+        results = stats_model.fit()
+        print(results.summary())
+
         
-        
-        formula = 'out = in_:I(1) + 1:1'
-        smf.ols(formula, data)
-        smf.run()
-        print(smf.summary())
+    def make_formula(self, lhs, rhs, optional_pin_expr):
+        terms = []
+        for expr, param in rhs.items():
+            terms.append('%s:(%s)'%(expr, optional_pin_expr))
+
+        formula = '%s ~ %s' % (lhs, ' + '.join(terms))
+        return self.clean_string(formula)
         
 

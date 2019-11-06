@@ -476,6 +476,7 @@ class LinearRegressionSM(LinearRegression):
     #print(df)
     #print('dv')
     #print(self.dv)
+    print('\n\nAbout to call ols with formula rhss, ', formula)
     model = dict([ (dv, sm.ols(formula='%s ~ %s' %(dv, formula[dv]), data=df).fit()) for dv in self.dv_iv_map.keys() ])
     predictors = dict([ (dv, list(model[dv].params.keys())) for dv in self.dv_iv_map.keys() ])
     exog  = dict([ (dv, model[dv].model.data.orig_exog) for dv in self.dv_iv_map.keys() ])
