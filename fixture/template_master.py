@@ -22,8 +22,19 @@ class TemplateKind(circuit.DefineCircuitKind):
             assert hasattr(cls, 'mapping'), 'Subclass of template must provide port mapping'
             # call user's function to associate ports
             cls.mapping(cls)
+
             # check that all the required ports actually got associated
             cls.check_required_ports(cls)
+
+            # determine what random vectors might be needed to run a test
+            assert hasattr(cls, 'specify_test_inputs'), 'Must specify required test inputs'
+            cls.inputs_test = cls.specify_test_inputs()
+
+            # specify the names and number of outputs
+            assert hasattr(cls, 'specify_test_outputs'), 'Must specify required test outputs'
+            cls.outputs_test = cls.specify_test_outputs()
+
+            # sort ports into different lists depending on what kind of stimulus they require
             cls.sort_ports(cls)
 
 
@@ -57,7 +68,6 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         required_mappings = [getattr(self, r).name for r in self.required_ports]
 
         def sort_port(port):
-            print('PORT IS', port)
             #if any(port == getattr(self, required) for required in self.required_ports):
             #if any(port.name == required for required in self.required_ports):
             if any(port.name == rn for rn in required_mappings):
@@ -121,14 +131,14 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
             sort_port(port)
 
         # Save results
-        #print()
-        #print(inputs_pinned)
-        #print(inputs_ranged)
-        #print(inputs_unspecified)
-        #print(inputs_digital)
-        #print(inputs_ba)
-        #print(outputs_analog)
-        #print(outputs_digital)
+        print('\nSaved results from port sorting:')
+        print(inputs_pinned)
+        print(inputs_ranged)
+        print(inputs_unspecified)
+        print(inputs_digital)
+        print(inputs_ba)
+        print(outputs_analog)
+        print(outputs_digital)
 
         self.inputs_pinned = inputs_pinned
         self.inputs_ranged = inputs_ranged

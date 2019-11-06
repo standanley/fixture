@@ -10,8 +10,9 @@ def transpose_special(vecs):
     # comes in as
     # mode: [in,out]: {pin: [x1, ...]}
     ins, outs = vecs[0] # only use 0th mode
-    xss = ins['in_']
-    yss = outs['out']
+    xss = ins['amp_input']
+    print(outs)
+    yss = outs['amp_output']
     return [xss, yss]
 
 def plot(results):
@@ -46,6 +47,7 @@ def simple_amp_tester(vectors):
 
     tester = fault.Tester(MyAmp)
     testbench = fixture.Testbench(tester)
+    print('About to apply vectors')
     testbench.set_test_vectors(vectors)
     testbench.create_test_bench()
     tester.compile_and_run('spice',
@@ -70,7 +72,8 @@ def test_many():
     plot(results)
 
 def test_with_sampler():
-    vectors = [fixture.Sampler.get_orthogonal_samples(1, 0, 20)]
+    vectors = [fixture.Sampler.get_orthogonal_samples(1, 0, 5)]
+    print('About to print vectors')
     print(vectors)
     #exit()
     results = simple_amp_tester(vectors)

@@ -1,5 +1,5 @@
 import fixture
-temp = fixture.template_master.TemplateMaster
+temp = fixture.regression.Regression
 parse = temp.parse_parameter_algebra
 
 def test_amp():

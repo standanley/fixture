@@ -11,10 +11,8 @@ from magma.port import Port, INPUT, OUTPUT, INOUT
 class RealKind2(fault.RealKind):
     def __init__(cls, name, bases, dct):
         super().__init__(name, bases, dct)
-        print('in eralkind init')
 
     def flip(cls):
-        print('My FLIP')
         if cls.isoriented(INPUT):
             return RealOut(getattr(cls, 'limits', None))
         elif cls.isoriented(OUTPUT):
@@ -22,7 +20,6 @@ class RealKind2(fault.RealKind):
         return cls
 
     def qualify(cls, direction):
-        print('My QUALIFY')
         if direction is None:
             return Real(getattr(cls, 'limits', None))
         elif direction == INPUT:
@@ -33,9 +30,6 @@ class RealKind2(fault.RealKind):
             raise NotImplementedError
             #return RealInOut(getattr(cls, 'limits', None))
         return cls
-    def __eq__(self, rhs):
-        print('MY COMPARISON')
-        return True
 
 class RealType2(fault.real_type.RealType):
     def __eq__(self, rhs):
@@ -44,7 +38,6 @@ class RealType2(fault.real_type.RealType):
 def RealIn(limits=None):
     kwargs = {'direction':magma.port.INPUT}
     temp = RealKind2('Real', (RealType2,), kwargs)
-    print('made temp, type is', type(temp))
     temp.limits = limits
     return temp
 
@@ -55,7 +48,6 @@ def RealOut(limits=None):
     return temp
 
 def Real(limits=None):
-    print('creating a real with no direction and limits', limits)
     kwargs = {}
     temp = RealKind2('Real', (RealType2,), kwargs)
     temp.limits = limits
@@ -113,6 +105,20 @@ def Bit(limits=None):
 
 def Array(n, t):
     return magma.Array[n, t]
+
+class TestVectorInput():
+    def __init__(self, limits=None, name='Unnamed test vector input'):
+        assert limits != None, 'Test vector input must have limits'
+        self.limits = limits
+        self.name = name
+    def __str__(self):
+        return self.name
+
+class TestVectorOutput():
+    def __init__(self, name='Unnamed test vector output'):
+        self.name = name
+    def __str__(self):
+        return self.name
 
 ''' Make more acceptable type names for .yaml files '''
 bit = Bit
