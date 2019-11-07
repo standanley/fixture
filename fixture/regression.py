@@ -5,6 +5,9 @@ import magma
 
 
 class Regression():
+    # statsmodels gets confused if you try to use '1' to mean a column of 
+    # ones, so we manually add a column of ones with the following name
+    one_literal = 'constant_ones'
 
     @classmethod
     def parse_parameter_algebra(self, f):
@@ -49,7 +52,7 @@ class Regression():
                     #print('going to expr after', param)
                 elif char == '+':
                     param = get_param()
-                    rhs['constant_ones'] = param
+                    rhs[self.one_literal] = param
                     prev = i
                     #print('staying param after', param)
             elif STATE == 'expr':
@@ -84,7 +87,7 @@ class Regression():
         interaction_a_ba = False
         interaction_ba_ba = False
 
-        terms = ['constant_ones']
+        terms = [cls.one_literal]
         for a_port in dut.inputs_ranged:
             a = cls.get_spice_name(a_port)
             for i in range(1, analog_order + 1):
@@ -122,8 +125,10 @@ class Regression():
         Incoming data should be of the form 
         for [in, out]: {pin:[x1, ...], ...}
         '''
+
+
         data = {**data[0], **data[1]}
-        data['constant_ones'] = [1 for _ in list(data.values())[0]]
+        data[self.one_literal] = [1 for _ in list(data.values())[0]]
         data = {self.clean_string(k):v for k,v in data.items()}
         self.df = pandas.DataFrame(data)
         print(self.df)
@@ -133,21 +138,50 @@ class Regression():
         optional_pin_expr = self.get_optional_pin_expression(dut)
 
         formula = self.make_formula(lhs, rhs, optional_pin_expr)
-        formula = 'amp_output ~ amp_input + adj^2'
 
         print(formula)
 
-        stats_model = smf.ols(formula, data)
+        stats_model = smf.ols(formula, self.df)
         results = stats_model.fit()
-        print(results.summary())
+        #print(results.summary())
+        result = self.parse_coefs(results, rhs)
+        # TODO dump res to a yaml file
 
         
+    @classmethod
     def make_formula(self, lhs, rhs, optional_pin_expr):
         terms = []
         for expr, param in rhs.items():
             terms.append('%s:(%s)'%(expr, optional_pin_expr))
 
-        formula = '%s ~ %s' % (lhs, ' + '.join(terms))
+        # the constant term should already be included as constantones somewhere
+        formula = '%s ~ %s -1' % (lhs, ' + '.join(terms))
         return self.clean_string(formula)
+        
+    @classmethod
+    def parse_coefs(self, results, rhs):
+        def get_relevant_param(term):
+            ''' Break the term into the param half and the optional pin half,
+            then return the corresponding param name and optional pin half 
+            '''
+            for partial_term_param, param in rhs.items():
+                if term.startswith(partial_term_param):
+                    partial_term_optional = term[len(partial_term_param)+1:]
+                    if partial_term_optional == '':
+                        partial_term_optional = self.one_literal
+                    return (param, partial_term_optional)
+            print('could not find a param for term', term)
+
+        res = {param:{} for param in rhs.values()}
+
+        coefs = results.params
+        print('param\tterm\tcoef')
+        for term, coef in coefs.items():
+            param, partial_term_optional = get_relevant_param(term)
+            print('%s\t%s\t%.3f' % (param, partial_term_optional, coef))
+            res[param][partial_term_optional] = coef
+        return res
+
+
         
 
