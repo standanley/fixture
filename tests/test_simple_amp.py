@@ -90,14 +90,14 @@ def test_simple():
     results = testbench.get_results()
     results_reformatted = results[0]
 
-    iv_names = ['in_']
-    dv_names = ['out']
-    formula = {'out':'in_ + I(in_**2) + I(in_**3)'}
+    iv_names = ['amp_input']
+    dv_names = ['amp_output']
+    formula = {'amp_output':'amp_input + I(amp_input**2) + I(amp_input**3)'}
     regression = fixture.LinearRegressionSM(iv_names, dv_names, results_reformatted)
     regression.run()
 
     stats = regression.get_statistics()
-    print(regression.get_summary()['out'])
+    print(regression.get_summary()['amp_output'])
 
     print('Plotting results')
     tf = get_tf(stats, dv_names)
@@ -163,12 +163,12 @@ def test_simple_parameterized():
 
     stats = regression.get_statistics()
 
-    print(regression.get_summary()['my_out'])
+    print(regression.get_summary()['amp_output'])
     #print(regression.get_summary()['vdd_internal'])
 
     print('Plotting results')
     temp = regression.model_ols
-    temp = temp['my_out']
+    temp = temp['amp_output']
     plot2(results_reformatted, temp, in_dim=0)
 
     

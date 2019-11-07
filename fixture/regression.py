@@ -133,18 +133,30 @@ class Regression():
         self.df = pandas.DataFrame(data)
         print(self.df)
 
-        params_algebra = dut.parameter_algebra
-        lhs, rhs = self.parse_parameter_algebra(params_algebra)
-        optional_pin_expr = self.get_optional_pin_expression(dut)
+        results = {}
+        for params_algebra in dut.parameter_algebra:
+            print('Working on params_algebra', params_algebra)
+            lhs, rhs = self.parse_parameter_algebra(params_algebra)
+            optional_pin_expr = self.get_optional_pin_expression(dut)
 
-        formula = self.make_formula(lhs, rhs, optional_pin_expr)
+            formula = self.make_formula(lhs, rhs, optional_pin_expr)
+            print('got formula', formula)
 
-        print(formula)
+            print(formula)
 
-        stats_model = smf.ols(formula, self.df)
-        results = stats_model.fit()
-        #print(results.summary())
-        result = self.parse_coefs(results, rhs)
+            stats_model = smf.ols(formula, self.df)
+            stat_results = stats_model.fit()
+            #print(results.summary())
+            result = self.parse_coefs(stat_results, rhs)
+            for k,v in result.items():
+                assert not k in results, 'Parameter %s found in multiple parameter algebra formulas'
+                results[k] = v
+
+        print('param\tterm\tcoef')
+        for param,d in results.items():
+            for partial_term_optional, coef in d.items():
+                print('%s\t%s\t%.3f' % (param, partial_term_optional, coef))
+
         # TODO dump res to a yaml file
 
         
@@ -154,7 +166,7 @@ class Regression():
         for expr, param in rhs.items():
             terms.append('%s:(%s)'%(expr, optional_pin_expr))
 
-        # the constant term should already be included as constantones somewhere
+        # the constant term should already be included as constant_ones somewhere
         formula = '%s ~ %s -1' % (lhs, ' + '.join(terms))
         return self.clean_string(formula)
         
@@ -164,21 +176,31 @@ class Regression():
             ''' Break the term into the param half and the optional pin half,
             then return the corresponding param name and optional pin half 
             '''
+            def norm(s):
+                ''' put string in normal form, i.e. no whitespace '''
+                return s.replace(' ', '')
+
+            term = norm(term)
             for partial_term_param, param in rhs.items():
+                partial_term_param = norm(partial_term_param)
                 if term.startswith(partial_term_param):
                     partial_term_optional = term[len(partial_term_param)+1:]
                     if partial_term_optional == '':
                         partial_term_optional = self.one_literal
                     return (param, partial_term_optional)
-            print('could not find a param for term', term)
+            assert False, 'Error: Could not find a param for term %s' % term
 
         res = {param:{} for param in rhs.values()}
 
         coefs = results.params
-        print('param\tterm\tcoef')
+        print('\nhere are the coefficient names')
+        for t,c in coefs.items():
+            print('\t'+t)
+        #print('param\tterm\tcoef')
         for term, coef in coefs.items():
+            print('considering term', term)
             param, partial_term_optional = get_relevant_param(term)
-            print('%s\t%s\t%.3f' % (param, partial_term_optional, coef))
+            #print('%s\t%s\t%.3f' % (param, partial_term_optional, coef))
             res[param][partial_term_optional] = coef
         return res
 

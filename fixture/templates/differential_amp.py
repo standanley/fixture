@@ -1,23 +1,25 @@
-#from .. import templates
-#from ..templates import *
 from fixture import TemplateMaster
 from fixture import TestVectorInput, TestVectorOutput
 
-class SimpleAmpTemplate(TemplateMaster):
-    __name__ = 'abc123'
-    required_ports = ['in_single', 'out_single']
-    parameter_algebra = ['amp_output ~ gain:amp_input + offset']
+class DifferentialAmpTemplate(TemplateMaster):
+    __name__ = 'DifferentialAmpTemplate'
+    required_ports = ['inp', 'inn', 'outp', 'outn']
+    parameter_algebra = ['I(outp - outn) ~ gain:I(inp-inn) + cm_gain:I((inp+inn)/2) + offset',
+            'I((outp+outn)/2) ~ gain_to_cm:I(inp-inn) + cm_gain_to_cm:I((inp+inn)/2) + offset_to_cm']
 
     @classmethod
     def specify_test_inputs(self):
-        input_limits = self.in_single.limits
-        in_ = TestVectorInput(input_limits, 'amp_input')
-        return [in_]
+        # TODO figure out limits
+        inp = TestVectorInput(self.inp.limits, 'inp')
+        inn = TestVectorInput(self.inn.limits, 'inn')
+        return [inp, inn]
 
     @classmethod
     def specify_test_outputs(self):
-        return [TestVectorOutput('amp_output')]
+        return [TestVectorOutput('outp'), TestVectorOutput('outn')]
 
+
+    # TODO fix these last two methods
     @classmethod
     def run_single_test(self, tester, value):
         tester.poke(self.in_single, value[0])
