@@ -19,8 +19,8 @@ def get_simple_amp():
     return UserAmpInterface
 
 def get_parameterized_amp():
-    class UserAmpInterface(fixture.templates.SimpleAmpTemplate):
-        name = 'my_simple_amp_interface'
+    class Parameterized(fixture.templates.SimpleAmpTemplate):
+        name = 'my_parameterized_amp'
         IO = [
             'my_in', fixture.RealIn((.5,.7)),
             'my_out', fixture.RealOut(),
@@ -34,7 +34,7 @@ def get_parameterized_amp():
         def mapping(self):
             self.in_single = self.my_in
             self.out_single = self.my_out
-    return UserAmpInterface
+    return Parameterized
 
 
 def test_simple_amp():
@@ -109,6 +109,6 @@ def test_differential_amp():
 
 if __name__ == '__main__':
    #test_simple_amp()
-   #test_parameterized_amp()
-   test_differential_amp()
+   test_parameterized_amp()
+   #test_differential_amp()
 

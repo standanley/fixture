@@ -9,30 +9,34 @@ class DifferentialAmpTemplate(TemplateMaster):
 
     @classmethod
     def specify_test_inputs(self):
-        inp = TestVectorInput(self.inp.limits, 'inp')
-        inn = TestVectorInput(self.inn.limits, 'inn')
-        return [inp, inn]
+        # TODO figure out limits
+        in_diff = TestVectorInput((0,1), 'in_diff')
+        in_cm = TestVectorInput((0,1), 'in_cm')
+        return [in_diff, in_cm]
 
     @classmethod
     def specify_test_outputs(self):
-        return [TestVectorOutput('outp'), TestVectorOutput('outn')]
+        return [TestVectorOutput('out_diff'), TestVectorOutput('out_cm')]
+
 
     # TODO fix these last two methods
     @classmethod
     def run_single_test(self, tester, value):
-        tester.poke(self.inp, value[0])
-        tester.poke(self.inn, value[1])
+        inp = value[0] + value[1] / 2
+        inn = value[0] - value[1] / 2
+        tester.poke(self.inp, inp)
+        tester.poke(self.inn, inn)
         tester.expect(self.outp, 0, save_for_later=True)
         tester.expect(self.outn, 0, save_for_later=True)
 
     @classmethod
     def process_single_test(self, tester):
-        results = []
-        results.append(tester.results_raw[tester.result_counter])
+        outp = tester.results_raw[tester.result_counter]
         tester.result_counter += 1
-        results.append(tester.results_raw[tester.result_counter])
+        outn = tester.results_raw[tester.result_counter]
         tester.result_counter += 1
-        # for an amp, for now, no post-processing is required
+
+        results = [outp - outn, (outp + outn) / 2]
         return results
 
 

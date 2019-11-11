@@ -6,3 +6,4 @@ from .linearregression import LinearRegression, LinearRegressionSM
 from .templates import *
 from .create_testbench import Testbench
 from .regression import Regression
+from .mgenero_interface import dump_yaml
