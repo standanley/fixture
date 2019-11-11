@@ -9,6 +9,9 @@ from magma.port import Port, INPUT, OUTPUT, INOUT
 # But really really they're just calling a generator function
 
 class RealKind2(fault.RealKind):
+    def __init__(cls, name, bases, dct):
+        super().__init__(name, bases, dct)
+
     def flip(cls):
         if cls.isoriented(INPUT):
             return RealOut(getattr(cls, 'limits', None))
@@ -28,22 +31,25 @@ class RealKind2(fault.RealKind):
             #return RealInOut(getattr(cls, 'limits', None))
         return cls
 
+class RealType2(fault.real_type.RealType):
+    def __eq__(self, rhs):
+        return self.name == rhs.name
+
 def RealIn(limits=None):
     kwargs = {'direction':magma.port.INPUT}
-    temp = RealKind2('Real', (fault.real_type.RealType,), kwargs)
+    temp = RealKind2('Real', (RealType2,), kwargs)
     temp.limits = limits
     return temp
 
 def RealOut(limits=None):
     kwargs = {'direction':magma.port.OUTPUT}
-    temp = RealKind2('Real', (fault.real_type.RealType,), kwargs)
+    temp = RealKind2('Real', (RealType2,), kwargs)
     temp.limits = limits
     return temp
 
 def Real(limits=None):
-    print('creating a real with no direction and limits', limits)
     kwargs = {}
-    temp = RealKind2('Real', (fault.real_type.RealType,), kwargs)
+    temp = RealKind2('Real', (RealType2,), kwargs)
     temp.limits = limits
     return temp
 
@@ -99,6 +105,20 @@ def Bit(limits=None):
 
 def Array(n, t):
     return magma.Array[n, t]
+
+class TestVectorInput():
+    def __init__(self, limits=None, name='Unnamed test vector input'):
+        assert limits != None, 'Test vector input must have limits'
+        self.limits = limits
+        self.name = name
+    def __str__(self):
+        return self.name
+
+class TestVectorOutput():
+    def __init__(self, name='Unnamed test vector output'):
+        self.name = name
+    def __str__(self):
+        return self.name
 
 ''' Make more acceptable type names for .yaml files '''
 bit = Bit

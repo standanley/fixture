@@ -1,6 +1,7 @@
 from magma import *
 import fault
 from .real_types import BinaryAnalogKind
+import re
 
 class TemplateKind(circuit.DefineCircuitKind):
 
@@ -21,8 +22,19 @@ class TemplateKind(circuit.DefineCircuitKind):
             assert hasattr(cls, 'mapping'), 'Subclass of template must provide port mapping'
             # call user's function to associate ports
             cls.mapping(cls)
+
             # check that all the required ports actually got associated
             cls.check_required_ports(cls)
+
+            # determine what random vectors might be needed to run a test
+            assert hasattr(cls, 'specify_test_inputs'), 'Must specify required test inputs'
+            cls.inputs_test = cls.specify_test_inputs()
+
+            # specify the names and number of outputs
+            assert hasattr(cls, 'specify_test_outputs'), 'Must specify required test outputs'
+            cls.outputs_test = cls.specify_test_outputs()
+
+            # sort ports into different lists depending on what kind of stimulus they require
             cls.sort_ports(cls)
 
 
@@ -35,6 +47,7 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         # TODO: this should give more info than just the names of the ports
         # maybe expect the template creator to override this?
         return '\n'.join([str(port) for port in self.required_ports])
+
 
     # gets called when someone subclasses a template, checks that all of
     # required_ports got mapped to in mapping
@@ -52,8 +65,14 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         outputs_analog =[]
         outputs_digital = []
 
+        required_mappings = [getattr(self, r).name for r in self.required_ports]
 
         def sort_port(port):
+            #if any(port == getattr(self, required) for required in self.required_ports):
+            #if any(port.name == required for required in self.required_ports):
+            if any(port.name == rn for rn in required_mappings):
+                # required ports don't go into these lists
+                return
             if isinstance(port, Array):
                 for i in range(len(port)):
                     sort_port(port[i])
@@ -112,14 +131,14 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
             sort_port(port)
 
         # Save results
-        #print()
-        #print(inputs_pinned)
-        #print(inputs_ranged)
-        #print(inputs_unspecified)
-        #print(inputs_digital)
-        #print(inputs_ba)
-        #print(outputs_analog)
-        #print(outputs_digital)
+        print('\nSaved results from port sorting:')
+        print(inputs_pinned)
+        print(inputs_ranged)
+        print(inputs_unspecified)
+        print(inputs_digital)
+        print(inputs_ba)
+        print(outputs_analog)
+        print(outputs_digital)
 
         self.inputs_pinned = inputs_pinned
         self.inputs_ranged = inputs_ranged
@@ -128,3 +147,4 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         self.inputs_ba = inputs_ba
         self.outputs_analog = outputs_analog
         self.outputs_digital = outputs_digital
+
