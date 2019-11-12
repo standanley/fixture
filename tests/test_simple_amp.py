@@ -56,6 +56,7 @@ def test_simple():
     # this interface can be used for spice sims as well as verilog models
     class UserAmpInterface(fixture.templates.SimpleAmpTemplate):
         name = 'my_simple_amp_interface'
+        extras = {'approx_settling_time':1e-3}
         IO = [
             'in_', fixture.RealIn((0.4, 1.0)),
             'out', fault.RealOut,
@@ -83,7 +84,8 @@ def test_simple():
     print(f'Running sim, {len(vectors[0])} test vectors')
     tester.compile_and_run('spice',
         simulator='ngspice',
-        model_paths = [Path('tests/spice/myamp.sp').resolve()]
+        model_paths = [Path('tests/spice/myamp.sp').resolve()],
+        clock_step_delay=0
     )
 
     print('Analyzing results')
@@ -109,6 +111,7 @@ def test_simple():
     
 def test_simple_parameterized():
     class UserAmpInterface(fixture.templates.SimpleAmpTemplate):
+        extras = {'approx_settling_time':1e-3}
         name = 'my_simple_amp_interface'
         IO = [
             'my_in', fixture.RealIn((.5,.7)),
@@ -147,7 +150,8 @@ def test_simple_parameterized():
     print(f'Running sim, {len(vectors)} test vectors')
     tester.compile_and_run('spice',
         simulator='ngspice',
-        model_paths = [Path('tests/spice/myamp_params.sp').resolve()]
+        model_paths = [Path('tests/spice/myamp_params.sp').resolve()],
+        clock_step_delay=0
     )
 
     print('Analyzing results')

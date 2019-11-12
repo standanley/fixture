@@ -20,3 +20,4 @@ pin:
         datatype: real
         template_pin: out_single
 test: print('TEST')
+approx_settling_time: 1e-3

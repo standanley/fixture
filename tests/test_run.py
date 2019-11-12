@@ -14,6 +14,14 @@ def test_simple_amp():
     print(res)
     print('>>>')
 
+def test_simple_amp_direct():
+    circuit_fname = file_relative_to_test('./configs/simple_amp.yaml')
+    test_fname = file_relative_to_test('./configs/ngspice.yaml')
+
+    import fixture.run as r
+    r.run(circuit_fname, test_fname)
+
+
 def test_parameterized_amp():
     circuit_fname = file_relative_to_test('./configs/parameterized_amp.yaml')
     test_fname = file_relative_to_test('./configs/ngspice.yaml')
@@ -23,3 +31,4 @@ def test_parameterized_amp():
 if __name__ == '__main__':
     #test_simple_amp()
     test_parameterized_amp()
+    #test_simple_amp_direct()

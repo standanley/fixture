@@ -53,12 +53,12 @@ def _run(circuit_config_dict, test_config_dict):
     class UserCircuit(template):
         name = circuit_config_dict['name']
         IO = io
+        extras = circuit_config_dict
 
         def mapping(self):
             for name, p in pins.items():
                 if 'template_pin' in p:
                     setattr(self, p['template_pin'], getattr(self, name))
-
     vectors = sampler.Sampler.get_samples_for_circuit(UserCircuit, 200)
 
     tester = fault.Tester(UserCircuit)
@@ -69,7 +69,8 @@ def _run(circuit_config_dict, test_config_dict):
     print(f'Running sim, {len(vectors[0])} test vectors')
     tester.compile_and_run(test_config_dict['target'],
         simulator=test_config_dict['simulator'],
-        model_paths = [Path(circuit_config_dict['filepath']).resolve()]
+        model_paths = [Path(circuit_config_dict['filepath']).resolve()],
+        clock_step_delay=0
     )
 
     print('Analyzing results')
