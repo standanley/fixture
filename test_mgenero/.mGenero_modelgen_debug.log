@@ -1,0 +1,30 @@
+INFO:dave.mgenero.mgenero.ModelCreator:
+mGenero - Analog/Mixed-Signal model generator
+                   Version 0.5 - Nov-12-2019
+ Copyright (c) 2016-2018 by Stanford University
+               ALL RIGHTS RESERVED
+
+
+This version is only for evaluation purpose. 
+Any redistribution, modification, or commercial 
+use is prohibited without written permission.
+For more information, contact bclim@stanford.edu
+
+
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO] Template name is doesn't matter.
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO] Module name is set to comparator1.
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO-PIN] Essential pins are ['in_', 'out'].
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO-PIN] Valid optional pins are [].
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO-PIN] User-defined pins are ['adj'].
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO-PIN] User-defined pins with 'is_pinonly'==True are [].
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO-PIN] Valid pins are ['adj', 'in_', 'out'].
+DEBUG:dave.mgenero.mgenero.ModelCreator:Validated pins:OrderedDict([('in_', {'is_pinonly': False, 'direction': 'input', 'name': 'in_', 'datatype': 'pwl', 'vectorsize': 1, 'is_optional': False, 'description': 'Input to comparator'}), ('out', {'is_pinonly': False, 'direction': 'output', 'name': 'out', 'datatype': 'digital', 'vectorsize': 0, 'is_optional': False, 'description': 'none'}), ('adj', {'is_pinonly': False, 'vectorsize': 1, 'direction': 'input', 'description': 'to_test_optional_analog_input', 'datatype': 'pwl', 'is_optional': True})])
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO-METRIC] Valid metrics are [].
+INFO:dave.mgenero.mgenero.ModelCreator:[WARN-METRIC] Invalid metrics are []. These will be ignored
+INFO:dave.mgenero.mgenero.ModelCreator:[WARN-METRIC] Undefined metrics in the user configuration are []. These will not be incorporated in the model
+DEBUG:dave.mgenero.mgenero.ModelCreator:Validated metrics:{}
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO-MODELPARAM] Model parameters from the interface are [].
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO-MODELPARAM] User-defined model parameters are [].
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO-TESTPARAM] Test parameters from the interface are [].
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO-TESTPARAM] User-defined test parameters are [].
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO] Use default API calls in '/home/dstanley/research/DaVE/dave/mgenero/api_mgenero.py'

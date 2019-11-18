@@ -1,0 +1,28 @@
+
+mGenero - Analog/Mixed-Signal model generator
+                   Version 0.5 - Nov-12-2019
+ Copyright (c) 2016-2018 by Stanford University
+               ALL RIGHTS RESERVED
+
+
+This version is only for evaluation purpose. 
+Any redistribution, modification, or commercial 
+use is prohibited without written permission.
+For more information, contact bclim@stanford.edu
+
+
+[INFO] Template name is doesn't matter.
+[INFO] Module name is set to comparator1.
+[INFO-PIN] Essential pins are ['in_', 'out'].
+[INFO-PIN] Valid optional pins are [].
+[INFO-PIN] User-defined pins are ['adj'].
+[INFO-PIN] User-defined pins with 'is_pinonly'==True are [].
+[INFO-PIN] Valid pins are ['adj', 'in_', 'out'].
+[INFO-METRIC] Valid metrics are [].
+[WARN-METRIC] Invalid metrics are []. These will be ignored
+[WARN-METRIC] Undefined metrics in the user configuration are []. These will not be incorporated in the model
+[INFO-MODELPARAM] Model parameters from the interface are [].
+[INFO-MODELPARAM] User-defined model parameters are [].
+[INFO-TESTPARAM] Test parameters from the interface are [].
+[INFO-TESTPARAM] User-defined test parameters are [].
+[INFO] Use default API calls in '/home/dstanley/research/DaVE/dave/mgenero/api_mgenero.py'
