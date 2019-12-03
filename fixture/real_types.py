@@ -34,6 +34,7 @@ class RealKind2(fault.RealKind):
 class RealType2(fault.real_type.RealType):
     def __eq__(self, rhs):
         return self.name == rhs.name
+    __hash__ = magma.Type.__hash__
 
 def RealIn(limits=None):
     kwargs = {'direction':magma.port.INPUT}
