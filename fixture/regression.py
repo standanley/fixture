@@ -81,6 +81,11 @@ class Regression():
 
     @classmethod
     def get_optional_pin_expression(cls, dut):
+        '''
+        Given the magma circuit dut, look at the optional pins and create a 
+        (string) R expression for how the analog pins affect something
+        '''
+
         # TODO pull these out of some dict
         analog_order = 3
         interaction_a_a = False

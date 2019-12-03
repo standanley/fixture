@@ -108,10 +108,11 @@ def Array(n, t):
     return magma.Array[n, t]
 
 class TestVectorInput():
-    def __init__(self, limits=None, name='Unnamed test vector input'):
+    def __init__(self, limits=None, name='Unnamed test vector input', binary_analog=False):
         assert limits != None, 'Test vector input must have limits'
         self.limits = limits
         self.name = name
+        self.binary_analog = binary_analog
     def __str__(self):
         return self.name
 

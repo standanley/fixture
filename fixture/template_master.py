@@ -28,7 +28,17 @@ class TemplateKind(circuit.DefineCircuitKind):
 
             # determine what random vectors might be needed to run a test
             assert hasattr(cls, 'specify_test_inputs'), 'Must specify required test inputs'
-            cls.inputs_test = cls.specify_test_inputs()
+            cls.inputs_test_a = []
+            cls.inputs_test_ba = []
+            for it in cls.specify_test_inputs():
+                if it.binary_analog:
+                    cls.inputs_test_ba.append(it)
+                else:
+                    cls.inputs_test_a.append(it)
+            print('required stuff:')
+            print(cls.inputs_test_a)
+            print(cls.inputs_test_ba)
+
 
             # specify the names and number of outputs
             assert hasattr(cls, 'specify_test_outputs'), 'Must specify required test outputs'

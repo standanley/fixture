@@ -1,0 +1,32 @@
+name: phase_blender
+filepath: ../spice/myphaseblender.sp
+template: PhaseBlenderTemplate
+pin:
+    vdd:
+        direction: input
+        datatype: real
+        value: 1.2
+    vss:
+        direction: input
+        datatype: real
+        value: 0
+    input_a:
+        direction: input
+        datatype: real
+        value: (0, 1.2)
+        template_pin: in_a
+    input_b:
+        direction: input
+        datatype: real
+        value: (0, 1.2)
+        template_pin: in_b
+    output:
+        direction: output
+        datatype: real
+        template_pin: out
+    sel:
+        direction: input
+        datatype: binary_analog
+        width: 3
+frequency: 1e6
+phase_offset: 0.2

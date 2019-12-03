@@ -19,5 +19,5 @@ pin:
         direction: output
         datatype: real
         template_pin: out_single
-test: print('TEST')
+test: print('TEST FROM CONFIG')
 approx_settling_time: 1e-3

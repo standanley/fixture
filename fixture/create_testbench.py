@@ -21,8 +21,8 @@ class Testbench():
     def scale_vectors(self, vectors_unscaled):
         def scale(limits, val):
             return limits[0] + val * (limits[1] - limits[0])
-        analog_limits = [port.limits for port in self.dut.inputs_ranged + self.dut.inputs_test]
-        ba_limits = [(0,1)]*self.num_ba
+        analog_limits = [port.limits for port in self.dut.inputs_test_a + self.dut.inputs_ranged]
+        ba_limits = [(0,1) for _ in self.dut.inputs_test_ba + self.dut.inputs_ba]
         lims = analog_limits + ba_limits
         vectors_scaled = []
         for vec in vectors_unscaled:
@@ -181,8 +181,12 @@ class Testbench():
         return results
 
     def run_test_vector(self, test_vector):
-        num_required = len(self.dut.inputs_test)
+        num_required_a = len(self.dut.inputs_test_a)
+        num_optional_a = len(self.dut.inputs_ranged)
+        num_required_ba = len(self.dut.inputs_test_ba)
+        num_optional_ba = len(self.dut.inputs_ba)
         v_required, v_optional = test_vector[:num_required], test_vector[num_required:]
+        abc
         self.apply_optional_inputs(v_optional)
         self.dut.run_single_test(self.tester, v_required)
         self.read_optional_outputs()
