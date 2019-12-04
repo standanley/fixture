@@ -144,8 +144,6 @@ class Testbench():
 
     def set_test_vectors(self, vectors, prescaled = False):
         ''' Creates self.test_vectors_by_mode '''
-        print('len', len(vectors))
-        print('len first', len(vectors[0][0]))
         if (len(vectors) == 2**self.num_digital
                 and len(vectors[0][0]) == self.num_ba + self.num_ranged):
             # TODO the line above used to have a +1, but I'm not sure why
@@ -209,7 +207,6 @@ class Testbench():
         for input_, val in zip(self.dut.inputs_ranged, test_vector[:self.num_ranged]):
             if not self.is_optional(input_):
                 name = type(input_).name
-                print('name for ', input_, 'is', name)
                 test_inputs[name] = val
 
         for input_, val in zip(self.dut.inputs_ba, test_vector[self.num_ranged:]):
@@ -224,7 +221,9 @@ class Testbench():
 
         for name, val in test_inputs.items():
             if type(val) == list:
-                test_inputs[name] = BitVector(val)
+                #test_inputs[name] = BitVector(val)
+                test_inputs[name] = BitVector[len(val)](val)
+        #print(test_inputs)
         self.dut.run_single_test(self.tester, test_inputs)
 
         return self.dut.process_single_test

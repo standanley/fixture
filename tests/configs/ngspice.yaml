@@ -1,3 +1,4 @@
 target: spice
 simulator: ngspice
+ic: {vss: 0}
 # TODO: could also have libraries to include, etc.

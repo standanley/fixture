@@ -59,19 +59,25 @@ def _run(circuit_config_dict, test_config_dict):
             for name, p in pins.items():
                 if 'template_pin' in p:
                     setattr(self, p['template_pin'], getattr(self, name))
-    vectors = sampler.Sampler.get_samples_for_circuit(UserCircuit, 200)
+    vectors = sampler.Sampler.get_samples_for_circuit(UserCircuit, 2)
 
     tester = fault.Tester(UserCircuit)
     testbench = create_testbench.Testbench(tester)
     testbench.set_test_vectors(vectors)
     testbench.create_test_bench()
 
+    approved_simulator_args = ['ic']
+    simulator_dict = {k:v for k,v in test_config_dict.items() if k in approved_simulator_args}
     print(f'Running sim, {len(vectors[0])} test vectors')
     tester.compile_and_run(test_config_dict['target'],
         simulator=test_config_dict['simulator'],
         model_paths = [Path(circuit_config_dict['filepath']).resolve()],
-        clock_step_delay=0
+        clock_step_delay=0,
+        **simulator_dict
     )
+    
+    print('finished compile and run')
+    exit()
 
     print('Analyzing results')
     results = testbench.get_results()

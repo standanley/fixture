@@ -11,15 +11,15 @@ M8 output N002 0 0 EENMOS w=1u l=0.1u
 C1 N001 0 1n
 M14 sel<0>_bar sel<0> 0 0 EENMOS w=10u l=0.1u
 M16 sel<1>_bar sel<1> 0 0 EENMOS w=10u l=0.1u
-M18 N003 sel<2> 0 0 EENMOS w=10u l=0.1u
-M19 N003 sel<2> vdd vdd EEPMOS w=1u l=.1u
+M18 sel<2>_bar sel<2> 0 0 EENMOS w=10u l=0.1u
+M19 sel<2>_bar sel<2> vdd vdd EEPMOS w=1u l=.1u
 M11 N001 sel<0>_bar input_a input_a EEPMOS w=1u l=.1u
 M12 N001 sel<1>_bar input_a input_a EEPMOS w=1u l=.1u
 M13 N001 sel<2>_bar input_a input_a EEPMOS w=3u l=.1u
 M20 N001 sel<0> input_b input_b EEPMOS w=1u l=.1u
 M21 N001 sel<1> input_b input_b EEPMOS w=1u l=.1u
 M22 N001 sel<2> input_b input_b EEPMOS w=3u l=.1u
-C2 N003 0 100n
+C2 sel<2>_bar 0 100n
 M15 sel<1>_bar sel<1> vdd vdd EEPMOS w=1u l=.1u
 M17 sel<0>_bar sel<0> vdd vdd EEPMOS w=1u l=.1u
 M9 N002 N001 vdd vdd EEPMOS w=1u l=.1u
