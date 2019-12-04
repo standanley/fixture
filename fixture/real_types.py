@@ -14,9 +14,15 @@ class RealKind2(fault.RealKind):
 
     def flip(cls):
         if cls.isoriented(INPUT):
-            return RealOut(getattr(cls, 'limits', None))
+            temp = RealOut(getattr(cls, 'limits', None))
+            if hasattr(cls, 'name'):
+                temp.name = cls.name
+            return temp
         elif cls.isoriented(OUTPUT):
-            return RealIn(getattr(cls, 'limits', None))
+            temp = RealIn(getattr(cls, 'limits', None))
+            if hasattr(cls, 'name'):
+                temp.name = cls.name
+            return temp
         return cls
 
     def qualify(cls, direction):

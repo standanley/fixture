@@ -28,16 +28,18 @@ class TemplateKind(circuit.DefineCircuitKind):
 
             # determine what random vectors might be needed to run a test
             assert hasattr(cls, 'specify_test_inputs'), 'Must specify required test inputs'
-            cls.inputs_test_a = []
-            cls.inputs_test_ba = []
-            for it in cls.specify_test_inputs():
-                if it.binary_analog:
-                    cls.inputs_test_ba.append(it)
-                else:
-                    cls.inputs_test_a.append(it)
-            print('required stuff:')
-            print(cls.inputs_test_a)
-            print(cls.inputs_test_ba)
+            cls.inputs_test = cls.specify_test_inputs()
+
+            # cls.inputs_test_a = []
+            # cls.inputs_test_ba = []
+            # for it in cls.specify_test_inputs():
+            #     if it.binary_analog:
+            #         cls.inputs_test_ba.append(it)
+            #     else:
+            #         cls.inputs_test_a.append(it)
+            # print('required stuff:')
+            # print(cls.inputs_test_a)
+            # print(cls.inputs_test_ba)
 
 
             # specify the names and number of outputs
@@ -66,6 +68,27 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
             assert hasattr(self, port_name), 'Did not associate port %s'%port_name
 
     def sort_ports(self):
+
+        required_mappings = [getattr(self, r).name for r in self.required_ports]
+        def is_required(p):
+            return any(p.name == rn for rn in required_mappings)
+
+        circuit_ports = [getattr(self, name) for name, _ in self.IO.items()]
+        self.optional_ports = [p for p in circuit_ports if not is_required(p)]
+
+
+        def flip_test_input(ti):
+            # magma flips ports when they are circuit inputs or outputs
+            # it also deals in instances of the port type so we instantiate
+            # we need to flip ones that magma hasn't already
+            if ti not in circuit_ports:
+                return ti.flip()()
+            else:
+                return ti
+        test_input_ports = [flip_test_input(p) for p in self.inputs_test]
+
+        sortable_ports = self.optional_ports + test_input_ports
+
         # we want to sort ports into inputs/outputs/analog/digital/pinned/ranged, etc
         inputs_pinned = []
         inputs_ranged = []
@@ -75,14 +98,13 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         outputs_analog =[]
         outputs_digital = []
 
-        required_mappings = [getattr(self, r).name for r in self.required_ports]
 
         def sort_port(port):
             #if any(port == getattr(self, required) for required in self.required_ports):
             #if any(port.name == required for required in self.required_ports):
-            if any(port.name == rn for rn in required_mappings):
-                # required ports don't go into these lists
-                return
+            #if any(port.name == rn for rn in required_mappings):
+            #    # required ports don't go into these lists
+            #    return
             if isinstance(port, Array):
                 for i in range(len(port)):
                     sort_port(port[i])
@@ -120,24 +142,29 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
                 elif isinstance(port_type, magma.BitKind):
                     inputs_digital.append(port)
                 else:
+                    print('didint match any types')
                     print(port)
-                    assert NotImplementedError
+                    raise NotImplementedError
             elif not port.isoutput():
                 if isinstance(port_type, fault.RealKind):
                     outputs_analog.append(port)
                 elif isinstance(port_type, magma.BitKind):
                     outputs_digital.append(port)
                 else:
+                    print(port)
                     assert False, "Only analog and digital outputs are supported"
 
             else:
                 # TODO deal with unspecified input/output ?
+                print('unspecified')
                 print(port)
                 raise NotImplementedError
 
-        for name, _ in self.IO.items():
-            print('Sorting', name)
-            port = getattr(self, name)
+        # for name, _ in self.IO.items():
+        #     print('Sorting', name)
+        #     port = getattr(self, name)
+        #     sort_port(port)
+        for port in sortable_ports:
             sort_port(port)
 
         # Save results

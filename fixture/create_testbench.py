@@ -2,6 +2,7 @@ import fault
 import re
 from itertools import product
 import collections
+from hwtypes import BitVector
 
 # TODO timing
 
@@ -21,8 +22,8 @@ class Testbench():
     def scale_vectors(self, vectors_unscaled):
         def scale(limits, val):
             return limits[0] + val * (limits[1] - limits[0])
-        analog_limits = [port.limits for port in self.dut.inputs_test_a + self.dut.inputs_ranged]
-        ba_limits = [(0,1) for _ in self.dut.inputs_test_ba + self.dut.inputs_ba]
+        analog_limits = [port.limits for port in self.dut.inputs_ranged]
+        ba_limits = [(0,1) for _ in self.dut.inputs_ba]
         lims = analog_limits + ba_limits
         vectors_scaled = []
         for vec in vectors_unscaled:
@@ -142,8 +143,13 @@ class Testbench():
             self.tester.poke(input_, val)
 
     def set_test_vectors(self, vectors, prescaled = False):
+        ''' Creates self.test_vectors_by_mode '''
+        print('len', len(vectors))
+        print('len first', len(vectors[0][0]))
         if (len(vectors) == 2**self.num_digital
-                and len(vectors[0][0]) == self.num_ba + self.num_ranged+1):
+                and len(vectors[0][0]) == self.num_ba + self.num_ranged):
+            # TODO the line above used to have a +1, but I'm not sure why
+            # maybe it was for the test_input
             modes = product(range(2), repeat=self.num_digital)
             self.test_vectors_by_mode = {}
             for mode, vectors_this_mode in zip(modes, vectors):
@@ -156,20 +162,25 @@ class Testbench():
             # for now we only support a list of lists of input vectors
             raise NotImplementedError
 
+    def is_optional(self, p):
+        for optional in self.dut.optional_ports:
+            # the whole point of this method is being able to use 
+            # 'is' instead of '=='
+            if p is optional:
+                return True
+        return False
 
 
     def apply_optional_inputs(self, test_vector):
         # poke analog ports
-        zipped = zip(self.dut.inputs_ranged, test_vector[:self.num_ranged])
+        zipped = zip(self.dut.inputs_ranged + self.dut.inputs_ba, test_vector)
         for input_, val in zipped:
-            self.tester.poke(input_, val) 
-
-        # poke binary analog ports
-        zipped = zip(self.dut.inputs_ba, test_vector[self.num_ranged:])
-        for input_, val in zipped:
-            self.tester.poke(input_, val)
+            if self.is_optional(input_):
+                self.tester.poke(input_, val) 
 
     def read_optional_outputs(self):
+        # TODO use new read object
+        # TODO think about test outputs being in the same list
         for port in self.dut.outputs_analog + self.dut.outputs_digital:
             self.tester.expect(port, 0, save_for_later = True)
 
@@ -181,15 +192,41 @@ class Testbench():
         return results
 
     def run_test_vector(self, test_vector):
-        num_required_a = len(self.dut.inputs_test_a)
-        num_optional_a = len(self.dut.inputs_ranged)
-        num_required_ba = len(self.dut.inputs_test_ba)
-        num_optional_ba = len(self.dut.inputs_ba)
-        v_required, v_optional = test_vector[:num_required], test_vector[num_required:]
-        abc
-        self.apply_optional_inputs(v_optional)
-        self.dut.run_single_test(self.tester, v_required)
-        self.read_optional_outputs()
+        #num_required_a = len(self.dut.inputs_test_a)
+        #num_optional_a = len(self.dut.inputs_ranged)
+        #num_required_ba = len(self.dut.inputs_test_ba)
+        #num_optional_ba = len(self.dut.inputs_ba)
+        #v_required, v_optional = test_vector[:num_required], test_vector[num_required:]
+        #abc
+        #self.apply_optional_inputs(v_optional)
+        #self.dut.run_single_test(self.tester, v_required)
+        #self.read_optional_outputs()
+
+        self.apply_optional_inputs(test_vector)
+
+        # TODO consider breaking the rest of this into another function
+        test_inputs = {}
+        for input_, val in zip(self.dut.inputs_ranged, test_vector[:self.num_ranged]):
+            if not self.is_optional(input_):
+                name = type(input_).name
+                print('name for ', input_, 'is', name)
+                test_inputs[name] = val
+
+        for input_, val in zip(self.dut.inputs_ba, test_vector[self.num_ranged:]):
+            if not self.is_optional(input_):
+                # TODO I don't like manually taking everything after the '.',
+                # but it looks like str() and repr() both give me the full name
+                name = str(input_.name).split('.')[-1]
+                bus_name = str(input_.name.array.name)
+                arr = test_inputs.get(bus_name, []) + [val]
+                test_inputs[bus_name] = arr
+                test_inputs[name] = val
+
+        for name, val in test_inputs.items():
+            if type(val) == list:
+                test_inputs[name] = BitVector(val)
+        self.dut.run_single_test(self.tester, test_inputs)
+
         return self.dut.process_single_test
     
     '''

@@ -1,7 +1,7 @@
 from fixture import TemplateMaster
-from fixture import TestVectorInput, TestVectorOutput
+from fixture import RealIn, BinaryAnalog
 import fixture.template_creation_utils as utils
-from fixture.real_types import BinaryAnalogKind
+from fixture.real_types import BinaryAnalogKind, TestVectorOutput
 
 class PhaseBlenderTemplate(TemplateMaster):
     __name__ = 'phase_blender_template'
@@ -12,15 +12,13 @@ class PhaseBlenderTemplate(TemplateMaster):
     @classmethod
     def specify_test_inputs(self):
         offset_range = self.extras.get('phase_offset_range', (0, .5))
-        diff = TestVectorInput(offset_range, 'in_phase_diff')
+        diff = RealIn(offset_range)
+        # TODO make this part of the instantiationo f RealIn
+        diff.name = 'in_phase_diff'
 
-        # I don't like how sometimes sel_is_ba is bool and sometimes is int
-        sel_is_ba = isinstance(type(self.sel), BinaryAnalogKind)
-        if sel_is_ba:
-            sel_is_ba = len(self.sel)
-
-        sel = TestVectorInput((0, 1), 'sel_fraction', binary_analog=sel_is_ba)
-        return [diff, sel]
+        # could make a new test vector with same params as sel, or just use sel itself
+        # new_sel = Array(len(self.sel), BinaryAnalog)
+        return [diff, self.sel]
 
     @classmethod
     def specify_test_outputs(self):
@@ -37,7 +35,7 @@ class PhaseBlenderTemplate(TemplateMaster):
         #phase_offset = offset_range[0] + rand_phase_offset*(offset_range[1]-offset_range[0])
 
         phase_a = 0
-        phase_diff = values[0]
+        phase_diff = values['in_phase_diff']
 
         tester.poke(self.in_a, 0, delay={
             'freq': freq,
@@ -47,12 +45,14 @@ class PhaseBlenderTemplate(TemplateMaster):
             'freq': freq,
             'phase': phase_a + phase_diff
             })
-        utils.poke_binary_analog(tester, self.sel, values[1])
+
+        #utils.poke_binary_analog(tester, self.sel, values['sel'])
+        tester.poke(self.sel, values['sel'])
 
         # wait 5 cycles for things to settle
         tester.delay(5 / freq)
 
-        tester.expect(self.out_single, 0, save_for_later=True)
+        tester.expect(self.out, 0, save_for_later=True)
 
     @classmethod
     def process_single_test(self, tester):

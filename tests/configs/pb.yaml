@@ -28,5 +28,9 @@ pin:
         direction: input
         datatype: binary_analog
         width: 3
-frequency: 1e6
+        #    z_test:
+        #        direction: input
+        #        datatype: real
+        #        value: (0, 42)
+frequency: 1000000.0
 phase_offset: 0.2
