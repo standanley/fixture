@@ -1,4 +1,4 @@
-.subckt myphaseblender gnd input_a input_b output sel<0> sel<1> sel<2> vdd
+.subckt myphaseblender gnd input_a input_b output sel<2> sel<1> sel<0> vdd
 
 M1 N001 sel<0> input_a input_a EENMOS w=1u l=0.1u
 M2 N001 sel<1> input_a input_a EENMOS w=1u l=0.1u

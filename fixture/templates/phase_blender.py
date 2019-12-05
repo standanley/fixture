@@ -88,5 +88,3 @@ class PhaseBlenderTemplate(TemplateMaster):
         return ret
 
 
-    
-

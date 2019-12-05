@@ -27,6 +27,11 @@ class TemplateKind(circuit.DefineCircuitKind):
             # check that all the required ports actually got associated
             cls.check_required_ports(cls)
 
+            # set required port names 
+            # TODO does this break things in magma?
+            for port_name in cls.required_ports:
+                getattr(cls, port_name).fixture_name = port_name
+
             # determine what random vectors might be needed to run a test
             assert hasattr(cls, 'specify_test_inputs'), 'Must specify required test inputs'
             cls.inputs_test = cls.specify_test_inputs()
@@ -63,9 +68,10 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
 
     @classmethod
     def is_required(self, p):
+        # TODO I'm afraid it is not handling busses correctly, but maybe it doesn't matter?
+        # Single wires of an optional bus are counted as optional, which is all I need for now
         required_mappings = [getattr(self, r).name for r in self.required_ports]
-        print('rm', required_mappings)
-        print(p.name)
+        print('for port', p, 'is required?', any(p.name == rn for rn in required_mappings))
         return any(p.name == rn for rn in required_mappings)
 
     # gets called when someone subclasses a template, checks that all of
@@ -73,6 +79,40 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
     def check_required_ports(self):
         for port_name in self.required_ports:
             assert hasattr(self, port_name), 'Did not associate port %s'%port_name
+
+    @classmethod
+    def get_name(self, p):
+        ''' gives back a string to identify something port-like
+        The input could be a port type or port instance, etc.
+        '''
+        if hasattr(type(p), 'name'):
+            name = str(type(p).name)
+            #print('FIRST CASE', name)
+            return name
+        elif isinstance(p, Type):
+            name = str(p.name)
+            #print('for ', p, 'trying', name)
+            #print(self.is_required(p))
+            for required_port in self.required_ports:
+                if name == str(getattr(self, required_port).name):
+                    name = required_port
+                    #print('matched! ', name)
+                    break
+            name = name.split('.')[-1]
+            #print('RETURING NAME', name)
+            return name
+        elif isinstance(p, fault.RealKind):
+            print('HERE')
+            print(p.name)
+            raise NotImplementedError
+        elif isinstance(p, Array):
+            raise NotImplementedError
+        elif issubclass(type(p), fault.RealKind):
+            raise NotImplementedError
+        else:
+            print(p)
+            print(type(p))
+            raise NotImplementedError
 
     def sort_ports(self):
         circuit_ports = [getattr(self, name) for name, _ in self.IO.items()]
@@ -173,6 +213,10 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
             sort_port(port)
 
         self.required_ba = inputs_ba[len(self.optional_ba):]
+        print('optional_a, optional_ba, required_ba')
+        print(self.optional_a)
+        print(self.optional_ba)
+        print(self.required_ba)
 
         # Save results
         print('\nSaved results from port sorting:')

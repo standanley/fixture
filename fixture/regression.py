@@ -93,19 +93,6 @@ class Regression():
         interaction_a_ba = False
         interaction_ba_ba = False
 
-        #print('testing')
-        #thing = dut.inputs_ranged[0]
-        #print(thing)
-        #print(thing.name)
-        #print(type(thing))
-        #print(type(thing).name)
-        #optional_a = [p for p in dut.inputs_ranged if not dut.is_required(type(p))]
-        #print('optional lists:')
-        #print(optional_a)
-        #optional_ba = [p for p in dut.inputs_ba if not dut.is_required(p.name)]
-        #print(optional_ba)
-
-        # TODO this is untested
         #print(dut.optional_a)
         #print(dut.optional_ba)
 
@@ -116,7 +103,7 @@ class Regression():
                 if i == 1:
                     terms.append(a)
                 else:
-                    terms.append('I(%s^%d)' % (a, i))
+                    terms.append('I(%s**%d)' % (a, i))
 
         for ba_port in dut.optional_ba:
             ba = cls.get_spice_name(ba_port)
@@ -162,8 +149,6 @@ class Regression():
                     to_be_deleted.add(key_term)
                     new_key_term = re.sub(search_str, new_name, key_term)
                     to_be_added[new_key_term] = rhs[key_term] + '_' + inst_name
-        print(to_be_added)
-        print(to_be_deleted)
         for d in to_be_deleted:
             del rhs[d]
         for k, v in to_be_added.items():
@@ -179,8 +164,9 @@ class Regression():
         data = {**data[0], **data[1]}
         data[self.one_literal] = [1 for _ in list(data.values())[0]]
         data = {self.clean_string(k):v for k,v in data.items()}
+        print('keys for dataframe: ', data.keys())
         self.df = pandas.DataFrame(data)
-        #print(self.df)
+        print(self.df)
 
         results = {}
         for params_algebra in dut.parameter_algebra:
@@ -190,6 +176,9 @@ class Regression():
             self.convert_required_ba(dut, rhs)
 
             formula = self.make_formula(lhs, rhs, optional_pin_expr)
+            #print('formula was', formula)
+            #formula = 'amp_output ~ adj + constant_ones'
+            #print('changed to ', formula)
 
             stats_model = smf.ols(formula, self.df)
             stat_results = stats_model.fit()

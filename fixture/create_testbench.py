@@ -29,8 +29,6 @@ class Testbench():
         for vec in vectors_unscaled:
             scaled = [scale(lim, val) for lim,val in zip(lims, vec)]
             vectors_scaled.append(scaled)
-        print('vectors_scaled')
-        print(vectors_scaled)
         return vectors_scaled
 
     '''
@@ -40,6 +38,7 @@ class Testbench():
             if port_name[-1] == '>':
                 bus = re.match('[^<>]+', port_name).group()
                 port = getattr(self.dut, bus)
+        irint('got float result', read_out_single.value, 'type', type(read_out_single.value,))
                 #print('port with full bus', port)
                 for m in re.finditer('<([0-9]+)>', port_name):
                     index = int(m.group(1))
@@ -162,20 +161,24 @@ class Testbench():
             # for now we only support a list of lists of input vectors
             raise NotImplementedError
 
-    def is_optional(self, p):
-        for optional in self.dut.optional_ports:
-            # the whole point of this method is being able to use 
-            # 'is' instead of '=='
-            if p is optional:
-                return True
-        return False
+    #def is_optional(self, p):
+    #    for optional in self.dut.optional_ports:
+    #        # the whole point of this method is being able to use 
+    #        # 'is' instead of '=='
+    #        if p is optional:
+    #            return True
+    #    return False
 
 
     def apply_optional_inputs(self, test_vector):
+        #print('applying optional things', test_vector)
         # poke analog ports
+        #optional = self.dut.optional_a + self.dut.optional_ba
+        #print(optional)
         zipped = zip(self.dut.inputs_ranged + self.dut.inputs_ba, test_vector)
         for input_, val in zipped:
-            if self.is_optional(input_):
+            if not self.dut.is_required(input_):
+                #print('doing input', input_, val)
                 self.tester.poke(input_, val) 
 
     def read_optional_outputs(self):
@@ -185,10 +188,12 @@ class Testbench():
             self.tester.expect(port, 0, save_for_later = True)
 
     def process_optional_outputs(self):
-        results = []
+        results = {}
         for port in self.dut.outputs_analog + self.dut.outputs_digital:
-            results.append(self.results_raw[self.result_counter])
-            self.result_counter += 1
+            if not self.dut.is_required(port):
+                result = self.results_raw[self.result_counter]
+                self.result_counter += 1
+                results[self.dut.get_name(port)] = result
         return results
 
     def run_test_vector(self, test_vector):
@@ -207,12 +212,16 @@ class Testbench():
         # TODO consider breaking the rest of this into another function
         test_inputs = {}
         for input_, val in zip(self.dut.inputs_ranged, test_vector[:self.num_ranged]):
-            if not self.is_optional(input_):
-                name = type(input_).name
+            if self.dut.is_required(input_):
+                #if hasattr(type(input_), 'name'):
+                #    name = type(input_).name
+                #else:
+                #    name = input_.fixture_name
+                name = self.dut.get_name(input_)
                 test_inputs[name] = val
 
         for input_, val in zip(self.dut.inputs_ba, test_vector[self.num_ranged:]):
-            if not self.is_optional(input_):
+            if not self.dut.is_required(input_):
                 # TODO I don't like manually taking everything after the '.',
                 # but it looks like str() and repr() both give me the full name
                 name = str(input_.name).split('.')[-1]
@@ -269,12 +278,12 @@ class Testbench():
                 assert False, 'Return from process_single_test should be a dict'
 
             # TODO: optional outputs
-            #result += self.process_optional_outputs()
+            optional_results = self.process_optional_outputs()
 
             append_vector(results_by_mode[m][0], v, input_names)
             append_vector(results_by_mode[m][1], result.values(), result.keys())
+            append_vector(results_by_mode[m][1], optional_results.values(), optional_results.keys())
 
-        print(results_by_mode)
         self.results = [x for m,x in results_by_mode.items()]
         print('Number of modes is', len(self.results))
         return self.results
@@ -285,13 +294,13 @@ class Testbench():
         inputs = self.dut.inputs_ranged + self.dut.inputs_ba
         outputs = self.dut.outputs_analog + self.dut.outputs_digital
         def clean(x):
-            if hasattr(type(x), 'name'):
-                x = type(x).name
-            w = str(x)
+            #if hasattr(type(x), 'name'):
+            #    x = type(x).name
+            #w = str(x)
+            w = self.dut.get_name(x)
             return w.split('.')[-1]
         input_names = [clean(x) for x in inputs]
         output_names = [clean(x) for x in outputs]
-        print('returning', input_names, output_names)
         return input_names, output_names
 
 

@@ -42,6 +42,7 @@ def _run(circuit_config_dict, test_config_dict):
     io = []
     pins = circuit_config_dict['pin']
     for name, p in pins.items():
+        print('MAKING PIN', name, p)
         dt = getattr(real_types, p['datatype'])
         value = ast.literal_eval(str(p.get('value', None)))
         dt = dt(value)
@@ -60,7 +61,7 @@ def _run(circuit_config_dict, test_config_dict):
             for name, p in pins.items():
                 if 'template_pin' in p:
                     setattr(self, p['template_pin'], getattr(self, name))
-    vectors = sampler.Sampler.get_samples_for_circuit(UserCircuit, 50)
+    vectors = sampler.Sampler.get_samples_for_circuit(UserCircuit, 5)
 
     tester = fault.Tester(UserCircuit)
     testbench = create_testbench.Testbench(tester)

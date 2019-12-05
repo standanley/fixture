@@ -138,7 +138,7 @@ def test_simple_parameterized():
 
     print('Creating test bench')
     # auto-create vectors for 1 analog dimension
-    vectors =  fixture.Sampler.get_samples_for_circuit(MyAmp, 500)
+    vectors =  fixture.Sampler.get_samples_for_circuit(MyAmp, 5)
 
     tester = fault.Tester(MyAmp)
     testbench = fixture.Testbench(tester)
@@ -158,6 +158,10 @@ def test_simple_parameterized():
     results = testbench.get_results()
     mode = 0
     results_reformatted = results[mode]
+
+    regression = fixture.Regression(MyAmp, results_reformatted)
+
+    exit()
 
     iv_names, dv_names = inputs_outputs
     regression = fixture.LinearRegressionSM(iv_names, dv_names, results_reformatted)
