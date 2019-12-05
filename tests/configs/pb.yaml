@@ -6,7 +6,7 @@ pin:
         direction: input
         datatype: real
         value: 1.2
-    vss:
+    gnd:
         direction: input
         datatype: real
         value: 0

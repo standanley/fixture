@@ -2,6 +2,7 @@ from magma import *
 import fault
 from .real_types import BinaryAnalogKind
 import re
+import copy
 
 class TemplateKind(circuit.DefineCircuitKind):
 
@@ -60,6 +61,12 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         # maybe expect the template creator to override this?
         return '\n'.join([str(port) for port in self.required_ports])
 
+    @classmethod
+    def is_required(self, p):
+        required_mappings = [getattr(self, r).name for r in self.required_ports]
+        print('rm', required_mappings)
+        print(p.name)
+        return any(p.name == rn for rn in required_mappings)
 
     # gets called when someone subclasses a template, checks that all of
     # required_ports got mapped to in mapping
@@ -68,13 +75,9 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
             assert hasattr(self, port_name), 'Did not associate port %s'%port_name
 
     def sort_ports(self):
-
-        required_mappings = [getattr(self, r).name for r in self.required_ports]
-        def is_required(p):
-            return any(p.name == rn for rn in required_mappings)
-
         circuit_ports = [getattr(self, name) for name, _ in self.IO.items()]
-        self.optional_ports = [p for p in circuit_ports if not is_required(p)]
+
+        self.optional_ports = [p for p in circuit_ports if not self.is_required(p)]
 
 
         def flip_test_input(ti):
@@ -86,8 +89,6 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
             else:
                 return ti
         test_input_ports = [flip_test_input(p) for p in self.inputs_test]
-
-        sortable_ports = self.optional_ports + test_input_ports
 
         # we want to sort ports into inputs/outputs/analog/digital/pinned/ranged, etc
         inputs_pinned = []
@@ -160,12 +161,18 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
                 print(port)
                 raise NotImplementedError
 
-        # for name, _ in self.IO.items():
-        #     print('Sorting', name)
-        #     port = getattr(self, name)
-        #     sort_port(port)
-        for port in sortable_ports:
+        # start sorting
+        for port in self.optional_ports:
             sort_port(port)
+
+        # remember these before we add template_specified inputs
+        self.optional_a = copy.copy(inputs_ranged)
+        self.optional_ba = copy.copy(inputs_ba)
+
+        for port in test_input_ports:
+            sort_port(port)
+
+        self.required_ba = inputs_ba[len(self.optional_ba):]
 
         # Save results
         print('\nSaved results from port sorting:')

@@ -29,6 +29,8 @@ class Testbench():
         for vec in vectors_unscaled:
             scaled = [scale(lim, val) for lim,val in zip(lims, vec)]
             vectors_scaled.append(scaled)
+        print('vectors_scaled')
+        print(vectors_scaled)
         return vectors_scaled
 
     '''
@@ -224,9 +226,9 @@ class Testbench():
                 #test_inputs[name] = BitVector(val)
                 test_inputs[name] = BitVector[len(val)](val)
         #print(test_inputs)
-        self.dut.run_single_test(self.tester, test_inputs)
 
-        return self.dut.process_single_test
+        reads = self.dut.run_single_test(self.tester, test_inputs)
+        return reads
     
     '''
     # Things for the user to override
@@ -242,8 +244,8 @@ class Testbench():
             self.set_digital_mode(digital_mode)
             test_vectors = self.test_vectors_by_mode[digital_mode]
             for test_vector in test_vectors:
-                callback = self.run_test_vector(test_vector)
-                self.result_processing_list.append((digital_mode, test_vector, callback))
+                reads = self.run_test_vector(test_vector)
+                self.result_processing_list.append((digital_mode, test_vector, reads))
 
     def get_results(self):
         ''' Return results in the following format:
@@ -259,22 +261,32 @@ class Testbench():
         self.results_raw = [float(x) for x in self.results_raw]
         results_by_mode = {m:({}, {}) for m in self.test_vectors_by_mode}
         self.result_counter = 0
-        for m, v, fun in self.result_processing_list:
-            result = fun(self)
-            if not isinstance(result, collections.Sequence):
+        for m, v, reads in self.result_processing_list:
+            result = self.dut.process_single_test(reads)
+            if not isinstance(result, dict):
                 result = [result]
                 # TODO I think we should assert fail here rather than try to fix it
-            result += self.process_optional_outputs()
+                assert False, 'Return from process_single_test should be a dict'
+
+            # TODO: optional outputs
+            #result += self.process_optional_outputs()
+
             append_vector(results_by_mode[m][0], v, input_names)
-            append_vector(results_by_mode[m][1], result, output_names)
+            append_vector(results_by_mode[m][1], result.values(), result.keys())
+
+        print(results_by_mode)
         self.results = [x for m,x in results_by_mode.items()]
         print('Number of modes is', len(self.results))
         return self.results
 
     def get_input_output_names(self):
-        inputs = self.dut.inputs_test + self.dut.inputs_ranged + self.dut.inputs_ba
-        outputs = self.dut.outputs_test + self.dut.outputs_analog + self.dut.outputs_digital
+        #inputs = self.dut.inputs_test + self.dut.inputs_ranged + self.dut.inputs_ba
+        #outputs = self.dut.outputs_test + self.dut.outputs_analog + self.dut.outputs_digital
+        inputs = self.dut.inputs_ranged + self.dut.inputs_ba
+        outputs = self.dut.outputs_analog + self.dut.outputs_digital
         def clean(x):
+            if hasattr(type(x), 'name'):
+                x = type(x).name
             w = str(x)
             return w.split('.')[-1]
         input_names = [clean(x) for x in inputs]

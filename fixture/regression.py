@@ -2,6 +2,7 @@ import statsmodels.formula.api as smf
 import pandas
 from itertools import combinations, product
 import magma
+import re
 
 
 class Regression():
@@ -92,8 +93,24 @@ class Regression():
         interaction_a_ba = False
         interaction_ba_ba = False
 
+        #print('testing')
+        #thing = dut.inputs_ranged[0]
+        #print(thing)
+        #print(thing.name)
+        #print(type(thing))
+        #print(type(thing).name)
+        #optional_a = [p for p in dut.inputs_ranged if not dut.is_required(type(p))]
+        #print('optional lists:')
+        #print(optional_a)
+        #optional_ba = [p for p in dut.inputs_ba if not dut.is_required(p.name)]
+        #print(optional_ba)
+
+        # TODO this is untested
+        #print(dut.optional_a)
+        #print(dut.optional_ba)
+
         terms = [cls.one_literal]
-        for a_port in dut.inputs_ranged:
+        for a_port in dut.optional_a:
             a = cls.get_spice_name(a_port)
             for i in range(1, analog_order + 1):
                 if i == 1:
@@ -101,7 +118,7 @@ class Regression():
                 else:
                     terms.append('I(%s^%d)' % (a, i))
 
-        for ba_port in dut.inputs_ba:
+        for ba_port in dut.optional_ba:
             ba = cls.get_spice_name(ba_port)
             terms.append(ba)
 
@@ -112,18 +129,45 @@ class Regression():
                 terms.append('%s:%s' % (a, b))
 
         if interaction_a_a:
-            interact(combinations(dut.inputs_ranged, 2))
+            interact(combinations(dut.optional_a, 2))
         if interaction_ba_ba:
-            interact(combinations(dut.inputs_ba, 2))
+            interact(combinations(dut.optional_ba, 2))
         if interaction_a_ba:
-            interact(product(dut.inputs_ranged, dut.inputs_ba))
+            interact(product(dut.optional_a, dut.optional_ba))
 
         return ' + '.join(terms)
 
 
     @classmethod
     def clean_string(self, s):
-        return s.replace('<', '_').replace('>', '_')
+        # discrepency between the way spice and magma do braces
+        # also Patsy won't use < in a variable name
+        temp = s.replace('<', '_').replace('>', '_')
+        return temp.replace('[', '_').replace(']', '_')
+
+
+    def convert_required_ba(self, dut, rhs):
+        # when the parameter algebra contains a term with a ba input,
+        # we have to break that term into multiple terms
+        to_be_deleted = set()
+        to_be_added = {}
+        for required_ba in dut.required_ba:
+            bus_name = str(required_ba.name.array.name)
+            inst_name = str(required_ba.name).split('.')[-1]
+            new_name = self.clean_string(inst_name)
+            search_str = r'\b' + bus_name + r'\b'
+
+            for key_term in rhs:
+                if re.search(search_str, key_term):
+                    to_be_deleted.add(key_term)
+                    new_key_term = re.sub(search_str, new_name, key_term)
+                    to_be_added[new_key_term] = rhs[key_term] + '_' + inst_name
+        print(to_be_added)
+        print(to_be_deleted)
+        for d in to_be_deleted:
+            del rhs[d]
+        for k, v in to_be_added.items():
+            rhs[k] = v
 
     def __init__(self, dut, data):
         '''
@@ -136,18 +180,16 @@ class Regression():
         data[self.one_literal] = [1 for _ in list(data.values())[0]]
         data = {self.clean_string(k):v for k,v in data.items()}
         self.df = pandas.DataFrame(data)
-        print(self.df)
+        #print(self.df)
 
         results = {}
         for params_algebra in dut.parameter_algebra:
-            print('Working on params_algebra', params_algebra)
             lhs, rhs = self.parse_parameter_algebra(params_algebra)
             optional_pin_expr = self.get_optional_pin_expression(dut)
 
-            formula = self.make_formula(lhs, rhs, optional_pin_expr)
-            print('got formula', formula)
+            self.convert_required_ba(dut, rhs)
 
-            print(formula)
+            formula = self.make_formula(lhs, rhs, optional_pin_expr)
 
             stats_model = smf.ols(formula, self.df)
             stat_results = stats_model.fit()
@@ -177,6 +219,7 @@ class Regression():
         
     @classmethod
     def parse_coefs(self, results, rhs):
+        #print('parsing coefs with rhs', rhs)
         def get_relevant_param(term):
             ''' Break the term into the param half and the optional pin half,
             then return the corresponding param name and optional pin half 
@@ -198,12 +241,10 @@ class Regression():
         res = {param:{} for param in rhs.values()}
 
         coefs = results.params
-        print('\nhere are the coefficient names')
-        for t,c in coefs.items():
-            print('\t'+t)
-        #print('param\tterm\tcoef')
+        #print('\nhere are the coefficient names')
+        #for t,c in coefs.items():
+        #    print('\t'+t)
         for term, coef in coefs.items():
-            print('considering term', term)
             param, partial_term_optional = get_relevant_param(term)
             #print('%s\t%s\t%.3f' % (param, partial_term_optional, coef))
             res[param][partial_term_optional] = coef

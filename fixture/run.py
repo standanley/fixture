@@ -5,7 +5,8 @@ import fixture.templates as templates
 import fixture.real_types as real_types
 import fixture.sampler as sampler
 import fixture.create_testbench as create_testbench
-import fixture.linearregression as lr
+#import fixture.linearregression as lr
+from fixture import Regression
 
 def path_relative(path_to_config, path_from_config):
     ''' Interpret path names specified in config file
@@ -59,14 +60,14 @@ def _run(circuit_config_dict, test_config_dict):
             for name, p in pins.items():
                 if 'template_pin' in p:
                     setattr(self, p['template_pin'], getattr(self, name))
-    vectors = sampler.Sampler.get_samples_for_circuit(UserCircuit, 2)
+    vectors = sampler.Sampler.get_samples_for_circuit(UserCircuit, 50)
 
     tester = fault.Tester(UserCircuit)
     testbench = create_testbench.Testbench(tester)
     testbench.set_test_vectors(vectors)
     testbench.create_test_bench()
 
-    approved_simulator_args = ['ic']
+    approved_simulator_args = ['ic', 'vsup']
     simulator_dict = {k:v for k,v in test_config_dict.items() if k in approved_simulator_args}
     print(f'Running sim, {len(vectors[0])} test vectors')
     tester.compile_and_run(test_config_dict['target'],
@@ -77,13 +78,17 @@ def _run(circuit_config_dict, test_config_dict):
     )
     
     print('finished compile and run')
-    exit()
 
     print('Analyzing results')
     results = testbench.get_results()
-    results_reformatted = results[0]
-
     iv_names, dv_names = testbench.get_input_output_names()
+
+    results_mode_0 = results[0]
+    reg = Regression(UserCircuit, results_mode_0)
+
+    print('EXITING')
+    exit()
+
     #formula = {'out':'in_ + I(in_**2) + I(in_**3)'}
     regression = lr.LinearRegressionSM(iv_names, dv_names, results_reformatted)
     regression.run()

@@ -34,16 +34,16 @@ class PhaseBlenderTemplate(TemplateMaster):
         #phase_offset = offset_range[0] + rand_phase_offset*(offset_range[1]-offset_range[0])
 
         phase_diff = values['in_phase_diff']
-        print('PHASE DIFF IS', phase_diff)
+        print('phase diff', phase_diff, '\tsel', values['sel'])
 
-        tester.poke(self.in_a, 1)
-        tester.delay(phase_diff / freq)
-        tester.poke(self.in_a, 1)
-        tester.delay((0.5-phase_diff) / freq)
-        tester.poke(self.in_a, 0)
-        tester.delay(phase_diff / freq)
-        tester.poke(self.in_a, 0)
-        tester.delay((0.5-phase_diff) / freq)
+        #tester.poke(self.in_a, 1)
+        #tester.delay(phase_diff / freq)
+        #tester.poke(self.in_a, 1)
+        #tester.delay((0.5-phase_diff) / freq)
+        #tester.poke(self.in_a, 0)
+        #tester.delay(phase_diff / freq)
+        #tester.poke(self.in_a, 0)
+        #tester.delay((0.5-phase_diff) / freq)
 
 
         tester.poke(self.in_a, 0, delay={
@@ -69,14 +69,23 @@ class PhaseBlenderTemplate(TemplateMaster):
         # these are just to force a wave dump on these nodes
         tester.expect(self.in_a, 0, save_for_later=True)
         tester.expect(self.in_b, 0, save_for_later=True)
+        tester.expect(self.sel[0], 0, save_for_later=True)
+        tester.expect(self.sel[1], 0, save_for_later=True)
+        tester.expect(self.sel[2], 0, save_for_later=True)
+
+        out_phase = tester.read(self.out, style='phase', params={
+            'ref': self.in_a
+            })
+        return [out_phase]
 
     @classmethod
-    def process_single_test(self, tester):
-        results = []
-        results.append(tester.results_raw[tester.result_counter])
-        tester.result_counter += 1
-        # for an amp, for now, no post-processing is required
-        return results
+    def process_single_test(self, reads):
+        out_phase = reads[0].value
+        #results = []
+        #results.append(tester.results_raw[tester.result_counter])
+        #tester.result_counter += 1
+        ret = {'out_phase': out_phase}
+        return ret
 
 
     
