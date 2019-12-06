@@ -71,8 +71,14 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         # TODO I'm afraid it is not handling busses correctly, but maybe it doesn't matter?
         # Single wires of an optional bus are counted as optional, which is all I need for now
         required_mappings = [getattr(self, r).name for r in self.required_ports]
-        print('for port', p, 'is required?', any(p.name == rn for rn in required_mappings))
-        return any(p.name == rn for rn in required_mappings)
+
+        is_required_port = any(p.name == rn for rn in required_mappings)
+
+        test_inputs_str = [self.get_name(x) for x in self.test_input_ports]
+        is_required_test = any(self.get_name(p) == rn for rn in test_inputs_str)
+
+        #print('checking required', p, is_required_port, is_required_test)
+        return is_required_port or is_required_test
 
     # gets called when someone subclasses a template, checks that all of
     # required_ports got mapped to in mapping
@@ -115,10 +121,9 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
             raise NotImplementedError
 
     def sort_ports(self):
+
+
         circuit_ports = [getattr(self, name) for name, _ in self.IO.items()]
-
-        self.optional_ports = [p for p in circuit_ports if not self.is_required(p)]
-
 
         def flip_test_input(ti):
             # magma flips ports when they are circuit inputs or outputs
@@ -128,7 +133,9 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
                 return ti.flip()()
             else:
                 return ti
-        test_input_ports = [flip_test_input(p) for p in self.inputs_test]
+        self.test_input_ports = [flip_test_input(p) for p in self.inputs_test]
+
+        self.optional_ports = [p for p in circuit_ports if not self.is_required(p)]
 
         # we want to sort ports into inputs/outputs/analog/digital/pinned/ranged, etc
         inputs_pinned = []
@@ -209,7 +216,7 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         self.optional_a = copy.copy(inputs_ranged)
         self.optional_ba = copy.copy(inputs_ba)
 
-        for port in test_input_ports:
+        for port in self.test_input_ports:
             sort_port(port)
 
         self.required_ba = inputs_ba[len(self.optional_ba):]

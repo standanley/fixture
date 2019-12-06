@@ -34,7 +34,6 @@ class PhaseBlenderTemplate(TemplateMaster):
         #phase_offset = offset_range[0] + rand_phase_offset*(offset_range[1]-offset_range[0])
 
         phase_diff = values['in_phase_diff']
-        print('phase diff', phase_diff, '\tsel', values['sel'])
 
         #tester.poke(self.in_a, 1)
         #tester.delay(phase_diff / freq)

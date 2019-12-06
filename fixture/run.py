@@ -61,7 +61,7 @@ def _run(circuit_config_dict, test_config_dict):
             for name, p in pins.items():
                 if 'template_pin' in p:
                     setattr(self, p['template_pin'], getattr(self, name))
-    vectors = sampler.Sampler.get_samples_for_circuit(UserCircuit, 5)
+    vectors = sampler.Sampler.get_samples_for_circuit(UserCircuit, 50)
 
     tester = fault.Tester(UserCircuit)
     testbench = create_testbench.Testbench(tester)
