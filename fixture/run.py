@@ -42,7 +42,6 @@ def _run(circuit_config_dict, test_config_dict):
     io = []
     pins = circuit_config_dict['pin']
     for name, p in pins.items():
-        print('MAKING PIN', name, p)
         dt = getattr(real_types, p['datatype'])
         value = ast.literal_eval(str(p.get('value', None)))
         dt = dt(value)

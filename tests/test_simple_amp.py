@@ -138,7 +138,7 @@ def test_simple_parameterized():
 
     print('Creating test bench')
     # auto-create vectors for 1 analog dimension
-    vectors =  fixture.Sampler.get_samples_for_circuit(MyAmp, 5)
+    vectors =  fixture.Sampler.get_samples_for_circuit(MyAmp, 50)
 
     tester = fault.Tester(MyAmp)
     testbench = fixture.Testbench(tester)

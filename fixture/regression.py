@@ -164,9 +164,8 @@ class Regression():
         data = {**data[0], **data[1]}
         data[self.one_literal] = [1 for _ in list(data.values())[0]]
         data = {self.clean_string(k):v for k,v in data.items()}
-        print('keys for dataframe: ', data.keys())
         self.df = pandas.DataFrame(data)
-        print(self.df)
+        #print(self.df)
 
         results = {}
         for params_algebra in dut.parameter_algebra:

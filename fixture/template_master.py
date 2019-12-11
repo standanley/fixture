@@ -220,20 +220,20 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
             sort_port(port)
 
         self.required_ba = inputs_ba[len(self.optional_ba):]
-        print('optional_a, optional_ba, required_ba')
-        print(self.optional_a)
-        print(self.optional_ba)
-        print(self.required_ba)
+        #print('optional_a, optional_ba, required_ba')
+        #print(self.optional_a)
+        #print(self.optional_ba)
+        #print(self.required_ba)
 
-        # Save results
-        print('\nSaved results from port sorting:')
-        print(inputs_pinned)
-        print(inputs_ranged)
-        print(inputs_unspecified)
-        print(inputs_digital)
-        print(inputs_ba)
-        print(outputs_analog)
-        print(outputs_digital)
+        ## Save results
+        #print('\nSaved results from port sorting:')
+        #print(inputs_pinned)
+        #print(inputs_ranged)
+        #print(inputs_unspecified)
+        #print(inputs_digital)
+        #print(inputs_ba)
+        #print(outputs_analog)
+        #print(outputs_digital)
 
         self.inputs_pinned = inputs_pinned
         self.inputs_ranged = inputs_ranged
