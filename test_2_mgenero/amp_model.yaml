@@ -1,0 +1,9 @@
+# Specifically for testing amplifier template for something simple
+test1:
+  dcgain:
+  - coef:
+      offset: 0.7071497
+      dans_pin*dans_pin: 42
+    mode:
+      dummy_digitalmode: 0
+

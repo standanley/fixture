@@ -1,0 +1,30 @@
+INFO:dave.mgenero.mgenero.ModelCreator:
+mGenero - Analog/Mixed-Signal model generator
+                   Version 0.5 - Dec-13-2019
+ Copyright (c) 2016-2018 by Stanford University
+               ALL RIGHTS RESERVED
+
+
+This version is only for evaluation purpose. 
+Any redistribution, modification, or commercial 
+use is prohibited without written permission.
+For more information, contact bclim@stanford.edu
+
+
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO] Template name is amplifier.
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO] Module name is set to amp1.
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO-PIN] Essential pins are ['inn', 'inp', 'outn', 'outp', 'vdd'].
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO-PIN] Valid optional pins are ['vss'].
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO-PIN] User-defined pins are [].
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO-PIN] User-defined pins with 'is_pinonly'==True are [].
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO-PIN] Valid pins are ['inn', 'inp', 'outn', 'outp', 'vdd', 'vss'].
+DEBUG:dave.mgenero.mgenero.ModelCreator:Validated pins:OrderedDict([('inn', {'is_pinonly': False, 'direction': 'input', 'name': 'inn', 'datatype': 'pwl', 'vectorsize': 1, 'is_optional': False, 'description': 'Input to comparator'}), ('inp', {'is_pinonly': False, 'direction': 'input', 'name': 'inp', 'datatype': 'pwl', 'vectorsize': 1, 'is_optional': False, 'description': 'Input to comparator'}), ('outn', {'is_pinonly': False, 'direction': 'output', 'name': 'outn', 'datatype': 'pwl', 'vectorsize': 0, 'is_optional': False, 'description': 'none'}), ('outp', {'is_pinonly': False, 'direction': 'output', 'name': 'outp', 'datatype': 'pwl', 'vectorsize': 0, 'is_optional': False, 'description': 'none'}), ('vdd', {'is_pinonly': False, 'direction': 'input', 'name': 'vdd', 'datatype': 'pwl', 'vectorsize': 0, 'is_optional': False, 'description': 'power supply'}), ('vss', {'is_pinonly': False, 'direction': 'input', 'name': 'vss', 'datatype': 'pwl', 'vectorsize': 0, 'is_optional': True, 'description': 'ground'})])
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO-METRIC] Valid metrics are [].
+INFO:dave.mgenero.mgenero.ModelCreator:[WARN-METRIC] Invalid metrics are ['test_abc']. These will be ignored
+INFO:dave.mgenero.mgenero.ModelCreator:[WARN-METRIC] Undefined metrics in the user configuration are ['filter', 'compression']. These will not be incorporated in the model
+DEBUG:dave.mgenero.mgenero.ModelCreator:Validated metrics:{}
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO-MODELPARAM] Model parameters from the interface are ['etol_vdd', 'etol_v_icm', 'v_os', 'etol_f'].
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO-MODELPARAM] User-defined model parameters are [].
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO-TESTPARAM] Test parameters from the interface are ['f_max', 'f_bin'].
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO-TESTPARAM] User-defined test parameters are [].
+INFO:dave.mgenero.mgenero.ModelCreator:[INFO] Use default API calls in '/home/dstanley/research/DaVE/dave/mgenero/api_mgenero.py'
