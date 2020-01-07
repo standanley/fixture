@@ -92,23 +92,11 @@ def test_simple():
     results = testbench.get_results()
     results_reformatted = results[0]
 
-    iv_names = ['amp_input']
-    dv_names = ['amp_output']
-    formula = {'amp_output':'amp_input + I(amp_input**2) + I(amp_input**3)'}
-    regression = fixture.LinearRegressionSM(iv_names, dv_names, results_reformatted)
-    regression.run()
+    mode = 0
+    results_reformatted = results[mode]
 
-    stats = regression.get_statistics()
-    print(regression.get_summary()['amp_output'])
+    regression = fixture.Regression(MyAmp, results_reformatted)
 
-    print('Plotting results')
-    tf = get_tf(stats, dv_names)
-    plot(results_reformatted, tf)
-    #temp = regression.model_ols
-    #temp = temp['out']
-    #plot2(results_reformatted, temp, in_dim=5)
-
-    
 def test_simple_parameterized():
     class UserAmpInterface(fixture.templates.SimpleAmpTemplate):
         extras = {'approx_settling_time':1e-3}
@@ -161,23 +149,22 @@ def test_simple_parameterized():
 
     regression = fixture.Regression(MyAmp, results_reformatted)
 
-    exit()
+    # old code for plotting based on a LinearRegression object
+    # iv_names, dv_names = inputs_outputs
+    # regression = fixture.LinearRegressionSM(iv_names, dv_names, results_reformatted)
+    # regression.run()
+    # suggested_formula = regression.suggest_model_using_sensitivity()
+    # regression.run(suggested_formula)
 
-    iv_names, dv_names = inputs_outputs
-    regression = fixture.LinearRegressionSM(iv_names, dv_names, results_reformatted)
-    regression.run()
-    suggested_formula = regression.suggest_model_using_sensitivity()
-    regression.run(suggested_formula)
+    # stats = regression.get_statistics()
 
-    stats = regression.get_statistics()
+    # print(regression.get_summary()['amp_output'])
+    # #print(regression.get_summary()['vdd_internal'])
 
-    print(regression.get_summary()['amp_output'])
-    #print(regression.get_summary()['vdd_internal'])
-
-    print('Plotting results')
-    temp = regression.model_ols
-    temp = temp['amp_output']
-    plot2(results_reformatted, temp, in_dim=0)
+    # print('Plotting results')
+    # temp = regression.model_ols
+    # temp = temp['amp_output']
+    # plot2(results_reformatted, temp, in_dim=0)
 
     
 if __name__ == '__main__':

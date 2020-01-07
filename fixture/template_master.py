@@ -1,6 +1,6 @@
 from magma import *
 import fault
-from .real_types import BinaryAnalogKind
+from .real_types import BinaryAnalogKind, TestVectorOutput
 import re
 import copy
 
@@ -107,6 +107,8 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
             name = name.split('.')[-1]
             #print('RETURING NAME', name)
             return name
+        elif hasattr(p, 'name'):
+            return p.name
         elif isinstance(p, fault.RealKind):
             print('HERE')
             print(p.name)
@@ -118,6 +120,7 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         else:
             print(p)
             print(type(p))
+            print(p.name)
             raise NotImplementedError
 
     def sort_ports(self):
@@ -148,6 +151,7 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
 
 
         def sort_port(port):
+            print('sorting', port, port.isinout(), port.isinput(), port.isoutput(), type(port))
             #if any(port == getattr(self, required) for required in self.required_ports):
             #if any(port.name == required for required in self.required_ports):
             #if any(port.name == rn for rn in required_mappings):
@@ -198,8 +202,11 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
                     outputs_analog.append(port)
                 elif isinstance(port_type, magma.BitKind):
                     outputs_digital.append(port)
+                elif isinstance(port, TestVectorOutput):
+                    # TODO do we need to save this?
+                    pass
                 else:
-                    print(port)
+                    print(port, type(port), self.get_name(port))
                     assert False, "Only analog and digital outputs are supported"
 
             else:

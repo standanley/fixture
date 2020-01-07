@@ -162,6 +162,7 @@ class Regression():
 
 
         data = {**data[0], **data[1]}
+        print('data is', data)
         data[self.one_literal] = [1 for _ in list(data.values())[0]]
         data = {self.clean_string(k):v for k,v in data.items()}
         self.df = pandas.DataFrame(data)
@@ -172,6 +173,7 @@ class Regression():
             lhs, rhs = self.parse_parameter_algebra(params_algebra)
             optional_pin_expr = self.get_optional_pin_expression(dut)
 
+            print('CALLING CONVERSION', rhs)
             self.convert_required_ba(dut, rhs)
 
             formula = self.make_formula(lhs, rhs, optional_pin_expr)

@@ -19,6 +19,7 @@ class SimpleAmpTemplate(TemplateMaster):
 
     @classmethod
     def run_single_test(self, tester, values):
+        print('GOT SIGNALS', values)
         tester.poke(self.in_single, values['in_single'])
         wait_time = float(self.extras['approx_settling_time'])*2
         tester.delay(wait_time)

@@ -87,6 +87,7 @@ def _run(circuit_config_dict, test_config_dict):
     reg = Regression(UserCircuit, results_mode_0)
 
     print('EXITING')
+    return
     exit()
 
     #formula = {'out':'in_ + I(in_**2) + I(in_**3)'}
