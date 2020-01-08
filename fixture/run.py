@@ -81,13 +81,13 @@ def _run(circuit_config_dict, test_config_dict):
 
     print('Analyzing results')
     results = testbench.get_results()
-    iv_names, dv_names = testbench.get_input_output_names()
 
     results_mode_0 = results[0]
     reg = Regression(UserCircuit, results_mode_0)
 
     print('EXITING')
     return
+    iv_names, dv_names = testbench.get_input_output_names()
     exit()
 
     #formula = {'out':'in_ + I(in_**2) + I(in_**3)'}

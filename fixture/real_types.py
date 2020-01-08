@@ -61,16 +61,6 @@ def Real(limits=None):
     return temp
 
 
-
-'''
-class BinaryAnalog(magma.Bit):
-    # this doesn't work because init is never called
-    #def __init__(self, *largs, **kwargs):
-    #    super().__init(largs, kwargs)
-    #    self._is_linear_bit = True
-    pass
-'''
-
 class BinaryAnalogKind(magma.BitKind):
     def qualify(cls, direction):
         if direction is None:
@@ -113,24 +103,6 @@ def Bit(limits=None):
 def Array(n, t):
     return magma.Array[n, t]
 
-# class TestVectorInput():
-#     def __init__(self, limits=None, name='Unnamed test vector input', binary_analog=False):
-#         assert limits != None, 'Test vector input must have limits'
-#         self.limits = limits
-#         self.name = name
-#         self.binary_analog = binary_analog
-#     def __str__(self):
-#         return self.name
-# 
-#     def isinout(self):
-#         return False
-# 
-#     def isinput(self):
-#         # It is confusing that this is False, but it has to do with the
-#         # fact that magma flips the direction of ports on circuit 
-#         # instantiation and this object never gets flipped
-#         print('Returning False for isinput')
-#         return False
 
 def TestVectorInput(limits=None, name='Unnamed test vector input', binary_analog=False):
         temp = RealIn(limits)
@@ -138,34 +110,27 @@ def TestVectorInput(limits=None, name='Unnamed test vector input', binary_analog
         temp.binary_analog = binary_analog
         return temp
 
-class TestVectorOutput():
-    def __init__(self, name='Unnamed test vector output'):
-        self.name = name
-    def __str__(self):
-        return self.name
+def TestVectorOutput(name='Unnamed test vector output'):
+    temp = RealIn()
+    temp.name = name
+    return temp
 
-    def isinout(self):
-        return False
-
-    def isinput(self):
-        # It is confusing that this is True, but it has to do with the
-        # fact that magma flips the direction of ports on circuit 
-        # instantiation and this object never gets flipped
-        print('Returning True for test output thing')
-        return True
-
-
-# def RealIn(limits=None):
-#     kwargs = {'direction':magma.port.INPUT}
-#     temp = RealKind2('Real', (RealType2,), kwargs)
-#     temp.limits = limits
-#     return temp
+# class TestVectorOutput():
+#     def __init__(self, name='Unnamed test vector output'):
+#         self.name = name
+#     def __str__(self):
+#         return self.name
 # 
-# def RealOut(limits=None):
-#     kwargs = {'direction':magma.port.OUTPUT}
-#     temp = RealKind2('Real', (RealType2,), kwargs)
-#     temp.limits = limits
-#     return temp
+#     def isinout(self):
+#         return False
+# 
+#     def isinput(self):
+#         # It is confusing that this is True, but it has to do with the
+#         # fact that magma flips the direction of ports on circuit 
+#         # instantiation and this object never gets flipped
+#         print('Returning True for test output thing')
+#         return True
+
 
 
 ''' Make more acceptable type names for .yaml files '''
