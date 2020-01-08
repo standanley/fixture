@@ -5,7 +5,8 @@ import fixture.templates as templates
 import fixture.real_types as real_types
 import fixture.sampler as sampler
 import fixture.create_testbench as create_testbench
-import fixture.linearregression as lr
+#import fixture.linearregression as lr
+from fixture import Regression
 
 def path_relative(path_to_config, path_from_config):
     ''' Interpret path names specified in config file
@@ -16,7 +17,6 @@ def path_relative(path_to_config, path_from_config):
         return path_from_config
     folder = os.path.dirname(path_to_config)
     res = os.path.join(folder, path_from_config)
-    print(res)
     return res
 
 def edit_paths(config_dict, config_filename, params):
@@ -24,7 +24,6 @@ def edit_paths(config_dict, config_filename, params):
         old = config_dict[param]
         new = path_relative(config_filename, old)
         config_dict[param] = new
-        print('changed path', old, 'to', new)
 
 def run(circuit_config_filename, test_config_filename):
     with open(circuit_config_filename) as f:
@@ -53,36 +52,34 @@ def _run(circuit_config_dict, test_config_dict):
     class UserCircuit(template):
         name = circuit_config_dict['name']
         IO = io
+        extras = circuit_config_dict
 
         def mapping(self):
             for name, p in pins.items():
                 if 'template_pin' in p:
                     setattr(self, p['template_pin'], getattr(self, name))
-
-    vectors = sampler.Sampler.get_samples_for_circuit(UserCircuit, 200)
+    vectors = sampler.Sampler.get_samples_for_circuit(UserCircuit, 50)
 
     tester = fault.Tester(UserCircuit)
     testbench = create_testbench.Testbench(tester)
     testbench.set_test_vectors(vectors)
     testbench.create_test_bench()
 
+    approved_simulator_args = ['ic', 'vsup']
+    simulator_dict = {k:v for k,v in test_config_dict.items() if k in approved_simulator_args}
     print(f'Running sim, {len(vectors[0])} test vectors')
     tester.compile_and_run(test_config_dict['target'],
         simulator=test_config_dict['simulator'],
-        model_paths = [Path(circuit_config_dict['filepath']).resolve()]
+        model_paths = [Path(circuit_config_dict['filepath']).resolve()],
+        clock_step_delay=0,
+        **simulator_dict
     )
-
+    
     print('Analyzing results')
     results = testbench.get_results()
-    results_reformatted = results[0]
 
-    iv_names, dv_names = testbench.get_input_output_names()
-    #formula = {'out':'in_ + I(in_**2) + I(in_**3)'}
-    regression = lr.LinearRegressionSM(iv_names, dv_names, results_reformatted)
-    regression.run()
-    print(regression.get_summary()[dv_names[0]])
-
-    
+    results_mode_0 = results[0]
+    reg = Regression(UserCircuit, results_mode_0)
 
 
 if __name__ == '__main__':

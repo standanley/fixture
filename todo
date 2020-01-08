@@ -1,5 +1,0 @@
-Finish parameter algebra
-rewrite run to use parameter algebra
-rethink other test cases to ether use run or only do one portion?
-
- make pytest pass?

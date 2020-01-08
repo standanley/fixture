@@ -111,14 +111,13 @@ class Sampler:
         ]
         '''
         assert isinstance(circuit, TemplateKind), 'For now, can only get samples for a templatized circuit'
-        num_analog = len(circuit.inputs_test) + len(circuit.inputs_ranged)
+        num_analog = len(circuit.inputs_ranged)
         num_ba = len(circuit.inputs_ba)
         num_digital = len(circuit.inputs_digital)
         input_vectors = []
         modes = 2**num_digital
         for i in range(modes):
             N = num_samples // modes + ((num_samples%modes)*i)//modes 
-            print(N)
             ss = cls.get_orthogonal_samples(num_analog, num_ba, N)
             input_vectors.append(ss)
         return input_vectors
@@ -140,10 +139,8 @@ class Sampler:
 
     def assert_fifty_fifty(samples):
         for dim, bits in enumerate(zip(*samples)):
-            print(bits)
             zeros = len([bit for bit in bits if bit == 0])
             N = len(bits)
-            print(bits, N)
             assert abs(zeros - N/2) < 0.75, f'{zeros} out of {N} bits are 0 in dim {dim}'
 
 

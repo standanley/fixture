@@ -2,6 +2,7 @@ import fault
 import re
 from itertools import product
 import collections
+from hwtypes import BitVector
 
 # TODO timing
 
@@ -21,8 +22,8 @@ class Testbench():
     def scale_vectors(self, vectors_unscaled):
         def scale(limits, val):
             return limits[0] + val * (limits[1] - limits[0])
-        analog_limits = [port.limits for port in self.dut.inputs_ranged + self.dut.inputs_test]
-        ba_limits = [(0,1)]*self.num_ba
+        analog_limits = [port.limits for port in self.dut.inputs_ranged]
+        ba_limits = [(0,1) for _ in self.dut.inputs_ba]
         lims = analog_limits + ba_limits
         vectors_scaled = []
         for vec in vectors_unscaled:
@@ -37,6 +38,7 @@ class Testbench():
             if port_name[-1] == '>':
                 bus = re.match('[^<>]+', port_name).group()
                 port = getattr(self.dut, bus)
+        irint('got float result', read_out_single.value, 'type', type(read_out_single.value,))
                 #print('port with full bus', port)
                 for m in re.finditer('<([0-9]+)>', port_name):
                     index = int(m.group(1))
@@ -142,8 +144,11 @@ class Testbench():
             self.tester.poke(input_, val)
 
     def set_test_vectors(self, vectors, prescaled = False):
+        ''' Creates self.test_vectors_by_mode '''
         if (len(vectors) == 2**self.num_digital
-                and len(vectors[0][0]) == self.num_ba + self.num_ranged+1):
+                and len(vectors[0][0]) == self.num_ba + self.num_ranged):
+            # TODO the line above used to have a +1, but I'm not sure why
+            # maybe it was for the test_input
             modes = product(range(2), repeat=self.num_digital)
             self.test_vectors_by_mode = {}
             for mode, vectors_this_mode in zip(modes, vectors):
@@ -156,37 +161,83 @@ class Testbench():
             # for now we only support a list of lists of input vectors
             raise NotImplementedError
 
+    #def is_optional(self, p):
+    #    for optional in self.dut.optional_ports:
+    #        # the whole point of this method is being able to use 
+    #        # 'is' instead of '=='
+    #        if p is optional:
+    #            return True
+    #    return False
 
 
     def apply_optional_inputs(self, test_vector):
+        #print('applying optional things', test_vector)
         # poke analog ports
-        zipped = zip(self.dut.inputs_ranged, test_vector[:self.num_ranged])
+        #optional = self.dut.optional_a + self.dut.optional_ba
+        #print(optional)
+        zipped = zip(self.dut.inputs_ranged + self.dut.inputs_ba, test_vector)
         for input_, val in zipped:
-            self.tester.poke(input_, val) 
-
-        # poke binary analog ports
-        zipped = zip(self.dut.inputs_ba, test_vector[self.num_ranged:])
-        for input_, val in zipped:
-            self.tester.poke(input_, val)
+            if not self.dut.is_required(input_):
+                #print('doing input', input_, val)
+                self.tester.poke(input_, val) 
 
     def read_optional_outputs(self):
+        # TODO use new read object
+        # TODO think about test outputs being in the same list
         for port in self.dut.outputs_analog + self.dut.outputs_digital:
             self.tester.expect(port, 0, save_for_later = True)
 
     def process_optional_outputs(self):
-        results = []
+        results = {}
         for port in self.dut.outputs_analog + self.dut.outputs_digital:
-            results.append(self.results_raw[self.result_counter])
-            self.result_counter += 1
+            if not self.dut.is_required(port):
+                result = self.results_raw[self.result_counter]
+                self.result_counter += 1
+                results[self.dut.get_name(port)] = result
         return results
 
     def run_test_vector(self, test_vector):
-        num_required = len(self.dut.inputs_test)
-        v_required, v_optional = test_vector[:num_required], test_vector[num_required:]
-        self.apply_optional_inputs(v_optional)
-        self.dut.run_single_test(self.tester, v_required)
-        self.read_optional_outputs()
-        return self.dut.process_single_test
+        #num_required_a = len(self.dut.inputs_test_a)
+        #num_optional_a = len(self.dut.inputs_ranged)
+        #num_required_ba = len(self.dut.inputs_test_ba)
+        #num_optional_ba = len(self.dut.inputs_ba)
+        #v_required, v_optional = test_vector[:num_required], test_vector[num_required:]
+        #abc
+        #self.apply_optional_inputs(v_optional)
+        #self.dut.run_single_test(self.tester, v_required)
+        #self.read_optional_outputs()
+
+        self.apply_optional_inputs(test_vector)
+
+        # TODO consider breaking the rest of this into another function
+        test_inputs = {}
+        for input_, val in zip(self.dut.inputs_ranged, test_vector[:self.num_ranged]):
+            if self.dut.is_required(input_):
+                #if hasattr(type(input_), 'name'):
+                #    name = type(input_).name
+                #else:
+                #    name = input_.fixture_name
+                name = self.dut.get_name(input_)
+                test_inputs[name] = val
+
+        for input_, val in zip(self.dut.inputs_ba, test_vector[self.num_ranged:]):
+            if not self.dut.is_required(input_):
+                # TODO I don't like manually taking everything after the '.',
+                # but it looks like str() and repr() both give me the full name
+                name = str(input_.name).split('.')[-1]
+                bus_name = str(input_.name.array.name)
+                arr = test_inputs.get(bus_name, []) + [val]
+                test_inputs[bus_name] = arr
+                test_inputs[name] = val
+
+        for name, val in test_inputs.items():
+            if type(val) == list:
+                #test_inputs[name] = BitVector(val)
+                test_inputs[name] = BitVector[len(val)](val)
+        #print(test_inputs)
+
+        reads = self.dut.run_single_test(self.tester, test_inputs)
+        return reads
     
     '''
     # Things for the user to override
@@ -202,8 +253,8 @@ class Testbench():
             self.set_digital_mode(digital_mode)
             test_vectors = self.test_vectors_by_mode[digital_mode]
             for test_vector in test_vectors:
-                callback = self.run_test_vector(test_vector)
-                self.result_processing_list.append((digital_mode, test_vector, callback))
+                reads = self.run_test_vector(test_vector)
+                self.result_processing_list.append((digital_mode, test_vector, reads))
 
     def get_results(self):
         ''' Return results in the following format:
@@ -219,27 +270,33 @@ class Testbench():
         self.results_raw = [float(x) for x in self.results_raw]
         results_by_mode = {m:({}, {}) for m in self.test_vectors_by_mode}
         self.result_counter = 0
-        for m, v, fun in self.result_processing_list:
-            result = fun(self)
-            if not isinstance(result, collections.Sequence):
+        for m, v, reads in self.result_processing_list:
+            result = self.dut.process_single_test(reads)
+            if not isinstance(result, dict):
                 result = [result]
                 # TODO I think we should assert fail here rather than try to fix it
-            result += self.process_optional_outputs()
+                assert False, 'Return from process_single_test should be a dict'
+
+            # TODO: optional outputs
+            optional_results = self.process_optional_outputs()
+
             append_vector(results_by_mode[m][0], v, input_names)
-            append_vector(results_by_mode[m][1], result, output_names)
+            append_vector(results_by_mode[m][1], result.values(), result.keys())
+            append_vector(results_by_mode[m][1], optional_results.values(), optional_results.keys())
+
         self.results = [x for m,x in results_by_mode.items()]
-        print('Number of modes is', len(self.results))
         return self.results
 
     def get_input_output_names(self):
-        inputs = self.dut.inputs_test + self.dut.inputs_ranged + self.dut.inputs_ba
-        outputs = self.dut.outputs_test + self.dut.outputs_analog + self.dut.outputs_digital
+        #inputs = self.dut.inputs_test + self.dut.inputs_ranged + self.dut.inputs_ba
+        #outputs = self.dut.outputs_test + self.dut.outputs_analog + self.dut.outputs_digital
+        inputs = self.dut.inputs_ranged + self.dut.inputs_ba
+        outputs = self.dut.outputs_analog + self.dut.outputs_digital
         def clean(x):
-            w = str(x)
+            w = self.dut.get_name(x)
             return w.split('.')[-1]
         input_names = [clean(x) for x in inputs]
         output_names = [clean(x) for x in outputs]
-        print('returning', input_names, output_names)
         return input_names, output_names
 
 

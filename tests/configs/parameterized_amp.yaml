@@ -34,3 +34,4 @@ pin:
     vdd_internal:
         direction: output
         datatype: real
+approx_settling_time: 1e-3

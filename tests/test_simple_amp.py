@@ -56,6 +56,7 @@ def test_simple():
     # this interface can be used for spice sims as well as verilog models
     class UserAmpInterface(fixture.templates.SimpleAmpTemplate):
         name = 'my_simple_amp_interface'
+        extras = {'approx_settling_time':1e-3}
         IO = [
             'in_', fixture.RealIn((0.4, 1.0)),
             'out', fault.RealOut,
@@ -83,32 +84,22 @@ def test_simple():
     print(f'Running sim, {len(vectors[0])} test vectors')
     tester.compile_and_run('spice',
         simulator='ngspice',
-        model_paths = [Path('tests/spice/myamp.sp').resolve()]
+        model_paths = [Path('tests/spice/myamp.sp').resolve()],
+        clock_step_delay=0
     )
 
     print('Analyzing results')
     results = testbench.get_results()
     results_reformatted = results[0]
 
-    iv_names = ['amp_input']
-    dv_names = ['amp_output']
-    formula = {'amp_output':'amp_input + I(amp_input**2) + I(amp_input**3)'}
-    regression = fixture.LinearRegressionSM(iv_names, dv_names, results_reformatted)
-    regression.run()
+    mode = 0
+    results_reformatted = results[mode]
 
-    stats = regression.get_statistics()
-    print(regression.get_summary()['amp_output'])
+    regression = fixture.Regression(MyAmp, results_reformatted)
 
-    print('Plotting results')
-    tf = get_tf(stats, dv_names)
-    plot(results_reformatted, tf)
-    #temp = regression.model_ols
-    #temp = temp['out']
-    #plot2(results_reformatted, temp, in_dim=5)
-
-    
 def test_simple_parameterized():
     class UserAmpInterface(fixture.templates.SimpleAmpTemplate):
+        extras = {'approx_settling_time':1e-3}
         name = 'my_simple_amp_interface'
         IO = [
             'my_in', fixture.RealIn((.5,.7)),
@@ -135,19 +126,18 @@ def test_simple_parameterized():
 
     print('Creating test bench')
     # auto-create vectors for 1 analog dimension
-    vectors =  fixture.Sampler.get_samples_for_circuit(MyAmp, 500)
+    vectors =  fixture.Sampler.get_samples_for_circuit(MyAmp, 50)
 
     tester = fault.Tester(MyAmp)
     testbench = fixture.Testbench(tester)
     testbench.set_test_vectors(vectors)
     testbench.create_test_bench()
-    inputs_outputs = testbench.get_input_output_names()
-
 
     print(f'Running sim, {len(vectors)} test vectors')
     tester.compile_and_run('spice',
         simulator='ngspice',
-        model_paths = [Path('tests/spice/myamp_params.sp').resolve()]
+        model_paths = [Path('tests/spice/myamp_params.sp').resolve()],
+        clock_step_delay=0
     )
 
     print('Analyzing results')
@@ -155,21 +145,7 @@ def test_simple_parameterized():
     mode = 0
     results_reformatted = results[mode]
 
-    iv_names, dv_names = inputs_outputs
-    regression = fixture.LinearRegressionSM(iv_names, dv_names, results_reformatted)
-    regression.run()
-    suggested_formula = regression.suggest_model_using_sensitivity()
-    regression.run(suggested_formula)
-
-    stats = regression.get_statistics()
-
-    print(regression.get_summary()['amp_output'])
-    #print(regression.get_summary()['vdd_internal'])
-
-    print('Plotting results')
-    temp = regression.model_ols
-    temp = temp['amp_output']
-    plot2(results_reformatted, temp, in_dim=0)
+    regression = fixture.Regression(MyAmp, results_reformatted)
 
     
 if __name__ == '__main__':

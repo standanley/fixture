@@ -14,9 +14,15 @@ class RealKind2(fault.RealKind):
 
     def flip(cls):
         if cls.isoriented(INPUT):
-            return RealOut(getattr(cls, 'limits', None))
+            temp = RealOut(getattr(cls, 'limits', None))
+            if hasattr(cls, 'name'):
+                temp.name = cls.name
+            return temp
         elif cls.isoriented(OUTPUT):
-            return RealIn(getattr(cls, 'limits', None))
+            temp = RealIn(getattr(cls, 'limits', None))
+            if hasattr(cls, 'name'):
+                temp.name = cls.name
+            return temp
         return cls
 
     def qualify(cls, direction):
@@ -34,6 +40,7 @@ class RealKind2(fault.RealKind):
 class RealType2(fault.real_type.RealType):
     def __eq__(self, rhs):
         return self.name == rhs.name
+    __hash__ = magma.Type.__hash__
 
 def RealIn(limits=None):
     kwargs = {'direction':magma.port.INPUT}
@@ -53,16 +60,6 @@ def Real(limits=None):
     temp.limits = limits
     return temp
 
-
-
-'''
-class BinaryAnalog(magma.Bit):
-    # this doesn't work because init is never called
-    #def __init__(self, *largs, **kwargs):
-    #    super().__init(largs, kwargs)
-    #    self._is_linear_bit = True
-    pass
-'''
 
 class BinaryAnalogKind(magma.BitKind):
     def qualify(cls, direction):
@@ -106,19 +103,18 @@ def Bit(limits=None):
 def Array(n, t):
     return magma.Array[n, t]
 
-class TestVectorInput():
-    def __init__(self, limits=None, name='Unnamed test vector input'):
-        assert limits != None, 'Test vector input must have limits'
-        self.limits = limits
-        self.name = name
-    def __str__(self):
-        return self.name
 
-class TestVectorOutput():
-    def __init__(self, name='Unnamed test vector output'):
-        self.name = name
-    def __str__(self):
-        return self.name
+def TestVectorInput(limits=None, name='Unnamed test vector input', binary_analog=False):
+        temp = RealIn(limits)
+        temp.name = name
+        temp.binary_analog = binary_analog
+        return temp
+
+def TestVectorOutput(name='Unnamed test vector output'):
+    temp = RealIn()
+    temp.name = name
+    return temp
+
 
 ''' Make more acceptable type names for .yaml files '''
 bit = Bit
