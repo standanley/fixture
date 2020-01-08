@@ -17,7 +17,6 @@ def path_relative(path_to_config, path_from_config):
         return path_from_config
     folder = os.path.dirname(path_to_config)
     res = os.path.join(folder, path_from_config)
-    print(res)
     return res
 
 def edit_paths(config_dict, config_filename, params):
@@ -25,7 +24,6 @@ def edit_paths(config_dict, config_filename, params):
         old = config_dict[param]
         new = path_relative(config_filename, old)
         config_dict[param] = new
-        print('changed path', old, 'to', new)
 
 def run(circuit_config_filename, test_config_filename):
     with open(circuit_config_filename) as f:
@@ -77,25 +75,11 @@ def _run(circuit_config_dict, test_config_dict):
         **simulator_dict
     )
     
-    print('finished compile and run')
-
     print('Analyzing results')
     results = testbench.get_results()
 
     results_mode_0 = results[0]
     reg = Regression(UserCircuit, results_mode_0)
-
-    print('EXITING')
-    return
-    iv_names, dv_names = testbench.get_input_output_names()
-    exit()
-
-    #formula = {'out':'in_ + I(in_**2) + I(in_**3)'}
-    regression = lr.LinearRegressionSM(iv_names, dv_names, results_reformatted)
-    regression.run()
-    print(regression.get_summary()[dv_names[0]])
-
-    
 
 
 if __name__ == '__main__':

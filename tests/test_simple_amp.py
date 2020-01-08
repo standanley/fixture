@@ -132,8 +132,6 @@ def test_simple_parameterized():
     testbench = fixture.Testbench(tester)
     testbench.set_test_vectors(vectors)
     testbench.create_test_bench()
-    inputs_outputs = testbench.get_input_output_names()
-
 
     print(f'Running sim, {len(vectors)} test vectors')
     tester.compile_and_run('spice',
@@ -148,23 +146,6 @@ def test_simple_parameterized():
     results_reformatted = results[mode]
 
     regression = fixture.Regression(MyAmp, results_reformatted)
-
-    # old code for plotting based on a LinearRegression object
-    # iv_names, dv_names = inputs_outputs
-    # regression = fixture.LinearRegressionSM(iv_names, dv_names, results_reformatted)
-    # regression.run()
-    # suggested_formula = regression.suggest_model_using_sensitivity()
-    # regression.run(suggested_formula)
-
-    # stats = regression.get_statistics()
-
-    # print(regression.get_summary()['amp_output'])
-    # #print(regression.get_summary()['vdd_internal'])
-
-    # print('Plotting results')
-    # temp = regression.model_ols
-    # temp = temp['amp_output']
-    # plot2(results_reformatted, temp, in_dim=0)
 
     
 if __name__ == '__main__':

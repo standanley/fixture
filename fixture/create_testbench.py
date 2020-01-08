@@ -285,7 +285,6 @@ class Testbench():
             append_vector(results_by_mode[m][1], optional_results.values(), optional_results.keys())
 
         self.results = [x for m,x in results_by_mode.items()]
-        print('Number of modes is', len(self.results))
         return self.results
 
     def get_input_output_names(self):
@@ -294,9 +293,6 @@ class Testbench():
         inputs = self.dut.inputs_ranged + self.dut.inputs_ba
         outputs = self.dut.outputs_analog + self.dut.outputs_digital
         def clean(x):
-            #if hasattr(type(x), 'name'):
-            #    x = type(x).name
-            #w = str(x)
             w = self.dut.get_name(x)
             return w.split('.')[-1]
         input_names = [clean(x) for x in inputs]

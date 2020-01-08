@@ -36,18 +36,6 @@ class TemplateKind(circuit.DefineCircuitKind):
             assert hasattr(cls, 'specify_test_inputs'), 'Must specify required test inputs'
             cls.inputs_test = cls.specify_test_inputs()
 
-            # cls.inputs_test_a = []
-            # cls.inputs_test_ba = []
-            # for it in cls.specify_test_inputs():
-            #     if it.binary_analog:
-            #         cls.inputs_test_ba.append(it)
-            #     else:
-            #         cls.inputs_test_a.append(it)
-            # print('required stuff:')
-            # print(cls.inputs_test_a)
-            # print(cls.inputs_test_ba)
-
-
             # specify the names and number of outputs
             assert hasattr(cls, 'specify_test_outputs'), 'Must specify required test outputs'
             cls.outputs_test = cls.specify_test_outputs()
@@ -110,7 +98,6 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         elif hasattr(p, 'name'):
             return p.name
         elif isinstance(p, fault.RealKind):
-            print('HERE')
             print(p.name)
             raise NotImplementedError
         elif isinstance(p, Array):
@@ -151,7 +138,6 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
 
 
         def sort_port(port):
-            print('sorting', port, port.isinout(), port.isinput(), port.isoutput(), type(port))
             #if any(port == getattr(self, required) for required in self.required_ports):
             #if any(port.name == required for required in self.required_ports):
             #if any(port.name == rn for rn in required_mappings):

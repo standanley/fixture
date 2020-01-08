@@ -115,23 +115,6 @@ def TestVectorOutput(name='Unnamed test vector output'):
     temp.name = name
     return temp
 
-# class TestVectorOutput():
-#     def __init__(self, name='Unnamed test vector output'):
-#         self.name = name
-#     def __str__(self):
-#         return self.name
-# 
-#     def isinout(self):
-#         return False
-# 
-#     def isinput(self):
-#         # It is confusing that this is True, but it has to do with the
-#         # fact that magma flips the direction of ports on circuit 
-#         # instantiation and this object never gets flipped
-#         print('Returning True for test output thing')
-#         return True
-
-
 
 ''' Make more acceptable type names for .yaml files '''
 bit = Bit
