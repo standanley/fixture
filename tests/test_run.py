@@ -28,6 +28,12 @@ def test_parameterized_amp():
     command = 'python -m fixture.run %s %s' % (circuit_fname, test_fname)
     res = subprocess.run(command.split(), check=True)
 
+# def test_differential_amp():
+#     circuit_fname = file_relative_to_test('./configs/parameterized_amp.yaml')
+#     test_fname = file_relative_to_test('./configs/ngspice.yaml')
+#     command = 'python -m fixture.run %s %s' % (circuit_fname, test_fname)
+#     res = subprocess.run(command.split(), check=True)
+
 if __name__ == '__main__':
     #test_simple_amp()
     #test_parameterized_amp()

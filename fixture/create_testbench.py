@@ -261,6 +261,8 @@ class Testbench():
         for mode: for [in, out]: {pin:[x1, x2, x3, ...], }
         '''
 
+        print('GET RESULTS WAS CALLED')
+
         input_names, output_names = self.get_input_output_names()
         def append_vector(orig, data, pins):
             for x, p in zip(data, pins):
@@ -278,6 +280,7 @@ class Testbench():
                 assert False, 'Return from process_single_test should be a dict'
 
             # TODO: optional outputs
+            print('got result', result)
             optional_results = self.process_optional_outputs()
 
             append_vector(results_by_mode[m][0], v, input_names)

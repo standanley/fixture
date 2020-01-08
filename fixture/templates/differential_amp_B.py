@@ -4,8 +4,11 @@ from fixture import TestVectorInput, TestVectorOutput
 class DifferentialAmpTemplate(TemplateMaster):
     __name__ = 'DifferentialAmpTemplate'
     required_ports = ['inp', 'inn', 'outp', 'outn']
-    parameter_algebra = ['I(outp - outn) ~ gain:I(inp-inn) + cm_gain:I((inp+inn)/2) + offset',
-            'I((outp+outn)/2) ~ gain_to_cm:I(inp-inn) + cm_gain_to_cm:I((inp+inn)/2) + offset_to_cm']
+    #parameter_algebra = ['I(outp - outn) ~ gain:I(inp-inn) + cm_gain:I((inp+inn)/2) + offset',
+     #       'I((outp+outn)/2) ~ gain_to_cm:I(inp-inn) + cm_gain_to_cm:I((inp+inn)/2) + offset_to_cm']
+
+    parameter_algebra = ['out_diff ~ gain:in_diff + cm_gain:I((inp+inn)/2) + offset',
+            'out_cm ~ gain_to_cm:in_diff + cm_gain_to_cm:in_cm + offset_to_cm']
 
     @classmethod
     def specify_test_inputs(self):
