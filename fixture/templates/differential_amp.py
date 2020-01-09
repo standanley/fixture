@@ -17,26 +17,23 @@ class DifferentialAmpTemplate(TemplateMaster):
     def specify_test_outputs(self):
         return [TestVectorOutput('outp'), TestVectorOutput('outn')]
 
-    # TODO fix these last two methods
     @classmethod
     def run_single_test(self, tester, value):
-        tester.poke(self.inp, value[0])
-        tester.poke(self.inn, value[1])
+        tester.poke(self.inp, value['inp'])
+        tester.poke(self.inn, value['inn'])
         wait_time = float(self.extras['approx_settling_time'])*2
         tester.delay(wait_time)
         tester.expect(self.outp, 0, save_for_later=True)
         tester.expect(self.outn, 0, save_for_later=True)
 
+        readp = tester.read(self.outp)
+        readn = tester.read(self.outn)
+        return [readp, readn]
+
+
     @classmethod
     def process_single_test(self, tester):
-        results = []
-        results.append(tester.results_raw[tester.result_counter])
-        tester.result_counter += 1
-        results.append(tester.results_raw[tester.result_counter])
-        tester.result_counter += 1
-        # for an amp, for now, no post-processing is required
-        return results
-
-
-    
+        outp = tester[0].value
+        outn = tester[1].value
+        return {'outp': outp, 'outn': outn}
 
