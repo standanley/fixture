@@ -260,7 +260,6 @@ class Testbench():
         ''' Return results in the following format:
         for mode: for [in, out]: {pin:[x1, x2, x3, ...], }
         '''
-
         input_names, output_names = self.get_input_output_names()
         def append_vector(orig, data, pins):
             for x, p in zip(data, pins):

@@ -109,6 +109,6 @@ def test_differential_amp():
 
 if __name__ == '__main__':
    #test_simple_amp()
-   test_parameterized_amp()
-   #test_differential_amp()
+   #test_parameterized_amp()
+   test_differential_amp()
 

@@ -35,16 +35,6 @@ class PhaseBlenderTemplate(TemplateMaster):
 
         phase_diff = values['in_phase_diff']
 
-        #tester.poke(self.in_a, 1)
-        #tester.delay(phase_diff / freq)
-        #tester.poke(self.in_a, 1)
-        #tester.delay((0.5-phase_diff) / freq)
-        #tester.poke(self.in_a, 0)
-        #tester.delay(phase_diff / freq)
-        #tester.poke(self.in_a, 0)
-        #tester.delay((0.5-phase_diff) / freq)
-
-
         tester.poke(self.in_a, 0, delay={
             'freq': freq,
             })
@@ -52,8 +42,6 @@ class PhaseBlenderTemplate(TemplateMaster):
         tester.poke(self.in_b, 0, delay={
             'freq': freq,
             })
-
-        #utils.poke_binary_analog(tester, self.sel, values['sel'])
 
         # TODO get this next line to work
         #tester.poke(self.sel, values['sel'])
@@ -80,9 +68,6 @@ class PhaseBlenderTemplate(TemplateMaster):
     @classmethod
     def process_single_test(self, reads):
         out_phase = reads[0].value
-        #results = []
-        #results.append(tester.results_raw[tester.result_counter])
-        #tester.result_counter += 1
         ret = {'out_phase': out_phase}
         return ret
 
