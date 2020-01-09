@@ -25,10 +25,21 @@ class Testbench():
         analog_limits = [port.limits for port in self.dut.inputs_ranged]
         ba_limits = [(0,1) for _ in self.dut.inputs_ba]
         lims = analog_limits + ba_limits
-        vectors_scaled = []
-        for vec in vectors_unscaled:
-            scaled = [scale(lim, val) for lim,val in zip(lims, vec)]
-            vectors_scaled.append(scaled)
+
+        vectors_scaled = {}
+        for pin, vals in vectors_unscaled.items():
+            limits = getattr(pin, 'limits', (0,1))
+            vectors_scaled[pin] = [scale(limits, val) for val in vals]
+
+        #print(vectors_unscaled)
+        #print(vectors_scaled)
+        #exit()
+        
+
+        # vectors_scaled = []
+        # for vec in vectors_unscaled:
+        #     scaled = [scale(lim, val) for lim,val in zip(lims, vec)]
+        #     vectors_scaled.append(scaled)
         return vectors_scaled
 
     '''
@@ -146,7 +157,7 @@ class Testbench():
     def set_test_vectors(self, vectors, prescaled = False):
         ''' Creates self.test_vectors_by_mode '''
         if (len(vectors) == 2**self.num_digital
-                and len(vectors[0][0]) == self.num_ba + self.num_ranged):
+                and len(vectors[0]) == self.num_ba + self.num_ranged):
             # TODO the line above used to have a +1, but I'm not sure why
             # maybe it was for the test_input
             modes = product(range(2), repeat=self.num_digital)
@@ -158,7 +169,7 @@ class Testbench():
                     scaled = self.scale_vectors(vectors_this_mode)
                 self.test_vectors_by_mode[mode] = scaled
         else:
-            # for now we only support a list of lists of input vectors
+            # for now we only support one way of specifying
             raise NotImplementedError
 
     #def is_optional(self, p):
@@ -252,7 +263,15 @@ class Testbench():
         for digital_mode in self.test_vectors_by_mode:
             self.set_digital_mode(digital_mode)
             test_vectors = self.test_vectors_by_mode[digital_mode]
-            for test_vector in test_vectors:
+
+            #TODO
+            # should I put a dictionary of pin:value in the self.result_processing_list.append or should I put a list of [value] and also save a corresponding list of [pin]?
+            self.result_processing_input_pin_order = test_vectors.keys()
+            test_vectors_transpose = zip(*[test_vectors[p] for p in self.result_processing_input_pin_order])
+            #print(list(test_vectors_transpose))
+
+
+            for test_vector in test_vectors_transpose:
                 reads = self.run_test_vector(test_vector)
                 self.result_processing_list.append((digital_mode, test_vector, reads))
 
@@ -260,7 +279,7 @@ class Testbench():
         ''' Return results in the following format:
         for mode: for [in, out]: {pin:[x1, x2, x3, ...], }
         '''
-        input_names, output_names = self.get_input_output_names()
+        input_names = [self.dut.get_name(p) for p in self.result_processing_input_pin_order]
         def append_vector(orig, data, pins):
             for x, p in zip(data, pins):
                 orig[p] = orig.get(p, []) + [x]
@@ -285,21 +304,4 @@ class Testbench():
 
         self.results = [x for m,x in results_by_mode.items()]
         return self.results
-
-    def get_input_output_names(self):
-        #inputs = self.dut.inputs_test + self.dut.inputs_ranged + self.dut.inputs_ba
-        #outputs = self.dut.outputs_test + self.dut.outputs_analog + self.dut.outputs_digital
-        inputs = self.dut.inputs_ranged + self.dut.inputs_ba
-        outputs = self.dut.outputs_analog + self.dut.outputs_digital
-        def clean(x):
-            w = self.dut.get_name(x)
-            return w.split('.')[-1]
-        input_names = [clean(x) for x in inputs]
-        output_names = [clean(x) for x in outputs]
-        return input_names, output_names
-
-
-
-
-
 

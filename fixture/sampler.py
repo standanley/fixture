@@ -119,7 +119,10 @@ class Sampler:
         for i in range(modes):
             N = num_samples // modes + ((num_samples%modes)*i)//modes 
             ss = cls.get_orthogonal_samples(num_analog, num_ba, N)
-            input_vectors.append(ss)
+            labels = circuit.inputs_ranged + circuit.inputs_ba
+            ss_transpose = zip(*ss)
+            ss_labeled = {l:list(xs) for l,xs in zip(labels, ss_transpose)}
+            input_vectors.append(ss_labeled)
         return input_vectors
 
 
