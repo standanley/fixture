@@ -172,15 +172,6 @@ class Testbench():
             # for now we only support one way of specifying
             raise NotImplementedError
 
-    #def is_optional(self, p):
-    #    for optional in self.dut.optional_ports:
-    #        # the whole point of this method is being able to use 
-    #        # 'is' instead of '=='
-    #        if p is optional:
-    #            return True
-    #    return False
-
-
     def apply_optional_inputs(self, test_vector):
         #print('applying optional things', test_vector)
         # poke analog ports
@@ -216,7 +207,7 @@ class Testbench():
         #abc
         #self.apply_optional_inputs(v_optional)
         #self.dut.run_single_test(self.tester, v_required)
-        #self.read_optional_outputs()
+        #self.read_optional_outeuts()
 
         self.apply_optional_inputs(test_vector)
 
