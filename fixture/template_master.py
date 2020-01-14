@@ -79,7 +79,9 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         ''' gives back a string to identify something port-like
         The input could be a port type or port instance, etc.
         '''
-        if hasattr(type(p), 'name'):
+        if type(p) == str:
+            return p
+        elif hasattr(type(p), 'name'):
             name = str(type(p).name)
             #print('FIRST CASE', name)
             return name

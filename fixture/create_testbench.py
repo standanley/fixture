@@ -177,39 +177,50 @@ class Testbench():
                 test_vectors_optional_T = [() for _ in test_vectors_required_T]
 
 
-            print(list(test_vectors_optional_T))
-            print(list(test_vectors_required_T))
+            # print(list(test_vectors_optional_T))
+            # print(list(test_vectors_required_T))
 
             for vec_required, vec_optional in zip(test_vectors_required_T, test_vectors_optional_T):
                 reads = self.run_test_vector(vec_required, vec_optional)
-                self.result_processing_list.append((digital_mode, test_vector, reads))
+                self.result_processing_list.append((digital_mode, vec_required, vec_optional, reads))
 
     def get_results(self):
         ''' Return results in the following format:
         for mode: for [in, out]: {pin:[x1, x2, x3, ...], }
         '''
-        input_names = [self.dut.get_name(p) for p in self.result_processing_input_pin_order]
-        def append_vector(orig, data, pins):
-            for x, p in zip(data, pins):
-                orig[p] = orig.get(p, []) + [x]
+        # input_names = [self.dut.get_name(p) for p in self.result_processing_input_pin_order]
+        # def append_vector(orig, data, pins):
+        #     for x, p in zip(data, pins):
+        #         orig[p] = orig.get(p, []) + [x]
+        # def append_vector(old, req, opt):
+        #     for port, val in zip(ports, req + opt):
+        #         old[port].append(val)
 
         self.results_raw = self.tester.targets['spice'].saved_for_later
         self.results_raw = [float(x) for x in self.results_raw]
-        results_by_mode = {m:({}, {}) for m in self.test_vectors_by_mode}
+        results_by_mode = {m:{} for m in self.test_vectors_by_mode}
         self.result_counter = 0
-        for m, v, reads in self.result_processing_list:
-            result = self.dut.process_single_test(reads)
-            if not isinstance(result, dict):
-                result = [result]
+        for m, req, opt, reads in self.result_processing_list:
+            results_out_req = self.dut.process_single_test(reads)
+            if not isinstance(results_out_req, dict):
+                results_out_req = [results_out_req]
                 # TODO I think we should assert fail here rather than try to fix it
                 assert False, 'Return from process_single_test should be a dict'
 
             # TODO: optional outputs
-            optional_results = self.process_optional_outputs()
+            # results_out_opt = self.process_optional_outputs()
 
-            append_vector(results_by_mode[m][0], v, input_names)
-            append_vector(results_by_mode[m][1], result.values(), result.keys())
-            append_vector(results_by_mode[m][1], optional_results.values(), optional_results.keys())
+            results_in_req = {k:v for k,v in zip(self.dut.inputs_required, req)}
+            results_in_opt = {k:v for k,v in zip(self.dut.inputs_optional, opt)}
+
+            results = {**results_in_req, **results_in_opt, **results_out_req}
+
+            if len(results_by_mode[m]) == 0:
+                results_by_mode[m] = {k:[] for k in results}
+
+            for k,v in results.items():
+                results_by_mode[m][k].append(v)
+
 
         self.results = [x for m,x in results_by_mode.items()]
         return self.results
