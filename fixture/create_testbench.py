@@ -56,7 +56,6 @@ class Testbench():
                 values_scaled = [scale(port.limits, val) for val in values]
             else:
                 values_scaled = values
-            print(vectors_scaled)
             vectors_scaled[port] = values_scaled
         return vectors_scaled
 
@@ -89,15 +88,9 @@ class Testbench():
             raise NotImplementedError
 
     def apply_optional_inputs(self, test_vector):
-        print('applying optional things', test_vector)
-        # poke analog ports
-        #optional = self.dut.optional_a + self.dut.optional_ba
-        #print(optional)
-        zipped = zip(self.dut.inputs_ranged + self.dut.inputs_ba, test_vector)
+        zipped = zip(self.dut.inputs_optional, test_vector)
         for input_, val in zipped:
-            if not self.dut.is_required(input_):
-                #print('doing input', input_, val)
-                self.tester.poke(input_, val) 
+            self.tester.poke(input_, val)
 
     def read_optional_outputs(self):
         # TODO use new read object
@@ -115,10 +108,7 @@ class Testbench():
         return results
 
     def run_test_vector(self, vec_required, vec_optional):
-        #self.apply_optional_inputs(vec_optional)
-        #TODO
-
-
+        self.apply_optional_inputs(vec_optional)
 
         # TODO consider breaking the rest of this into another function
         test_inputs = {}
