@@ -70,7 +70,10 @@ class Testbench():
             self.tester.poke(input_, val)
 
     def set_test_vectors(self, vectors, prescaled = False):
-        ''' Creates self.test_vectors_by_mode '''
+        '''
+        Creates self.test_vectors_by_mode
+        vectors should be [for mode: {for port: [values]}]
+        '''
         if (len(vectors) == 2**self.num_digital
                 and len(vectors[0]) == self.num_optional + self.num_required):
             # TODO the line above used to have a +1, but I'm not sure why
