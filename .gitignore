@@ -6,3 +6,4 @@ build/
 *.swp
 *.egg-info
 
+.idea
