@@ -38,7 +38,7 @@ def get_parameterized_amp():
 
 
 def test_simple_amp():
-    data = ({'in_single':[1, 2, 3, 4, 5]}, {'amp_output':[6,4,5,2,2]})
+    data = ({'in_single':[1, 2, 3, 4, 5], 'amp_output':[6,4,5,2,2]})
     dut = get_simple_amp()
     reg = Regression(dut, data)
 
@@ -49,8 +49,7 @@ def test_parameterized_amp():
              'ba<1>': [0, 1, 0, 0, 1],
              'ba<2>': [1, 0, 0, 0, 1],
              'ba<3>': [0, 0, 0, 1, 0],
-             }, 
-            {'amp_output':[6,4,5,2,2]
+             'amp_output':[6,4,5,2,2]
             })
     dut = get_parameterized_amp()
     reg = Regression(dut, data)
@@ -86,7 +85,7 @@ def test_differential_amp():
         datax['inn'].append(inn)
         datay['outp'].append(outp)
         datay['outn'].append(outn)
-    data = [datax, datay]
+    data = {**datax, **datay}
 
     print('\nDATA', data)
 
