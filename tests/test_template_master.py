@@ -77,7 +77,6 @@ def test_port_sorting():
         IO = ['my_digital', In(Bit),
                 'my_analog_limits', fixture.RealIn((.1, .9)),
                 'my_analog_pinned', fixture.RealIn(1.2),
-                'my_analog_unspecified', fixture.RealIn(),
                 'my_analog_out', fault.RealOut,
                 'my_digital_out', Out(Bit)
             ]
@@ -124,3 +123,7 @@ def test_simple():
 
         t.compile_and_run('verilator')
 
+
+if __name__ == '__main__':
+    #test_simple()
+    test_port_sorting()

@@ -3,7 +3,7 @@ import pandas
 from itertools import combinations, product
 import magma
 import re
-
+from fault import RealKind
 
 class Regression():
     # statsmodels gets confused if you try to use '1' to mean a column of 
@@ -93,11 +93,18 @@ class Regression():
         interaction_a_ba = False
         interaction_ba_ba = False
 
-        #print(dut.optional_a)
-        #print(dut.optional_ba)
+        opt_a, opt_ba = [], []
+        for port in dut.inputs_optional:
+            if isinstance(type(port), RealKind):
+                opt_a.append(port)
+            else:
+                opt_ba.append(port)
+
+        #print(opt_a)
+        #print(opt_ba)
 
         terms = [cls.one_literal]
-        for a_port in dut.optional_a:
+        for a_port in opt_a:
             a = cls.get_spice_name(a_port)
             for i in range(1, analog_order + 1):
                 if i == 1:
@@ -105,7 +112,7 @@ class Regression():
                 else:
                     terms.append('I(%s**%d)' % (a, i))
 
-        for ba_port in dut.optional_ba:
+        for ba_port in opt_ba:
             ba = cls.get_spice_name(ba_port)
             terms.append(ba)
 
@@ -116,11 +123,11 @@ class Regression():
                 terms.append('%s:%s' % (a, b))
 
         if interaction_a_a:
-            interact(combinations(dut.optional_a, 2))
+            interact(combinations(opt_a, 2))
         if interaction_ba_ba:
-            interact(combinations(dut.optional_ba, 2))
+            interact(combinations(opt_ba, 2))
         if interaction_a_ba:
-            interact(product(dut.optional_a, dut.optional_ba))
+            interact(product(opt_a, opt_ba))
 
         return ' + '.join(terms)
 
@@ -134,21 +141,22 @@ class Regression():
 
 
     def convert_required_ba(self, dut, rhs):
-        # when the parameter algebra contains a term with a ba input,
+        # when the parameter algebra contains an Array (most likely ba input),
         # we have to break that term into multiple terms
         to_be_deleted = set()
         to_be_added = {}
-        for required_ba in dut.required_ba:
-            bus_name = str(required_ba.name.array.name)
-            inst_name = str(required_ba.name).split('.')[-1]
-            new_name = self.clean_string(inst_name)
-            search_str = r'\b' + bus_name + r'\b'
+        for arr_req in dut.inputs_required:
+            if isinstance(arr_req.name, magma.ref.ArrayRef):
+                bus_name = str(arr_req.name.array.name)
+                inst_name = str(arr_req.name).split('.')[-1]
+                new_name = self.clean_string(inst_name)
+                search_str = r'\b' + bus_name + r'\b'
 
-            for key_term in rhs:
-                if re.search(search_str, key_term):
-                    to_be_deleted.add(key_term)
-                    new_key_term = re.sub(search_str, new_name, key_term)
-                    to_be_added[new_key_term] = rhs[key_term] + '_' + inst_name
+                for key_term in rhs:
+                    if re.search(search_str, key_term):
+                        to_be_deleted.add(key_term)
+                        new_key_term = re.sub(search_str, new_name, key_term)
+                        to_be_added[new_key_term] = rhs[key_term] + '_' + inst_name
         for d in to_be_deleted:
             del rhs[d]
         for k, v in to_be_added.items():
@@ -161,7 +169,8 @@ class Regression():
         '''
 
 
-        data = {**data[0], **data[1]}
+        # data = {**data[0], **data[1]}
+        data = {dut.get_name(k):v for k,v in data.items()}
         data[self.one_literal] = [1 for _ in list(data.values())[0]]
         data = {self.clean_string(k):v for k,v in data.items()}
         self.df = pandas.DataFrame(data)

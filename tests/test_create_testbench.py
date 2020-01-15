@@ -6,19 +6,19 @@ import random
 def transpose(x):
     return list(zip(*list(x)))
 
-def transpose_special(vecs):
+def transpose_special(vecs, xy):
     # comes in as
     # mode: [in,out]: {pin: [x1, ...]}
-    ins, outs = vecs[0] # only use 0th mode
-    xss = ins['amp_input']
-    print(outs)
-    yss = outs['amp_output']
+    # only use 0th mode
+    vecs = {str(k):v for k,v in vecs[0].items()}
+    xss = vecs[xy[0]]
+    yss = vecs[xy[1]]
     return [xss, yss]
 
-def plot(results):
+def plot(results, xy):
     if __name__ == '__main__':
         import matplotlib.pyplot as plt
-        res = transpose_special(results)
+        res = transpose_special(results, xy)
         plt.plot(res[0], res[1], '*')
         plt.show()
 
@@ -43,7 +43,8 @@ def simple_amp_tester(vectors):
     # Since we include that file in compile_and_run, they get linked
     class MyAmp(UserAmpInterface):
         name = 'myamp'
-    
+
+    vectors = [{getattr(MyAmp, k):v for k,v in vs.items()} for vs in vectors]
 
 
     tester = fault.Tester(MyAmp)
@@ -62,29 +63,35 @@ def simple_amp_tester(vectors):
 
 def test_tiny():
     # one list of vectors for each digital mode
-    vectors = [[(0.7,), (0.8,)]]
+    vectors = [{'in_':[0.7, 0.8]}]
     results = simple_amp_tester(vectors)
     print(results)
 
 def test_many():
-    vectors = [[(random.random(),) for _ in range(20)]]
+    vectors = [{'in_':[random.random() for _ in range(20)]}]
     results = simple_amp_tester(vectors)
     #print(results[:10])
     #print(results)
-    plot(results)
+    plot(results, ('in_', 'amp_output'))
 
 def test_with_sampler():
-    vectors = [fixture.Sampler.get_orthogonal_samples(1, 0, 20)]
+    vectors = fixture.Sampler.get_orthogonal_samples(1, 0, 20)
+    ports = ['in_']
+    vectors = [{p:vs for p,vs in zip(ports, zip(*vectors))}]
     print('About to print vectors')
     print(vectors)
+
     #exit()
     results = simple_amp_tester(vectors)
     #print(results[:10])
     #print(results)
-    plot(results)
+    plot(results, ('in_', 'amp_output'))
 
 
 if __name__ == '__main__':
+    print('Starting tests')
     test_with_sampler()
     #test_many()
+    print('done')
+print('test')
 

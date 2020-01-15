@@ -55,18 +55,18 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         return '\n'.join([str(port) for port in self.required_ports])
 
     @classmethod
-    def is_required(self, p):
+    def is_required_port(self, p):
         # TODO I'm afraid it is not handling busses correctly, but maybe it doesn't matter?
         # Single wires of an optional bus are counted as optional, which is all I need for now
         required_mappings = [getattr(self, r).name for r in self.required_ports]
 
-        is_required_port = any(p.name == rn for rn in required_mappings)
+        return any(p.name == rn for rn in required_mappings)
 
-        test_inputs_str = [self.get_name(x) for x in self.test_input_ports]
-        is_required_test = any(self.get_name(p) == rn for rn in test_inputs_str)
+        # test_inputs_str = [self.get_name(x) for x in test_input_ports]
+        # is_required_test = any(self.get_name(p) == rn for rn in test_inputs_str)
 
-        #print('checking required', p, is_required_port, is_required_test)
-        return is_required_port or is_required_test
+        # #print('checking required', p, is_required_port, is_required_test)
+        # return is_required_port or is_required_test
 
     # gets called when someone subclasses a template, checks that all of
     # required_ports got mapped to in mapping
@@ -79,7 +79,9 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         ''' gives back a string to identify something port-like
         The input could be a port type or port instance, etc.
         '''
-        if hasattr(type(p), 'name'):
+        if type(p) == str:
+            return p
+        elif hasattr(type(p), 'name'):
             name = str(type(p).name)
             #print('FIRST CASE', name)
             return name
@@ -123,20 +125,19 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
                 return ti.flip()()
             else:
                 return ti
-        self.test_input_ports = [flip_test_input(p) for p in self.inputs_test]
+        test_input_ports = [flip_test_input(p) for p in self.inputs_test]
 
-        self.optional_ports = [p for p in circuit_ports if not self.is_required(p)]
+        self.optional_ports = [p for p in circuit_ports if not self.is_required_port(p)]
 
         # we want to sort ports into inputs/outputs/analog/digital/pinned/ranged, etc
         inputs_pinned = []
-        inputs_ranged = []
-        inputs_unspecified = []
-        inputs_digital = []
-        inputs_ba = []
-        outputs_analog =[]
-        outputs_digital = []
+        inputs_true_digital = []
+        inputs_optional = []
+        inputs_required = []
+        outputs_optional_analog = []
 
-
+        temp_inputs_a_or_ba = []
+        
         def sort_port(port):
             #if any(port == getattr(self, required) for required in self.required_ports):
             #if any(port.name == required for required in self.required_ports):
@@ -151,88 +152,87 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
             port_type = type(port)
             if port.isinout():
                 raise NotImplementedError
+
             if not port.isinput():
                 # NOTE: I'm not sure why I need the "not" above,
                 # and magma.Flip does not work on port
                 if isinstance(port_type, fault.RealKind):
-                    if hasattr(port, 'limits'):
-                        limits = port.limits
-                        if limits == None:
-                            inputs_unspecified.append(port)
+                    assert hasattr(port, 'limits'), "Analog ports must have limits"
+                    try:
+                        pin = float(port.limits)
+                        inputs_pinned.append(port)
+                    except TypeError:
+                        if len(port.limits) == 2:
+                            #inputs_ranged.append((name, tuple(limits)))
+                            # magma overloads the name "tuple"
+                            # inputs_ranged.append(port)
+                            temp_inputs_a_or_ba.append(port)
                         else:
-                            try:
-                                pin = float(limits)
-                                inputs_pinned.append(port)
-                            except TypeError:
-                                if len(limits) == 2:
-                                    #inputs_ranged.append((name, tuple(limits)))
-                                    # magma overloads the name "tuple"
-                                    inputs_ranged.append(port)
-                                else:
-                                    # TODO put a better message here
-                                    assert False, 'Limits must be 1 or 2 values'
-                    else:
-                        # TODO I believe this case is not covered in the test
-                        inputs_unspecified.append(port)
+                            # TODO put a better message here
+                            assert False, 'Limits must be 1 or 2 values'
 
                 elif isinstance(port_type, BinaryAnalogKind):
-                    inputs_ba.append(port)
+                    temp_inputs_a_or_ba.append(port)
                 elif isinstance(port_type, magma.BitKind):
-                    inputs_digital.append(port)
+                    inputs_true_digital.append(port)
                 else:
                     print('didint match any types')
                     print(port)
                     raise NotImplementedError
             elif not port.isoutput():
                 if isinstance(port_type, fault.RealKind):
-                    outputs_analog.append(port)
+                    outputs_optional_analog.append(port)
                 elif isinstance(port_type, magma.BitKind):
+                    # No support yet for optional digital because of the nonlinearity
+                    raise NotImplementedError
                     outputs_digital.append(port)
-                elif isinstance(port, TestVectorOutput):
-                    # TODO do we need to save this?
-                    pass
                 else:
                     print(port, type(port), self.get_name(port))
                     assert False, "Only analog and digital outputs are supported"
 
             else:
                 # TODO deal with unspecified input/output ?
-                print('unspecified')
+                print('unspecified input/output')
                 print(port)
-                raise NotImplementedError
+                assert False
 
         # start sorting
         for port in self.optional_ports:
             sort_port(port)
+        inputs_optional = temp_inputs_a_or_ba
 
-        # remember these before we add template_specified inputs
-        self.optional_a = copy.copy(inputs_ranged)
-        self.optional_ba = copy.copy(inputs_ba)
-
-        for port in self.test_input_ports:
+        temp_inputs_a_or_ba = []
+        for port in test_input_ports:
             sort_port(port)
+        inputs_required = temp_inputs_a_or_ba
 
-        self.required_ba = inputs_ba[len(self.optional_ba):]
+        #self.required_ba = inputs_ba[len(self.optional_ba):]
         #print('optional_a, optional_ba, required_ba')
         #print(self.optional_a)
         #print(self.optional_ba)
         #print(self.required_ba)
 
         ## Save results
-        #print('\nSaved results from port sorting:')
-        #print(inputs_pinned)
-        #print(inputs_ranged)
-        #print(inputs_unspecified)
-        #print(inputs_digital)
-        #print(inputs_ba)
-        #print(outputs_analog)
+        print('\nSaved results from port sorting:')
+        print(inputs_pinned)
+        print(inputs_true_digital)
+        print(inputs_optional)
+        print(inputs_required)
+        print(outputs_optional_analog)
         #print(outputs_digital)
 
+
         self.inputs_pinned = inputs_pinned
-        self.inputs_ranged = inputs_ranged
-        self.inputs_unspecified = inputs_unspecified
-        self.inputs_digital = inputs_digital
-        self.inputs_ba = inputs_ba
-        self.outputs_analog = outputs_analog
-        self.outputs_digital = outputs_digital
+        self.inputs_true_digital = inputs_true_digital
+        self.inputs_optional = inputs_optional
+        self.inputs_required = inputs_required
+        self.outputs_optional_analog = outputs_optional_analog
+
+        # self.inputs_pinned = inputs_pinned
+        # self.inputs_ranged = inputs_ranged
+        # self.inputs_unspecified = inputs_unspecified
+        # self.inputs_digital = inputs_digital
+        # self.inputs_ba = inputs_ba
+        # self.outputs_analog = outputs_analog
+        # self.outputs_digital = outputs_digital
 
