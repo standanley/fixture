@@ -1,4 +1,4 @@
-magma-lang
+magma-lang==1
 fault
 statsmodels
 
