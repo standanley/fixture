@@ -6,8 +6,9 @@ from fixture.real_types import BinaryAnalogKind, TestVectorOutput
 class PhaseBlenderTemplate(TemplateMaster):
     __name__ = 'phase_blender_template'
     required_ports = ['in_a', 'in_b', 'sel', 'out']
-    #parameter_algebra = ['I(out_phase - in_a_phase) ~ gain:I((in_b_phase-in_a_phase)*sel) + offset']
-    parameter_algebra = ['out_phase ~ gain:I(in_phase_diff*sel) + offset']
+    parameter_algebra = [
+        ('out_phase', {'gain':'in_phase_diff*sel', 'offset':'1'})
+    ]
 
     @classmethod
     def specify_test_inputs(self):

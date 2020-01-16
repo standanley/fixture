@@ -4,69 +4,27 @@ from itertools import combinations, product
 import magma
 import re
 from fault import RealKind
+from ast import literal_eval
 
 class Regression():
     # statsmodels gets confused if you try to use '1' to mean a column of 
     # ones, so we manually add a column of ones with the following name
-    one_literal = 'constant_ones'
+    one_literal = 'const_1'
 
     @classmethod
     def parse_parameter_algebra(self, f):
-        ''' Parse a formula to find coefficients of params.
-        I didn't want to write my own parser but we do need to understand
-        parentheses so regex isn't good enough, and patsy won't parse it
-        unless it knows all the variable names ahead of time.
-        Ex:
-        input : 'out_single ~ gain:in_single + offset'
-        output: ('out_single', {'in_single': 'gain', '1': 'offset'})
         '''
-
-        depth = 0
-        prev = 0
-        STATE = 'lhs'
-        rhs = {}
-
-        def get_param():
-            param = f[prev+1:i].strip()
-            # TODO: check for non \w chars
-            return param
-
-        for i, char in enumerate(f + '+'):
-            if char == '(':
-                depth += 1
-            elif char == ')':
-                depth -= 1
-            if depth != 0:
-                continue
-
-            if STATE == 'lhs':
-                if char == '~':
-                    lhs = f[:i].strip()
-                    prev = i
-                    STATE = 'param'
-                    #print('going to param after', lhs)
-            elif STATE == 'param':
-                if char == ':':
-                    param = get_param()
-                    prev = i
-                    STATE = 'expr'
-                    #print('going to expr after', param)
-                elif char == '+':
-                    param = get_param()
-                    rhs[self.one_literal] = param
-                    prev = i
-                    #print('staying param after', param)
-            elif STATE == 'expr':
-                if char == '+':
-                    expr = f[prev+1:i].strip()
-                    prev = i
-                    rhs[expr] = param
-                    STATE = 'param'
-                    #print('going to param after ', expr)
-        assert depth == 0, 'Unmatched paren in formula "%s"' % f
-        assert STATE == 'param', 'Unexpected end while parsing formula "%s"' % f
-
-        return (lhs, rhs)
+        Removes spaces, wraps in I(), and flips RHS terms so expr is the key
+        :param f:
+        :return:
+        '''
+        def clean(s):
+            return f'I({s.replace("" "", "")})'
+        lhs, rhs = f
+        res = {}
+        for k,v in rhs.items():
+            res[clean(v)] = k.replace(' ', '_')
+        return (clean(lhs), res)
 
     @classmethod
     def get_spice_name(cls, port):
@@ -165,22 +123,43 @@ class Regression():
     def __init__(self, dut, data):
         '''
         Incoming data should be of the form 
-        for [in, out]: {pin:[x1, ...], ...}
+        {pin:[x1, ...], ...}
         '''
 
-
-        # data = {**data[0], **data[1]}
         data = {dut.get_name(k):v for k,v in data.items()}
         data[self.one_literal] = [1 for _ in list(data.values())[0]]
         data = {self.clean_string(k):v for k,v in data.items()}
         self.df = pandas.DataFrame(data)
 
+        def create_const(rhs):
+            '''
+            pandas gets confused when you put a constant in the formula,
+            so for each constant we create a dedicated column in the df.
+            :param rhs: dictionary of expressions which may contain consts
+            :return: nothing; it modifies rhs and self.df in place
+            '''
+            for expr in rhs:
+                expr_literal = expr[2:-1]
+                try:
+                    const = literal_eval(expr_literal)
+                    column_name = f'const_{expr_literal}'
+                    self.df[column_name] = const
+                    param = rhs[expr]
+                    del rhs[expr]
+                    rhs[column_name] = param
+                    #print(const)
+                except ValueError:
+                    # not a constant
+                    pass
+
         results = {}
         for params_algebra in dut.parameter_algebra:
             lhs, rhs = self.parse_parameter_algebra(params_algebra)
+
             optional_pin_expr = self.get_optional_pin_expression(dut)
 
             self.convert_required_ba(dut, rhs)
+            create_const(rhs)
 
             formula = self.make_formula(lhs, rhs, optional_pin_expr)
             #print('formula was', formula)
@@ -237,12 +216,8 @@ class Regression():
         res = {param:{} for param in rhs.values()}
 
         coefs = results.params
-        #print('\nhere are the coefficient names')
-        #for t,c in coefs.items():
-        #    print('\t'+t)
         for term, coef in coefs.items():
             param, partial_term_optional = get_relevant_param(term)
-            #print('%s\t%s\t%.3f' % (param, partial_term_optional, coef))
             res[param][partial_term_optional] = coef
         return res
 

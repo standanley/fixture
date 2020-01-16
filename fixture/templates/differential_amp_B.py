@@ -4,19 +4,21 @@ from fixture import TestVectorInput, TestVectorOutput
 class DifferentialAmpTemplate(TemplateMaster):
     __name__ = 'DifferentialAmpTemplate'
     required_ports = ['inp', 'inn', 'outp', 'outn']
-    parameter_algebra = ['out_diff ~ gain:in_diff + cm_gain:in_cm + offset',
-            'out_cm ~ gain_to_cm:in_diff + cm_gain_to_cm:in_cm + offset_to_cm']
+    parameter_algebra = [
+        ('out_diff', {'gain':'in_diff', 'cm_gain':'in_cm', 'offset':'1'}),
+        ('out_cm', {'gain_to_cm':'in_diff', 'cm_gain_to_cm':'in_cm', 'offset_to_cm':'1'})
+    ]
 
     @classmethod
     def specify_test_inputs(self):
-        # TODO figure out limits
+        # Calculate differential and cm limits given pin limits
         limits_p, limits_n = self.inp.limits, self.inn.limits
         limits_cm = (limits_p[0] + (limits_p[1] - limits_p[0]) * 0.25, 
             limits_p[0] + (limits_p[1] - limits_p[0]) * 0.75)
         limits_diff = ((limits_p[1] - limits_p[0]) * -0.5, 
                 (limits_p[1] - limits_p[0]) * 0.5)
 
-        print('limits', limits_cm, limits_diff)
+        print('limits cm', limits_cm, 'limits differential', limits_diff)
         in_diff = TestVectorInput(limits_diff, 'in_diff')
         in_cm = TestVectorInput(limits_cm, 'in_cm')
         return [in_diff, in_cm]
