@@ -2,8 +2,8 @@ from fixture import TemplateMaster
 from fixture import TestVectorInput, TestVectorOutput
 from fixture import template_creation_utils
 
-print('ABout to create SimpleAmpTemplate class')
-class SimpleAmpTemplate(TemplateMaster):
+@template_creation_utils.dynamic
+class DynamicAmpTemplate(TemplateMaster):
     __name__ = 'abc123'
     required_ports = ['in_single', 'out_single']
     #parameter_algebra = ['amp_output ~ gain:in_single + offset']
@@ -24,6 +24,7 @@ class SimpleAmpTemplate(TemplateMaster):
     def run_single_test(self, tester, values):
         tester.poke(self.in_single, values['in_single'])
         wait_time = float(self.extras['approx_settling_time'])*2
+        self.read_transient(tester, self.out_single, wait_time)
         tester.delay(wait_time)
         tester.expect(self.out_single, 0, save_for_later=True)
         return tester.read(self.out_single)
@@ -33,8 +34,4 @@ class SimpleAmpTemplate(TemplateMaster):
     def process_single_test(self, read_out_single):
         results = {'amp_output': read_out_single.value}
         return results
-
-print('Finished creating SimpleAmpTemplate', SimpleAmpTemplate)
-
-    
 
