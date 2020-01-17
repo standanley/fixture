@@ -2,11 +2,9 @@ from fixture import TemplateMaster
 from fixture import TestVectorInput, TestVectorOutput
 from fixture import template_creation_utils
 
-print('ABout to create SimpleAmpTemplate class')
 class SimpleAmpTemplate(TemplateMaster):
     __name__ = 'abc123'
     required_ports = ['in_single', 'out_single']
-    #parameter_algebra = ['amp_output ~ gain:in_single + offset']
     parameter_algebra = [
         ('amp_output', {'gain':'in_single', 'offset':'1'})
     ]
@@ -33,8 +31,3 @@ class SimpleAmpTemplate(TemplateMaster):
     def process_single_test(self, read_out_single):
         results = {'amp_output': read_out_single.value}
         return results
-
-print('Finished creating SimpleAmpTemplate', SimpleAmpTemplate)
-
-    
-

@@ -23,30 +23,6 @@ class Testbench():
         self.num_required = len(self.dut.inputs_required)
         self.num_digital = len(self.dut.inputs_true_digital)
 
-
-    # def scale_vectors(self, vectors_unscaled):
-    #     def scale(limits, val):
-    #         return limits[0] + val * (limits[1] - limits[0])
-    #     analog_limits = [port.limits for port in self.dut.inputs_ranged]
-    #     ba_limits = [(0,1) for _ in self.dut.inputs_ba]
-    #     lims = analog_limits + ba_limits
-
-    #     vectors_scaled = {}
-    #     for pin, vals in vectors_unscaled.items():
-    #         limits = getattr(pin, 'limits', (0,1))
-    #         vectors_scaled[pin] = [scale(limits, val) for val in vals]
-
-    #     #print(vectors_unscaled)
-    #     #print(vectors_scaled)
-    #     #exit()
-    #     
-
-    #     # vectors_scaled = []
-    #     # for vec in vectors_unscaled:
-    #     #     scaled = [scale(lim, val) for lim,val in zip(lims, vec)]
-    #     #     vectors_scaled.append(scaled)
-    #     return vectors_scaled
-
     def scale_vectors(self, vectors_unscaled):
         def scale(limits, val):
             return limits[0] + val * (limits[1] - limits[0])
@@ -153,12 +129,6 @@ class Testbench():
             self.set_digital_mode(digital_mode)
             test_vectors = self.test_vectors_by_mode[digital_mode]
 
-            #TODO
-            # should I put a dictionary of pin:value in the self.result_processing_list.append or should I put a list of [value] and also save a corresponding list of [pin]?
-            #exit()
-            #self.result_processing_input_pin_order = test_vectors.keys()
-            #test_vectors_transpose = zip(*[test_vectors[p] for p in self.result_processing_input_pin_order])
-            #print(list(test_vectors_transpose))
             def transpose(xs):
                 return list(zip(*xs))
             test_vectors_required_T = transpose([test_vectors[p] for p in self.dut.inputs_required])
@@ -168,10 +138,6 @@ class Testbench():
                 test_vectors_required_T = [() for _ in test_vectors_optional_T]
             if len(test_vectors_optional_T) == 0:
                 test_vectors_optional_T = [() for _ in test_vectors_required_T]
-
-
-            # print(list(test_vectors_optional_T))
-            # print(list(test_vectors_required_T))
 
             for vec_required, vec_optional in zip(test_vectors_required_T, test_vectors_optional_T):
                 reads = self.run_test_vector(vec_required, vec_optional)

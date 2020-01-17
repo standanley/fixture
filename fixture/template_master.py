@@ -46,7 +46,6 @@ class TemplateKind(circuit.DefineCircuitKind):
 
         return cls
 
-print('About to create TemplateMaster class')
 class TemplateMaster(Circuit, metaclass=TemplateKind):
 
     @classmethod
@@ -84,19 +83,14 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
             return p
         elif hasattr(type(p), 'name'):
             name = str(type(p).name)
-            #print('FIRST CASE', name)
             return name
         elif isinstance(p, Type):
             name = str(p.name)
-            #print('for ', p, 'trying', name)
-            #print(self.is_required(p))
             for required_port in self.required_ports:
                 if name == str(getattr(self, required_port).name):
                     name = required_port
-                    #print('matched! ', name)
                     break
             name = name.split('.')[-1]
-            #print('RETURING NAME', name)
             return name
         elif hasattr(p, 'name'):
             return p.name
@@ -207,12 +201,6 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
             sort_port(port)
         inputs_required = temp_inputs_a_or_ba
 
-        #self.required_ba = inputs_ba[len(self.optional_ba):]
-        #print('optional_a, optional_ba, required_ba')
-        #print(self.optional_a)
-        #print(self.optional_ba)
-        #print(self.required_ba)
-
         ## Save results
         # print('\nSaved results from port sorting:')
         # print(inputs_pinned)
@@ -228,12 +216,4 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         self.inputs_optional = inputs_optional
         self.inputs_required = inputs_required
         self.outputs_optional_analog = outputs_optional_analog
-
-        # self.inputs_pinned = inputs_pinned
-        # self.inputs_ranged = inputs_ranged
-        # self.inputs_unspecified = inputs_unspecified
-        # self.inputs_digital = inputs_digital
-        # self.inputs_ba = inputs_ba
-        # self.outputs_analog = outputs_analog
-        # self.outputs_digital = outputs_digital
 

@@ -1,27 +1,11 @@
 from fixture import template_master
 
-'''
-#from fixture.templates import SimpleAmpTemplate
-#from . import templates
-#test = fixture.templates.SimpleAmpTemplate
-import fixture
-#fixture.SimpleAmpTemplate
-#fixture.templates
-#print(fixture.__dict__)
-from . import templates
-#templates.simple_amp
-#templates.SimpleAmpTemplate
-#from . import SimpleAmpTemplate
-templates.PhaseBlenderTemplate
-'''
-
 def extract_pzs(nps, nzs, x, y):
     # TODO
     return ([42.42]*nps, [42.42]*nzs)
 
 
 def dynamic(template):
-    print('IN DYNAMIC WRAPPER', template, template==template_master)
     # NOTE: the only reason I inherit directly from TemplateMaster
     # here is because I check whether a class is a template by checking
     # whether it's a direct subclass of TemplateMaster
@@ -37,8 +21,6 @@ def dynamic(template):
         # wrap run_single_test to return read_transient
         @classmethod
         def run_single_test(self, *args, **kwargs):
-            #print('In the wrapper for run now! args are:', args)
-            #ret = template.run_single_test(*args, **kwargs)
             ret = super().run_single_test(*args, **kwargs)
             err = ('If you use the Dynamic Template type, you must call '
                 'read_transient in your run_single_test!')
