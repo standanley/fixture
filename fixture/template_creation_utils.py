@@ -1,7 +1,8 @@
 from fixture import template_master
+
+'''
 #from fixture.templates import SimpleAmpTemplate
 #from . import templates
-
 #test = fixture.templates.SimpleAmpTemplate
 import fixture
 #fixture.SimpleAmpTemplate
@@ -12,64 +13,57 @@ from . import templates
 #templates.SimpleAmpTemplate
 #from . import SimpleAmpTemplate
 templates.PhaseBlenderTemplate
-
+'''
 
 def extract_pzs(nps, nzs, x, y):
     # TODO
     return ([42.42]*nps, [42.42]*nzs)
 
 
-class Dynamic(template_master.TemplateKind):
-    def __new__(metacls, name, bases, dct):
-        cls = super(Dynamic, metacls).__new__(metacls, name, bases, dct)
-        print('\ntop of new', cls, hasattr(cls, 'in_single'))
-
-        if hasattr(cls, 'latest_dynamic_read') or cls == templates.simple_amp.SimpleAmpTemplate:
-            print('Skipping dynamic wrapper for', cls)
-            return cls
-
-        print(cls.parameter_algebra)
-        #print('pa was', cls.parameter_algebra)
-
-        # add pzs to parameter_algebra
-        cls.parameter_algebra += ('p1', {'p1': '1'})
+def dynamic(template):
+    print('IN DYNAMIC WRAPPER', template, template==template_master)
+    # NOTE: the only reason I inherit directly from TemplateMaster
+    # here is because I check whether a class is a template by checking
+    # whether it's a direct subclass of TemplateMaster
+    class Dynamic(template, template_master.TemplateMaster):
+        latest_dynamic_read = None
 
         # create function for reading transient in run_single_test
-        cls.latest_dynamic_read = None
-        def read_transient(self, tester, duration):
-            r = tester.read(self.out_single, style='block', params={'duration':duration})
+        @classmethod
+        def read_transient(self, tester, port, duration):
+            r = tester.read(port, style='block', params={'duration':duration})
             self.latest_dynamic_read = r
-        cls.read_transient = read_transient
 
         # wrap run_single_test to return read_transient
-        def dec_run(f):
-            def wrapper(*args, **kwargs):
-                print('In the wrapper for run now! args are:', args)
-                ret = f(*args, **kwargs)
-                err = ('If you use the Dynamic Template type, you must call '
-                    'read_transient in your run_single_test!')
-                assert cls.latest_dynamic_read != None, err
-                block_read = cls.latest_dynamic_read
-                cls.latest_dynamic_read = None
-                return (ret, block_read)
-            return wrapper
-        print('Wrapping run right now!', cls)
-        cls.run_single_test = dec_run(cls.run_single_test)
+        @classmethod
+        def run_single_test(self, *args, **kwargs):
+            #print('In the wrapper for run now! args are:', args)
+            #ret = template.run_single_test(*args, **kwargs)
+            ret = super().run_single_test(*args, **kwargs)
+            err = ('If you use the Dynamic Template type, you must call '
+                'read_transient in your run_single_test!')
+            assert self.latest_dynamic_read is not None, err
+            block_read = self.latest_dynamic_read
+            self.latest_dynamic_read = None
+            return (ret, block_read)
 
         # wrap process_single_test to process the block read
-        def dec_process(f):
-            def wrapper(self, reads, **kwargs):
-                reads_orig, block_read = reads
-                ret_dict = f(self, reads_orig, **kwargs)
-                x, y = block_read.value
-                ps, zs = extract_pzs(1, 0, x, y)
-                p1 = ps[0]
-                ret_dict['p1'] = p1
-                return ret_dict
-            return wrapper
-        cls.process_single_test = dec_process(cls.process_single_test)
+        @classmethod
+        def process_single_test(self, reads, *args, **kwargs):
+            reads_orig, block_read = reads
+            ret_dict = super().process_single_test(reads_orig, *args, **kwargs)
+            x, y = block_read.value
+            ps, zs = extract_pzs(1, 0, x, y)
+            p1 = ps[0]
+            ret_dict['p1'] = p1
+            return ret_dict
 
-        return cls
+    print('before', Dynamic.parameter_algebra)
+    Dynamic.parameter_algebra += [('p1', {'p1': '1'})]
+    print('after', Dynamic.parameter_algebra)
+
+    print('Before we return Dynamic, let\'s check:', hasattr(Dynamic, 'mapping'))
+    return Dynamic
 
 
 

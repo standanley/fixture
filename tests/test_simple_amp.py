@@ -53,6 +53,7 @@ def plot(results, tf):
 def test_simple():
     print('\nTop of test')
 
+    print('About to create UserAmpInterface from template')
     # this interface can be used for spice sims as well as verilog models
     class UserAmpInterface(fixture.templates.SimpleAmpTemplate):
         name = 'my_simple_amp_interface'
@@ -67,11 +68,18 @@ def test_simple():
             self.in_single = self.in_
             self.out_single = self.out
 
+    print('About to create MyAmp from interface')
     # The name and IO here match the spice model in spice/myamp.sp
     # Since we include that file in compile_and_run, they get linked
     class MyAmp(UserAmpInterface):
         name = 'myamp'
 
+        #@classmethod
+        #def run_single_test(*args):
+        #    print('local version got args', args)
+        #    super().run_single_test(*args)
+
+    print('Finished making MyAmp')
     print('Creating test bench')
     # auto-create vectors for 1 analog dimension
     vectors = fixture.Sampler.get_samples_for_circuit(MyAmp, 50)
@@ -149,6 +157,6 @@ def test_simple_parameterized():
 
     
 if __name__ == '__main__':
-    #test_simple()
-    test_simple_parameterized()
+    test_simple()
+    #test_simple_parameterized()
 

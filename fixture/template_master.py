@@ -46,6 +46,7 @@ class TemplateKind(circuit.DefineCircuitKind):
 
         return cls
 
+print('About to create TemplateMaster class')
 class TemplateMaster(Circuit, metaclass=TemplateKind):
 
     @classmethod
