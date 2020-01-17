@@ -26,13 +26,13 @@ def dynamic(template):
     # here is because I check whether a class is a template by checking
     # whether it's a direct subclass of TemplateMaster
     class Dynamic(template, template_master.TemplateMaster):
-        latest_dynamic_read = None
+        dynamic_reads = {}
 
         # create function for reading transient in run_single_test
         @classmethod
         def read_transient(self, tester, port, duration):
             r = tester.read(port, style='block', params={'duration':duration})
-            self.latest_dynamic_read = r
+            self.dynamic_reads[port] = r
 
         # wrap run_single_test to return read_transient
         @classmethod
@@ -42,27 +42,32 @@ def dynamic(template):
             ret = super().run_single_test(*args, **kwargs)
             err = ('If you use the Dynamic Template type, you must call '
                 'read_transient in your run_single_test!')
-            assert self.latest_dynamic_read is not None, err
-            block_read = self.latest_dynamic_read
-            self.latest_dynamic_read = None
-            return (ret, block_read)
+            assert len(self.dynamic_reads) > 0, err
+            dynamic_reads = self.dynamic_reads
+            self.latest_dynamic_reads = {}
+            return (ret, dynamic_reads)
 
         # wrap process_single_test to process the block read
         @classmethod
         def process_single_test(self, reads, *args, **kwargs):
-            reads_orig, block_read = reads
+            # we purposely put dynamic_reads in a scope the template creator
+            # can access so that they can edit it before we process
+            reads_orig, block_reads = reads
+            self.dynamic_reads = {p:r.value for p,r in block_reads.items()}
             ret_dict = super().process_single_test(reads_orig, *args, **kwargs)
-            x, y = block_read.value
-            ps, zs = extract_pzs(1, 0, x, y)
-            p1 = ps[0]
-            ret_dict['p1'] = p1
+            for port, (x,y) in self.dynamic_reads.items():
+                ps, zs = extract_pzs(1, 0, x, y)
+                p1 = ps[0]
+
+                # add these ps zs to parameter algebra if they are not already there
+                name = f'{self.get_name(port)}_p1'
+                if not name in [n for n,_ in self.parameter_algebra]:
+                    self.parameter_algebra.append((name, {name:'1'}))
+
+                # add to the dict so they can be used for regression later
+                ret_dict[name] = p1
             return ret_dict
 
-    print('before', Dynamic.parameter_algebra)
-    Dynamic.parameter_algebra += [('p1', {'p1': '1'})]
-    print('after', Dynamic.parameter_algebra)
-
-    print('Before we return Dynamic, let\'s check:', hasattr(Dynamic, 'mapping'))
     return Dynamic
 
 
