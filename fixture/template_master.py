@@ -213,12 +213,12 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
         #print(self.required_ba)
 
         ## Save results
-        print('\nSaved results from port sorting:')
-        print(inputs_pinned)
-        print(inputs_true_digital)
-        print(inputs_optional)
-        print(inputs_required)
-        print(outputs_optional_analog)
+        # print('\nSaved results from port sorting:')
+        # print(inputs_pinned)
+        # print(inputs_true_digital)
+        # print(inputs_optional)
+        # print(inputs_required)
+        # print(outputs_optional_analog)
         #print(outputs_digital)
 
 
