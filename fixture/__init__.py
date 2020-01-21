@@ -6,3 +6,4 @@ from .create_testbench import Testbench
 from .regression import Regression
 from .mgenero_interface import dump_yaml
 from .run import run
+from .modal_analysis import ModalAnalysis

@@ -8,5 +8,6 @@
 
 R0 vdd out 5000
 MN0 out in_ vss vss EENMOS w=0.4u l=0.1u
+C0 out vss 20n
 
 .ends

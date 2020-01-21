@@ -1,7 +1,22 @@
 from fixture import template_master
+import fixture.modal_analysis as modal_analysis
+
+def plot(x, y):
+    import matplotlib.pyplot as plt
+    plt.plot(x, y, '-*')
+    plt.show()
 
 def extract_pzs(nps, nzs, x, y):
     # TODO
+
+    #print(x)
+    #print(y)
+    plot(x, y)
+
+    ma = modal_analysis.ModalAnalysis(rho_threshold=0.9)
+    ma.fit_stepresponse(y - y[0], x)
+
+
     return ([42.42]*nps, [42.42]*nzs)
 
 
@@ -26,7 +41,7 @@ def dynamic(template):
                 'read_transient in your run_single_test!')
             assert len(self.dynamic_reads) > 0, err
             dynamic_reads = self.dynamic_reads
-            self.latest_dynamic_reads = {}
+            self.dynamic_reads = {}
             return (ret, dynamic_reads)
 
         # wrap process_single_test to process the block read
@@ -38,8 +53,13 @@ def dynamic(template):
             self.dynamic_reads = {p:r.value for p,r in block_reads.items()}
             ret_dict = super().process_single_test(reads_orig, *args, **kwargs)
             for port, (x,y) in self.dynamic_reads.items():
-                ps, zs = extract_pzs(1, 0, x, y)
-                p1 = ps[0]
+
+                if hasattr(self, 'skip'):
+                    ps, zs = extract_pzs(1, 0, x, y)
+                    p1 = ps[0]
+                else:
+                    p1 = 0
+                self.skip = False
 
                 # add these ps zs to parameter algebra if they are not already there
                 name = f'{self.get_name(port)}_p1'
