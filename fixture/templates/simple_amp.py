@@ -1,24 +1,17 @@
-#from .. import templates
-#from ..templates import *
 from fixture import TemplateMaster
 from fixture import TestVectorInput, TestVectorOutput
 
 class SimpleAmpTemplate(TemplateMaster):
     __name__ = 'abc123'
     required_ports = ['in_single', 'out_single']
-    #parameter_algebra = ['amp_output ~ gain:in_single + offset']
-    parameter_algebra = [
-        ('amp_output', {'gain':'in_single', 'offset':'1'})
-    ]
+    parameter_algebra = {
+        'amp_output': {'gain':'in_single', 'offset':'1'}
+        }
 
     @classmethod
     def specify_test_inputs(self):
         # could also use fixture.RealIn(self.in_single.limits, 'my_name')
         return [self.in_single]
-
-    @classmethod
-    def specify_test_outputs(self):
-        return [TestVectorOutput('amp_output')]
 
     @classmethod
     def run_single_test(self, tester, values):

@@ -4,11 +4,10 @@ import fixture.template_creation_utils as utils
 from fixture.real_types import BinaryAnalogKind, TestVectorOutput
 
 class PhaseBlenderTemplate(TemplateMaster):
-    __name__ = 'phase_blender_template'
     required_ports = ['in_a', 'in_b', 'sel', 'out']
-    parameter_algebra = [
-        ('out_phase', {'gain':'in_phase_diff*sel', 'offset':'1'})
-    ]
+    parameter_algebra = {
+        'out_phase': {'gain':'in_phase_diff*sel', 'offset':'1'}
+    }
 
     @classmethod
     def specify_test_inputs(self):
@@ -20,10 +19,6 @@ class PhaseBlenderTemplate(TemplateMaster):
         # could make a new test vector with same params as sel, or just use sel itself
         # new_sel = Array(len(self.sel), BinaryAnalog)
         return [diff, self.sel]
-
-    @classmethod
-    def specify_test_outputs(self):
-        return [TestVectorOutput('out_phase')]
 
     @classmethod
     def run_single_test(self, tester, values):

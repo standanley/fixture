@@ -2,12 +2,11 @@ from fixture import TemplateMaster
 from fixture import TestVectorInput, TestVectorOutput
 
 class DifferentialAmpTemplate(TemplateMaster):
-    __name__ = 'DifferentialAmpTemplate'
     required_ports = ['inp', 'inn', 'outp', 'outn']
-    parameter_algebra = [
-        ('out_diff', {'gain':'in_diff', 'cm_gain':'in_cm', 'offset':'1'}),
-        ('out_cm', {'gain_to_cm':'in_diff', 'cm_gain_to_cm':'in_cm', 'offset_to_cm':'1'})
-    ]
+    parameter_algebra = {
+        'out_diff': {'gain':'in_diff', 'cm_gain':'in_cm', 'offset':'1'},
+        'out_cm': {'gain_to_cm':'in_diff', 'cm_gain_to_cm':'in_cm', 'offset_to_cm':'1'}
+    }
 
     @classmethod
     def specify_test_inputs(self):
@@ -22,11 +21,6 @@ class DifferentialAmpTemplate(TemplateMaster):
         in_diff = TestVectorInput(limits_diff, 'in_diff')
         in_cm = TestVectorInput(limits_cm, 'in_cm')
         return [in_diff, in_cm]
-
-    @classmethod
-    def specify_test_outputs(self):
-        return [TestVectorOutput('out_diff'), TestVectorOutput('out_cm')]
-
 
     @classmethod
     def run_single_test(self, tester, value):
