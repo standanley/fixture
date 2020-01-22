@@ -1,5 +1,4 @@
 import fixture
-from fixture.real_types import LinearBitKind
 import fault
 import magma
 from pathlib import Path
@@ -58,7 +57,7 @@ def plot(results, tf):
     xs, ys = results
     plt.plot(xs, ys, '*')
     xs.sort()
-    plt.plot(xs, [tf(x[0]) for x in xs], '--')
+    plt.plot(xs, [tf(x) for x in xs], '--')
     plt.grid()
     plt.show()
 
@@ -103,12 +102,7 @@ def test_simple():
 
     print('Analyzing results')
     results = testbench.get_results()
-    ins, outs = results
-    results_reformatted = [ins[0], outs[0]]
-
-    my_ins  = [x[0] for x in results_reformatted[0]]
-    my_outs = [x[0] for x in results_reformatted[1]]
-    trip = fixture.templates.ContinuousComparatorTemplate.get_tripping_point((my_ins, my_outs))
+    trip = MyAmp.get_tripping_point(results[0])
     print('Measured trip point is', trip)
 
     trip_expression = {'coef':{'offset':trip}}
@@ -127,6 +121,7 @@ def test_simple():
 
     print('Plotting results')
     tf = lambda x: 1 if x > trip else 0
+    results_reformatted = (results[0][MyAmp.in_], results[0]['out'])
     plot(results_reformatted, tf)
     #temp = regression.model_ols
     #temp = temp['out']

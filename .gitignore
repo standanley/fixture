@@ -6,3 +6,6 @@ build/
 *.swp
 *.egg-info
 
+.idea
+
+test_*_output.yaml

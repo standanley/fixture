@@ -5,18 +5,20 @@ class ContinuousComparatorTemplate(TemplateMaster):
     required_ports = ['in_', 'out']
 
     @classmethod
-    def run_single_test(self, tester):
-        # For now we treat the input the same as the other analog inputs
-        # so we don't need any pokes of our own
-        #tester.expect(getattr(self, 'out_single'), 0, save_for_later=True)
-        tester.expect(self.out, 0, save_for_later=True)
+    def specify_test_inputs(self):
+        return [self.in_]
 
     @classmethod
-    def process_single_test(self, tester):
-        results = []
-        results.append(tester.results_raw[tester.result_counter])
-        tester.result_counter += 1
-        # for an amp, for now, no post-processing is required
+    def run_single_test(self, tester, values):
+        # For now we treat the input the same as the other analog inputs
+        # so we don't need any pokes of our own
+        tester.poke(self.in_, values['in_'])
+        return tester.read(self.out)
+
+    @classmethod
+    def process_single_test(self, read):
+        # TODO the slicing should take place in fault, I'm not sure why it's not
+        results = {'out': 1 if read.value > 0.6 else 0}
         return results
 
     @classmethod
@@ -27,8 +29,12 @@ class ContinuousComparatorTemplate(TemplateMaster):
         '''
         # for now the trip point is halfway between the last zero and the first one
 
+        print(data)
+
         def transpose(x):
             return list(zip(*list(x)))
+
+        data = (data[self.in_], data['out'])
         
         zeros = [x for x,y in transpose(data) if y == 0]
         ones  = [x for x,y in transpose(data) if y == 1]

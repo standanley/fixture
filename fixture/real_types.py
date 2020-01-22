@@ -9,61 +9,116 @@ from magma.port import Port, INPUT, OUTPUT, INOUT
 # But really really they're just calling a generator function
 
 class RealKind2(fault.RealKind):
-    # TODO we should probably override qualify as well
+    def __init__(cls, name, bases, dct):
+        super().__init__(name, bases, dct)
+
     def flip(cls):
         if cls.isoriented(INPUT):
-            return RealOut(getattr(cls, 'limits', None))
+            temp = RealOut(getattr(cls, 'limits', None))
+            if hasattr(cls, 'name'):
+                temp.name = cls.name
+            return temp
         elif cls.isoriented(OUTPUT):
-            return RealIn(getattr(cls, 'limits', None))
+            temp = RealIn(getattr(cls, 'limits', None))
+            if hasattr(cls, 'name'):
+                temp.name = cls.name
+            return temp
         return cls
+
+    def qualify(cls, direction):
+        if direction is None:
+            return Real(getattr(cls, 'limits', None))
+        elif direction == INPUT:
+            return RealIn(getattr(cls, 'limits', None))
+        elif direction == OUTPUT:
+            return RealOut(getattr(cls, 'limits', None))
+        elif direction == INOUT:
+            raise NotImplementedError
+            #return RealInOut(getattr(cls, 'limits', None))
+        return cls
+
+class RealType2(fault.real_type.RealType):
+    def __eq__(self, rhs):
+        return self.name == rhs.name
+    __hash__ = magma.Type.__hash__
 
 def RealIn(limits=None):
     kwargs = {'direction':magma.port.INPUT}
-    temp = RealKind2('Real', (fault.real_type.RealType,), kwargs)
+    temp = RealKind2('Real', (RealType2,), kwargs)
     temp.limits = limits
     return temp
 
 def RealOut(limits=None):
     kwargs = {'direction':magma.port.OUTPUT}
-    temp = RealKind2('Real', (fault.real_type.RealType,), kwargs)
+    temp = RealKind2('Real', (RealType2,), kwargs)
+    temp.limits = limits
+    return temp
+
+def Real(limits=None):
+    kwargs = {}
+    temp = RealKind2('Real', (RealType2,), kwargs)
     temp.limits = limits
     return temp
 
 
-'''
-class LinearBit(magma.Bit):
-    # this doesn't work because init is never called
-    #def __init__(self, *largs, **kwargs):
-    #    super().__init(largs, kwargs)
-    #    self._is_linear_bit = True
-    pass
-'''
-
-class LinearBitKind(magma.BitKind):
+class BinaryAnalogKind(magma.BitKind):
     def qualify(cls, direction):
         if direction is None:
-            return LinearBit
+            return BinaryAnalog
         elif direction == INPUT:
-            return LinearBitIn
+            return BinaryAnalogIn
         elif direction == OUTPUT:
-            return LinearBitOut
+            return BinaryAnalogOut
         elif direction == INOUT:
-            return LinearBitInOut
+            return BinaryAnalogInOut
         return cls
 
     def flip(cls):
         if cls.isoriented(INPUT):
-            return LinearBitOut
+            return BinaryAnalogOut
         elif cls.isoriented(OUTPUT):
-            return LinearBitIn
+            return BinaryAnalogIn
         return cls
 
 
-def MakeLinearBit(**kwargs):
-    return LinearBitKind('LinearBit', (magma.BitType,), kwargs)
+def MakeBinaryAnalog(**kwargs):
+    return BinaryAnalogKind('BinaryAnalog', (magma.BitType,), kwargs)
 
 
-LinearBit = MakeLinearBit()
-LinearBitIn = MakeLinearBit(direction=INPUT)
-LinearBitOut = MakeLinearBit(direction=OUTPUT)
-LinearBitInOut = MakeLinearBit(direction=INOUT)
+# TODO this is ugly now because BinaryAnalog is a funciton to return the type,
+# while BinaryAnalogIn is just the type itself
+def BinaryAnalog(limits=None):
+    assert limits==None, 'Bit type cannot have limits'
+    return MakeBinaryAnalog()
+
+#BinaryAnalog = MakeBinaryAnalog()
+BinaryAnalogIn = MakeBinaryAnalog(direction=INPUT)
+BinaryAnalogOut = MakeBinaryAnalog(direction=OUTPUT)
+BinaryAnalogInOut = MakeBinaryAnalog(direction=INOUT)
+
+def Bit(limits=None):
+    assert limits==None, 'Bit type cannot have limits'
+    return magma.Bit
+
+def Array(n, t):
+    return magma.Array[n, t]
+
+
+def TestVectorInput(limits=None, name='Unnamed test vector input', binary_analog=False):
+        temp = RealIn(limits)
+        temp.name = name
+        temp.binary_analog = binary_analog
+        return temp
+
+def TestVectorOutput(name='Unnamed test vector output'):
+    temp = RealIn()
+    temp.name = name
+    return temp
+
+
+''' Make more acceptable type names for .yaml files '''
+bit = Bit
+real = Real
+input = magma.In
+output = magma.Out
+binary_analog = BinaryAnalog

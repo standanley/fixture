@@ -1,23 +1,10 @@
 import fixture
-from fixture.real_types import LinearBitKind
 import fault
 import magma
 from pathlib import Path
 
-def reformat(results):
-    ivs = []
-    dvs = []
-    for result in results:
-        iv, dv = result
-        ivs.append(iv)
-        #dvs.append([float(dv_component) for dv_component in dv])
-        dvs.append(dv)
-    return ivs, dvs
-
-def reformat2(results):
-    # was for [in,out]: for mode: for vec: for pin: x
-    # we swap the first two axes
-    return list(zip(*list(results)))
+def transpose(x):
+    return list(zip(*list(x)))
 
 def get_tf(stats, ivs):
     def tf(x):
@@ -41,8 +28,10 @@ def plot2(results, statsmodels, in_dim=0):
     if __name__ != '__main__':
         return
     xs, ys = results
-    xs = [x[in_dim] for x in xs]
-    ys = [y[0] for y in ys]
+    x_key = list(xs)[in_dim]
+    y_key = list(ys)[0]
+    xs = xs[x_key]
+    ys = ys[y_key]
     estimated = statsmodels.fittedvalues
     plot_errors(xs, ys, estimated)
 
@@ -52,10 +41,9 @@ def plot(results, tf):
     if __name__ != '__main__':
         return
     import matplotlib.pyplot as plt
-    #xs, ys = zip(*results)
-    #xs = [x[0] for x in xs]
-    #ys = [y[0] for y in ys]
     xs, ys = results
+    xs = transpose([x[k] for k in x])
+    ys = transpose([y[k] for k in y])
     plt.plot(xs, ys, '*')
     xs.sort()
     plt.plot(xs, [tf(x[0]) for x in xs], '--')
@@ -68,6 +56,7 @@ def test_simple():
     # this interface can be used for spice sims as well as verilog models
     class UserAmpInterface(fixture.templates.SimpleAmpTemplate):
         name = 'my_simple_amp_interface'
+        extras = {'approx_settling_time':1e-3}
         IO = [
             'in_', fixture.RealIn((0.4, 1.0)),
             'out', fault.RealOut,
@@ -95,40 +84,29 @@ def test_simple():
     print(f'Running sim, {len(vectors[0])} test vectors')
     tester.compile_and_run('spice',
         simulator='ngspice',
-        model_paths = [Path('tests/spice/myamp.sp').resolve()]
+        model_paths = [Path('tests/spice/myamp.sp').resolve()],
+        clock_step_delay=0
     )
 
     print('Analyzing results')
     results = testbench.get_results()
-    ins, outs = results
-    results_reformatted = [ins[0], outs[0]]
+    results_reformatted = results[0]
 
-    iv_names = ['in_']
-    dv_names = ['out']
-    formula = {'out':'in_ + I(in_**2) + I(in_**3)'}
-    regression = fixture.LinearRegressionSM(iv_names, dv_names, results_reformatted)
-    regression.run()
+    mode = 0
+    results_reformatted = results[mode]
 
-    stats = regression.get_statistics()
-    print(regression.get_summary()['out'])
+    regression = fixture.Regression(MyAmp, results_reformatted)
 
-    print('Plotting results')
-    tf = get_tf(stats, dv_names)
-    plot(results_reformatted, tf)
-    #temp = regression.model_ols
-    #temp = temp['out']
-    #plot2(results_reformatted, temp, in_dim=5)
-
-    
 def test_simple_parameterized():
     class UserAmpInterface(fixture.templates.SimpleAmpTemplate):
+        extras = {'approx_settling_time':1e-3}
         name = 'my_simple_amp_interface'
         IO = [
             'my_in', fixture.RealIn((.5,.7)),
             'my_out', fault.RealOut,
             'vdd', fixture.RealIn(1.2),
             'vss', fixture.RealIn(0.0),
-            'ba', magma.Array[4, magma.In(fixture.LinearBit)],
+            'ba', magma.Array[4, magma.In(fixture.BinaryAnalog())],
             'adj', fixture.RealIn((.45,.55)),
             'ctrl', magma.In(magma.Bits[2]),
             'vdd_internal', fault.RealOut
@@ -148,42 +126,26 @@ def test_simple_parameterized():
 
     print('Creating test bench')
     # auto-create vectors for 1 analog dimension
-    vectors =  fixture.Sampler.get_samples_for_circuit(MyAmp, 500)
+    vectors =  fixture.Sampler.get_samples_for_circuit(MyAmp, 50)
 
     tester = fault.Tester(MyAmp)
     testbench = fixture.Testbench(tester)
     testbench.set_test_vectors(vectors)
     testbench.create_test_bench()
-    inputs_outputs = testbench.get_input_output_names()
-
 
     print(f'Running sim, {len(vectors)} test vectors')
     tester.compile_and_run('spice',
         simulator='ngspice',
-        model_paths = [Path('tests/spice/myamp_params.sp').resolve()]
+        model_paths = [Path('tests/spice/myamp_params.sp').resolve()],
+        clock_step_delay=0
     )
 
     print('Analyzing results')
     results = testbench.get_results()
-    ins, outs = results
     mode = 0
-    results_reformatted = [ins[mode], outs[mode]]
+    results_reformatted = results[mode]
 
-    iv_names, dv_names = inputs_outputs
-    regression = fixture.LinearRegressionSM(iv_names, dv_names, results_reformatted)
-    regression.run()
-    suggested_formula = regression.suggest_model_using_sensitivity()
-    regression.run(suggested_formula)
-
-    stats = regression.get_statistics()
-
-    print(regression.get_summary()['my_out'])
-    #print(regression.get_summary()['vdd_internal'])
-
-    print('Plotting results')
-    temp = regression.model_ols
-    temp = temp['my_out']
-    plot2(results_reformatted, temp, in_dim=0)
+    regression = fixture.Regression(MyAmp, results_reformatted)
 
     
 if __name__ == '__main__':

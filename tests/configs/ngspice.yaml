@@ -1,0 +1,5 @@
+target: spice
+simulator: ngspice
+#ic: {vss: 0}
+vsup: 1.2
+# TODO: could also have libraries to include, etc.

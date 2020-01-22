@@ -1,7 +1,8 @@
 import math
 import itertools
 import random
-from .template_master import TemplateKind
+from fixture.template_master import TemplateKind
+from fault import RealKind
 
 class Sampler:
     def rand():
@@ -111,16 +112,26 @@ class Sampler:
         ]
         '''
         assert isinstance(circuit, TemplateKind), 'For now, can only get samples for a templatized circuit'
-        num_analog = len(circuit.inputs_ranged)
-        num_ba = len(circuit.inputs_ba)
-        num_digital = len(circuit.inputs_digital)
+
+        def is_analog(p):
+            return isinstance(type(p), RealKind)
+
+        pins_sampled = circuit.inputs_optional + circuit.inputs_required
+        ports_a = [p for p in pins_sampled if is_analog(p)]
+        ports_ba = [p for p in pins_sampled if not is_analog(p)]
+
+        num_digital = len(circuit.inputs_true_digital)
         input_vectors = []
         modes = 2**num_digital
         for i in range(modes):
             N = num_samples // modes + ((num_samples%modes)*i)//modes 
-            print(N)
-            ss = cls.get_orthogonal_samples(num_analog, num_ba, N)
-            input_vectors.append(ss)
+            ss = cls.get_orthogonal_samples(len(ports_a), len(ports_ba), N)
+
+
+            labels = ports_a + ports_ba
+            ss_transpose = zip(*ss)
+            ss_labeled = {l:list(xs) for l,xs in zip(labels, ss_transpose)}
+            input_vectors.append(ss_labeled)
         return input_vectors
 
 
@@ -140,10 +151,8 @@ class Sampler:
 
     def assert_fifty_fifty(samples):
         for dim, bits in enumerate(zip(*samples)):
-            print(bits)
             zeros = len([bit for bit in bits if bit == 0])
             N = len(bits)
-            print(bits, N)
             assert abs(zeros - N/2) < 0.75, f'{zeros} out of {N} bits are 0 in dim {dim}'
 
 
