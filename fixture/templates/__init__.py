@@ -2,3 +2,4 @@ from .simple_amp import SimpleAmpTemplate
 from .differential_amp import DifferentialAmpTemplate
 from .differential_amp_B import DifferentialAmpTemplate as DifferentialAmpTemplateB
 from .phase_blender import PhaseBlenderTemplate
+from .oscillator import OscillatorTemplate

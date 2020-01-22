@@ -36,10 +36,6 @@ class TemplateKind(circuit.DefineCircuitKind):
             assert hasattr(cls, 'specify_test_inputs'), 'Must specify required test inputs'
             cls.inputs_test = cls.specify_test_inputs()
 
-            # specify the names and number of outputs
-            assert hasattr(cls, 'specify_test_outputs'), 'Must specify required test outputs'
-            cls.outputs_test = cls.specify_test_outputs()
-
             # sort ports into different lists depending on what kind of stimulus they require
             cls.sort_ports(cls)
 

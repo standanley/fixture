@@ -12,7 +12,7 @@ class Regression():
     one_literal = 'const_1'
 
     @classmethod
-    def parse_parameter_algebra(self, f):
+    def parse_parameter_algebra(self, lhs, rhs):
         '''
         Removes spaces, wraps in I(), and flips RHS terms so expr is the key
         :param f:
@@ -20,7 +20,10 @@ class Regression():
         '''
         def clean(s):
             return f'I({s.replace("" "", "")})'
-        lhs, rhs = f
+
+        if rhs == 'const':
+            rhs = {lhs:'1'}
+
         res = {}
         for k,v in rhs.items():
             res[clean(v)] = k.replace(' ', '_')
@@ -153,13 +156,14 @@ class Regression():
                     pass
 
         results = {}
-        for params_algebra in dut.parameter_algebra:
-            lhs, rhs = self.parse_parameter_algebra(params_algebra)
+        for lhs, rhs in dut.parameter_algebra.items():
+            lhs, rhs = self.parse_parameter_algebra(lhs, rhs)
 
             optional_pin_expr = self.get_optional_pin_expression(dut)
 
             self.convert_required_ba(dut, rhs)
             create_const(rhs)
+            print('param algebra is now', lhs, rhs)
 
             formula = self.make_formula(lhs, rhs, optional_pin_expr)
             #print('formula was', formula)
