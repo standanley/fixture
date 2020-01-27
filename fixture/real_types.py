@@ -42,16 +42,18 @@ class RealType2(fault.real_type.RealType):
         return self.name == rhs.name
     __hash__ = magma.Type.__hash__
 
-def RealIn(limits=None):
+def RealIn(limits=None, name = None):
     kwargs = {'direction':magma.port.INPUT}
     temp = RealKind2('Real', (RealType2,), kwargs)
     temp.limits = limits
+    temp.name = name
     return temp
 
-def RealOut(limits=None):
+def RealOut(limits=None, name = None):
     kwargs = {'direction':magma.port.OUTPUT}
     temp = RealKind2('Real', (RealType2,), kwargs)
     temp.limits = limits
+    temp.name = name
     return temp
 
 def Real(limits=None):

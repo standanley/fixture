@@ -18,7 +18,8 @@ class ModalAnalysis(object):
         return self.fit_impulseresponse(h_impulse,t_impulse)
     
     def fit_impulseresponse(self,h,t):
-        for N in range(2,self.N_degree):
+        #for N in range(2,self.N_degree):
+        for N in range(1,self.N_degree):
             print('Trying degree', N)
             ls_result = self.leastsquare_complexexponential(h,t,N)
             if ls_result['failed'] and N >=3:
@@ -35,10 +36,10 @@ class ModalAnalysis(object):
 
     def compare_impulseresponse(self,h1,h2):
 
-        import matplotlib.pyplot as plt
-        plt.plot(h1, '-*')
-        plt.plot(h2, '-*')
-        plt.show()
+        #import matplotlib.pyplot as plt
+        #plt.plot(h1, '-*')
+        #plt.plot(h2, '-*')
+        #plt.show()
 
 
         h1 = h1.flatten()
@@ -52,11 +53,27 @@ class ModalAnalysis(object):
                 t: time range vector (in sec); must be uniformly-spaced
                 N: degree of freedom
         '''
+        h_temp, t_temp = h, t
         no_sample = h.size
-        if diff(t).max() > diff(t).max(): # check for uniform time steps
+        if diff(t).max() > diff(t).min(): # check for uniform time steps
+            print('RESAMPLING')
             spline_fn = interpolate.InterpolatedUnivariateSpline(t,h)
-            t = linspace(t[0],t[-1],no_sample)
+            #t = linspace(t[0],t[-1],no_sample)
+            # TODO i intentionally cut off the first point below to see if it would fix problems but it did not
+            # if the problems go away, we should try putting that point back
+            t = linspace(1e-12,t[-1],no_sample+1)
+            t = t[1:]
             h = spline_fn(t)
+            h = h / abs(max(h))
+
+        #import matplotlib.pyplot as plt
+        #plt.plot(h, '-*')
+        #plt.show()
+
+
+
+
+
         h = h.reshape(no_sample,1)
         t = t.reshape(no_sample,1)
         M = no_sample - N # no of equations
@@ -80,6 +97,11 @@ class ModalAnalysis(object):
         except ValueError:
             error = True
             print('Error calculating poles/zeros')
+
+            import matplotlib.pyplot as plt
+            plt.plot(t, h, '-*')
+            plt.show()
+
             Z = matrix(zeros((Q.shape[0],h.shape[1])))
         # return values
         num,den = invres(Z.getA1(),P.getA1(),zeros(size(P)),tol=1e-4,rtype='avg')

@@ -1,5 +1,6 @@
 from fixture import template_master
 import fixture.modal_analysis as modal_analysis
+import numpy as np
 
 def plot(x, y):
     import matplotlib.pyplot as plt
@@ -11,13 +12,23 @@ def extract_pzs(nps, nzs, x, y):
 
     #print(x)
     #print(y)
-    plot(x, y)
+    #plot(x, y)
 
-    ma = modal_analysis.ModalAnalysis(rho_threshold=0.9)
-    ma.fit_stepresponse(y - y[0], x)
+    ma = modal_analysis.ModalAnalysis(rho_threshold=0.99)
+    tf = ma.fit_stepresponse(y - y[0], x)
+    zs = np.roots(tf['num'])
+    ps = np.roots(tf['den'])
+    print(zs, ps)
 
+    def pad(xs, n):
+        if len(xs) == n:
+            return xs
+        elif len(xs > n):
+            return sorted(xs)[:n]
+        else:
+            return xs + [float('inf')*(n - len(x))]
 
-    return ([42.42]*nps, [42.42]*nzs)
+    return (pad(ps, nps), pad(zs, nzs))
 
 
 def dynamic(template):
@@ -51,20 +62,29 @@ def dynamic(template):
             # can access so that they can edit it before we process
             reads_orig, block_reads = reads
             self.dynamic_reads = {p:r.value for p,r in block_reads.items()}
+            for p,r in self.dynamic_reads.items():
+                print('p')
+                if len(r[0]) < 100:
+                    print('PROBLEM WITH r')
+                    pass
+                print(len(r[0]))
             ret_dict = super().process_single_test(reads_orig, *args, **kwargs)
             for port, (x,y) in self.dynamic_reads.items():
 
-                if hasattr(self, 'skip'):
-                    ps, zs = extract_pzs(1, 0, x, y)
-                    p1 = ps[0]
-                else:
-                    p1 = 0
-                self.skip = False
+                ps, zs = extract_pzs(1, 0, x, y)
+                p1 = ps[0]
 
                 # add these ps zs to parameter algebra if they are not already there
-                name = f'{self.get_name(port)}_p1'
-                if not name in [n for n,_ in self.parameter_algebra]:
-                    self.parameter_algebra.append((name, {name:'1'}))
+                def add_to_p_a(name):
+                    if not name in [n for n, _ in self.parameter_algebra]:
+                        self.parameter_algebra.append((name, {name:'1'}))
+                for n,p in enumerate(ps):
+                    name = f'{self.get_name(port)}_p{n}'
+                    add_to_p_a(name)
+                for n,z in enumerate(zs):
+                    name = f'{self.get_name(port)}_z{n}'
+                    add_to_p_a(name)
+
 
                 # add to the dict so they can be used for regression later
                 ret_dict[name] = p1
