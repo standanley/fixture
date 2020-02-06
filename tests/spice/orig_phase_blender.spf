@@ -16,10 +16,7 @@
 **   TCAD_TIME_STAMP Wed Apr 27 03:21:55 2016
 **   TCADGRD_VERSION 80
 ** HALF_NODE_SCALE_FACTOR 0.98
-***********.SUBCKT phase_blender ph_in[1] ph_in[0] thm_sel_bld[15] thm_sel_bld[10] thm_sel_bld[5] thm_sel_bld[14] thm_sel_bld[13] thm_sel_bld[12] thm_sel_bld[11] thm_sel_bld[9] thm_sel_bld[8] thm_sel_bld[6] thm_sel_bld[3] thm_sel_bld[2] thm_sel_bld[1] thm_sel_bld[0] thm_sel_bld[4] thm_sel_bld[7] ph_out
-
-.SUBCKT phase_blender ph_in[0] ph_in[1] ph_out thm_sel_bld[15] thm_sel_bld[14] thm_sel_bld[13] thm_sel_bld[12] thm_sel_bld[11] thm_sel_bld[10] thm_sel_bld[9] thm_sel_bld[8] thm_sel_bld[7] thm_sel_bld[6] thm_sel_bld[5] thm_sel_bld[4] thm_sel_bld[3] thm_sel_bld[2] thm_sel_bld[1] thm_sel_bld[0]
-
+.SUBCKT phase_blender ph_in[1] ph_in[0] thm_sel_bld[15] thm_sel_bld[10] thm_sel_bld[5] thm_sel_bld[14] thm_sel_bld[13] thm_sel_bld[12] thm_sel_bld[11] thm_sel_bld[9] thm_sel_bld[8] thm_sel_bld[6] thm_sel_bld[3] thm_sel_bld[2] thm_sel_bld[1] thm_sel_bld[0] thm_sel_bld[4] thm_sel_bld[7] ph_out
 *|GROUND_NET 0
 *|NET ln_X47/10 0.000226317PF
 *|I (ld_X47/X17:GATE ld_X47/X17 GATE I 0 3.90694 5.32796)

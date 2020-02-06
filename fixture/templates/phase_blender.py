@@ -42,7 +42,7 @@ class PhaseBlenderTemplate(TemplateMaster):
         # TODO get this next line to work
         #tester.poke(self.sel, values['sel'])
         for i in range(len(self.sel)):
-            tester.poke(self.sel[i], values['sel[%d]'%i])
+            tester.poke(self.sel[i], values[self.sel[i]])
 
         # wait 5 cycles for things to settle
         tester.delay(5 / freq)

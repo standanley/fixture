@@ -1,0 +1,25 @@
+name: myamp
+filepath: ../spice/myamp.sp
+template: SimpleAmpTemplate
+pin:
+    vdd:
+        direction: input
+        datatype: real
+        value: 1.2
+    vss:
+        direction: input
+        datatype: real
+        value: 0
+    in_:
+        direction: input
+        datatype: real
+        value: (.4, .8)
+        template_pin: in_single
+    out:
+        direction: output
+        datatype: real
+        template_pin: out_single
+test: print('TEST FROM CONFIG')
+approx_settling_time: 1e-3
+
+mgenero: ./../../mgenero_4/simple_amp_mgenero_config.yaml

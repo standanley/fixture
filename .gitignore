@@ -9,3 +9,5 @@ build/
 .idea
 
 test_*_output.yaml
+
+**mgenero_build

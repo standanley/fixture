@@ -6,4 +6,10 @@ test1:
       dans_pin*dans_pin: 42
     mode:
       dummy_digitalmode: 0
+test3:
+  v_oc:
+  - coef:
+      offset: 1.276681
+    mode:
+      dummy_digitalmode: 0
 

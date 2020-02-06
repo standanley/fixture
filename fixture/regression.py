@@ -72,6 +72,7 @@ class Regression():
                     terms.append(a)
                 else:
                     terms.append('I(%s**%d)' % (a, i))
+                    #terms.append('%s**%d' % (a, i))
 
         for ba_port in opt_ba:
             ba = cls.get_spice_name(ba_port)
@@ -184,6 +185,7 @@ class Regression():
                 print('%s\t%s\t%.3f' % (param, partial_term_optional, coef))
 
         # TODO dump res to a yaml file
+        self.results = results
 
         
     @classmethod

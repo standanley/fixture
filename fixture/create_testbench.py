@@ -115,6 +115,8 @@ class Testbench():
 
         # TODO consider breaking the rest of this into another function
         test_inputs = {}
+
+        # Add values with the ports as keys. Also note buses
         buses = set()
         for input_, val in zip(self.dut.inputs_required, vec_required):
             #name = self.dut.get_name(input_)
@@ -122,12 +124,14 @@ class Testbench():
             if isinstance(input_.name, magma.ref.ArrayRef):
                 buses.add(input_.name.array)
 
+        # Also add each individual pin of the bus
         for bus in buses:
             vals = []
             for port in bus.ts:
                 vals.append(test_inputs[port])
             test_inputs[bus] = vals
 
+        # in addition to using pins as keys, also use their string names
         for p, v in list(test_inputs.items()):
             test_inputs[self.dut.get_name(p)] = v
 
