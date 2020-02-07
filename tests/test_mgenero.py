@@ -6,7 +6,7 @@ def file_relative_to_test(fname):
     return os.path.join(os.path.dirname(__file__), fname)
 
 def test_1():
-    circuit_fname = file_relative_to_test('configs/simple_amp_mgenero.yaml')
+    circuit_fname = file_relative_to_test('configs/differential_amp_mgenero.yaml')
     test_fname = file_relative_to_test('./configs/ngspice.yaml')
 
     fixture.run(circuit_fname, test_fname)

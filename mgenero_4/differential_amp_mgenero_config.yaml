@@ -1,5 +1,6 @@
 build_folder: ./mgenero_build
-template_name: amplifier.template.sv
+# TODO right now the template name is relative to the build folder
+template_name: ../amplifier.template.sv
 
 modelparam:
   v_os:

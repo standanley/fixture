@@ -27,7 +27,10 @@ def dump_yaml(params_by_mode):
     d = {}
     for mode, params in params_by_mode.items():
         for param, terms in params.items():
-            mode_dict = {f'true_digital_{m}':x for m,x in enumerate(binary(mode, len(params_by_mode)))}
+            if len(params_by_mode) == 1:
+                mode_dict = {'dummy_digitalmode': 0}
+            else:
+                mode_dict = {f'true_digital_{m}':x for m,x in enumerate(binary(mode, len(params_by_mode)))}
             coefs_by_mode = d.get(param, [])
             coefs_this_mode = {
                     'mode': mode_dict,

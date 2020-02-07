@@ -5,7 +5,7 @@ class SimpleAmpTemplate(TemplateMaster):
     __name__ = 'abc123'
     required_ports = ['in_single', 'out_single']
     parameter_algebra = {
-        'amp_output': {'gain':'in_single', 'offset':'1'}
+        'amp_output': {'dcgain':'in_single', 'offset':'1'}
         }
 
     @classmethod

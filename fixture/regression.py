@@ -11,7 +11,7 @@ class Regression():
     # ones, so we manually add a column of ones with the following name
     one_literal = 'const_1'
 
-    @classmethod
+    # @classmethod
     def parse_parameter_algebra(self, lhs, rhs):
         '''
         Removes spaces, wraps in I(), and flips RHS terms so expr is the key
@@ -29,7 +29,7 @@ class Regression():
             res[clean(v)] = k.replace(' ', '_')
         return (clean(lhs), res)
 
-    @classmethod
+    # @classmethod
     def get_spice_name(cls, port):
         # TODO: this has to match the way fault does it in spice_target
         # I think that this conversion should be broken out into a method in fault
@@ -41,7 +41,7 @@ class Regression():
         else:
             return str(port)
 
-    @classmethod
+    # @classmethod
     def get_optional_pin_expression(cls, dut):
         '''
         Given the magma circuit dut, look at the optional pins and create a 
@@ -94,7 +94,7 @@ class Regression():
         return ' + '.join(terms)
 
 
-    @classmethod
+    # @classmethod
     def clean_string(self, s):
         # discrepency between the way spice and magma do braces
         # also Patsy won't use < in a variable name
@@ -135,6 +135,7 @@ class Regression():
         data = {self.clean_string(k):v for k,v in data.items()}
         self.df = pandas.DataFrame(data)
 
+        self.consts ={}
         def create_const(rhs):
             '''
             pandas gets confused when you put a constant in the formula,
@@ -152,6 +153,7 @@ class Regression():
                     del rhs[expr]
                     rhs[column_name] = param
                     #print(const)
+                    self.consts[column_name] = expr_literal
                 except ValueError:
                     # not a constant
                     pass
@@ -187,8 +189,14 @@ class Regression():
         # TODO dump res to a yaml file
         self.results = results
 
-        
-    @classmethod
+    # @classmethod
+    def un_create_const(self, name):
+        if name in self.consts:
+            return self.consts[name]
+        else:
+            return name
+
+    # @classmethod
     def make_formula(self, lhs, rhs, optional_pin_expr):
         terms = []
         for expr, param in rhs.items():
@@ -198,7 +206,7 @@ class Regression():
         formula = '%s ~ %s -1' % (lhs, ' + '.join(terms))
         return self.clean_string(formula)
         
-    @classmethod
+    # @classmethod
     def parse_coefs(self, results, rhs):
         #print('parsing coefs with rhs', rhs)
         def get_relevant_param(term):
@@ -224,6 +232,8 @@ class Regression():
         coefs = results.params
         for term, coef in coefs.items():
             param, partial_term_optional = get_relevant_param(term)
+            if partial_term_optional in self.consts:
+                partial_term_optional = self.consts[partial_term_optional]
             res[param][partial_term_optional] = coef
         return res
 
