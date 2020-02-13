@@ -1,8 +1,0 @@
-test1:
-  slice_point:
-  - coef:
-      offset: 0.65
-      adj: 0.5
-    mode:
-        dummy_digitalmode: 0
-
