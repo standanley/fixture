@@ -1,6 +1,7 @@
 import fixture
 import subprocess
 import os
+import pytest
 
 def file_relative_to_test(fname):
     return os.path.join(os.path.dirname(__file__), fname)
@@ -11,6 +12,7 @@ def file_relative_to_test(fname):
 # 
 #     fixture.run(circuit_fname, test_fname)
 
+@pytest.mark.xfail
 def test_diff_param():
     circuit_fname = file_relative_to_test('configs/differential_model.yaml')
     test_fname = file_relative_to_test('./configs/mlingua.yaml')

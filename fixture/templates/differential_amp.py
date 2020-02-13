@@ -34,14 +34,12 @@ class DifferentialAmpTemplate(TemplateMaster):
 
         readp = tester.read(self.outp)
         readn = tester.read(self.outn)
-        en = tester.read(self.adj)
-        return [readp, readn, en]
+        return [readp, readn]
 
 
     @classmethod
     def process_single_test(self, reads):
         outp = reads[0].value
         outn = reads[1].value
-        en = reads[2].value
-        return {'outp': outp, 'outn': outn, 'en_read':en}
+        return {'outp': outp, 'outn': outn}
 
