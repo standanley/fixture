@@ -38,8 +38,8 @@ class DifferentialAmpTemplate(TemplateMaster):
 
 
     @classmethod
-    def process_single_test(self, tester):
-        outp = tester[0].value
-        outn = tester[1].value
+    def process_single_test(self, reads):
+        outp = reads[0].value
+        outn = reads[1].value
         return {'outp': outp, 'outn': outn}
 

@@ -7,3 +7,7 @@ build/
 *.egg-info
 
 .idea
+
+test_*_output.yaml
+
+**mgenero_build

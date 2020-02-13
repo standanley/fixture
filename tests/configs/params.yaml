@@ -1,0 +1,21 @@
+test1:
+  gain_sel[0]:
+  - coef:
+      const_1: -0.1763519098150526
+    mode:
+      true_digital_0: 0
+  gain_sel[1]:
+  - coef:
+      const_1: -0.1847318297032246
+    mode:
+      true_digital_0: 0
+  gain_sel[2]:
+  - coef:
+      const_1: -0.5629488708455792
+    mode:
+      true_digital_0: 0
+  offset:
+  - coef:
+      const_1: 0.30152958435601585
+    mode:
+      true_digital_0: 0

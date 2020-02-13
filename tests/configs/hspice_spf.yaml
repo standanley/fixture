@@ -1,0 +1,6 @@
+target: spice
+simulator: hspice
+#ic: {vss: 0}
+vsup: 1.2
+bus_delim: "[]"
+# TODO: could also have libraries to include, etc.
