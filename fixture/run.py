@@ -68,13 +68,30 @@ def _run(circuit_config_dict, test_config_dict):
     testbench.set_test_vectors(vectors)
     testbench.create_test_bench()
 
-	# TODO fill in all args from SpiceTarger or remove this check
-    approved_simulator_args = ['ic', 'vsup', 'bus_delim']
+    # TODO fill in all args from SpiceTarger or remove this check
+    approved_simulator_args = ['ic', 'vsup', 'bus_delim', 'flags']
     simulator_dict = {k:v for k,v in test_config_dict.items() if k in approved_simulator_args}
+
+    # make sure to put the circuit file location in the right arg
+    if test_config_dict['target'] == 'spice':
+        model_path_key = 'model_paths'
+    else:
+        model_path_key = 'ext_libs'
+        simulator_dict['ext_model_file'] = True
+    mps = simulator_dict.get(model_path_key, [])
+    mps.append(Path(circuit_config_dict['filepath']).resolve())
+    simulator_dict[model_path_key] = mps
+
+    # flgs will later get shell escaped, but I think the user should have escaped them already
+    # ran into problems when a flag was like '-define NCVLOG'
+    if 'flags' in simulator_dict:
+        flags = [x for f in simulator_dict['flags'] for x in f.split()]
+        simulator_dict['flags'] = flags
+
+    print('calling with sim dict', simulator_dict)
     print(f'Running sim, {len(vectors[0])} test vectors')
     tester.compile_and_run(test_config_dict['target'],
         simulator=test_config_dict['simulator'],
-        model_paths = [Path(circuit_config_dict['filepath']).resolve()],
         clock_step_delay=0,
         **simulator_dict
     )
@@ -87,7 +104,7 @@ def _run(circuit_config_dict, test_config_dict):
         reg = Regression(UserCircuit, res)
         print(reg.results)
         params_by_mode[mode] = reg.results
-    parmams_text = mgenero_interface.dump_yaml(params_by_mode)
+    parmams_text = mgenero_interface.dump_yaml(UserCircuit, params_by_mode)
     if 'mgenero' in circuit_config_dict:
         mgenero_config_dir = circuit_config_dict['mgenero']
         with open(mgenero_config_dir) as f:

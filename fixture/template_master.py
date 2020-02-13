@@ -153,7 +153,7 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
                 # NOTE: I'm not sure why I need the "not" above,
                 # and magma.Flip does not work on port
                 if isinstance(port_type, fault.RealKind):
-                    assert hasattr(port, 'limits'), "Analog ports must have limits"
+                    assert hasattr(port, 'limits') and port.limits is not None, "Analog ports must have limits"
                     try:
                         pin = float(port.limits)
                         inputs_pinned.append(port)

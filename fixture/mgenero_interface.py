@@ -2,6 +2,7 @@ import yaml
 from fixture.run import path_relative
 import os
 from fault import RealKind
+from magma import Array
 
 '''
 A parameter file for mgenero looks like this:
@@ -23,14 +24,16 @@ A parameter file for mgenero looks like this:
 def binary(x, y):
     return [(x//(i+1))%2 for i in range(y)]
 
-def dump_yaml(params_by_mode):
+def dump_yaml(dut, params_by_mode):
     d = {}
     for mode, params in params_by_mode.items():
         for param, terms in params.items():
             if len(params_by_mode) == 1:
                 mode_dict = {'dummy_digitalmode': 0}
             else:
-                mode_dict = {f'true_digital_{m}':x for m,x in enumerate(binary(mode, len(params_by_mode)))}
+                # mode dict keys are true digital pins
+                names = [dut.get_name(p) for p in dut.inputs_true_digital]
+                mode_dict = {name:x for name,x in zip(names, binary(mode, len(names)))}
             coefs_by_mode = d.get(param, [])
             coefs_this_mode = {
                     'mode': mode_dict,
@@ -47,6 +50,12 @@ def dump_yaml(params_by_mode):
 def create_interface(circuit, collateral_dict):
 
 
+    def my_in(p, ps):
+        ''' computes (p in ps) without importing mantle '''
+        for p2 in ps:
+            if p is p2:
+                return True
+        return False
 
     def create_pin(p, spice_name):
         d = {}
@@ -54,14 +63,19 @@ def create_interface(circuit, collateral_dict):
         d['name'] = spice_name
         d['description'] = str(p)
         # TODO inout?
-        d['direction'] = 'input' if p.isinput() else 'output'
+        d['direction'] = 'input' if not p.isinput() else 'output'
         # pwl
         # logic can mean true digital or clock ...
         # vectorsize is # bits
         # Let's assume pwl for real and logic for digital/ba
         isreal = isinstance(type(p), RealKind)
         d['datatype'] = 'pwl' if isreal else 'logic'
-        d['is_optional'] = p in (circuit.inputs_optional + circuit.inputs_pinned)
+        d['is_optional'] = my_in(p, (circuit.inputs_optional + circuit.inputs_pinned))
+
+        # TODO array of reals?
+        if isinstance(p, Array):
+            d['vectorsize'] = len(p)
+
         return d
 
     # mapping from fixture template name to spice name
@@ -96,7 +110,7 @@ def create_interface(circuit, collateral_dict):
 
 def create_all(circuit, config, params):
     # TODO:
-    params_text = dump_yaml(params)
+    params_text = dump_yaml(circuit, params)
     interface_text, circuit_text = create_interface(circuit, config)
     generate_text = get_generate_text(config['template_name'])
     directory = config['build_folder']

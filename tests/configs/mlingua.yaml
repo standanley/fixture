@@ -1,0 +1,25 @@
+target: system-verilog
+simulator: ncsim
+
+flags: 
+    # DaVE-related defines
+    - -define NCVLOG
+    - -define DAVE_TIMEUNIT=1fs
+
+    # include paths
+    - -incdir ${mLINGUA_DIR}/samples
+
+    # extensions for library files
+    - +libext+.v
+    - +libext+.sv
+    - +libext+.vp
+
+    # this PLI file is needed for some DaVE functions
+    - -loadpli1 ${mLINGUA_DIR}/samples/pli/libpli.so:dave_boot
+
+    # DaVE libraries
+    - -y ${mLINGUA_DIR}/samples/prim
+    - -y ${mLINGUA_DIR}/samples/stim
+    - -y ${mLINGUA_DIR}/samples/meas
+    - -y ${mLINGUA_DIR}/samples/misc
+

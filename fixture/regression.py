@@ -49,7 +49,7 @@ class Regression():
         '''
 
         # TODO pull these out of some dict
-        analog_order = 3
+        analog_order = 1
         interaction_a_a = False
         interaction_a_ba = False
         interaction_ba_ba = False
@@ -167,6 +167,7 @@ class Regression():
             self.convert_required_ba(dut, rhs)
             create_const(rhs)
             print('param algebra is now', lhs, rhs)
+            print(self.df)
 
             formula = self.make_formula(lhs, rhs, optional_pin_expr)
             #print('formula was', formula)

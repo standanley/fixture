@@ -1,0 +1,44 @@
+name: myamp
+filepath: ../spice/myamp_differential_fake_param.sp
+template: DifferentialAmpTemplate
+pin:
+    vdd:
+        direction: input
+        datatype: real
+        value: 1.2
+    vss:
+        direction: input
+        datatype: real
+        value: 0
+    inp:
+        direction: input
+        datatype: real
+        value: (.5, .7)
+        template_pin: inp
+    outp:
+        direction: output
+        datatype: real
+        template_pin: outp
+    inn:
+        direction: input
+        datatype: real
+        value: (.5, .7)
+        template_pin: inn
+    outn:
+        direction: output
+        datatype: real
+        template_pin: outn
+
+    # optional pins
+#     en:
+#         direction: input
+#         datatype: bit
+#         width: 1
+    adj:
+        direction: input
+        datatype: real
+        value: (0, 1.2)
+
+approx_settling_time: 1e-3
+
+mgenero: ./../../mgenero_4/differential_amp_mgenero_config.yaml
