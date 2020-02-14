@@ -2,6 +2,7 @@
 __pycache__/
 
 build/
+!/tsmc_test/build
 
 *.swp
 *.egg-info

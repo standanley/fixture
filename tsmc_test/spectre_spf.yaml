@@ -1,0 +1,4 @@
+target: spice
+simulator: spectre
+vsup: 1.2
+bus_delim: "[]"
