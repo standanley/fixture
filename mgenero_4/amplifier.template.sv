@@ -49,6 +49,8 @@ $$#from api_mgenero import *
 $$#
 $$#}$$
 
+`include "mLingua_pwl.vh"
+
 module $$(Module.name()) #(
   $$(Module.parameters())
 ) (
@@ -82,7 +84,6 @@ pwl v_id, v_icm; // differential and common-mode inputs
 
 real t0;
 real v_icm_r;
-real vdd_r;
 $$PWL.declare_optional_analog_pins_in_real()
 
 real fz1, fp1, fp2; // at most, two poles and a zero
@@ -113,14 +114,13 @@ pwl_add #(.no_sig(2)) xicm (.in(_v_icm), .scale(_k_v_icm), .out(v_icm));
 
 // discretization of control inputs
 $$PWL.instantiate_pwl2real('v_icm')
-$$PWL.instantiate_pwl2real('vdd')
 $$PWL.instantiate_pwl2real_optional_analog_pins(['vss'] if Pin.is_exist('vss') else [])
 
 // updating parameters as control inputs/mode inputs change
 
 $${
 # sensitivity list of always @ statement
-sensitivity = ['v_icm_r', 'vdd_r', 'wakeup'] + get_sensitivity_list() 
+sensitivity = ['v_icm_r', 'wakeup'] + get_sensitivity_list() 
 
 # model parameter mapping for back-annotation
 # { testname : { test output : Verilog variable being mapped to } }
