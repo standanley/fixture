@@ -1,8 +1,10 @@
 from magma import *
 import fault
-from .real_types import BinaryAnalogKind, TestVectorOutput
-import re
-import copy
+from .real_types import BinaryAnalogType
+#from .real_types import BinaryAnalogKind, TestVectorOutput
+
+
+
 
 class TemplateKind(circuit.DefineCircuitKind):
 
@@ -167,9 +169,11 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
                             # TODO put a better message here
                             assert False, 'Limits must be 1 or 2 values'
 
-                elif isinstance(port_type, BinaryAnalogKind):
+                #elif isinstance(port_type, BinaryAnalogKind):
+                elif issubclass(port_type, BinaryAnalogType):
                     temp_inputs_a_or_ba.append(port)
-                elif isinstance(port_type, magma.BitKind):
+                # TODO used to be BitKind on the next line
+                elif isinstance(port, magma.Bit):
                     inputs_true_digital.append(port)
                 else:
                     print('didint match any types')

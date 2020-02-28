@@ -1,7 +1,7 @@
 from fixture import TemplateMaster
 from fixture import RealIn, BinaryAnalog
-import fixture.template_creation_utils as utils
-from fixture.real_types import BinaryAnalogKind, TestVectorOutput
+#import fixture.template_creation_utils as utils
+#from fixture.real_types import BinaryAnalogKind, TestVectorOutput
 
 class PhaseBlenderTemplate(TemplateMaster):
     required_ports = ['in_a', 'in_b', 'sel', 'out']
