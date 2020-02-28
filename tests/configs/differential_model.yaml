@@ -42,3 +42,5 @@ pin:
 approx_settling_time: 1e-3
 
 #mgenero: ./../../mgenero_4/differential_amp_mgenero_config.yaml
+
+test_config_file: ngspice.yaml

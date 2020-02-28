@@ -27,16 +27,20 @@ def edit_paths(config_dict, config_filename, params):
             new = path_relative(config_filename, old)
             config_dict[param] = new
 
-def run(circuit_config_filename, test_config_filename):
+def run(circuit_config_filename):
     with open(circuit_config_filename) as f:
         circuit_config_dict = yaml.safe_load(f)
         circuit_config_dict['filename'] = circuit_config_filename
-    with open(test_config_filename) as f:
-        test_config_dict = yaml.safe_load(f)
     edit_paths(circuit_config_dict, circuit_config_filename, ['filepath', 'mgenero'])
-    _run(circuit_config_dict, test_config_dict)
+    _run(circuit_config_dict)
 
-def _run(circuit_config_dict, test_config_dict):
+def _run(circuit_config_dict):
+    # load test config data
+    test_config_filename = circuit_config_dict['test_config_file']
+    test_config_filename_abs = path_relative(circuit_config_dict['filename'], test_config_filename)
+    with open(test_config_filename_abs) as f:
+        test_config_dict = yaml.safe_load(f)
+
     template = getattr(templates, circuit_config_dict['template'])
 
     # generate IO
@@ -69,7 +73,7 @@ def _run(circuit_config_dict, test_config_dict):
     testbench.create_test_bench()
 
     # TODO fill in all args from SpiceTarger or remove this check
-    approved_simulator_args = ['ic', 'vsup', 'bus_delim', 'flags']
+    approved_simulator_args = ['ic', 'vsup', 'bus_delim', 'flags', 't_step']
     simulator_dict = {k:v for k,v in test_config_dict.items() if k in approved_simulator_args}
 
     # make sure to put the circuit file location in the right arg
@@ -126,6 +130,6 @@ def _run(circuit_config_dict, test_config_dict):
 if __name__ == '__main__':
     args = sys.argv
     circuit_config_filename = args[1]
-    test_config_filename = args[2]
-    run(circuit_config_filename, test_config_filename)
+    #test_config_filename = args[2]
+    run(circuit_config_filename)
 

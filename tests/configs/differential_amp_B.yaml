@@ -29,3 +29,5 @@ pin:
         datatype: real
         template_pin: outn
 approx_settling_time: 1e-3
+
+test_config_file: ngspice.yaml
