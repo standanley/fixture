@@ -1,3 +1,4 @@
+import ast
 from magma import *
 import fault
 from .real_types import BinaryAnalogType
@@ -156,7 +157,10 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
                 # and magma.Flip does not work on port
                 if isinstance(port_type, fault.RealKind):
                     assert hasattr(port, 'limits') and port.limits is not None, "Analog ports must have limits"
+                    # TODO: I don't think try/except is the best way to do this
                     try:
+                        if type(port.limits) == str:
+                            port.limits = ast.literal_eval(port.limits)
                         pin = float(port.limits)
                         inputs_pinned.append(port)
                     except TypeError:

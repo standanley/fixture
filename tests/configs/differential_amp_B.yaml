@@ -13,7 +13,6 @@ pin:
     inp:
         direction: input
         datatype: real
-        value: (.4, .8)
         template_pin: inp
     outp:
         direction: output
@@ -22,12 +21,14 @@ pin:
     inn:
         direction: input
         datatype: real
-        value: (.4, .8)
         template_pin: inn
     outn:
         direction: output
         datatype: real
         template_pin: outn
+
 approx_settling_time: 1e-3
+limits_diff: (-0.2, 0.2)
+limits_cm: (0.5, 0.7)
 
 test_config_file: ngspice.yaml
