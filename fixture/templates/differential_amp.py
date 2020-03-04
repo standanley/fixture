@@ -32,8 +32,8 @@ class DifferentialAmpTemplate(TemplateMaster):
         #tester.expect(self.outp, 0, save_for_later=True)
         #tester.expect(self.outn, 0, save_for_later=True)
 
-        readp = tester.read(self.outp)
-        readn = tester.read(self.outn)
+        readp = tester.get_value(self.outp)
+        readn = tester.get_value(self.outn)
         return [readp, readn]
 
 

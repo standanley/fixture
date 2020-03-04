@@ -1,11 +1,9 @@
 import fault
-import re
 from itertools import product
-import collections
+from numpy import ndarray
 
 import magma
 from hwtypes import BitVector
-from magma import Array
 
 # TODO timing
 
@@ -99,7 +97,7 @@ class Testbench():
         # TODO use new read object
         for port in self.dut.outputs_analog + self.dut.outputs_digital:
             assert False # not really supported right now :(
-            r = self.tester.read(port)
+            r = self.tester.get_value(port)
 
     def process_optional_outputs(self):
         results = {}
@@ -205,6 +203,9 @@ class Testbench():
                 # TODO I think we should assert fail here rather than try to fix it
                 assert False, 'Return from process_single_test should be a dict'
 
+            for k,v in results_out_req.items():
+                if type(v) == ndarray:
+                    results_out_req[k] = float(v)
             # TODO: optional outputs
             # results_out_opt = self.process_optional_outputs()
 

@@ -24,8 +24,8 @@ class DifferentialAmpTemplate(TemplateMaster):
         wait_time = float(self.extras['approx_settling_time'])*2
         tester.delay(wait_time)
 
-        readp = tester.read(self.outp)
-        readn = tester.read(self.outn)
+        readp = tester.get_value(self.outp)
+        readn = tester.get_value(self.outn)
         return [readp, readn]
 
     @classmethod

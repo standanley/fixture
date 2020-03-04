@@ -15,7 +15,7 @@ class OscillatorTemplate(TemplateMaster):
     def run_single_test(self, tester, values):
         approx_period = 1 / float(self.extras['approx_frequency'])
         tester.delay(approx_period * 20)
-        return tester.read(self.out, style='frequency')
+        return tester.get_value(self.out, params={'style':'frequency'})
 
 
     @classmethod

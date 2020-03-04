@@ -47,11 +47,11 @@ def test_ngspice():
     tester.poke(MyAmp.vdd, 1.2)
     tester.poke(MyAmp.in_, 0.76)
     tester.expect(MyAmp.out, None, above=0.64, below=0.65)
-    r1 = tester.read(MyAmp.out)
+    r1 = tester.get_value(MyAmp.out)
 
     tester.poke(MyAmp.in_, 0.84)
     tester.expect(MyAmp.out, None, above=0.37, below=0.38)
-    r2 = tester.read(MyAmp.out)
+    r2 = tester.get_value(MyAmp.out)
 
     tester.compile_and_run('spice',
         simulator='ngspice', 
