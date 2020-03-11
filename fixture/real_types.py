@@ -1,6 +1,7 @@
 import fault
 import magma
-from magma.port import Port, INPUT, OUTPUT, INOUT
+#from magma.port import Port, Direction.In, Direction.Out, Direction.InOut
+from magma.t import Direction
 
 
 # this is a little strange since the types are actually classes, not instances
@@ -12,27 +13,28 @@ class RealKind2(fault.RealKind):
     def __init__(cls, name, bases, dct):
         super().__init__(name, bases, dct)
 
-    def flip(cls):
-        if cls.isoriented(INPUT):
-            temp = RealOut(getattr(cls, 'limits', None))
-            if hasattr(cls, 'name'):
-                temp.name = cls.name
+    #@classmethod
+    def flip(self):
+        if self.is_oriented(Direction.In):
+            temp = RealOut(getattr(self, 'limits', None))
+            if hasattr(self, 'name'):
+                temp.name = self.name
             return temp
-        elif cls.isoriented(OUTPUT):
-            temp = RealIn(getattr(cls, 'limits', None))
-            if hasattr(cls, 'name'):
-                temp.name = cls.name
+        elif self.isoriented(Direction.Out):
+            temp = RealIn(getattr(self, 'limits', None))
+            if hasattr(self, 'name'):
+                temp.name = self.name
             return temp
-        return cls
+        return self
 
     def qualify(cls, direction):
         if direction is None:
             return Real(getattr(cls, 'limits', None))
-        elif direction == INPUT:
+        elif direction == Direction.In:
             return RealIn(getattr(cls, 'limits', None))
-        elif direction == OUTPUT:
+        elif direction == Direction.Out:
             return RealOut(getattr(cls, 'limits', None))
-        elif direction == INOUT:
+        elif direction == Direction.InOut:
             raise NotImplementedError
             #return RealInOut(getattr(cls, 'limits', None))
         return cls
@@ -43,13 +45,13 @@ class RealType2(fault.real_type.RealType):
     __hash__ = magma.Type.__hash__
 
 def RealIn(limits=None):
-    kwargs = {'direction':magma.port.INPUT}
+    kwargs = {'direction':magma.Direction.In}
     temp = RealKind2('Real', (RealType2,), kwargs)
     temp.limits = limits
     return temp
 
 def RealOut(limits=None):
-    kwargs = {'direction':magma.port.OUTPUT}
+    kwargs = {'direction':magma.Direction.Out}
     temp = RealKind2('Real', (RealType2,), kwargs)
     temp.limits = limits
     return temp
@@ -60,29 +62,31 @@ def Real(limits=None):
     temp.limits = limits
     return temp
 
-
-class BinaryAnalogKind(magma.BitKind):
-    def qualify(cls, direction):
+'''
+class BinaryAnalogKind(magma.DigitalMeta):
+    @classmethod
+    def qualify(mcs, direction):
         if direction is None:
             return BinaryAnalog
-        elif direction == INPUT:
+        elif direction == Direction.In:
             return BinaryAnalogIn
-        elif direction == OUTPUT:
+        elif direction == Direction.Out:
             return BinaryAnalogOut
-        elif direction == INOUT:
+        elif direction == Direction.InOut:
             return BinaryAnalogInOut
-        return cls
+        return mcs
 
-    def flip(cls):
-        if cls.isoriented(INPUT):
+    @classmethod
+    def flip(mcs):
+        if mcs.isoriented(Direction.In):
             return BinaryAnalogOut
-        elif cls.isoriented(OUTPUT):
+        elif mcs.isoriented(Direction.Out):
             return BinaryAnalogIn
-        return cls
+        return mcs
 
 
 def MakeBinaryAnalog(**kwargs):
-    return BinaryAnalogKind('BinaryAnalog', (magma.BitType,), kwargs)
+    return BinaryAnalogKind('BinaryAnalog', (BinaryAnalogKind, magma.Bit), kwargs)
 
 
 # TODO this is ugly now because BinaryAnalog is a funciton to return the type,
@@ -92,9 +96,20 @@ def BinaryAnalog(limits=None):
     return MakeBinaryAnalog()
 
 #BinaryAnalog = MakeBinaryAnalog()
-BinaryAnalogIn = MakeBinaryAnalog(direction=INPUT)
-BinaryAnalogOut = MakeBinaryAnalog(direction=OUTPUT)
-BinaryAnalogInOut = MakeBinaryAnalog(direction=INOUT)
+BinaryAnalogIn = MakeBinaryAnalog(direction=Direction.In)
+BinaryAnalogOut = MakeBinaryAnalog(direction=Direction.Out)
+BinaryAnalogInOut = MakeBinaryAnalog(direction=Direction.InOut)
+
+'''
+
+class BinaryAnalogType(magma.Bit):
+    #def __init__(self):
+    #    super(BinaryAnalog, self).__init__()
+    pass
+
+def BinaryAnalog(limits=None):
+    assert limits==None, 'Bit type cannot have limits'
+    return BinaryAnalogType
 
 def Bit(limits=None):
     assert limits==None, 'Bit type cannot have limits'

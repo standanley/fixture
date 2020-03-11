@@ -19,3 +19,5 @@ pin:
         datatype: real
         template_pin: out
 approx_frequency: 100e3
+
+test_config_file: ngspice_osc.yaml

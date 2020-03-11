@@ -13,7 +13,7 @@ class ContinuousComparatorTemplate(TemplateMaster):
         # For now we treat the input the same as the other analog inputs
         # so we don't need any pokes of our own
         tester.poke(self.in_, values['in_'])
-        return tester.read(self.out)
+        return tester.get_value(self.out)
 
     @classmethod
     def process_single_test(self, read):

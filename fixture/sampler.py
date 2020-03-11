@@ -203,7 +203,7 @@ if __name__ == '__main__':
     #visualize(get_orthogonal_samples(2, 1, 85))
 
     Da, Dd = 2, 12
-    samples = Sampler.get_orthogonal_samples(Da, Dd, 5)
+    samples = Sampler.get_orthogonal_samples(Da, Dd, 10)
 
     reorg = list(zip(*samples))
     analog_samples = list(zip(*(reorg[:Da])))

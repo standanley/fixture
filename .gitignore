@@ -13,7 +13,7 @@ tmp/
 test_*_output.yaml
 
 **mgenero_build
+tests/models/*
 
 *.spf
-
 
