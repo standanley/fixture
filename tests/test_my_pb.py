@@ -7,9 +7,8 @@ def file_relative_to_test(fname):
 
 def test_1():
     circuit_fname = file_relative_to_test('configs/pb.yaml')
-    test_fname = file_relative_to_test('./configs/ngspice.yaml')
 
-    fixture.run(circuit_fname, test_fname)
+    fixture.run(circuit_fname)
 
 
 if __name__ == '__main__':

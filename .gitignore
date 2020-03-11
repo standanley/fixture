@@ -2,6 +2,8 @@
 __pycache__/
 
 build/
+junk/
+tmp/
 
 *.swp
 *.egg-info
@@ -11,3 +13,7 @@ build/
 test_*_output.yaml
 
 **mgenero_build
+
+*.spf
+
+

@@ -1,11 +1,9 @@
 import fault
-import re
 from itertools import product
-import collections
+from numpy import ndarray
 
 import magma
 from hwtypes import BitVector
-from magma import Array
 
 # TODO timing
 
@@ -97,14 +95,15 @@ class Testbench():
 
     def read_optional_outputs(self):
         # TODO use new read object
-        # TODO think about test outputs being in the same list
         for port in self.dut.outputs_analog + self.dut.outputs_digital:
-            self.tester.expect(port, 0, save_for_later = True)
+            assert False # not really supported right now :(
+            r = self.tester.get_value(port)
 
     def process_optional_outputs(self):
         results = {}
         for port in self.dut.outputs_analog + self.dut.outputs_digital:
             if not self.dut.is_required(port):
+                assert False # not really supported right now :(
                 result = self.results_raw[self.result_counter]
                 self.result_counter += 1
                 results[self.dut.get_name(port)] = result
@@ -193,8 +192,8 @@ class Testbench():
         #     for port, val in zip(ports, req + opt):
         #         old[port].append(val)
 
-        self.results_raw = self.tester.targets['spice'].saved_for_later
-        self.results_raw = [float(x) for x in self.results_raw]
+        #self.results_raw = self.tester.targets['spice'].saved_for_later
+        #self.results_raw = [float(x) for x in self.results_raw]
         results_by_mode = {m:{} for m in self.test_vectors_by_mode}
         self.result_counter = 0
         for m, req, opt, reads in self.result_processing_list:
@@ -204,6 +203,9 @@ class Testbench():
                 # TODO I think we should assert fail here rather than try to fix it
                 assert False, 'Return from process_single_test should be a dict'
 
+            for k,v in results_out_req.items():
+                if type(v) == ndarray:
+                    results_out_req[k] = float(v)
             # TODO: optional outputs
             # results_out_opt = self.process_optional_outputs()
 
