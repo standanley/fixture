@@ -73,7 +73,7 @@ def _run(circuit_config_dict):
     testbench.create_test_bench()
 
     # TODO fill in all args from SpiceTarget or remove this check
-    approved_simulator_args = ['ic', 'vsup', 'bus_delim', 'ext_libs', 'inc_dirs', 'defines', 'flags']
+    approved_simulator_args = ['ic', 'vsup', 'bus_delim', 'ext_libs', 'inc_dirs', 'defines', 'flags', 't_step']
     simulator_dict = {k:v for k,v in test_config_dict.items() if k in approved_simulator_args}
 
     # make sure to put the circuit file location in the right arg
