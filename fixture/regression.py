@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import statsmodels.formula.api as smf
 import pandas
 from itertools import combinations, product
@@ -103,7 +105,7 @@ class Regression():
 
 
     def convert_required_ba(self, dut, rhs):
-        # when the parameter algebra contains an Array (most likely ba input),
+        # when the parameter algebra contains an Array (most likely ba required input),
         # we have to break that term into multiple terms
         to_be_deleted = set()
         to_be_added = {}
@@ -118,11 +120,27 @@ class Regression():
                     if re.search(search_str, key_term):
                         to_be_deleted.add(key_term)
                         new_key_term = re.sub(search_str, new_name, key_term)
-                        to_be_added[new_key_term] = rhs[key_term] + '_' + inst_name
+                        to_be_added[new_key_term] = rhs[key_term] + self.component_tag + inst_name
         for d in to_be_deleted:
             del rhs[d]
         for k, v in to_be_added.items():
             rhs[k] = v
+
+    def condense_required_ba(self, results):
+        buss = defaultdict(list)
+        for k, v in results.items():
+            if self.component_tag in k:
+                # k is one bit of required ba
+                param, bit = k.split(self.component_tag)
+                buss[param].append((k, bit))
+        for bus, bits in buss.items():
+            assert bus not in results, f'Cannot have entire bus {bus} and bus components both in results'
+            results[bus] = {}
+            for name, bit in bits:
+                print(name, bit, results[name])
+                terms = results.pop(name)
+                for coef, value in terms.items():
+                    results[bus][f'{bit}*{coef}'] = value
 
     def __init__(self, dut, data):
         '''
@@ -130,6 +148,7 @@ class Regression():
         {pin:[x1, ...], ...}
         '''
 
+        self.component_tag = '_component_'
         data = {dut.get_name(k):v for k,v in data.items()}
         data[self.one_literal] = [1 for _ in list(data.values())[0]]
         data = {self.clean_string(k):v for k,v in data.items()}
@@ -181,6 +200,8 @@ class Regression():
             for k,v in result.items():
                 assert not k in results, 'Parameter %s found in multiple parameter algebra formulas'
                 results[k] = v
+
+        self.condense_required_ba(results)
 
         print('param\tterm\tcoef')
         for param,d in results.items():

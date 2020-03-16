@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import yaml
 from fixture.run import path_relative
 import os
@@ -27,6 +29,26 @@ def binary(x, y):
 def dump_yaml(dut, params_by_mode):
     d = {}
     for mode, params in params_by_mode.items():
+#        # TODO I haven't found a good way to deal with required BA, so this is a bit of a hack
+#        # Note all params that are part of a bus
+#        buss = defaultdict(list)
+#        for param in params:
+#            if param[-1] == ']':
+#                name = param.split('[')[0]
+#                buss[name].append(param)
+#        aggregates = defaultdict(dict)
+#
+#        # add buses at the end that are the sum of their components
+#        # also delete entries from 'params' for the individual bits
+#        for name, bits in buss.items():
+#            params[name] = {}
+#            for bit in bits:
+#                terms = params.pop(bit)
+#                for factor, coef in terms.items():
+#                    new_factor = f'{bit}*{factor}'
+#                    params[name][new_factor] = coef
+
+
         for param, terms in params.items():
             if len(params_by_mode) == 1:
                 mode_dict = {'dummy_digitalmode': 0}
