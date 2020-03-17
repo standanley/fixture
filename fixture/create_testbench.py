@@ -106,7 +106,7 @@ class Testbench():
                 assert False # not really supported right now :(
                 result = self.results_raw[self.result_counter]
                 self.result_counter += 1
-                results[self.dut.get_name(port)] = result
+                results[self.dut.get_name_circuit(port)] = result
         return results
 
     def run_test_vector(self, vec_required, vec_optional):
@@ -118,7 +118,6 @@ class Testbench():
         # Add values with the ports as keys. Also note buses
         buses = set()
         for input_, val in zip(self.dut.inputs_required, vec_required):
-            #name = self.dut.get_name(input_)
             test_inputs[input_] = val
             if isinstance(input_.name, magma.ref.ArrayRef):
                 buses.add(input_.name.array)
@@ -132,7 +131,7 @@ class Testbench():
 
         # in addition to using pins as keys, also use their string names
         for p, v in list(test_inputs.items()):
-            name = getattr(p, 'fixture_name', self.dut.get_name(p))
+            name = self.dut.get_name_template(p)
             test_inputs[name] = v
 
         # turn lists of bits into magma BitVector types
@@ -185,16 +184,6 @@ class Testbench():
         ''' Return results in the following format:
         for mode: for [in, out]: {pin:[x1, x2, x3, ...], }
         '''
-        # input_names = [self.dut.get_name(p) for p in self.result_processing_input_pin_order]
-        # def append_vector(orig, data, pins):
-        #     for x, p in zip(data, pins):
-        #         orig[p] = orig.get(p, []) + [x]
-        # def append_vector(old, req, opt):
-        #     for port, val in zip(ports, req + opt):
-        #         old[port].append(val)
-
-        #self.results_raw = self.tester.targets['spice'].saved_for_later
-        #self.results_raw = [float(x) for x in self.results_raw]
         results_by_mode = {m:{} for m in self.test_vectors_by_mode}
         self.result_counter = 0
         for m, req, opt, reads in self.result_processing_list:

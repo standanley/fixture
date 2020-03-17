@@ -54,7 +54,7 @@ def dump_yaml(dut, params_by_mode):
                 mode_dict = {'dummy_digitalmode': 0}
             else:
                 # mode dict keys are true digital pins
-                names = [dut.get_name(p) for p in dut.inputs_true_digital]
+                names = [dut.get_name_circuit(p) for p in dut.inputs_true_digital]
                 mode_dict = {name:x for name,x in zip(names, binary(mode, len(names)))}
             coefs_by_mode = d.get(param, [])
             coefs_this_mode = {
@@ -110,8 +110,8 @@ def create_interface(circuit, collateral_dict):
     pins = {}
     for p_name, _ in circuit.IO.items():
         p = getattr(circuit, p_name)
-        spice_name = circuit.get_name(p)
-        template_name = getattr(p, 'fixture_name', spice_name)
+        spice_name = circuit.get_name_circuit(p)
+        template_name = circuit.get_name_template(p)
         # this next line key should not be spice name
         pins[template_name] = create_pin(p, spice_name)
 
