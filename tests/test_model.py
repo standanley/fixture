@@ -19,5 +19,9 @@ def test_diff_param():
 
     fixture.run(circuit_fname, test_fname)
 
+def test_pb():
+    circuit_fname = file_relative_to_test('configs/pb_model.yaml')
+    fixture.run(circuit_fname)
+
 if __name__ == '__main__':
-    test_diff_param()
+    test_pb()

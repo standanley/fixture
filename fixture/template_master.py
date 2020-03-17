@@ -88,11 +88,11 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
             name = str(p.name)
             #print('for ', p, 'trying', name)
             #print(self.is_required(p))
-            for required_port in self.required_ports:
-                if name == str(getattr(self, required_port).name):
-                    name = required_port
-                    #print('matched! ', name)
-                    break
+            #for required_port in self.required_ports:
+            #    if name == str(getattr(self, required_port).name):
+            #        name = required_port
+            #        #print('matched! ', name)
+            #        break
             name = name.split('.')[-1]
             #print('RETURING NAME', name)
             return name

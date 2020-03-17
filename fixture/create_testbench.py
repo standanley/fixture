@@ -132,7 +132,8 @@ class Testbench():
 
         # in addition to using pins as keys, also use their string names
         for p, v in list(test_inputs.items()):
-            test_inputs[self.dut.get_name(p)] = v
+            name = getattr(p, 'fixture_name', self.dut.get_name(p))
+            test_inputs[name] = v
 
         # turn lists of bits into magma BitVector types
         for name, val in test_inputs.items():

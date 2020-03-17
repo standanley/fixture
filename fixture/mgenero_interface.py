@@ -100,18 +100,20 @@ def create_interface(circuit, collateral_dict):
 
         return d
 
-    # mapping from fixture template name to spice name
-    pin_name_mapping = {}
-    for template_port_name in circuit.required_ports:
-        template_port = getattr(circuit, template_port_name)
-        # TODO use the mgenero template name for the key
-        pin_name_mapping[template_port] = template_port.name.name
+    ## mapping from fixture template name to spice name
+    #pin_name_mapping = {}
+    #for template_port_name in circuit.required_ports:
+    #    template_port = getattr(circuit, template_port_name)
+    #    # TODO use the mgenero template name for the key
+    #    pin_name_mapping[template_port] = template_port.fixture_name
 
     pins = {}
     for p_name, _ in circuit.IO.items():
         p = getattr(circuit, p_name)
-        spice_name = pin_name_mapping.get(p_name, p_name)
-        pins[spice_name] = create_pin(p, spice_name)
+        spice_name = circuit.get_name(p)
+        template_name = getattr(p, 'fixture_name', spice_name)
+        # this next line key should not be spice name
+        pins[template_name] = create_pin(p, spice_name)
 
     interface = {}
     interface['pin'] = pins

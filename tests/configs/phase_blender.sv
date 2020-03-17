@@ -49,6 +49,8 @@ $$#from api_mgenero import *
 $$#
 $$#}$$
 
+`include "mLingua_pwl.vh"
+
 module $$(Module.name()) #(
   $$(Module.parameters())
 ) (
@@ -63,7 +65,9 @@ module $$(Module.name()) #(
 `get_timeunit
 PWLMethod pm=new;
 
+// about to map
 $$Pin.print_map() $$# map between user pin names and generic ones
+// just mapped
 
 //----- BODY STARTS HERE -----
 
@@ -80,11 +84,9 @@ pwl ZERO = `PWL0;
 // pwl vop_lim, von_lim;
 // pwl v_id, v_icm; // differential and common-mode inputs
 
-real rising_a;
-//real rising_a_old;
 
-
-// real t0;
+// TODO is t0 ever used? does mLingua need it?
+real t0;
 // real v_icm_r;
 // real vdd_r;
 $$PWL.declare_optional_analog_pins_in_real()
@@ -94,6 +96,10 @@ $$PWL.declare_optional_analog_pins_in_real()
 // real max_swing; // Max voltage swing of an output (Itail*Rout)
 // real vid_r; // vid<|vid_r| (max_swing/Av)
 // real v_oc_r;  // common-mode output voltage
+
+// Declaration of params
+real gain;
+real offest;
 
 event wakeup;
 
@@ -105,7 +111,6 @@ initial ->> wakeup; // dummy event for ignition at t=0
 
 // discretization of control inputs
 $$#PWL.instantiate_pwl2real_optional_analog_pins(['vss'] if Pin.is_exist('vss') else [])
-$$PWL.instantiate_pwl2real('test123')
 
 // updating parameters as control inputs/mode inputs change
 
@@ -131,6 +136,8 @@ always @($$print_sensitivity_list(sensitivity)) begin
 // TODO do I need to annotate modelparam?
 $$annotate_modelparam(model_param_map, iv_map)
 
+end
+
 //-- Model behaviors
 
 
@@ -143,12 +150,12 @@ real diff;
 real delay_periods;
 real delay;
 
-always @posedge(in_a) begin
+always @(posedge(in_a)) begin
     period = `get_time - rising_a;
     rising_a = `get_time;
 end
 
-always @posedge(in_b) begin
+always @(posedge(in_b)) begin
     diff = `get_time - rising_a;
     delay_periods = diff / period * gain + offset + 1;
     delay = delay_periods * period;
