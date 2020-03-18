@@ -99,7 +99,7 @@ $$PWL.declare_optional_analog_pins_in_real()
 
 // Declaration of params
 real gain;
-real offest;
+real offset;
 
 event wakeup;
 
@@ -117,7 +117,7 @@ $$#PWL.instantiate_pwl2real_optional_analog_pins(['vss'] if Pin.is_exist('vss') 
 $${
 # sensitivity list of always @ statement
 # sensitivity = ['v_icm_r', 'vdd_r', 'wakeup'] + get_sensitivity_list() 
-sensitivity = ['wakeup'] + get_sensitivity_list() 
+sensitivity = ['wakeup', 'sel'] + get_sensitivity_list() 
 
 # model parameter mapping for back-annotation
 # { testname : { test output : Verilog variable being mapped to } }

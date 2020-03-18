@@ -12,17 +12,17 @@ pin:
         value: 0
     input_a:
         direction: input
-        datatype: real
-        value: (0, 1.2)
+        datatype: bit
+        #value: (0, 1.2)
         template_pin: in_a
     input_b:
         direction: input
-        datatype: real
-        value: (0, 1.2)
+        datatype: bit
+        #value: (0, 1.2)
         template_pin: in_b
     output_:
         direction: output
-        datatype: real
+        datatype: bit
         template_pin: out
     sel:
         direction: input

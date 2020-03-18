@@ -89,9 +89,9 @@ def create_interface(circuit, collateral_dict):
         # pwl
         # logic can mean true digital or clock ...
         # vectorsize is # bits
-        # Let's assume pwl for real and logic for digital/ba
+        # Let's assume real for real and logic for digital/ba
         isreal = isinstance(type(p), RealKind)
-        d['datatype'] = 'pwl' if isreal else 'logic'
+        d['datatype'] = 'real' if isreal else 'logic'
         d['is_optional'] = my_in(p, (circuit.inputs_optional + circuit.inputs_pinned))
 
         # TODO array of reals?
