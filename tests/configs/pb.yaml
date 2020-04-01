@@ -1,6 +1,6 @@
 name: myphaseblender
-#filepath: ../spice/myphaseblender.sp
-filepath: ../spice/myphaseblender3.sp
+filepath: ../spice/myphaseblender.sp
+#filepath: ../spice/myphaseblender3.sp
 template: PhaseBlenderTemplate
 pin:
     vdd:
@@ -42,15 +42,15 @@ pin:
     #    direction: input
     #    datatype: binary_analog
     #    width: 3
-    za:
-        direction: output
-        datatype: real
-    zb:
-        direction: output
-        datatype: real
-    zo:
-        direction: output
-        datatype: real
+    #za:
+    #    direction: output
+    #    datatype: real
+    #zb:
+    #    direction: output
+    #    datatype: real
+    #zo:
+    #    direction: output
+    #    datatype: real
         #    z_test:
         #        direction: input
         #        datatype: real
