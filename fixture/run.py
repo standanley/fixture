@@ -110,7 +110,7 @@ def _run(circuit_config_dict):
     tester.compile_and_run(test_config_dict['target'],
         simulator=test_config_dict['simulator'],
         clock_step_delay=0,
-        tmp_dir=(not DEBUG),
+        tmp_dir=False,
         **simulator_dict
     )
 
