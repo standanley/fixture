@@ -1,13 +1,12 @@
-name: myphaseblender
-#filepath: ../spice/myphaseblender.sp
-filepath: ../spice/myphaseblender3.sp
+name: pb2
+filepath: ../spice/pb1.scs
 template: PhaseBlenderTemplate
 pin:
     vdd:
         direction: input
         datatype: real
         value: 1.2
-    gnd:
+    vss:
         direction: input
         datatype: real
         value: 0
@@ -25,36 +24,11 @@ pin:
         direction: output
         datatype: bit
         template_pin: out
-    #sel<2>:
-    #    direction: input
-    #    datatype: real
-    #    value: 0
-    #sel<1>:
-    #    direction: input
-    #    datatype: real
-    #    value: 0
     sel:
         direction: input
         datatype: binary_analog
         width: 3
         template_pin: sel
-    #sel:
-    #    direction: input
-    #    datatype: binary_analog
-    #    width: 3
-    za:
-        direction: output
-        datatype: real
-    zb:
-        direction: output
-        datatype: real
-    zo:
-        direction: output
-        datatype: real
-        #    z_test:
-        #        direction: input
-        #        datatype: real
-        #        value: (0, 42)
 frequency: 1000000.0
 #phase_offset_range: [.2, 0.21]
 phase_offset_range: [.25, 0.250001]
@@ -63,4 +37,4 @@ phase_offset_range: [.25, 0.250001]
 mgenero: pb_mgenero.yaml
 
 #test_config_file: ngspice.yaml
-test_config_file: ngspice_osc.yaml
+test_config_file: spectre.yaml

@@ -66,6 +66,12 @@ class PhaseBlenderTemplate(TemplateMaster):
             'style': 'phase',
             'ref': self.in_a
             })
+
+        # wait a touch longer because I had issues when the simulation ended exactly as the measurement was taken
+        tester.delay(2/freq)
+        tester.poke(self.in_a, 0)
+        tester.poke(self.in_b, 0)
+        tester.delay(1/freq)
         return [out_phase]
 
     @classmethod

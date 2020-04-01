@@ -142,29 +142,60 @@ end
 
 
 
-event go_high;
-event go_low;
+event set_high;
+event set_low;
+real period_unclamped;
 real period;
 real rising_a;
 real diff;
 real delay_periods;
+real delay_unshifted;
+//real delay_unclamped;
 real delay;
+real wait_unshifted;
+real w;
 
 always @(posedge(in_a)) begin
-    period = `get_time - rising_a;
+    period_unclamped = `get_time - rising_a;
+    period = period_unclamped > max_delay? max_delay : period_unclamped;
     rising_a = `get_time;
 end
 
 always @(posedge(in_b)) begin
     diff = `get_time - rising_a;
     delay_periods = diff / period * gain + offset + 1;
-    delay = delay_periods * period;
-    #(delay) ->> go_high;
-    #(period/2) ->> go_low;
+    delay_unshifted = delay_periods * period;
+    delay = delay_unshifted <  0?      delay_unshifted + period
+          : delay_unshifted >= period? delay_unshifted - period
+          : delay_unshifted;
+    // delay is now the time from rising edge of a to rising edge of out
 end
 
-always @(go_high) out = 1;
-always @(go_low) out = 0;
+initial begin
+    wait(in_a == 0);
+    wait(in_b == 0);
+    wait(in_a == 1);
+    wait(in_b == 1);
+    ->> set_high;
+end
+
+always @(set_high) begin
+    out = 1;
+    #(period / 2 *1s) ->> set_low;
+end
+always @(set_low) begin
+    out = 0;
+    // now we schedule the next high edge
+    // t = prev_a + delay
+    // wait = t - current_time
+    wait_unshifted = rising_a + delay - `get_time;
+    // value is usually almost exactly period/2, we will clamp 0 <= w < period
+    // TODO this might be redundant with shifting we already did to delay
+    w = wait_unshifted < 0?       wait_unshifted + period
+      : wait_unshifted >= period? wait_unshifted - period
+      : wait_unshifted;
+    #(w * 1s) ->> set_high;
+end
 
 //pragma protect end
 `endprotect

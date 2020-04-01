@@ -2,22 +2,26 @@ build_folder: ./mgenero_build
 template_name: ../phase_blender.sv
 
 modelparam:
-  v_os:
-    description: input-referred static offset voltage
+  max_delay:
+    description: Maximum time allowed between output edges
     datatype: real
-    value: 0.0
-  etol_v_icm:
-    description: resolution of input common-mode voltage (inp+inn)/2.0
-    datatype: real
-    value: 0.01
-  etol_vdd:
-    description: resolution of vdd
-    datatype: real
-    value: 0.01
-  etol_f:
-    description: error tolerance of a filter
-    datatype: real
-    value: 0.0001
+    value: 2e6
+#  v_os:
+#    description: input-referred static offset voltage
+#    datatype: real
+#    value: 0.0
+#  etol_v_icm:
+#    description: resolution of input common-mode voltage (inp+inn)/2.0
+#    datatype: real
+#    value: 0.01
+#  etol_vdd:
+#    description: resolution of vdd
+#    datatype: real
+#    value: 0.01
+#  etol_f:
+#    description: error tolerance of a filter
+#    datatype: real
+#    value: 0.0001
 
 # verilog template name: fixture template name
 # for new models this should always be 1:1
