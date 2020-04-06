@@ -1,7 +1,6 @@
 import math
 import itertools
 import random
-from fixture.template_master import TemplateKind
 from fault import RealKind
 
 class Sampler:

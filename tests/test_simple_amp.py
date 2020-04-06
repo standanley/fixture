@@ -53,8 +53,8 @@ def plot(results, tf):
 def test_simple():
     print('\nTop of test')
 
-    # this interface can be used for spice sims as well as verilog models
-    class UserAmpInterface(fixture.templates.SimpleAmpTemplate):
+    # TODO update to new style of magma IO declaration
+    class MyAmp(magma.Circuit):
         name = 'my_simple_amp_interface'
         extras = {'approx_settling_time':1e-3}
         IO = [
@@ -63,14 +63,12 @@ def test_simple():
             'vdd', fixture.RealIn(1.2),
             'vss', fixture.RealIn(0.0)
         ]
-        def mapping(self):
-            self.in_single = self.in_
-            self.out_single = self.out
+    mapping = {
+        'in_single': 'in_',
+        'out_single': 'out'
+    }
 
-    # The name and IO here match the spice model in spice/myamp.sp
-    # Since we include that file in compile_and_run, they get linked
-    class MyAmp(UserAmpInterface):
-        name = 'myamp'
+    t = fixture.templates.SimpleAmpTemplate(MyAmp, mapping)
 
     print('Creating test bench')
     # auto-create vectors for 1 analog dimension
