@@ -1,0 +1,80 @@
+// Generated for: spectre
+// Generated on: Mar 31 18:54:20 2020
+// Design library name: myee272
+// Design cell name: test_pb1
+// Design view name: schematic
+simulator lang=spectre
+global 0
+parameters frequency=1M phase_shift=.25 vdd=1.2
+include "/cad/freepdk/FreePDK15/hspice/models/fet.inc" section=CMG
+
+// Library name: myfreepdk15
+// Cell name: inv
+// View name: schematic
+subckt inv gnd in out vdd
+    M0 (out in gnd gnd) nfet w=30n l=15n as=6.08e-16 ad=6.08e-16 ps=168n \
+        pd=168n m=2 degradation=no
+    M1 (out in vdd vdd) pfet w=30n l=15n as=6.08e-16 ad=6.08e-16 ps=168n \
+        pd=168n m=2 degradation=no
+ends inv
+// End of subcircuit definition.
+
+// Library name: myfreepdk15
+// Cell name: mux
+// View name: schematic
+subckt mux ina inb out sel vdd vss
+parameters strength
+    M5 (inb sel out vss) nfet as=6.08e-16 ad=6.08e-16 ps=168n pd=168n \
+        m=strength*2 degradation=no
+    M2 (ina sel_bar out vss) nfet as=6.08e-16 ad=6.08e-16 ps=168n pd=168n \
+        m=strength*2 degradation=no
+    M3 (out sel_bar inb vdd) pfet as=6.08e-16 ad=6.08e-16 ps=168n pd=168n \
+        m=strength * 4 degradation=no
+    M4 (out sel ina vdd) pfet as=6.08e-16 ad=6.08e-16 ps=168n pd=168n m=strength * 4 \
+         degradation=no
+    I0 (vss sel sel_bar vdd) inv
+ends mux
+// End of subcircuit definition.
+
+// Library name: myfreepdk15
+// Cell name: pb2
+// View name: schematic
+subckt pb2 ina inb out sel\<0\> sel\<1\> sel\<2\> vdd vss
+    I4 (ina_lpf inb_lpf out_raw sel\<2\> vdd vss) mux strength=3
+    I3 (ina_lpf inb_lpf out_raw sel\<1\> vdd vss) mux strength=1
+    I2 (ina_lpf inb_lpf out_raw sel\<0\> vdd vss) mux strength=1
+    C1 (inb_lpf vss) capacitor c=100p
+    C0 (ina_lpf vss) capacitor c=100p
+    R1 (inb inb_lpf) resistor r=(.05u/100p)
+    R0 (ina ina_lpf) resistor r=(.05u/100p)
+    I8 (vss net9 out vdd) inv
+    I7 (vss out_raw net9 vdd) inv
+ends pb2
+// End of subcircuit definition.
+
+// // Library name: myee272
+// // Cell name: test_pb1
+// // View name: schematic
+// V0 (net2 0) vsource dc=vdd type=dc
+// V5 (sel\<2\> 0) vsource type=pulse val0=0 val1=vdd period=(1/frequency)*12
+// V4 (sel\<1\> 0) vsource type=pulse val0=0 val1=vdd period=(1/frequency)*6
+// V3 (sel\<0\> 0) vsource type=pulse val0=0 val1=vdd period=(1/frequency)*3
+// V2 (net4 0) vsource type=pulse val0=0 val1=vdd period=1 / frequency delay=(1/frequency) * phase_shift \
+//         
+// V1 (net3 0) vsource type=pulse val0=0 val1=vdd period=1 / frequency
+// C0 (net5 0) capacitor c=1p
+// I2 (net3 net4 net5 sel\<0\> sel\<1\> sel\<2\> net2 0) pb2
+// simulatorOptions options psfversion="1.1.0" reltol=1e-3 vabstol=1e-6 \
+//     iabstol=1e-12 temp=27 tnom=27 scalem=1.0 scale=1.0 gmin=1e-12 rforce=1 \
+//     maxnotes=5 maxwarns=5 digits=5 cols=80 pivrel=1e-3 \
+//     sensfile="../psf/sens.output" checklimitdest=psf 
+// tran tran stop=24u write="spectre.ic" writefinal="spectre.fc" \
+//     annotate=status maxiters=5 
+// finalTimeOP info what=oppoint where=rawfile
+// modelParameter info what=models where=rawfile
+// element info what=inst where=rawfile
+// outputParameter info what=output where=rawfile
+// designParamVals info what=parameters where=rawfile
+// primitives info what=primitives where=rawfile
+// subckts info what=subckts where=rawfile
+// saveOptions options save=allpub

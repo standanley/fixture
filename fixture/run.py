@@ -40,6 +40,8 @@ def _run(circuit_config_dict):
     test_config_filename_abs = path_relative(circuit_config_dict['filename'], test_config_filename)
     with open(test_config_filename_abs) as f:
         test_config_dict = yaml.safe_load(f)
+    if 'num_cycles' not in test_config_dict and test_config_dict['target'] != 'spice':
+        test_config_dict['num_cycles'] = 10**9 # default 1 second, will quit early if $finish is reached
 
     template = getattr(templates, circuit_config_dict['template'])
 
@@ -68,12 +70,23 @@ def _run(circuit_config_dict):
     vectors = sampler.Sampler.get_samples_for_circuit(UserCircuit, 50)
 
     tester = fault.Tester(UserCircuit)
+
+    DEBUG = False
+    if DEBUG:
+        # list of pins you want to plot after simulation
+        pins = ['input_a', 'input_b', 'output_', 'vdd']
+        DEBUG_DICT = {}
+        for p_name in pins:
+            p = getattr(UserCircuit, p_name)
+            gv = tester.get_value(p, params={'style':'block', 'duration':100e-6})
+            DEBUG_DICT[p_name] = gv
+
     testbench = create_testbench.Testbench(tester)
     testbench.set_test_vectors(vectors)
     testbench.create_test_bench()
 
-    # TODO fill in all args from SpiceTarger or remove this check
-    approved_simulator_args = ['ic', 'vsup', 'bus_delim', 'flags', 't_step']
+    # TODO fill in all args from SpiceTarget or remove this check
+    approved_simulator_args = ['ic', 'vsup', 'bus_delim', 'ext_libs', 'inc_dirs', 'defines', 'flags', 't_step', 'num_cycles', 'conn_order']
     simulator_dict = {k:v for k,v in test_config_dict.items() if k in approved_simulator_args}
 
     # make sure to put the circuit file location in the right arg
@@ -88,17 +101,30 @@ def _run(circuit_config_dict):
 
     # flgs will later get shell escaped, but I think the user should have escaped them already
     # ran into problems when a flag was like '-define NCVLOG'
-    if 'flags' in simulator_dict:
-        flags = [x for f in simulator_dict['flags'] for x in f.split()]
-        simulator_dict['flags'] = flags
+    #if 'flags' in simulator_dict:
+    #    flags = [x for f in simulator_dict['flags'] for x in f.split()]
+    #    simulator_dict['flags'] = flags
 
     print('calling with sim dict', simulator_dict)
     print(f'Running sim, {len(vectors[0])} test vectors')
     tester.compile_and_run(test_config_dict['target'],
         simulator=test_config_dict['simulator'],
         clock_step_delay=0,
+        tmp_dir=False,
         **simulator_dict
     )
+
+    if DEBUG:
+        vals = {k:v.value for k,v in DEBUG_DICT.items()}
+        pass
+        import matplotlib.pyplot as plt
+        leg = []
+        for k,v in vals.items():
+            plt.plot(v[0], v[1])
+            leg.append(k)
+        plt.legend(leg)
+        plt.show()
+
     
     print('Analyzing results')
     results = testbench.get_results()

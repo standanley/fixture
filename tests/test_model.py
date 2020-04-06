@@ -2,6 +2,7 @@ import fixture
 import subprocess
 import os
 import pytest
+import shutil
 
 def file_relative_to_test(fname):
     return os.path.join(os.path.dirname(__file__), fname)
@@ -19,5 +20,10 @@ def test_diff_param():
 
     fixture.run(circuit_fname, test_fname)
 
+@pytest.mark.skipif(not shutil.which('ncsim'), reason='ncsim not installed')
+def test_pb():
+    circuit_fname = file_relative_to_test('configs/pb_model.yaml')
+    fixture.run(circuit_fname)
+
 if __name__ == '__main__':
-    test_diff_param()
+    test_pb()

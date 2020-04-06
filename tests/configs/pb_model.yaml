@@ -1,0 +1,34 @@
+name: myphaseblender
+filepath: ../models/pb_model.sv
+template: PhaseBlenderTemplate
+pin:
+    vdd:
+        direction: input
+        datatype: real
+        value: 1.2
+    gnd:
+        direction: input
+        datatype: real
+        value: 0
+    input_a:
+        direction: input
+        datatype: bit
+        #value: (0, 1.2)
+        template_pin: in_a
+    input_b:
+        direction: input
+        datatype: bit
+        #value: (0, 1.2)
+        template_pin: in_b
+    output_:
+        direction: output
+        datatype: bit
+        template_pin: out
+    sel:
+        direction: input
+        datatype: binary_analog
+        width: 3
+frequency: 1000000.0
+phase_offset_range: [.2, 0.21]
+
+test_config_file: mlingua.yaml

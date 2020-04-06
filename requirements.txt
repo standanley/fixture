@@ -1,4 +1,4 @@
-magma-lang
+magma-lang==2.0.21
 fault
 statsmodels
 kratos

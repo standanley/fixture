@@ -55,17 +55,13 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
 
     @classmethod
     def is_required_port(self, p):
+        # TODO just use fixture_name?
         # TODO I'm afraid it is not handling busses correctly, but maybe it doesn't matter?
         # Single wires of an optional bus are counted as optional, which is all I need for now
         required_mappings = [getattr(self, r).name for r in self.required_ports]
 
         return any(p.name == rn for rn in required_mappings)
 
-        # test_inputs_str = [self.get_name(x) for x in test_input_ports]
-        # is_required_test = any(self.get_name(p) == rn for rn in test_inputs_str)
-
-        # #print('checking required', p, is_required_port, is_required_test)
-        # return is_required_port or is_required_test
 
     # gets called when someone subclasses a template, checks that all of
     # required_ports got mapped to in mapping
@@ -74,7 +70,11 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
             assert hasattr(self, port_name), 'Did not associate port %s'%port_name
 
     @classmethod
-    def get_name(self, p):
+    def get_name_template(cls, p):
+        return getattr(p, 'fixture_name', cls.get_name_circuit(p))
+
+    @classmethod
+    def get_name_circuit(self, p):
         ''' gives back a string to identify something port-like
         The input could be a port type or port instance, etc.
         '''
@@ -88,11 +88,11 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
             name = str(p.name)
             #print('for ', p, 'trying', name)
             #print(self.is_required(p))
-            for required_port in self.required_ports:
-                if name == str(getattr(self, required_port).name):
-                    name = required_port
-                    #print('matched! ', name)
-                    break
+            #for required_port in self.required_ports:
+            #    if name == str(getattr(self, required_port).name):
+            #        name = required_port
+            #        #print('matched! ', name)
+            #        break
             name = name.split('.')[-1]
             #print('RETURING NAME', name)
             return name
@@ -191,7 +191,7 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
                     raise NotImplementedError
                     outputs_digital.append(port)
                 else:
-                    print(port, type(port), self.get_name(port))
+                    print(port, type(port), self.get_name_circuit(port))
                     assert False, "Only analog and digital outputs are supported"
 
             else:

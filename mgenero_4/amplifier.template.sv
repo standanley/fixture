@@ -49,6 +49,8 @@ $$#from api_mgenero import *
 $$#
 $$#}$$
 
+`include "mLingua_pwl.vh"
+
 module $$(Module.name()) #(
   $$(Module.parameters())
 ) (

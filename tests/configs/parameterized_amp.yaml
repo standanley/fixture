@@ -10,7 +10,7 @@ pin:
         direction: input
         datatype: real
         value: 0
-    in_:
+    my_in:
         direction: input
         datatype: real
         value: (.2, 1.0)
@@ -27,7 +27,7 @@ pin:
         direction: input
         datatype: bit
         width: 2
-    out:
+    my_out:
         direction: output
         datatype: real
         template_pin: out_single

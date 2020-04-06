@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import yaml
 from fixture.run import path_relative
 import os
@@ -27,12 +29,32 @@ def binary(x, y):
 def dump_yaml(dut, params_by_mode):
     d = {}
     for mode, params in params_by_mode.items():
+#        # TODO I haven't found a good way to deal with required BA, so this is a bit of a hack
+#        # Note all params that are part of a bus
+#        buss = defaultdict(list)
+#        for param in params:
+#            if param[-1] == ']':
+#                name = param.split('[')[0]
+#                buss[name].append(param)
+#        aggregates = defaultdict(dict)
+#
+#        # add buses at the end that are the sum of their components
+#        # also delete entries from 'params' for the individual bits
+#        for name, bits in buss.items():
+#            params[name] = {}
+#            for bit in bits:
+#                terms = params.pop(bit)
+#                for factor, coef in terms.items():
+#                    new_factor = f'{bit}*{factor}'
+#                    params[name][new_factor] = coef
+
+
         for param, terms in params.items():
             if len(params_by_mode) == 1:
                 mode_dict = {'dummy_digitalmode': 0}
             else:
                 # mode dict keys are true digital pins
-                names = [dut.get_name(p) for p in dut.inputs_true_digital]
+                names = [dut.get_name_circuit(p) for p in dut.inputs_true_digital]
                 mode_dict = {name:x for name,x in zip(names, binary(mode, len(names)))}
             coefs_by_mode = d.get(param, [])
             coefs_this_mode = {
@@ -67,9 +89,9 @@ def create_interface(circuit, collateral_dict):
         # pwl
         # logic can mean true digital or clock ...
         # vectorsize is # bits
-        # Let's assume pwl for real and logic for digital/ba
+        # Let's assume real for real and logic for digital/ba
         isreal = isinstance(type(p), RealKind)
-        d['datatype'] = 'pwl' if isreal else 'logic'
+        d['datatype'] = 'real' if isreal else 'logic'
         d['is_optional'] = my_in(p, (circuit.inputs_optional + circuit.inputs_pinned))
 
         # TODO array of reals?
@@ -78,18 +100,20 @@ def create_interface(circuit, collateral_dict):
 
         return d
 
-    # mapping from fixture template name to spice name
-    pin_name_mapping = {}
-    for template_port_name in circuit.required_ports:
-        template_port = getattr(circuit, template_port_name)
-        # TODO use the mgenero template name for the key
-        pin_name_mapping[template_port] = template_port.name.name
+    ## mapping from fixture template name to spice name
+    #pin_name_mapping = {}
+    #for template_port_name in circuit.required_ports:
+    #    template_port = getattr(circuit, template_port_name)
+    #    # TODO use the mgenero template name for the key
+    #    pin_name_mapping[template_port] = template_port.fixture_name
 
     pins = {}
     for p_name, _ in circuit.IO.items():
         p = getattr(circuit, p_name)
-        spice_name = pin_name_mapping.get(p_name, p_name)
-        pins[spice_name] = create_pin(p, spice_name)
+        spice_name = circuit.get_name_circuit(p)
+        template_name = circuit.get_name_template(p)
+        # this next line key should not be spice name
+        pins[template_name] = create_pin(p, spice_name)
 
     interface = {}
     interface['pin'] = pins
