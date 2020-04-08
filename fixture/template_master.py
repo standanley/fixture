@@ -2,67 +2,64 @@ import ast
 from magma import *
 import fault
 from .real_types import BinaryAnalogType
-#from .real_types import BinaryAnalogKind, TestVectorOutput
-
-
-
-
-# class TemplateKind(circuit.DefineCircuitKind):
-# 
-# 
-#     def __new__(metacls, name, bases, dct):
-#         cls = super(TemplateKind, metacls).__new__(metacls, name, bases, dct)
-# 
-#         if name == 'TemplateMaster':
-#             # no checks are needed
-#             return cls
-# 
-#         is_template = (TemplateMaster in bases)
-#         if is_template:
-#             assert hasattr(cls, 'required_ports'), 'Template must give required ports'
-#             assert not hasattr(cls, 'mapping'), 'mapping is for the instance, not the template'
-# 
-#         else:
-#             assert hasattr(cls, 'mapping'), 'Subclass of template must provide port mapping'
-#             # call user's function to associate ports
-#             cls.mapping(cls)
-# 
-#             # check that all the required ports actually got associated
-#             cls.check_required_ports(cls)
-# 
-#             # set required port names 
-#             # TODO does this break things in magma?
-#             for port_name in cls.required_ports:
-#                 getattr(cls, port_name).fixture_name = port_name
-# 
-#             # determine what random vectors might be needed to run a test
-#             assert hasattr(cls, 'specify_test_inputs'), 'Must specify required test inputs'
-#             cls.inputs_test = cls.specify_test_inputs()
-# 
-#             # sort ports into different lists depending on what kind of stimulus they require
-#             cls.sort_ports(cls)
-# 
-# 
-#         return cls
+from abc import ABC, abstractmethod
+import fixture
 
 class TemplateMaster():
 
-    def __init__(self, circuit, port_mapping, params={}):
+    class Ports():
+        def __init__(self, dut, mapping):
+            self.dut = dut
+            self.mapping = mapping
+
+        def __getattr__(self, item):
+            if item in self.mapping:
+                return getattr(self.dut, self.mapping[item])
+            else:
+                super()
+                #assert False, f'No required port named "{item}"'
+
+
+    def __init__(self, circuit, port_mapping, run_callback, extras={}):
         '''
         circuit: The magma circuit
         port_mapping: a dictionary of {template_name: circuit_name} for required pins
         params: a dictionary of template-specific parameters
         '''
 
-        self.circ = circuit
+        self.dut = circuit
         self.mapping = port_mapping
-        self.params = params
+        self.extras = extras
+        self.run = run_callback
+        self.ports = self.Ports(circuit, port_mapping)
 
-        # by the time the tempalte is instantiated, a child should have added this
+        # by the time the template is instantiated, a child should have added this
         assert hasattr(self, 'required_ports')
         self.check_required_ports()
 
-    @classmethod
+        assert hasattr(self, 'tests')
+        # replace test classes with instance
+        self.tests = [T(self) for T in self.tests]
+
+        self.sort_ports()
+
+    def go(self):
+        '''
+        Actually do the entire analysis of the circuit
+        '''
+        for test in self.tests:
+            tester = fault.Tester(self.dut)
+            tb = fixture.Testbench(self, tester, test)
+            tb.create_test_bench()
+
+            self.run(tester)
+
+            results_each_mode = tb.get_results()
+            for mode, results in enumerate(results_each_mode):
+                regression = fixture.Regression(self.dut, results)
+                
+
+
     def required_port_info(self):
         # TODO: this should give more info than just the names of the ports
         # maybe expect the template creator to override this?
@@ -84,7 +81,7 @@ class TemplateMaster():
         for port_name in self.required_ports:
             assert port_name in self.mapping, 'Did not associate port %s'%port_name
 
-    def get_name_template(cls, p):
+    def get_name_template(self, p):
         try:
             return self.reverse_mapping[self.get_name_circuit(p)]
         except KeyError:
@@ -129,13 +126,16 @@ class TemplateMaster():
 
     def sort_ports(self):
 
-        circuit_ports = [getattr(self.circ, name) for name, _ in self.circ.IO.items()]
-        optional_ports = []
-        for p in circuit_ports:
-            # TODO is this the only time we really need get_name_circuit?
-            name = self.get_name_circuit(p)
-            if not p in self.mapping.values():
-                optional_ports.append(p)
+        circuit_port_names = [name for name, _ in self.dut.IO.items()]
+        optional_port_names = [name for name in circuit_port_names if name not in self.mapping.values()]
+        optional_ports = [getattr(self.dut, name) for name in optional_port_names]
+        # optional_ports = []
+        # for p in circuit_ports:
+        #     # TODO is this the only time we really need get_name_circuit?
+        #     name = self.get_name_circuit(p)
+        #     # NOTE: can't use "in" on the next line because == doesn't work for ports
+        #     if not any(p is port for port in self.mapping.values()):
+        #         optional_ports.append(p)
 
         # we want to sort ports into inputs/outputs/analog/digital/pinned/ranged, etc
         inputs_pinned = []
@@ -166,13 +166,13 @@ class TemplateMaster():
 
                     if type(port.limits) == float:
                         inputs_pinned.append(port)
-                    elif hasattr(port, '__len__') and len(port.limits) == 2:
+                    elif hasattr(port.limits, '__len__') and len(port.limits) == 2:
                             inputs_analog.append(port)
                     else:
                         assert False, f'Cannot understand limits {port.limits} for {port}'
 
                 elif issubclass(port_type, BinaryAnalogType):
-                    input_ba.append(port)
+                    inputs_ba.append(port)
                 # TODO used to be BitKind on the next line
                 elif isinstance(port, magma.Bit):
                     inputs_true_digital.append(port)
@@ -193,7 +193,7 @@ class TemplateMaster():
                 assert False, 'Cannot recognize input/output type {type(port)} for {port}'
 
         # Sort!
-        for port in self.optional_ports:
+        for port in optional_ports:
             sort_port(port)
 
         ## Save results
@@ -211,3 +211,44 @@ class TemplateMaster():
         self.inputs_ba = inputs_ba
         self.inputs_analog = inputs_analog
         self.outputs_analog = outputs_analog
+
+
+
+    '''
+    Subclass Test will be used to organize methods related to tests
+    '''
+    class Test(ABC):
+        # TODO perhaps put an init method that checks some parameter algebra
+        # has been specified
+        def __init__(self, template):
+            self.template = template
+            #self.dut = template.dut
+            self.ports = template.ports
+            self.extras = template.extras
+
+        @abstractmethod
+        def input_domain(self):
+            '''
+            Specify the input domain space for this test. Return a list of 
+            Reals and Bits with names
+            '''
+            pass
+
+        @abstractmethod
+        def testbench(self, tester, values):
+            '''
+            Run a test for one operating point. Use the provided fault tester
+            object and values dict containing a random value for each dimension
+            in the specified input domain.
+            '''
+            pass
+
+        @abstractmethod
+        def analysis(self, reads):
+            '''
+            Given the GetValue objects from your testbench, convert things back
+            to a nice domain for linear fitting to optional parameters.
+            Return a dict with keys matching parameters and their measured values
+            '''
+            pass
+    

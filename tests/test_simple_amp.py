@@ -67,33 +67,38 @@ def test_simple():
         'in_single': 'in_',
         'out_single': 'out'
     }
+    extras = {
+        'approx_settling_time': 1e-6
+    }
 
-    t = fixture.templates.SimpleAmpTemplate(MyAmp, mapping)
+    def run_callback(tester):
+        print(f'Running sim, {len(vectors[0])} test vectors')
+        tester.compile_and_run('spice',
+            simulator='ngspice',
+            model_paths = [Path('tests/spice/myamp.sp').resolve()],
+            clock_step_delay=0
+        )
+
+    t = fixture.templates.SimpleAmpTemplate(MyAmp, mapping, run_callback, extras)
+    t.go()
 
     print('Creating test bench')
     # auto-create vectors for 1 analog dimension
-    vectors = fixture.Sampler.get_samples_for_circuit(MyAmp, 50)
+    #vectors = fixture.Sampler.get_samples_for_circuit(MyAmp, 50)
 
-    tester = fault.Tester(MyAmp)
-    testbench = fixture.Testbench(tester)
-    testbench.set_test_vectors(vectors)
-    testbench.create_test_bench()
+    #tester = fault.Tester(MyAmp)
+    #testbench = fixture.Testbench(tester)
+    #testbench.set_test_vectors(vectors)
+    #testbench.create_test_bench()
 
-    print(f'Running sim, {len(vectors[0])} test vectors')
-    tester.compile_and_run('spice',
-        simulator='ngspice',
-        model_paths = [Path('tests/spice/myamp.sp').resolve()],
-        clock_step_delay=0
-    )
+    #print('Analyzing results')
+    #results = testbench.get_results()
+    #results_reformatted = results[0]
 
-    print('Analyzing results')
-    results = testbench.get_results()
-    results_reformatted = results[0]
+    #mode = 0
+    #results_reformatted = results[mode]
 
-    mode = 0
-    results_reformatted = results[mode]
-
-    regression = fixture.Regression(MyAmp, results_reformatted)
+    #regression = fixture.Regression(MyAmp, results_reformatted)
 
 def test_simple_parameterized():
     class UserAmpInterface(fixture.templates.SimpleAmpTemplate):
@@ -147,6 +152,6 @@ def test_simple_parameterized():
 
     
 if __name__ == '__main__':
-    #test_simple()
-    test_simple_parameterized()
+    test_simple()
+    #test_simple_parameterized()
 

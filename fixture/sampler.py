@@ -4,7 +4,8 @@ import random
 from fault import RealKind
 
 class Sampler:
-    def rand():
+    @classmethod
+    def rand(cls):
         return random.random()
 
     @classmethod
@@ -93,7 +94,7 @@ class Sampler:
                 point.append(p)
             points.append(point)
         return points
-
+    """
     @classmethod
     def get_samples_for_circuit(cls, circuit, num_samples):
         '''Generate orthogonal samples based on circuit IO.
@@ -132,7 +133,7 @@ class Sampler:
             ss_labeled = {l:list(xs) for l,xs in zip(labels, ss_transpose)}
             input_vectors.append(ss_labeled)
         return input_vectors
-
+    """
 
 
     def assert_lhs(samples):

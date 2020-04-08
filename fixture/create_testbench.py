@@ -1,3 +1,4 @@
+import fixture
 import fault
 from itertools import product
 from numpy import ndarray
@@ -11,46 +12,27 @@ def add_vectors():
     raise NotImplemented
 
 class Testbench():
-    def __init__(self, tester):
+    def __init__(self, template, tester, test):
+        '''
+        tester: fault tester object
+        test: TemplateMaster Test subclass object
+        '''
+
+        self.template = template
         self.tester = tester
         self.dut = tester.circuit.circuit
-        self.io = self.dut.IO
-        # self.num_ba = len(self.dut.inputs_ba)
-        # self.num_ranged = len(self.dut.inputs_ranged)
-        self.num_optional = len(self.dut.inputs_optional)
-        self.num_required = len(self.dut.inputs_required)
-        self.num_digital = len(self.dut.inputs_true_digital)
+        self.test = test
 
-
-    # def scale_vectors(self, vectors_unscaled):
-    #     def scale(limits, val):
-    #         return limits[0] + val * (limits[1] - limits[0])
-    #     analog_limits = [port.limits for port in self.dut.inputs_ranged]
-    #     ba_limits = [(0,1) for _ in self.dut.inputs_ba]
-    #     lims = analog_limits + ba_limits
-
-    #     vectors_scaled = {}
-    #     for pin, vals in vectors_unscaled.items():
-    #         limits = getattr(pin, 'limits', (0,1))
-    #         vectors_scaled[pin] = [scale(limits, val) for val in vals]
-
-    #     #print(vectors_unscaled)
-    #     #print(vectors_scaled)
-    #     #exit()
-    #     
-
-    #     # vectors_scaled = []
-    #     # for vec in vectors_unscaled:
-    #     #     scaled = [scale(lim, val) for lim,val in zip(lims, vec)]
-    #     #     vectors_scaled.append(scaled)
-    #     return vectors_scaled
+        #self.num_optional = len(self.dut.inputs_optional)
+        #self.num_required = len(self.dut.inputs_required)
+        #self.num_digital = len(self.dut.inputs_true_digital)
 
     def scale_vectors(self, vectors_unscaled):
         def scale(limits, val):
             return limits[0] + val * (limits[1] - limits[0])
         vectors_scaled = {}
         for port, values in vectors_unscaled.items():
-            if isinstance(type(port), fault.RealKind):
+            if hasattr(port, 'limits'):
                 values_scaled = [scale(port.limits, val) for val in values]
             else:
                 values_scaled = values
@@ -67,6 +49,45 @@ class Testbench():
         for input_, val in zip(self.dut.inputs_true_digital, mode):
             self.tester.poke(input_, val)
 
+    def get_test_vectors(self):
+        # sort input_domain dimensions into analog and ba
+        test_analog = []
+        test_ba = []
+        for test_dim in self.test.input_domain():
+            if hasattr(test_dim, 'limits'):
+                test_analog.append(test_dim)
+            else:
+                test_ba.append(test_dim)
+
+        # get random values with fixture.Sampler
+        num_oa = len(self.template.inputs_analog)
+        num_ta = len(test_analog)
+        num_oba = len(self.template.inputs_ba)
+        num_tba = len(test_ba)
+        # TODO how many samples?
+        samples_T = fixture.Sampler.get_orthogonal_samples(num_oa + num_ta, num_oba + num_tba, 20)
+        samples = list(zip(*samples_T))
+
+        # reorganize samples into dictionary
+        samples_oa = samples[0:num_oa]
+        samples_ta = samples[num_oa:num_oa+num_ta]
+        na = num_oa + num_ta
+        samples_oba = samples[na:na+num_oba]
+        samples_tba = samples[na+num_oba:]
+
+        optional = {n: vs for n, vs in zip(
+            self.template.inputs_analog + self.template.inputs_ba,
+            samples_oa + samples_oba
+        )}
+        test = {n: vs for n, vs in zip(
+            test_analog + test_ba,
+            samples_ta + samples_tba
+        )}
+
+        return optional, test
+
+
+    """
     def set_test_vectors(self, vectors, prescaled = False):
         '''
         Creates self.test_vectors_by_mode
@@ -87,12 +108,14 @@ class Testbench():
         else:
             # for now we only support one way of specifying
             raise NotImplementedError
+    """
 
     def apply_optional_inputs(self, test_vector):
         zipped = zip(self.dut.inputs_optional, test_vector)
         for input_, val in zipped:
             self.tester.poke(input_, val)
 
+    ''' optional ouput not supported at the moment
     def read_optional_outputs(self):
         # TODO use new read object
         for port in self.dut.outputs_analog + self.dut.outputs_digital:
@@ -108,6 +131,7 @@ class Testbench():
                 self.result_counter += 1
                 results[self.dut.get_name_circuit(port)] = result
         return results
+    '''
 
     def run_test_vector(self, vec_required, vec_optional):
         self.apply_optional_inputs(vec_optional)
@@ -149,35 +173,19 @@ class Testbench():
     '''
         
     def create_test_bench(self):
+        #TODO set test vectors
+        tvs_optional, tvs_test = self.get_test_vectors()
         #self.startup()
         self.result_processing_list = []
         self.set_pinned_inputs()
-        for digital_mode in self.test_vectors_by_mode:
-            self.set_digital_mode(digital_mode)
-            test_vectors = self.test_vectors_by_mode[digital_mode]
 
-            #TODO
-            # should I put a dictionary of pin:value in the self.result_processing_list.append or should I put a list of [value] and also save a corresponding list of [pin]?
-            #exit()
-            #self.result_processing_input_pin_order = test_vectors.keys()
-            #test_vectors_transpose = zip(*[test_vectors[p] for p in self.result_processing_input_pin_order])
-            #print(list(test_vectors_transpose))
-            def transpose(xs):
-                return list(zip(*xs))
-            test_vectors_required_T = transpose([test_vectors[p] for p in self.dut.inputs_required])
-            test_vectors_optional_T = transpose([test_vectors[p] for p in self.dut.inputs_optional])
-
-            if len(test_vectors_required_T) == 0:
-                test_vectors_required_T = [() for _ in test_vectors_optional_T]
-            if len(test_vectors_optional_T) == 0:
-                test_vectors_optional_T = [() for _ in test_vectors_required_T]
-
-
-            # print(list(test_vectors_optional_T))
-            # print(list(test_vectors_required_T))
-
-            for vec_required, vec_optional in zip(test_vectors_required_T, test_vectors_optional_T):
-                reads = self.run_test_vector(vec_required, vec_optional)
+        digital_modes = product(range(2), repeat=self.num_digital)
+        for digital_mode in digital_modes:
+            num_vecs = len(next(iter(tvs_optional.values())))
+            for i in range(num_vecs):
+                vec_optional = {k:vs[i] for k,vs in tvs_optional}
+                vec_test = {k:vs[i] for k,vs in tvs_test}
+                reads = self.run_test_vector(vec_test, vec_optional)
                 self.result_processing_list.append((digital_mode, vec_required, vec_optional, reads))
 
     def get_results(self):
@@ -185,7 +193,6 @@ class Testbench():
         for mode: for [in, out]: {pin:[x1, x2, x3, ...], }
         '''
         results_by_mode = {m:{} for m in self.test_vectors_by_mode}
-        self.result_counter = 0
         for m, req, opt, reads in self.result_processing_list:
             results_out_req = self.dut.process_single_test(reads)
             if not isinstance(results_out_req, dict):
