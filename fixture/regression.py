@@ -144,10 +144,12 @@ class Regression():
         '''
 
         def get_name(x):
-            if type(x) == str:
-                return x
+            c = template.get_name_circuit(x)
+            if c in template.reverse_mapping:
+                return template.get_name_template(c)
             else:
-                return template.get_name_template(x)
+                return c
+
         self.component_tag = '_component_'
         data = {get_name(k): v for k, v in data.items()}
         data[self.one_literal] = [1 for _ in list(data.values())[0]]

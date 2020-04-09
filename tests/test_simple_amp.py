@@ -101,9 +101,8 @@ def test_simple():
     #regression = fixture.Regression(MyAmp, results_reformatted)
 
 def test_simple_parameterized():
-    class UserAmpInterface(fixture.templates.SimpleAmpTemplate):
-        extras = {'approx_settling_time':1e-3}
-        name = 'my_simple_amp_interface'
+    class UserAmp(magma.Circuit):
+        name = 'myamp_params'
         IO = [
             'my_in', fixture.RealIn((.5,.7)),
             'my_out', fault.RealOut,
@@ -114,44 +113,51 @@ def test_simple_parameterized():
             'ctrl', magma.In(magma.Bits[2]),
             'vdd_internal', fault.RealOut
         ]
-        def mapping(self):
-            self.in_single = self.my_in
-            self.out_single = self.my_out
 
+    mapping = {
+        'in_single': 'my_in',
+        'out_single': 'my_out'
+    }
+    extras = {
+        'approx_settling_time': 1e-6
+    }
 
+    def run_callback(tester):
+        print('Running sim')
+        tester.compile_and_run('spice',
+           simulator='ngspice',
+           model_paths = [Path('tests/spice/myamp_params.sp').resolve()],
+           clock_step_delay=0,
+           tmp_dir=False
+       )
 
-    # The name and IO here match the spice model in spice/myamp.sp
-    # Since we include that file in compile_and_run, they get linked
-    class MyAmp(UserAmpInterface):
-        name = 'myamp_params'
+    t = fixture.templates.SimpleAmpTemplate(UserAmp, mapping, run_callback, extras)
+    t.go()
 
-    io = MyAmp.IO
+    # print('Creating test bench')
+    # # auto-create vectors for 1 analog dimension
 
-    print('Creating test bench')
-    # auto-create vectors for 1 analog dimension
-    vectors =  fixture.Sampler.get_samples_for_circuit(MyAmp, 50)
+    # tester = fault.Tester(MyAmp)
+    # testbench = fixture.Testbench(tester)
+    # testbench.set_test_vectors(vectors)
+    # testbench.create_test_bench()
 
-    tester = fault.Tester(MyAmp)
-    testbench = fixture.Testbench(tester)
-    testbench.set_test_vectors(vectors)
-    testbench.create_test_bench()
+    # print(f'Running sim, {len(vectors)} test vectors')
+    # tester.compile_and_run('spice',
+    #     simulator='ngspice',
+    #     model_paths = [Path('tests/spice/myamp_params.sp').resolve()],
+    #     clock_step_delay=0
+    # )
 
-    print(f'Running sim, {len(vectors)} test vectors')
-    tester.compile_and_run('spice',
-        simulator='ngspice',
-        model_paths = [Path('tests/spice/myamp_params.sp').resolve()],
-        clock_step_delay=0
-    )
+    # print('Analyzing results')
+    # results = testbench.get_results()
+    # mode = 0
+    # results_reformatted = results[mode]
 
-    print('Analyzing results')
-    results = testbench.get_results()
-    mode = 0
-    results_reformatted = results[mode]
-
-    regression = fixture.Regression(MyAmp, results_reformatted)
+    # regression = fixture.Regression(MyAmp, results_reformatted)
 
     
 if __name__ == '__main__':
-    test_simple()
-    #test_simple_parameterized()
+    #test_simple()
+    test_simple_parameterized()
 

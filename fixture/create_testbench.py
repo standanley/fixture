@@ -101,7 +101,7 @@ class Testbench():
         for p, vs in zip(test_analog, samples_ta_unscaled):
             samples_ta.append(self.scale_vector(vs, p.limits))
 
-        self.optional_vectors = list(zip(*(samples_oa, samples_oba)))
+        self.optional_vectors = list(zip(*(samples_oa + samples_oba)))
         self.optional_inputs = self.template.inputs_analog + self.template.inputs_ba
         self.test_vectors = list(zip(*(samples_ta + samples_tba)))
         self.test_inputs = test_analog + test_ba
@@ -206,6 +206,7 @@ class Testbench():
         num_digital = len(self.template.inputs_true_digital)
         self.true_digital_modes = list(product(range(2), repeat=num_digital))
         for digital_mode in self.true_digital_modes:
+            self.set_digital_mode(digital_mode)
             for v_optional, v_test in zip(self.optional_vectors, self.test_vectors):
                 reads = self.run_test_vector(v_test, v_optional)
                 self.result_processing_list.append((digital_mode, v_test, v_optional, reads))
