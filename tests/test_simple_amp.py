@@ -55,7 +55,7 @@ def test_simple():
 
     # TODO update to new style of magma IO declaration
     class MyAmp(magma.Circuit):
-        name = 'my_simple_amp_interface'
+        name = 'myamp'
         extras = {'approx_settling_time':1e-3}
         IO = [
             'in_', fixture.RealIn((0.4, 1.0)),
@@ -72,7 +72,7 @@ def test_simple():
     }
 
     def run_callback(tester):
-        print(f'Running sim, {len(vectors[0])} test vectors')
+        print('Running sim')
         tester.compile_and_run('spice',
             simulator='ngspice',
             model_paths = [Path('tests/spice/myamp.sp').resolve()],

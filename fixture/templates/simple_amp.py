@@ -3,11 +3,12 @@ from fixture import TestVectorInput, TestVectorOutput
 
 class SimpleAmpTemplate(TemplateMaster):
     required_ports = ['in_single', 'out_single']
-    parameter_algebra = {
-        'amp_output': {'dcgain':'in_single', 'offset':'1'}
-        }
 
     class Test1(TemplateMaster.Test):
+        parameter_algebra = {
+            'amp_output': {'dcgain': 'in_single', 'offset': '1'}
+        }
+
         def input_domain(self):
             # could also use fixture.RealIn(self.in_single.limits, 'my_name')
             return [self.ports.in_single]

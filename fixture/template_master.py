@@ -37,6 +37,8 @@ class TemplateMaster():
         assert hasattr(self, 'required_ports')
         self.check_required_ports()
 
+        self.reverse_mapping = {v:k for k,v in port_mapping.items()}
+
         assert hasattr(self, 'tests')
         # replace test classes with instance
         self.tests = [T(self) for T in self.tests]
@@ -56,7 +58,7 @@ class TemplateMaster():
 
             results_each_mode = tb.get_results()
             for mode, results in enumerate(results_each_mode):
-                regression = fixture.Regression(self.dut, results)
+                regression = fixture.Regression(self, test, results)
                 
 
 
