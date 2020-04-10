@@ -166,6 +166,7 @@ class Testbench():
         buses = set()
         for input_, val in zip(self.test_inputs, vec_test):
             test_inputs[input_] = val
+
             if isinstance(input_.name, magma.ref.ArrayRef):
                 buses.add(input_.name.array)
 

@@ -5,79 +5,80 @@ from fixture import RealIn, BinaryAnalog
 
 class PhaseBlenderTemplate(TemplateMaster):
     required_ports = ['in_a', 'in_b', 'sel', 'out']
-    parameter_algebra = {
-        'out_phase': {'gain':'in_phase_diff*sel', 'offset':'1'}
-    }
 
-    @classmethod
-    def specify_test_inputs(self):
-        offset_range = self.extras.get('phase_offset_range', (0, .5))
-        diff = RealIn(offset_range)
-        # TODO make this part of the instantiationo f RealIn
-        diff.name = 'in_phase_diff'
+    class Test1(TemplateMaster.Test):
+        parameter_algebra = {
+            'out_phase': {'gain':'in_phase_diff*sel', 'offset':'1'}
+        }
 
-        # could make a new test vector with same params as sel, or just use sel itself
-        # new_sel = Array(len(self.sel), BinaryAnalog)
-        return [diff, self.sel]
+        def input_domain(self):
+            offset_range = self.extras.get('phase_offset_range', (0, .5))
+            diff = RealIn(offset_range)
+            # TODO make this part of the instantiationo f RealIn
+            diff.name = 'in_phase_diff'
 
-    @classmethod
-    def run_single_test(self, tester, values):
-        freq = self.extras['frequency']
+            # could make a new test vector with same params as sel, or just use sel itself
+            # new_sel = Array(len(self.sel), BinaryAnalog)
+            return [diff, self.ports.sel]
 
-        # always between 0 and 1
-        #rand_phase_offset = values[1]
-        # "random" value within the specified range
-        #phase_offset = offset_range[0] + rand_phase_offset*(offset_range[1]-offset_range[0])
+        def testbench(self, tester, values):
+            freq = self.extras['frequency']
 
-        phase_diff = values['in_phase_diff']
+            # always between 0 and 1
+            #rand_phase_offset = values[1]
+            # "random" value within the specified range
+            #phase_offset = offset_range[0] + rand_phase_offset*(offset_range[1]-offset_range[0])
 
-        tester.poke(self.in_a, 0, delay={
-            'freq': freq,
-            })
-        tester.delay(phase_diff / freq)
-        tester.poke(self.in_b, 0, delay={
-            'freq': freq,
-            })
+            phase_diff = values['in_phase_diff']
 
-        # TODO get this next line to work
-        #tester.poke(self.sel, values['sel'])
-        for i in range(len(self.sel)):
-            tester.poke(self.sel[i], values[self.sel[i]])
+            tester.poke(self.ports.in_a, 0, delay={
+                'freq': freq,
+                })
+            tester.delay(phase_diff / freq)
+            tester.poke(self.ports.in_b, 0, delay={
+                'freq': freq,
+                })
 
-        # wait 5 cycles for things to settle
-        tester.delay(5 / freq)
+            # TODO get this next line to work
+            #tester.poke(self.ports.sel, values['sel'])
+            for i in range(len(self.ports.sel)):
+                tester.poke(self.ports.sel[i], values[self.ports.sel[i]])
 
-        # TODO: what was this next line for?
-        #tester.expect(self.out, 0, save_for_later=True)
+            # wait 5 cycles for things to settle
+            tester.delay(5 / freq)
 
-        # these are just to force a wave dump on these nodes
-        # tester.read(self.in_a)
-        # tester.read(self.in_b)
-        # tester.read(self.sel[0])
-        # tester.read(self.sel[1])
-        # tester.read(self.sel[2])
-        #tester.expect(self.in_a, 0, save_for_later=True)
-        #tester.expect(self.in_b, 0, save_for_later=True)
-        #tester.expect(self.sel[0], 0, save_for_later=True)
-        #tester.expect(self.sel[1], 0, save_for_later=True)
-        #tester.expect(self.sel[2], 0, save_for_later=True)
+            # TODO: what was this next line for?
+            #tester.expect(self.ports.out, 0, save_for_later=True)
 
-        out_phase = tester.get_value(self.out, params={
-            'style': 'phase',
-            'ref': self.in_a
-            })
+            # these are just to force a wave dump on these nodes
+            # tester.read(self.ports.in_a)
+            # tester.read(self.ports.in_b)
+            # tester.read(self.ports.sel[0])
+            # tester.read(self.ports.sel[1])
+            # tester.read(self.ports.sel[2])
+            #tester.expect(self.ports.in_a, 0, save_for_later=True)
+            #tester.expect(self.ports.in_b, 0, save_for_later=True)
+            #tester.expect(self.ports.sel[0], 0, save_for_later=True)
+            #tester.expect(self.ports.sel[1], 0, save_for_later=True)
+            #tester.expect(self.ports.sel[2], 0, save_for_later=True)
 
-        # wait a touch longer because I had issues when the simulation ended exactly as the measurement was taken
-        tester.delay(2/freq)
-        tester.poke(self.in_a, 0)
-        tester.poke(self.in_b, 0)
-        tester.delay(1/freq)
-        return [out_phase]
+            out_phase = tester.get_value(self.ports.out, params={
+                'style': 'phase',
+                'ref': self.ports.in_a
+                })
 
-    @classmethod
-    def process_single_test(self, reads):
-        out_phase = reads[0].value
-        ret = {'out_phase': out_phase}
-        return ret
+            # wait a touch longer because I had issues when the simulation ended exactly as the measurement was taken
+            tester.delay(2/freq)
+            tester.poke(self.ports.in_a, 0)
+            tester.poke(self.ports.in_b, 0)
+            tester.delay(1/freq)
+            return [out_phase]
+
+        def analysis(self, reads):
+            out_phase = reads[0].value
+            ret = {'out_phase': out_phase}
+            return ret
+
+    tests = [Test1]
 
 

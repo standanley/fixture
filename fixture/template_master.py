@@ -42,6 +42,8 @@ class TemplateMaster():
         assert hasattr(self, 'tests')
         # replace test classes with instance
         self.tests = [T(self) for T in self.tests]
+        print(self.tests)
+        print(self.tests[0].extras)
 
         self.sort_ports()
 
@@ -57,8 +59,14 @@ class TemplateMaster():
             self.run(tester)
 
             results_each_mode = tb.get_results()
+
+            params_by_mode = {}
             for mode, results in enumerate(results_each_mode):
                 regression = fixture.Regression(self, test, results)
+                params_by_mode[mode] = regression.results
+
+            return params_by_mode
+
                 
 
 
@@ -84,10 +92,15 @@ class TemplateMaster():
             assert port_name in self.mapping, 'Did not associate port %s'%port_name
 
     def get_name_template(self, p):
+        '''
+        Gets the name of a port or real type with a preference for the name
+        known to the template designer.
+        '''
+        circuit_name = self.get_name_circuit(p)
         try:
-            return self.reverse_mapping[self.get_name_circuit(p)]
+            return self.reverse_mapping[circuit_name]
         except KeyError:
-            assert False, f'Tried to get template name for non-template port {p}'
+            return circuit_name
 
     def get_name_circuit(self, p):
         ''' gives back a string to identify something port-like
@@ -166,7 +179,7 @@ class TemplateMaster():
                     if type(port.limits) == str:
                         port.limits = ast.literal_eval(port.limits)
 
-                    if type(port.limits) == float:
+                    if type(port.limits) == float or type(port.limits) == int:
                         inputs_pinned.append(port)
                     elif hasattr(port.limits, '__len__') and len(port.limits) == 2:
                             inputs_analog.append(port)
