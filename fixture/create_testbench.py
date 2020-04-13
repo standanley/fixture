@@ -69,13 +69,15 @@ class Testbench():
         # TODO how many samples?
         num_samples = 20
         # sort input_domain dimensions into analog and ba
-        test_analog = []
-        test_ba = []
-        for test_dim in self.test.input_domain():
-            if hasattr(test_dim, 'limits'):
-                test_analog.append(test_dim)
-            else:
-                test_ba.append(test_dim)
+        # test_analog = []
+        # test_ba = []
+        # for test_dim in self.test.input_domain():
+        #     if hasattr(test_dim, 'limits'):
+        #         test_analog.append(test_dim)
+        #     else:
+        #         test_ba.append(test_dim)
+        test_analog = self.test.inputs_analog
+        test_ba = self.test.inputs_ba
 
         # get random values with fixture.Sampler
         num_oa = len(self.template.inputs_analog)
@@ -170,7 +172,7 @@ class Testbench():
             if isinstance(input_.name, magma.ref.ArrayRef):
                 buses.add(input_.name.array)
 
-        # Also add each individual pin of the bus
+        # Also add the bus as a whole
         for bus in buses:
             vals = []
             for port in bus.ts:

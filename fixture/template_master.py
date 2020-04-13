@@ -45,7 +45,26 @@ class TemplateMaster():
         print(self.tests)
         print(self.tests[0].extras)
 
-        self.sort_ports()
+
+        # TODO sort optional vs required
+        circuit_port_names = [name for name, _ in self.dut.IO.items()]
+        optional_port_names = [name for name in circuit_port_names
+                               if name not in self.mapping.values()]
+        optional_ports = [getattr(self.dut, name) for name in optional_port_names]
+        (self.inputs_pinned,
+         self.inputs_true_digital,
+         self.inputs_ba,
+         self.inputs_analog,
+         self.outputs_analog) = self.sort_ports(optional_ports)
+
+        for test in self.tests:
+            test_dimensions = test.input_domain()
+            #td_insts = [td() for td in test_dimensions]
+            (test.inputs_pinned,
+             test.inputs_true_digital,
+             test.inputs_ba,
+             test.inputs_analog,
+             test.outputs_analog) = self.sort_ports(test_dimensions)
 
     def go(self):
         '''
@@ -139,11 +158,8 @@ class TemplateMaster():
             print(p.name)
             raise NotImplementedError
 
-    def sort_ports(self):
+    def sort_ports(self, ports):
 
-        circuit_port_names = [name for name, _ in self.dut.IO.items()]
-        optional_port_names = [name for name in circuit_port_names if name not in self.mapping.values()]
-        optional_ports = [getattr(self.dut, name) for name in optional_port_names]
         # optional_ports = []
         # for p in circuit_ports:
         #     # TODO is this the only time we really need get_name_circuit?
@@ -167,13 +183,15 @@ class TemplateMaster():
                     sort_port(port[i])
                 return
 
-            port_type = type(port)
+            is_magma = issubclass(type(type(port)), magma.Kind) #any(port is p for p in self.dut.IO)
+
+            port_type = type(port) if is_magma else port
             if port.isinout():
                 raise NotImplementedError
 
-            if not port.isinput():
-                # NOTE: I'm not sure why I need the "not" above,
-                # and magma.Flip does not work on port
+            if is_magma ^ port.isinput():
+                # NOTE: I'm not sure why magma flips the directions of ports
+                # in a way that is confusing, but the above line seems to deal with it
                 if isinstance(port_type, fault.RealKind):
                     assert hasattr(port, 'limits') and port.limits is not None, "Analog ports must have limits"
                     if type(port.limits) == str:
@@ -192,9 +210,9 @@ class TemplateMaster():
                 elif isinstance(port, magma.Bit):
                     inputs_true_digital.append(port)
                 else:
-                    assert False, 'Cannot recognize port type {type(port)} for {port}'
+                    assert False, f'Cannot recognize port type {type(port)} for {port}'
 
-            elif not port.isoutput():
+            elif is_magma ^ port.isoutput():
                 if isinstance(port_type, fault.RealKind):
                     outputs_analog.append(port)
                 elif isinstance(port_type, magma.BitKind):
@@ -208,7 +226,7 @@ class TemplateMaster():
                 assert False, 'Cannot recognize input/output type {type(port)} for {port}'
 
         # Sort!
-        for port in optional_ports:
+        for port in ports:
             sort_port(port)
 
         ## Save results
@@ -220,13 +238,11 @@ class TemplateMaster():
         print(outputs_analog)
         #print(outputs_digital)
 
-
-        self.inputs_pinned = inputs_pinned
-        self.inputs_true_digital = inputs_true_digital
-        self.inputs_ba = inputs_ba
-        self.inputs_analog = inputs_analog
-        self.outputs_analog = outputs_analog
-
+        return (inputs_pinned,
+                inputs_true_digital,
+                inputs_ba,
+                inputs_analog,
+                outputs_analog)
 
 
     '''
