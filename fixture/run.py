@@ -139,7 +139,7 @@ def _run(circuit_config_dict):
         if not os.path.exists(dir_clean):
             os.makedirs(dir_clean)
 
-        mgenero_interface.create_all(UserCircuit, mgenero_params, params_by_mode)
+        mgenero_interface.create_all(t, mgenero_params, params_by_mode)
 
 
 

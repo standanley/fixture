@@ -96,7 +96,7 @@ class Regression():
         return temp.replace('[', '_').replace(']', '_')
 
 
-    def convert_required_ba(self, template, rhs):
+    def convert_required_ba(self, test, rhs):
         '''
         when the parameter algebra contains an Array (most likely ba required input),
         we have to break that term into multiple terms.
@@ -104,7 +104,7 @@ class Regression():
         '''
         to_be_deleted = set()
         to_be_added = {}
-        for arr_req in template.inputs_analog + template.inputs_ba:
+        for arr_req in test.inputs_ba:
             if isinstance(arr_req.name, magma.ref.ArrayRef):
                 bus_name = str(arr_req.name.array.name)
                 inst_name = str(arr_req.name).split('.')[-1]
@@ -185,7 +185,7 @@ class Regression():
 
             optional_pin_expr = self.get_optional_pin_expression(template)
 
-            self.convert_required_ba(template, rhs)
+            self.convert_required_ba(test, rhs)
             create_const(rhs)
             print('param algebra is now', lhs, rhs)
             print(self.df)
