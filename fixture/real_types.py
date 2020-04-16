@@ -56,10 +56,12 @@ def RealOut(limits=None):
     temp.limits = limits
     return temp
 
-def Real(limits=None):
+def Real(limits=None, name=None):
     kwargs = {}
     temp = RealKind2('Real', (RealType2,), kwargs)
     temp.limits = limits
+    if name:
+        temp.name = name
     return temp
 
 '''

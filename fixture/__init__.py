@@ -1,4 +1,4 @@
-from .real_types import RealIn, BinaryAnalog, RealOut, Array, input, output, TestVectorInput, TestVectorOutput
+from .real_types import RealIn, BinaryAnalog, RealOut, Array, input, output, TestVectorInput, TestVectorOutput, Real
 from .template_master import TemplateMaster
 from .sampler import Sampler
 from .templates import *

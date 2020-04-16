@@ -187,8 +187,8 @@ class Regression():
 
             self.convert_required_ba(test, rhs)
             create_const(rhs)
-            print('param algebra is now', lhs, rhs)
-            print(self.df)
+            #print('param algebra is now', lhs, rhs)
+            #print(self.df)
 
             formula = self.make_formula(lhs, rhs, optional_pin_expr)
             #print('formula was', formula)
