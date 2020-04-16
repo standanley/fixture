@@ -1,0 +1,23 @@
+name: sampler1
+filepath: ../spice/sampler1.sp
+template: SamplerTemplate
+pin:
+    in_:
+        direction: input
+        datatype: real
+        # NMOS vth is 0.4 and vdd is 1.2, max pull up is 0.8
+        value: (0, 0.8)
+        template_pin: in_
+    clk:
+        direction: input
+        datatype: bit
+        template_pin: clk
+        width: 2
+    out:
+        direction: output
+        datatype: real
+        template_pin: out
+        width: 2
+approx_settling_time: 10e-6
+
+test_config_file: ngspice_sampler.yaml
