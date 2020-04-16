@@ -6,18 +6,27 @@ class SamplerTemplate(TemplateMaster):
     required_ports = ['in_', 'clk', 'out']
 
     def __init__(self, *args, **kwargs):
+        # Some magic constants, maybe pull these from config?
+        # NOTE this is before super() because it is used for Test instantiation
+        self.nonlinearity_points = 101
+
         super().__init__(*args, **kwargs)
+
+        # NOTE this must be after super() because it needs ports to be defined
         assert (len(self.ports.out) == len(self.ports.clk),
             'Must have one clock for each output!')
 
-        # Some magic constants, maybe pull these from config?
-        self.nonlinearity_points = 101
 
     @template_creation_utils.debug
     class StaticNonlinearityTest(TemplateMaster.Test):
-        parameter_algebra = {
-            #'out_phase': {'gain':'in_phase_diff*sel', 'offset':'1'}
-        }
+        def __init__(self, *args, **kwargs):
+            # set parameter algebra before parent checks it
+            nl_points = args[0].nonlinearity_points
+            self.parameter_algebra = {}
+            for i in range(nl_points):
+                self.parameter_algebra[f'nl_{i}'] = {f'nonlinearity_{i}': '1'}
+
+            super().__init__(*args, **kwargs)
 
         def input_domain(self):
             return []
@@ -60,10 +69,16 @@ class SamplerTemplate(TemplateMaster):
             results = [r.value for dc, r in reads]
             xs = [dc for dc, r in reads]
 
-            #template_creation_utils.plot(xs, results)
-            template_creation_utils.invert_function(xs, results)
+            ret = {f'nl_{i}': v for i, v in enumerate(results)}
 
-            return 'not implemented'
+            # we don't want to create the inverse function here becsue it would
+            # only be valid for this particular set of optional inputs
+            #template_creation_utils.plot(xs, results)
+            #inv = template_creation_utils.invert_function(xs, results)
+            #reconstruct_x = [inv(res) for res in results]
+            #template_creation_utils.plot(xs, reconstruct_x)
+
+            return ret
 
     tests = [StaticNonlinearityTest]
 

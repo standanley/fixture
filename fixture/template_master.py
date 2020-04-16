@@ -249,13 +249,12 @@ class TemplateMaster():
     Subclass Test will be used to organize methods related to tests
     '''
     class Test(ABC):
-        # TODO perhaps put an init method that checks some parameter algebra
-        # has been specified
         def __init__(self, template):
             self.template = template
             #self.dut = template.dut
             self.ports = template.ports
             self.extras = template.extras
+            assert hasattr(self, 'parameter_algebra'), f'{self} should specify parameter_algebra!'
 
         @abstractmethod
         def input_domain(self):

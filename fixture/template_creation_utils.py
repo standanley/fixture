@@ -1,5 +1,7 @@
 import random
 
+from scipy.interpolate import interp1d
+
 
 def poke_binary_analog(tester, port, value):
     '''
@@ -61,11 +63,8 @@ def make_nondecreasing(ys):
     such that the MSE between the two lists is minimized
     '''
     ys = [float(y) for y in ys]
-    print('Top of invert function, range for ys', min(ys), max(ys))
     new_ys = [ys[0]]
     for i in range(1, len(ys)):
-        #print('i is', i)
-        #prev = ys[i-1]
         y = ys[i]
         new_ys.append(y)
         if new_ys[-1] < new_ys[-2]:
@@ -79,7 +78,6 @@ def make_nondecreasing(ys):
             j = i
             while j > 0:
                 j -= 1
-                #print('i,j are', i, j)
                 cum_sum += ys[j]
                 count += 1
                 avg = cum_sum / count
@@ -100,28 +98,26 @@ def make_nondecreasing(ys):
                 j_best = j
 
             # now that we're out of the loop, we have the j and avg we want
-            print('Setting new avg from ', j_best, 'to', i, avg_best)
             for k in range(j_best, i+1):
                 new_ys[k] = avg_best
 
-    print('Bottom of invert function, range for ys', min(ys), max(ys))
-    # I think we've got new_ys all happy now
-    print('DONE', len(ys), len(new_ys))
-
+    '''
     import matplotlib.pyplot as plt
     xs = list(range(len(ys)))
     plt.plot(xs, ys, '+')
     plt.plot(xs, new_ys, '--')
     plt.grid()
     plt.show()
+    '''
+
     return new_ys
 
 
 
 def invert_function(xs, ys):
-    ys = [float(y) + random.random()*0.02 for y in ys]
+    #ys = [float(y) + random.random()*0.02 for y in ys]
     xs = [float(x) for x in xs]
-    xs = list(range(len(xs)))
+    #xs = list(range(len(xs)))
     # TODO: this is broken for decreasing things
     if ys[0] > ys[-1]:
         temp = [-y for y in ys]
@@ -165,14 +161,21 @@ def invert_function(xs, ys):
     new_xs.append(xs[-1])
     new_ys.append(ys_up[-1])
 
+    '''
     import matplotlib.pyplot as plt
     plt.plot(xs, ys, '--')
     plt.plot(xs, ys_up, '+')
     plt.plot(new_xs, new_ys, '-x')
     plt.grid()
     plt.show()
-    asdf
-            
+    '''
+
+    # TODO I would like to give each flat region a slight tilt because it
+    # would help in cases where the true curve is increasing but noise
+    # messed it up - we don't want everything in that region collected on
+    # one end of the flat region
+
+    return interp1d(new_ys, new_xs, fill_value='extrapolate')
             
         
 
