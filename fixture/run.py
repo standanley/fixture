@@ -83,7 +83,9 @@ def _run(circuit_config_dict):
 
 
     # TODO fill in all args from SpiceTarget or remove this check
-    approved_simulator_args = ['ic', 'vsup', 'bus_delim', 'ext_libs', 'inc_dirs', 'defines', 'flags', 't_step', 'num_cycles', 'conn_order']
+    approved_simulator_args = ['ic', 'vsup', 'bus_delim', 'ext_libs', 'inc_dirs',
+                               'defines', 'flags', 't_step', 'num_cycles',
+                               'conn_order', 'no_run', 'directory']
     simulator_dict = {k:v for k,v in test_config_dict.items() if k in approved_simulator_args}
 
     # make sure to put the circuit file location in the right arg
@@ -102,8 +104,9 @@ def _run(circuit_config_dict):
     #    flags = [x for f in simulator_dict['flags'] for x in f.split()]
     #    simulator_dict['flags'] = flags
 
-    def run_callback(tester):
+    def run_callback(tester, name=''):
         print('calling with sim dict', simulator_dict)
+        simulator_dict['directory'] = f'build_{name}'
         tester.compile_and_run(test_config_dict['target'],
             simulator=test_config_dict['simulator'],
             clock_step_delay=0,

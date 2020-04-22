@@ -76,7 +76,7 @@ class TemplateMaster():
             tb = fixture.Testbench(self, tester, test)
             tb.create_test_bench()
 
-            self.run(tester)
+            self.run(tester, name = str(test))
 
             results_each_mode = tb.get_results()
 

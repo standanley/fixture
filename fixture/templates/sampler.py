@@ -8,7 +8,8 @@ class SamplerTemplate(TemplateMaster):
     def __init__(self, *args, **kwargs):
         # Some magic constants, maybe pull these from config?
         # NOTE this is before super() because it is used for Test instantiation
-        self.nonlinearity_points = 6
+        self.nonlinearity_points = 31
+        self.aperture_points = 150
 
         super().__init__(*args, **kwargs)
 
@@ -78,6 +79,7 @@ class SamplerTemplate(TemplateMaster):
             #inv = template_creation_utils.invert_function(xs, results)
             #reconstruct_x = [inv(res) for res in results]
             #template_creation_utils.plot(xs, reconstruct_x)
+            self.template.temp_inv = template_creation_utils.invert_function(xs, results)
 
             return ret
 
@@ -93,7 +95,7 @@ class SamplerTemplate(TemplateMaster):
             return []
 
         def testbench(self, tester, values):
-            print('APERATURE TEST TESTBENCH')
+            print('APERTURE TEST TESTBENCH')
             settle = float(self.extras['approx_settling_time'])
             wait = 3 * settle
 
@@ -113,11 +115,11 @@ class SamplerTemplate(TemplateMaster):
 
             limits = self.ports.in_.limits
             step_start = limits[0]
-            step_end = limits[1]
+            step_end = .4#limits[1]
 
-            num = 51
-            t_min = -1.0 * settle
-            t_max = 0.5 * settle
+            num = self.template.aperture_points
+            t_min = -0.5 * settle
+            t_max = 0.25 * settle
             results = []
             for i in range(num):
                 t = t_min + i * (t_max - t_min) / (num-1)
@@ -151,6 +153,8 @@ class SamplerTemplate(TemplateMaster):
             xs = [float(x) for x,gv in reads]
             ys = [float(gv.value) for x,gv in reads]
 
+            ys_mapped = [self.template.temp_inv(y) for y in ys]
+
             # In this plot the left side is what we see of steps that happen
             # early compared to the clock, and right side is steps that
             # happen late, so the plot shows a falling edge.
@@ -159,6 +163,12 @@ class SamplerTemplate(TemplateMaster):
             # response represented in the same way we should take derivative
             # and then negate it.
             template_creation_utils.plot(xs, ys)
+
+            template_creation_utils.plot(xs, ys_mapped)
+
+
+            ys_flipped = [-y for y in ys_mapped]
+            template_creation_utils.extract_pzs(5, 5, xs, ys_flipped)
 
 
 

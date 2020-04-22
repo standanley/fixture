@@ -1,5 +1,7 @@
 target: spice
 simulator: ngspice
+#simulator: spectre
 #ic: {vss: 0}
 vsup: 1.2
-t_step: 1.0e-7
+t_step: 1.0e-8
+#no_run: True
