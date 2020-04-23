@@ -11,6 +11,10 @@ def test_ngspice():
 
     fixture.run(circuit_fname)
 
+def test_sampler2():
+    circuit_fname = file_relative_to_test('configs/sampler2.yaml')
+
+    fixture.run(circuit_fname)
 
 if __name__ == '__main__':
-    test_ngspice()
+    test_sampler2()

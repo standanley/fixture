@@ -208,7 +208,7 @@ class Regression():
         print('param\tterm\tcoef')
         for param,d in results.items():
             for partial_term_optional, coef in d.items():
-                print('%s\t%s\t%.3f' % (param, partial_term_optional, coef))
+                print('%s\t%s\t%.3e' % (param, partial_term_optional, coef))
 
         # TODO dump res to a yaml file
         self.results = results

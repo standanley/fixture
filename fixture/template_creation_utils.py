@@ -6,7 +6,11 @@ import numpy as np
 
 def plot(x, y):
     import matplotlib.pyplot as plt
-    plt.plot(x, y, '-*')
+    if type(y) != tuple:
+        y = (y,)
+    for y in y:
+        plt.plot(x, y, '-*')
+    plt.grid()
     plt.show()
 
 def extract_pzs(nps, nzs, x, y):
@@ -100,11 +104,13 @@ def dynamic(template):
 
 
 
+'''
 def plot(xs, ys):
     import matplotlib.pyplot as plt
     plt.plot(xs, ys, '-+')
     plt.grid()
     plt.show()
+'''
 
 def debug(test):
     class DebugTest(test):
@@ -241,12 +247,14 @@ def invert_function(xs, ys):
     new_xs.append(xs[-1])
     new_ys.append(ys_up[-1])
 
+    '''
     import matplotlib.pyplot as plt
     plt.plot(xs, ys, '--')
     plt.plot(xs, ys_up, '+')
     plt.plot(new_xs, new_ys, '-x')
     plt.grid()
     plt.show()
+    '''
 
     # TODO I would like to give each flat region a slight tilt because it
     # would help in cases where the true curve is increasing but noise
