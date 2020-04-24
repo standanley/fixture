@@ -18,6 +18,10 @@ def test_spectre():
 
     fixture.run(circuit_fname)
 
+def test_generated():
+    circuit_fname = file_relative_to_test('configs/generated_pb.yaml')
+
+    fixture.run(circuit_fname)
 
 if __name__ == '__main__':
-    test_spectre()
+    test_generated()

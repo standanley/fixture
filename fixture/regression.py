@@ -144,6 +144,7 @@ class Regression():
         '''
 
         def get_name(x):
+            TODO use template function?
             c = template.get_name_circuit(x)
             if c in template.reverse_mapping:
                 return template.get_name_template(c)
