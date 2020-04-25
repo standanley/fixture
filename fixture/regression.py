@@ -41,6 +41,7 @@ class Regression():
             bus_index = port.name.index
             return '%s<%d>' % (bus_name, bus_index)
         else:
+            print('returning', str(port))
             return str(port)
 
     # @classmethod
@@ -106,8 +107,10 @@ class Regression():
         to_be_added = {}
         for arr_req in test.inputs_ba:
             if isinstance(arr_req.name, magma.ref.ArrayRef):
-                bus_name = str(arr_req.name.array.name)
-                inst_name = str(arr_req.name).split('.')[-1]
+                #bus_name = str(arr_req.name.array.name)
+                #inst_name = str(arr_req.name).split('.')[-1]
+                bus_name = test.template.get_name_template(arr_req.name.array)
+                inst_name = test.template.get_name_template(arr_req)
                 new_name = self.clean_string(inst_name)
                 search_str = r'\b' + bus_name + r'\b'
 
@@ -143,16 +146,9 @@ class Regression():
         {pin:[x1, ...], ...}
         '''
 
-        def get_name(x):
-            TODO use template function?
-            c = template.get_name_circuit(x)
-            if c in template.reverse_mapping:
-                return template.get_name_template(c)
-            else:
-                return c
-
         self.component_tag = '_component_'
-        data = {get_name(k): v for k, v in data.items()}
+        # translate from circuit names to template names
+        data = {template.get_name_template(k): v for k, v in data.items()}
         data[self.one_literal] = [1 for _ in list(data.values())[0]]
         data = {self.clean_string(k):v for k,v in data.items()}
         self.df = pandas.DataFrame(data)

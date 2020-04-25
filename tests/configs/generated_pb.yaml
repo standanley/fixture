@@ -22,7 +22,7 @@ pin:
         direction: output
         datatype: bit
         template_pin: out
-    sel:
+    thm_sel_bld:
         direction: input
         datatype: binary_analog
         width: 4

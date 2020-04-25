@@ -27,17 +27,31 @@ class TemplateMaster():
         params: a dictionary of template-specific parameters
         '''
 
+        # expand buses in port mapping
+        self.mapping = {}
+        for t_name, c_name in port_mapping.items():
+            self.mapping[t_name] = c_name
+            p = getattr(circuit, c_name)
+            if isinstance(p, Array):
+                for i in range(p.N):
+                    sel = f'<{i}>'
+                    self.mapping[t_name+sel] = c_name+sel
+                    sel = f'[{i}]'
+                    self.mapping[t_name+sel] = c_name+sel
+
+        self.ports = self.Ports(circuit, self.mapping)
         self.dut = circuit
-        self.mapping = port_mapping
         self.extras = extras
         self.run = run_callback
-        self.ports = self.Ports(circuit, port_mapping)
+
 
         # by the time the template is instantiated, a child should have added this
         assert hasattr(self, 'required_ports')
         self.check_required_ports()
 
-        self.reverse_mapping = {v:k for k,v in port_mapping.items()}
+        self.reverse_mapping = {v:k for k,v in self.mapping.items()}
+        for k in self.reverse_mapping:
+            print(k)
 
         assert hasattr(self, 'tests')
         # replace test classes with instance
