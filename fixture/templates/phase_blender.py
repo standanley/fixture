@@ -1,11 +1,12 @@
 from fixture import TemplateMaster
 from fixture import RealIn, BinaryAnalog
-#import fixture.template_creation_utils as utils
+from fixture.template_creation_utils import debug
 #from fixture.real_types import BinaryAnalogKind, TestVectorOutput
 
 class PhaseBlenderTemplate(TemplateMaster):
     required_ports = ['in_a', 'in_b', 'sel', 'out']
 
+    #@debug
     class Test1(TemplateMaster.Test):
         parameter_algebra = {
             'out_phase': {'gain':'in_phase_diff*sel', 'offset':'1'}
@@ -22,12 +23,17 @@ class PhaseBlenderTemplate(TemplateMaster):
             return [diff, self.ports.sel]
 
         def testbench(self, tester, values):
-            freq = self.extras['frequency']
+            freq = float(self.extras['frequency'])
 
             # always between 0 and 1
             #rand_phase_offset = values[1]
             # "random" value within the specified range
             #phase_offset = offset_range[0] + rand_phase_offset*(offset_range[1]-offset_range[0])
+
+            #self.debug(tester, self.ports.in_a, 1/freq*100)
+            #self.debug(tester, self.ports.in_b, 1/freq*100)
+            #self.debug(tester, self.ports.out, 1/freq*100)
+            #self.debug(tester, self.template.dut.thm_sel_bld[0], 1/freq*100)
 
             phase_diff = values['in_phase_diff']
 
