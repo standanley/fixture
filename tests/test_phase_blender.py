@@ -24,5 +24,5 @@ def test_generated():
     fixture.run(circuit_fname)
 
 if __name__ == '__main__':
-    #test_generated()
-    test_ngspice()
+    test_generated()
+    #test_ngspice()
