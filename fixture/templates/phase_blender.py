@@ -6,7 +6,7 @@ from fixture.template_creation_utils import debug
 class PhaseBlenderTemplate(TemplateMaster):
     required_ports = ['in_a', 'in_b', 'sel', 'out']
 
-    #@debug
+    @debug
     class Test1(TemplateMaster.Test):
         parameter_algebra = {
             'out_phase': {'gain':'in_phase_diff*sel', 'offset':'1'}
@@ -30,10 +30,10 @@ class PhaseBlenderTemplate(TemplateMaster):
             # "random" value within the specified range
             #phase_offset = offset_range[0] + rand_phase_offset*(offset_range[1]-offset_range[0])
 
-            #self.debug(tester, self.ports.in_a, 1/freq*100)
-            #self.debug(tester, self.ports.in_b, 1/freq*100)
-            #self.debug(tester, self.ports.out, 1/freq*100)
-            #self.debug(tester, self.template.dut.thm_sel_bld[0], 1/freq*100)
+            self.debug(tester, self.ports.in_a, 1/freq*100)
+            self.debug(tester, self.ports.in_b, 1/freq*100)
+            self.debug(tester, self.ports.out, 1/freq*100)
+            self.debug(tester, self.template.dut.thm_sel_bld[0], 1/freq*100)
 
             phase_diff = values['in_phase_diff']
 
@@ -68,11 +68,13 @@ class PhaseBlenderTemplate(TemplateMaster):
             #tester.expect(self.ports.sel[1], 0, save_for_later=True)
             #tester.expect(self.ports.sel[2], 0, save_for_later=True)
 
+            '''
             out_phase = tester.get_value(self.ports.out, params={
                 'style': 'phase',
                 'ref': self.ports.in_a
                 })
-
+            '''
+            out_phase = None
             # wait a touch longer because I had issues when the simulation ended exactly as the measurement was taken
             tester.delay(2/freq)
             tester.poke(self.ports.in_a, 0)

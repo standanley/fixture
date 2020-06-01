@@ -28,6 +28,8 @@ class TemplateMaster():
         '''
 
         # expand buses in port mapping
+        # the entire bus as well as each child with [] and <> endings are added
+        # TODO nested buses? I don't think there's a way to do that in the .yaml
         self.mapping = {}
         for t_name, c_name in port_mapping.items():
             self.mapping[t_name] = c_name
@@ -56,11 +58,13 @@ class TemplateMaster():
         assert hasattr(self, 'tests')
         # replace test classes with instance
         self.tests = [T(self) for T in self.tests]
-        print(self.tests)
-        print(self.tests[0].extras)
 
 
-        # TODO sort optional vs required
+        # The required ports are completely handled by the template creator,
+        # so this code does not do much with required ports
+        # We do need to deal with optional ports, so we are going to sort them
+        # into different input/output types in sort_ports
+        # Test inputs are treated a lot like optional ports
         circuit_port_names = [name for name, _ in self.dut.IO.items()]
         optional_port_names = [name for name in circuit_port_names
                                if name not in self.mapping.values()]
@@ -79,26 +83,6 @@ class TemplateMaster():
              test.inputs_ba,
              test.inputs_analog,
              test.outputs_analog) = self.sort_ports(test_dimensions)
-
-    def go(self):
-        '''
-        Actually do the entire analysis of the circuit
-        '''
-        for test in self.tests:
-            tester = fault.Tester(self.dut)
-            tb = fixture.Testbench(self, tester, test)
-            tb.create_test_bench()
-
-            self.run(tester)
-
-            results_each_mode = tb.get_results()
-
-            params_by_mode = {}
-            for mode, results in enumerate(results_each_mode):
-                regression = fixture.Regression(self, test, results)
-                params_by_mode[mode] = regression.results
-
-            return params_by_mode
 
                 
 
@@ -297,3 +281,23 @@ class TemplateMaster():
             '''
             pass
     
+
+    def go(self):
+        '''
+        Actually do the entire analysis of the circuit
+        '''
+        for test in self.tests:
+            tester = fault.Tester(self.dut)
+            tb = fixture.Testbench(self, tester, test)
+            tb.create_test_bench()
+
+            self.run(tester)
+
+            results_each_mode = tb.get_results()
+
+            params_by_mode = {}
+            for mode, results in enumerate(results_each_mode):
+                regression = fixture.Regression(self, test, results)
+                params_by_mode[mode] = regression.results
+
+            return params_by_mode
