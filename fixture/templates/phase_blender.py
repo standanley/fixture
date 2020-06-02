@@ -6,7 +6,7 @@ from fixture.template_creation_utils import debug
 class PhaseBlenderTemplate(TemplateMaster):
     required_ports = ['in_a', 'in_b', 'sel', 'out']
 
-    @debug
+    #@debug
     class Test1(TemplateMaster.Test):
         parameter_algebra = {
             'out_phase': {'gain':'in_phase_diff*sel', 'offset':'1'}
@@ -30,10 +30,10 @@ class PhaseBlenderTemplate(TemplateMaster):
             # "random" value within the specified range
             #phase_offset = offset_range[0] + rand_phase_offset*(offset_range[1]-offset_range[0])
 
-            self.debug(tester, self.ports.in_a, 1/freq*100)
-            self.debug(tester, self.ports.in_b, 1/freq*100)
-            self.debug(tester, self.ports.out, 1/freq*100)
-            self.debug(tester, self.template.dut.thm_sel_bld[0], 1/freq*100)
+            #self.debug(tester, self.ports.in_a, 1/freq*100)
+            #self.debug(tester, self.ports.in_b, 1/freq*100)
+            #self.debug(tester, self.ports.out, 1/freq*100)
+            #self.debug(tester, self.template.dut.thm_sel_bld[0], 1/freq*100)
 
             phase_diff = values['in_phase_diff']
 
