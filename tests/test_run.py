@@ -36,7 +36,7 @@ def test_differential_amp_B():
 
 if __name__ == '__main__':
     #test_simple_amp()
-    test_parameterized_amp()
+    #test_parameterized_amp()
     #test_simple_amp_direct()
     #test_differential_amp()
-    #test_differential_amp_B()
+    test_differential_amp_B()

@@ -3,26 +3,24 @@ from fixture import TestVectorInput, TestVectorOutput
 
 class OscillatorTemplate(TemplateMaster):
     required_ports = ['out']
-    parameter_algebra = {
+
+    class Test1(TemplateMaster.Test):
+        parameter_algebra = {
             'frequency': 'const'
         }
 
-    @classmethod
-    def specify_test_inputs(self):
-        return []
+        def input_domain(self):
+            return []
 
-    @classmethod
-    def run_single_test(self, tester, values):
-        approx_period = 1 / float(self.extras['approx_frequency'])
-        tester.delay(approx_period * 20)
-        return tester.get_value(self.out, params={'style':'frequency'})
+        def testbench(self, tester, values):
+            approx_period = 1 / float(self.extras['approx_frequency'])
+            tester.delay(approx_period * 20)
+            return tester.get_value(self.ports.out, params={'style':'frequency'})
 
+        @classmethod
+        def analysis(self, read):
+            results = {'frequency': read.value}
+            return results
 
-    @classmethod
-    def process_single_test(self, read):
-        results = {'frequency': read.value}
-        return results
-
-
-    
+    tests = [Test1]
 

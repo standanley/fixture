@@ -2,78 +2,123 @@ import ast
 from magma import *
 import fault
 from .real_types import BinaryAnalogType
-#from .real_types import BinaryAnalogKind, TestVectorOutput
+from abc import ABC, abstractmethod
+import fixture
+
+class TemplateMaster():
+
+    class Ports():
+        def __init__(self, dut, mapping):
+            self.dut = dut
+            self.mapping = mapping
+
+        def __getattr__(self, item):
+            if item in self.mapping:
+                return getattr(self.dut, self.mapping[item])
+            else:
+                super()
+                #assert False, f'No required port named "{item}"'
 
 
+    def __init__(self, circuit, port_mapping, run_callback, extras={}):
+        '''
+        circuit: The magma circuit
+        port_mapping: a dictionary of {template_name: circuit_name} for required pins
+        params: a dictionary of template-specific parameters
+        '''
+
+        # expand buses in port mapping
+        # the entire bus as well as each child with [] and <> endings are added
+        # TODO nested buses? I don't think there's a way to do that in the .yaml
+        self.mapping = {}
+        for t_name, c_name in port_mapping.items():
+            self.mapping[t_name] = c_name
+            p = getattr(circuit, c_name)
+            if isinstance(p, Array):
+                for i in range(p.N):
+                    sel = f'<{i}>'
+                    self.mapping[t_name+sel] = c_name+sel
+                    sel = f'[{i}]'
+                    self.mapping[t_name+sel] = c_name+sel
+
+        self.ports = self.Ports(circuit, self.mapping)
+        self.dut = circuit
+        self.extras = extras
+        self.run = run_callback
 
 
-class TemplateKind(circuit.DefineCircuitKind):
+        # by the time the template is instantiated, a child should have added this
+        assert hasattr(self, 'required_ports')
+        self.check_required_ports()
+
+        self.reverse_mapping = {v:k for k,v in self.mapping.items()}
+        for k in self.reverse_mapping:
+            print(k)
+
+        assert hasattr(self, 'tests')
+        # replace test classes with instance
+        self.tests = [T(self) for T in self.tests]
 
 
-    def __new__(metacls, name, bases, dct):
-        cls = super(TemplateKind, metacls).__new__(metacls, name, bases, dct)
+        # The required ports are completely handled by the template creator,
+        # so this code does not do much with required ports
+        # We do need to deal with optional ports, so we are going to sort them
+        # into different input/output types in sort_ports
+        # Test inputs are treated a lot like optional ports
+        circuit_port_names = [name for name, _ in self.dut.IO.items()]
+        optional_port_names = [name for name in circuit_port_names
+                               if name not in self.mapping.values()]
+        optional_ports = [getattr(self.dut, name) for name in optional_port_names]
+        (self.inputs_pinned,
+         self.inputs_true_digital,
+         self.inputs_ba,
+         self.inputs_analog,
+         self.outputs_analog) = self.sort_ports(optional_ports)
 
-        if name == 'TemplateMaster':
-            # no checks are needed
-            return cls
+        for test in self.tests:
+            test_dimensions = test.input_domain()
+            #td_insts = [td() for td in test_dimensions]
+            (test.inputs_pinned,
+             test.inputs_true_digital,
+             test.inputs_ba,
+             test.inputs_analog,
+             test.outputs_analog) = self.sort_ports(test_dimensions)
 
-        is_template = (TemplateMaster in bases)
-        if is_template:
-            assert hasattr(cls, 'required_ports'), 'Template must give required ports'
-            assert not hasattr(cls, 'mapping'), 'mapping is for the instance, not the template'
-
-        else:
-            assert hasattr(cls, 'mapping'), 'Subclass of template must provide port mapping'
-            # call user's function to associate ports
-            cls.mapping(cls)
-
-            # check that all the required ports actually got associated
-            cls.check_required_ports(cls)
-
-            # set required port names 
-            # TODO does this break things in magma?
-            for port_name in cls.required_ports:
-                getattr(cls, port_name).fixture_name = port_name
-
-            # determine what random vectors might be needed to run a test
-            assert hasattr(cls, 'specify_test_inputs'), 'Must specify required test inputs'
-            cls.inputs_test = cls.specify_test_inputs()
-
-            # sort ports into different lists depending on what kind of stimulus they require
-            cls.sort_ports(cls)
+                
 
 
-        return cls
-
-class TemplateMaster(Circuit, metaclass=TemplateKind):
-
-    @classmethod
     def required_port_info(self):
         # TODO: this should give more info than just the names of the ports
         # maybe expect the template creator to override this?
         return '\n'.join([str(port) for port in self.required_ports])
 
-    @classmethod
-    def is_required_port(self, p):
-        # TODO just use fixture_name?
-        # TODO I'm afraid it is not handling busses correctly, but maybe it doesn't matter?
-        # Single wires of an optional bus are counted as optional, which is all I need for now
-        required_mappings = [getattr(self, r).name for r in self.required_ports]
+#     def is_required_port(self, p):
+#         # TODO just use fixture_name?
+#         # TODO I'm afraid it is not handling busses correctly, but maybe it doesn't matter?
+#         # Single wires of an optional bus are counted as optional, which is all I need for now
+#         required_mappings = [getattr(self, r).name for r in self.required_ports]
+# 
+#         return any(p.name == rn for rn in required_mappings)
 
-        return any(p.name == rn for rn in required_mappings)
 
-
-    # gets called when someone subclasses a template, checks that all of
-    # required_ports got mapped to in mapping
     def check_required_ports(self):
+        '''
+        Checks that the template instantiator actually mapped all the required ports.
+        '''
         for port_name in self.required_ports:
-            assert hasattr(self, port_name), 'Did not associate port %s'%port_name
+            assert port_name in self.mapping, 'Did not associate port %s'%port_name
 
-    @classmethod
-    def get_name_template(cls, p):
-        return getattr(p, 'fixture_name', cls.get_name_circuit(p))
+    def get_name_template(self, p):
+        '''
+        Gets the name of a port or real type with a preference for the name
+        known to the template designer.
+        '''
+        circuit_name = self.get_name_circuit(p)
+        try:
+            return self.reverse_mapping[circuit_name]
+        except KeyError:
+            return circuit_name
 
-    @classmethod
     def get_name_circuit(self, p):
         ''' gives back a string to identify something port-like
         The input could be a port type or port instance, etc.
@@ -111,132 +156,148 @@ class TemplateMaster(Circuit, metaclass=TemplateKind):
             print(p.name)
             raise NotImplementedError
 
-    def sort_ports(self):
+    def sort_ports(self, ports):
 
-
-        circuit_ports = [getattr(self, name) for name, _ in self.IO.items()]
-
-        def flip_test_input(ti):
-            # magma flips ports when they are circuit inputs or outputs
-            # it also deals in instances of the port type so we instantiate
-            # we need to flip ones that magma hasn't already
-            if ti not in circuit_ports:
-                return ti.flip()()
-            else:
-                return ti
-        test_input_ports = [flip_test_input(p) for p in self.inputs_test]
-
-        self.optional_ports = [p for p in circuit_ports if not self.is_required_port(p)]
+        # optional_ports = []
+        # for p in circuit_ports:
+        #     # TODO is this the only time we really need get_name_circuit?
+        #     name = self.get_name_circuit(p)
+        #     # NOTE: can't use "in" on the next line because == doesn't work for ports
+        #     if not any(p is port for port in self.mapping.values()):
+        #         optional_ports.append(p)
 
         # we want to sort ports into inputs/outputs/analog/digital/pinned/ranged, etc
         inputs_pinned = []
         inputs_true_digital = []
-        inputs_optional = []
-        inputs_required = []
-        outputs_optional_analog = []
-
-        temp_inputs_a_or_ba = []
+        inputs_ba = []
+        inputs_analog = []
+        outputs_analog = []
         
         def sort_port(port):
-            #if any(port == getattr(self, required) for required in self.required_ports):
-            #if any(port.name == required for required in self.required_ports):
-            #if any(port.name == rn for rn in required_mappings):
-            #    # required ports don't go into these lists
-            #    return
+
+            # recurse for arrays
             if isinstance(port, Array):
                 for i in range(len(port)):
                     sort_port(port[i])
                 return
 
-            port_type = type(port)
+            is_magma = issubclass(type(type(port)), magma.Kind) #any(port is p for p in self.dut.IO)
+
+            port_type = type(port) if is_magma else port
             if port.isinout():
                 raise NotImplementedError
 
-            if not port.isinput():
-                # NOTE: I'm not sure why I need the "not" above,
-                # and magma.Flip does not work on port
+            if is_magma ^ port.isinput():
+                # NOTE: I'm not sure why magma flips the directions of ports
+                # in a way that is confusing, but the above line seems to deal with it
                 if isinstance(port_type, fault.RealKind):
                     assert hasattr(port, 'limits') and port.limits is not None, "Analog ports must have limits"
-                    # TODO: I don't think try/except is the best way to do this
-                    try:
-                        if type(port.limits) == str:
-                            port.limits = ast.literal_eval(port.limits)
-                        pin = float(port.limits)
-                        inputs_pinned.append(port)
-                    except TypeError:
-                        if len(port.limits) == 2:
-                            #inputs_ranged.append((name, tuple(limits)))
-                            # magma overloads the name "tuple"
-                            # inputs_ranged.append(port)
-                            temp_inputs_a_or_ba.append(port)
-                        else:
-                            # TODO put a better message here
-                            assert False, 'Limits must be 1 or 2 values'
+                    if type(port.limits) == str:
+                        port.limits = ast.literal_eval(port.limits)
 
-                #elif isinstance(port_type, BinaryAnalogKind):
+                    if type(port.limits) == float or type(port.limits) == int:
+                        inputs_pinned.append(port)
+                    elif hasattr(port.limits, '__len__') and len(port.limits) == 2:
+                            inputs_analog.append(port)
+                    else:
+                        assert False, f'Cannot understand limits {port.limits} for {port}'
+
                 elif issubclass(port_type, BinaryAnalogType):
-                    temp_inputs_a_or_ba.append(port)
+                    inputs_ba.append(port)
                 # TODO used to be BitKind on the next line
                 elif isinstance(port, magma.Bit):
                     inputs_true_digital.append(port)
                 else:
-                    print('didint match any types')
-                    print(port)
-                    raise NotImplementedError
-            elif not port.isoutput():
+                    assert False, f'Cannot recognize port type {type(port)} for {port}'
+
+            elif is_magma ^ port.isoutput():
                 if isinstance(port_type, fault.RealKind):
-                    outputs_optional_analog.append(port)
+                    outputs_analog.append(port)
                 elif isinstance(port_type, magma.BitKind):
                     # No support yet for optional digital because of the nonlinearity
                     raise NotImplementedError
                     outputs_digital.append(port)
                 else:
-                    print(port, type(port), self.get_name_circuit(port))
-                    assert False, "Only analog and digital outputs are supported"
+                    assert False, 'Cannot recognize port type {type(port)} for {port}'
 
             else:
-                # TODO deal with unspecified input/output ?
-                print('unspecified input/output')
-                print(port)
-                assert False
+                assert False, 'Cannot recognize input/output type {type(port)} for {port}'
 
-        # start sorting
-        for port in self.optional_ports:
+        # Sort!
+        for port in ports:
             sort_port(port)
-        inputs_optional = temp_inputs_a_or_ba
-
-        temp_inputs_a_or_ba = []
-        for port in test_input_ports:
-            sort_port(port)
-        inputs_required = temp_inputs_a_or_ba
-
-        #self.required_ba = inputs_ba[len(self.optional_ba):]
-        #print('optional_a, optional_ba, required_ba')
-        #print(self.optional_a)
-        #print(self.optional_ba)
-        #print(self.required_ba)
 
         ## Save results
         print('\nSaved results from port sorting:')
         print(inputs_pinned)
         print(inputs_true_digital)
-        print(inputs_optional)
-        print(inputs_required)
-        print(outputs_optional_analog)
+        print(inputs_ba)
+        print(inputs_analog)
+        print(outputs_analog)
         #print(outputs_digital)
 
+        return (inputs_pinned,
+                inputs_true_digital,
+                inputs_ba,
+                inputs_analog,
+                outputs_analog)
 
-        self.inputs_pinned = inputs_pinned
-        self.inputs_true_digital = inputs_true_digital
-        self.inputs_optional = inputs_optional
-        self.inputs_required = inputs_required
-        self.outputs_optional_analog = outputs_optional_analog
 
-        # self.inputs_pinned = inputs_pinned
-        # self.inputs_ranged = inputs_ranged
-        # self.inputs_unspecified = inputs_unspecified
-        # self.inputs_digital = inputs_digital
-        # self.inputs_ba = inputs_ba
-        # self.outputs_analog = outputs_analog
-        # self.outputs_digital = outputs_digital
+    '''
+    Subclass Test will be used to organize methods related to tests
+    '''
+    class Test(ABC):
+        # TODO perhaps put an init method that checks some parameter algebra
+        # has been specified
+        def __init__(self, template):
+            self.template = template
+            #self.dut = template.dut
+            self.ports = template.ports
+            self.extras = template.extras
 
+        @abstractmethod
+        def input_domain(self):
+            '''
+            Specify the input domain space for this test. Return a list of 
+            Reals and Bits with names
+            '''
+            pass
+
+        @abstractmethod
+        def testbench(self, tester, values):
+            '''
+            Run a test for one operating point. Use the provided fault tester
+            object and values dict containing a random value for each dimension
+            in the specified input domain.
+            '''
+            pass
+
+        @abstractmethod
+        def analysis(self, reads):
+            '''
+            Given the GetValue objects from your testbench, convert things back
+            to a nice domain for linear fitting to optional parameters.
+            Return a dict with keys matching parameters and their measured values
+            '''
+            pass
+    
+
+    def go(self):
+        '''
+        Actually do the entire analysis of the circuit
+        '''
+        for test in self.tests:
+            tester = fault.Tester(self.dut)
+            tb = fixture.Testbench(self, tester, test)
+            tb.create_test_bench()
+
+            self.run(tester)
+
+            results_each_mode = tb.get_results()
+
+            params_by_mode = {}
+            for mode, results in enumerate(results_each_mode):
+                regression = fixture.Regression(self, test, results)
+                params_by_mode[mode] = regression.results
+
+            return params_by_mode

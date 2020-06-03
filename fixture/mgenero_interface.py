@@ -69,7 +69,8 @@ def dump_yaml(dut, params_by_mode):
     final = {'test1':d}
     return yaml.dump(final)
 
-def create_interface(circuit, collateral_dict):
+def create_interface(template, collateral_dict):
+    circuit = template.dut
 
 
     def my_in(p, ps):
@@ -92,7 +93,8 @@ def create_interface(circuit, collateral_dict):
         # Let's assume real for real and logic for digital/ba
         isreal = isinstance(type(p), RealKind)
         d['datatype'] = 'real' if isreal else 'logic'
-        d['is_optional'] = my_in(p, (circuit.inputs_optional + circuit.inputs_pinned))
+        d['is_optional'] = my_in(p,
+            (template.inputs_analog + template.inputs_ba + template.inputs_pinned))
 
         # TODO array of reals?
         if isinstance(p, Array):
@@ -110,8 +112,8 @@ def create_interface(circuit, collateral_dict):
     pins = {}
     for p_name, _ in circuit.IO.items():
         p = getattr(circuit, p_name)
-        spice_name = circuit.get_name_circuit(p)
-        template_name = circuit.get_name_template(p)
+        spice_name = template.get_name_circuit(p)
+        template_name = template.get_name_template(p)
         # this next line key should not be spice name
         pins[template_name] = create_pin(p, spice_name)
 
@@ -132,10 +134,10 @@ def create_interface(circuit, collateral_dict):
     
 
 
-def create_all(circuit, config, params):
+def create_all(template, config, params):
     # TODO:
-    params_text = dump_yaml(circuit, params)
-    interface_text, circuit_text = create_interface(circuit, config)
+    params_text = dump_yaml(template, params)
+    interface_text, circuit_text = create_interface(template, config)
     generate_text = get_generate_text(config['template_name'])
     directory = config['build_folder']
 

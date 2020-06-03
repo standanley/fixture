@@ -41,12 +41,13 @@ class Regression():
             bus_index = port.name.index
             return '%s<%d>' % (bus_name, bus_index)
         else:
+            print('returning', str(port))
             return str(port)
 
     # @classmethod
-    def get_optional_pin_expression(cls, dut):
+    def get_optional_pin_expression(cls, template):
         '''
-        Given the magma circuit dut, look at the optional pins and create a 
+        Given the magma circuit template, look at the optional pins and create a
         (string) R expression for how the analog pins affect something
         '''
 
@@ -56,15 +57,7 @@ class Regression():
         interaction_a_ba = False
         interaction_ba_ba = False
 
-        opt_a, opt_ba = [], []
-        for port in dut.inputs_optional:
-            if isinstance(type(port), RealKind):
-                opt_a.append(port)
-            else:
-                opt_ba.append(port)
-
-        #print(opt_a)
-        #print(opt_ba)
+        opt_a, opt_ba = template.inputs_analog, template.inputs_ba
 
         terms = [cls.one_literal]
         for a_port in opt_a:
@@ -104,15 +97,20 @@ class Regression():
         return temp.replace('[', '_').replace(']', '_')
 
 
-    def convert_required_ba(self, dut, rhs):
-        # when the parameter algebra contains an Array (most likely ba required input),
-        # we have to break that term into multiple terms
+    def convert_required_ba(self, test, rhs):
+        '''
+        when the parameter algebra contains an Array (most likely ba required input),
+        we have to break that term into multiple terms.
+        This function edits rhs in place to split terms with an array.
+        '''
         to_be_deleted = set()
         to_be_added = {}
-        for arr_req in dut.inputs_required:
+        for arr_req in test.inputs_ba:
             if isinstance(arr_req.name, magma.ref.ArrayRef):
-                bus_name = str(arr_req.name.array.name)
-                inst_name = str(arr_req.name).split('.')[-1]
+                #bus_name = str(arr_req.name.array.name)
+                #inst_name = str(arr_req.name).split('.')[-1]
+                bus_name = test.template.get_name_template(arr_req.name.array)
+                inst_name = test.template.get_name_template(arr_req)
                 new_name = self.clean_string(inst_name)
                 search_str = r'\b' + bus_name + r'\b'
 
@@ -142,14 +140,15 @@ class Regression():
                 for coef, value in terms.items():
                     results[bus][f'{bit}*{coef}'] = value
 
-    def __init__(self, dut, data):
+    def __init__(self, template, test, data):
         '''
         Incoming data should be of the form 
         {pin:[x1, ...], ...}
         '''
 
         self.component_tag = '_component_'
-        data = {dut.get_name_template(k): v for k, v in data.items()}
+        # translate from circuit names to template names
+        data = {template.get_name_template(k): v for k, v in data.items()}
         data[self.one_literal] = [1 for _ in list(data.values())[0]]
         data = {self.clean_string(k):v for k,v in data.items()}
         self.df = pandas.DataFrame(data)
@@ -178,12 +177,12 @@ class Regression():
                     pass
 
         results = {}
-        for lhs, rhs in dut.parameter_algebra.items():
+        for lhs, rhs in test.parameter_algebra.items():
             lhs, rhs = self.parse_parameter_algebra(lhs, rhs)
 
-            optional_pin_expr = self.get_optional_pin_expression(dut)
+            optional_pin_expr = self.get_optional_pin_expression(template)
 
-            self.convert_required_ba(dut, rhs)
+            self.convert_required_ba(test, rhs)
             create_const(rhs)
             print('param algebra is now', lhs, rhs)
             print(self.df)

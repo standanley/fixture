@@ -123,6 +123,14 @@ model_param_map = { 'test1': {'gain': 'gain', 'offset': 'offset'} }
 always @($$print_sensitivity_list(sensitivity)) begin
   t0 = `get_time;
 
+$${
+print("ABC")
+iv_map = {}
+print("B")
+}$$
+
+$$print('iv_map', iv_map)
+
 $$annotate_modelparam(model_param_map, iv_map)
 
 //-- Model behaviors

@@ -1,11 +1,11 @@
 import sys, yaml, ast, os
 from pathlib import Path
+import magma
 import fault
 import fixture.templates as templates
 import fixture.real_types as real_types
 import fixture.sampler as sampler
 import fixture.create_testbench as create_testbench
-#import fixture.linearregression as lr
 from fixture import Regression
 import fixture.mgenero_interface as mgenero_interface
 
@@ -43,7 +43,7 @@ def _run(circuit_config_dict):
     if 'num_cycles' not in test_config_dict and test_config_dict['target'] != 'spice':
         test_config_dict['num_cycles'] = 10**9 # default 1 second, will quit early if $finish is reached
 
-    template = getattr(templates, circuit_config_dict['template'])
+    Template = getattr(templates, circuit_config_dict['template'])
 
     # generate IO
     io = []
@@ -58,32 +58,19 @@ def _run(circuit_config_dict):
             dt = real_types.Array(p['width'], dt)
         io += [name, dt]
 
-    class UserCircuit(template):
+    class UserCircuit(magma.Circuit):
         name = circuit_config_dict['name']
         IO = io
-        extras = circuit_config_dict
 
-        def mapping(self):
-            for name, p in pins.items():
-                if 'template_pin' in p:
-                    setattr(self, p['template_pin'], getattr(self, name))
-    vectors = sampler.Sampler.get_samples_for_circuit(UserCircuit, 50)
+    mapping = {}
+    for name, p in pins.items():
+        if 'template_pin' in p:
+            mapping[p['template_pin']] = name
+
+    extras = circuit_config_dict
 
     tester = fault.Tester(UserCircuit)
 
-    DEBUG = False
-    if DEBUG:
-        # list of pins you want to plot after simulation
-        pins = ['input_a', 'input_b', 'output_', 'vdd']
-        DEBUG_DICT = {}
-        for p_name in pins:
-            p = getattr(UserCircuit, p_name)
-            gv = tester.get_value(p, params={'style':'block', 'duration':100e-6})
-            DEBUG_DICT[p_name] = gv
-
-    testbench = create_testbench.Testbench(tester)
-    testbench.set_test_vectors(vectors)
-    testbench.create_test_bench()
 
     # TODO fill in all args from SpiceTarget or remove this check
     approved_simulator_args = ['ic', 'vsup', 'bus_delim', 'ext_libs', 'inc_dirs', 'defines', 'flags', 't_step', 'num_cycles', 'conn_order']
@@ -105,36 +92,19 @@ def _run(circuit_config_dict):
     #    flags = [x for f in simulator_dict['flags'] for x in f.split()]
     #    simulator_dict['flags'] = flags
 
-    print('calling with sim dict', simulator_dict)
-    print(f'Running sim, {len(vectors[0])} test vectors')
-    tester.compile_and_run(test_config_dict['target'],
-        simulator=test_config_dict['simulator'],
-        clock_step_delay=0,
-        tmp_dir=False,
-        **simulator_dict
-    )
+    def run_callback(tester):
+        print('calling with sim dict', simulator_dict)
+        tester.compile_and_run(test_config_dict['target'],
+            simulator=test_config_dict['simulator'],
+            clock_step_delay=0,
+            tmp_dir=False,
+            **simulator_dict
+        )
 
-    if DEBUG:
-        vals = {k:v.value for k,v in DEBUG_DICT.items()}
-        pass
-        import matplotlib.pyplot as plt
-        leg = []
-        for k,v in vals.items():
-            plt.plot(v[0], v[1])
-            leg.append(k)
-        plt.legend(leg)
-        plt.show()
+    t = Template(UserCircuit, mapping, run_callback, extras)
+    params_by_mode = t.go()
 
-    
-    print('Analyzing results')
-    results = testbench.get_results()
 
-    params_by_mode = {}
-    for mode, res in enumerate(results):
-        reg = Regression(UserCircuit, res)
-        print(reg.results)
-        params_by_mode[mode] = reg.results
-    parmams_text = mgenero_interface.dump_yaml(UserCircuit, params_by_mode)
     if 'mgenero' in circuit_config_dict:
         mgenero_config_dir = circuit_config_dict['mgenero']
         with open(mgenero_config_dir) as f:
@@ -149,7 +119,7 @@ def _run(circuit_config_dict):
         if not os.path.exists(dir_clean):
             os.makedirs(dir_clean)
 
-        mgenero_interface.create_all(UserCircuit, mgenero_params, params_by_mode)
+        mgenero_interface.create_all(t, mgenero_params, params_by_mode)
 
 
 
