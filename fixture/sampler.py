@@ -1,7 +1,6 @@
 import math
 import itertools
 import random
-from fault import RealKind
 
 class Sampler:
     @classmethod

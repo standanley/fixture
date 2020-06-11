@@ -3,7 +3,7 @@ from collections import defaultdict
 import yaml
 from fixture.run import path_relative
 import os
-from fault import RealKind
+from fault import RealType
 from magma import Array
 
 '''
@@ -91,7 +91,7 @@ def create_interface(template, collateral_dict):
         # logic can mean true digital or clock ...
         # vectorsize is # bits
         # Let's assume real for real and logic for digital/ba
-        isreal = isinstance(type(p), RealKind)
+        isreal = isinstance(RealType)
         d['datatype'] = 'real' if isreal else 'logic'
         d['is_optional'] = my_in(p,
             (template.inputs_analog + template.inputs_ba + template.inputs_pinned))

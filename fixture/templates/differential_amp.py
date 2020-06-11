@@ -1,5 +1,4 @@
 from fixture import TemplateMaster
-from fixture import TestVectorInput, TestVectorOutput
 
 class DifferentialAmpTemplate(TemplateMaster):
     required_ports = ['inp', 'inn', 'outp', 'outn']

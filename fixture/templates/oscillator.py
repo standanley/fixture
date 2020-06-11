@@ -1,5 +1,4 @@
 from fixture import TemplateMaster
-from fixture import TestVectorInput, TestVectorOutput
 
 class OscillatorTemplate(TemplateMaster):
     required_ports = ['out']

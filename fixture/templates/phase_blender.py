@@ -1,5 +1,5 @@
 from fixture import TemplateMaster
-from fixture import RealIn, BinaryAnalog
+from fixture import RealIn, BinaryAnalogIn
 from fixture.template_creation_utils import debug
 #from fixture.real_types import BinaryAnalogKind, TestVectorOutput
 
@@ -19,7 +19,7 @@ class PhaseBlenderTemplate(TemplateMaster):
             diff.name = 'in_phase_diff'
 
             # could make a new test vector with same params as sel, or just use sel itself
-            # new_sel = Array(len(self.sel), BinaryAnalog)
+            # new_sel = Array(len(self.sel), BinaryAnalogIn)
             return [diff, self.ports.sel]
 
         def testbench(self, tester, values):

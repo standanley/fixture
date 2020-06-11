@@ -143,13 +143,6 @@ class TemplateMaster():
             return name
         elif hasattr(p, 'name'):
             return p.name
-        elif isinstance(p, fault.RealKind):
-            print(p.name)
-            raise NotImplementedError
-        elif isinstance(p, Array):
-            raise NotImplementedError
-        elif issubclass(type(p), fault.RealKind):
-            raise NotImplementedError
         else:
             print(p)
             print(type(p))
