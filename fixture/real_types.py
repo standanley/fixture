@@ -26,7 +26,7 @@ class BinaryAnalogType(magma.Bit):
     pass
 
 def BinaryAnalog(value=None, name=None):
-    assert value == None, 'Binary analog port can not have a value'
+    assert value is None, 'Binary analog port can not have a value'
     class FixtureBaType(BinaryAnalogType):
         pass
     FixtureBaType.name = name
@@ -56,14 +56,8 @@ def Array(n, t):
 Various tools for sorting ports
 '''
 def get_type(x):
-    if isinstance(x, magma.Type):
-        y = type(x)
-    else:
-        y = x
-    if issubclass(y, magma.Array):
-        z = y.T
-    else:
-        z = y
+    y = type(x) if isinstance(x, magma.Type) else x
+    z = y.T if issubclass(y, magma.Array) else y
     return z
 
 def is_real(x):
@@ -80,6 +74,10 @@ def is_bit(x):
     if is_binary_analog(t):
         return False
     return issubclass(t, magma.Bit)
+
+def is_array(x):
+    t = type(x) if isinstance(x, magma.Type) else x
+    return issubclass(t, magma.Array)
 
 '''
 NOTE these functions are a little weird:

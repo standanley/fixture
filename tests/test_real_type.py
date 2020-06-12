@@ -150,7 +150,13 @@ def test_magma_interaction():
             fix_r_in  = RealIn((0, 5)),
             fix_r_out = RealOut((0, 3.3)),
 
-            fix_ba_in = BinaryAnalogIn()
+            fix_ba_in = BinaryAnalogIn(),
+
+            fix_arr_b_in = rt.Array(1, magma.BitIn),
+            fix_arr_b_out = rt.Array(1, magma.BitOut),
+            fix_arr_r_in  = rt.Array(5, rt.RealIn(0, 1)),
+            fix_arr_r_out = rt.Array(3, rt.RealOut(0, 1)),
+            fix_arr_ba_in = rt.Array(1, rt.BinaryAnalogIn())
         )
 
     for name, port in TestCircuit.io.ports.items():
@@ -169,6 +175,9 @@ def test_magma_interaction():
         assert not is_bit ^ rt.is_bit(port)
         assert not is_real ^ rt.is_real(port)
         assert not is_ba ^ rt.is_binary_analog(port)
+
+        is_array = '_arr_' in name
+        assert not is_array ^ rt.is_array(port)
 
         assert rt.get_name(port) == name
         #print(name, isinstance(port, magma.Type))
@@ -193,19 +202,26 @@ def test_magma_interaction():
         assert not is_real ^ rt.is_real(port)
         assert not is_ba ^ rt.is_binary_analog(port)
 
-''' TODO test with arrays '''
+        is_array = '_arr_' in name
+        assert not is_array ^ rt.is_array(port)
+
 def test_array():
     ar = rt.Array(3, rt.RealIn((0, 1)))
+    aba = rt.Array(3, rt.BinaryAnalogIn())
 
-    print(rt.get_name(ar))
-    print(rt.is_real(ar))
-    print(rt.is_bit(ar))
+    assert not rt.is_bit(ar)
+    assert rt.is_real(ar)
+    assert not rt.is_binary_analog(ar)
+
+    assert not rt.is_bit(aba)
+    assert not rt.is_real(aba)
+    assert rt.is_binary_analog(aba)
 
 if __name__ == '__main__':
-    #test_magma_interaction()
+    test_magma_interaction()
     #test_real()
     #test_binary_analog_friendly()
     #test_binary_analog()
     #test_bit()
-    test_array()
+    #test_array()
 
