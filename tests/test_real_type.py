@@ -12,6 +12,8 @@ def test_bit():
     assert not rt.is_binary_analog(a)
     assert a.is_input()
     assert not a.is_output()
+    assert rt.is_input(a)
+    assert not rt.is_output(a)
 
     b = rt.bit
     b = b(None)
@@ -21,6 +23,8 @@ def test_bit():
     assert not rt.is_binary_analog(b)
     assert not b.is_input()
     assert b.is_output()
+    assert not rt.is_input(b)
+    assert rt.is_output(b)
 
 def test_real_friendly():
     a = RealIn((1, 5), 'a')
@@ -29,8 +33,11 @@ def test_real_friendly():
     assert not rt.is_binary_analog(a)
     assert a.limits == (1, 5)
     assert a.name == 'a'
+    assert rt.get_name(a) == 'a'
     assert a.is_input()
     assert not a.is_output()
+    assert rt.is_input(a)
+    assert not rt.is_output(a)
 
     b = RealOut((1, 5), 'b')
     assert not rt.is_bit(b)
@@ -38,8 +45,11 @@ def test_real_friendly():
     assert not rt.is_binary_analog(b)
     assert b.limits == (1, 5)
     assert b.name == 'b'
+    assert rt.get_name(b) == 'b'
     assert not b.is_input()
     assert b.is_output()
+    assert not rt.is_input(b)
+    assert rt.is_output(b)
 
 def test_real():
     a = rt.real
@@ -52,6 +62,8 @@ def test_real():
     assert a.limits == (1, 5)
     assert a.is_input()
     assert not a.is_output()
+    assert rt.is_input(a)
+    assert not rt.is_output(a)
 
     b = rt.real
     b = b(3.3)
@@ -62,6 +74,8 @@ def test_real():
     assert b.limits == 3.3
     assert not b.is_input()
     assert b.is_output()
+    assert not rt.is_input(b)
+    assert rt.is_output(b)
 
     f = fault.RealIn
     assert rt.is_real(f)
@@ -72,15 +86,20 @@ def test_binary_analog_friendly():
     assert not rt.is_real(a)
     assert rt.is_binary_analog(a)
     assert a.name == 'a'
+    assert rt.get_name(a) == 'a'
     assert a.is_input()
     assert not a.is_output()
+    assert rt.is_input(a)
+    assert not rt.is_output(a)
 
     b = BinaryAnalogIn()
     assert not rt.is_bit(b)
     assert not rt.is_real(b)
     assert rt.is_binary_analog(b)
-    assert a.is_input()
-    assert not a.is_output()
+    assert b.is_input()
+    assert not b.is_output()
+    assert rt.is_input(b)
+    assert not rt.is_output(b)
 
     try:
         bad = BinaryAnalogIn((1, 5), 'bad')
@@ -104,6 +123,8 @@ def test_binary_analog():
     assert rt.is_binary_analog(a)
     assert a.is_input()
     assert not a.is_output()
+    assert rt.is_input(a)
+    assert not rt.is_output(a)
 
     # Although it works, BA output doesn't really make sense
     # b = rt.binary_analog
@@ -135,9 +156,12 @@ def test_magma_interaction():
     for name, port in TestCircuit.io.ports.items():
         # note that input/output gets flipped in magma circuits
         if '_in' in name:
+            assert rt.is_input(port)
             assert not port.is_input()
         if '_out' in name:
+            assert rt.is_output(port)
             assert not port.is_output()
+
 
         is_bit = '_b_' in name
         is_real = '_r_' in name
@@ -145,19 +169,43 @@ def test_magma_interaction():
         assert not is_bit ^ rt.is_bit(port)
         assert not is_real ^ rt.is_real(port)
         assert not is_ba ^ rt.is_binary_analog(port)
-        print(name, isinstance(port, magma.Type))
 
+        assert rt.get_name(port) == name
+        #print(name, isinstance(port, magma.Type))
+
+
+    # BONUS: I don't think accessing TestCircuit.IO is recommended because
+    # it is just literally what was passed in during declaration, but that's
+    # handy for us because it lets us test all these types before instantiation
     for name, port in TestCircuit.IO.ports.items():
-        print(name, isinstance(port, magma.Type))
+        #print(name, isinstance(port, magma.Type))
+        if '_in' in name:
+            assert rt.is_input(port)
+            assert port.is_input()
+        if '_out' in name:
+            assert rt.is_output(port)
+            assert port.is_output()
 
+        is_bit = '_b_' in name
+        is_real = '_r_' in name
+        is_ba = '_ba_' in name
+        assert not is_bit ^ rt.is_bit(port)
+        assert not is_real ^ rt.is_real(port)
+        assert not is_ba ^ rt.is_binary_analog(port)
 
-    ports = TestCircuit.io.ports
+''' TODO test with arrays '''
+def test_array():
+    ar = rt.Array(3, rt.RealIn((0, 1)))
 
+    print(rt.get_name(ar))
+    print(rt.is_real(ar))
+    print(rt.is_bit(ar))
 
 if __name__ == '__main__':
-    test_magma_interaction()
+    #test_magma_interaction()
     #test_real()
     #test_binary_analog_friendly()
     #test_binary_analog()
     #test_bit()
+    test_array()
 

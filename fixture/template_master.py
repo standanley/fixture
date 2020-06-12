@@ -4,6 +4,7 @@ import fault
 from .real_types import BinaryAnalogType
 from abc import ABC, abstractmethod
 import fixture
+import fixture.real_types as rt
 
 class TemplateMaster():
 
@@ -123,9 +124,12 @@ class TemplateMaster():
         ''' gives back a string to identify something port-like
         The input could be a port type or port instance, etc.
         '''
+        return rt.get_name(p)
         if type(p) == str:
             return p
-        elif hasattr(type(p), 'name'):
+        elif hasattr(p, 'name') and p.name is not None:
+            return str(p.name)
+        elif hasattr(type(p), 'name') and type(p).name is not None:
             name = str(type(p).name)
             #print('FIRST CASE', name)
             return name
@@ -141,8 +145,6 @@ class TemplateMaster():
             name = name.split('.')[-1]
             #print('RETURING NAME', name)
             return name
-        elif hasattr(p, 'name'):
-            return p.name
         else:
             print(p)
             print(type(p))
@@ -174,16 +176,18 @@ class TemplateMaster():
                     sort_port(port[i])
                 return
 
+            '''
             is_magma = issubclass(type(type(port)), magma.Kind) #any(port is p for p in self.dut.IO)
 
             port_type = type(port) if is_magma else port
             if port.isinout():
                 raise NotImplementedError
+            '''
 
-            if is_magma ^ port.isinput():
+            if rt.is_input(port):
                 # NOTE: I'm not sure why magma flips the directions of ports
                 # in a way that is confusing, but the above line seems to deal with it
-                if isinstance(port_type, fault.RealKind):
+                if rt.is_real(port):
                     assert hasattr(port, 'limits') and port.limits is not None, "Analog ports must have limits"
                     if type(port.limits) == str:
                         port.limits = ast.literal_eval(port.limits)
@@ -195,18 +199,18 @@ class TemplateMaster():
                     else:
                         assert False, f'Cannot understand limits {port.limits} for {port}'
 
-                elif issubclass(port_type, BinaryAnalogType):
+                elif rt.is_binary_analog(port):
                     inputs_ba.append(port)
                 # TODO used to be BitKind on the next line
-                elif isinstance(port, magma.Bit):
+                elif rt.is_bit(port):
                     inputs_true_digital.append(port)
                 else:
                     assert False, f'Cannot recognize port type {type(port)} for {port}'
 
-            elif is_magma ^ port.isoutput():
-                if isinstance(port_type, fault.RealKind):
+            elif rt.is_output(port):
+                if rt.is_real(port):
                     outputs_analog.append(port)
-                elif isinstance(port_type, magma.BitKind):
+                elif rt.is_bit(port):
                     # No support yet for optional digital because of the nonlinearity
                     raise NotImplementedError
                     outputs_digital.append(port)

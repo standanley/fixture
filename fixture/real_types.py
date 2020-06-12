@@ -55,29 +55,57 @@ def Array(n, t):
 '''
 Various tools for sorting ports
 '''
-def is_real(x):
+def get_type(x):
     if isinstance(x, magma.Type):
-        t = type(x)
+        y = type(x)
     else:
-        t = x
+        y = x
+    if issubclass(y, magma.Array):
+        z = y.T
+    else:
+        z = y
+    return z
+
+def is_real(x):
+    t = get_type(x)
     # we will allow this to accept fault versions as well as fixture versions
     return issubclass(t, fault.RealType)
 
 def is_binary_analog(x):
-    if isinstance(x, magma.Type):
-        t = type(x)
-    else:
-        t = x
+    t = get_type(x)
     return issubclass(t, BinaryAnalogType)
 
 def is_bit(x):
-    if isinstance(x, magma.Type):
-        t = type(x)
-    else:
-        t = x
+    t = get_type(x)
     if is_binary_analog(t):
         return False
     return issubclass(t, magma.Bit)
+
+'''
+NOTE these functions are a little weird:
+When magma instantiates a port as part of a circuit declaration it explicitly
+flips the direction of the port. These functions take that into account. That
+means they will give the wrong answer if the user manually instantiates one
+of the real_types and does not flip it!
+'''
+def is_input(x):
+    if isinstance(x, magma.Type):
+        return not x.is_input()
+    else:
+        return x.is_input()
+def is_output(x):
+    if isinstance(x, magma.Type):
+        return not x.is_output()
+    else:
+        return x.is_output()
+
+def get_name(x):
+    if type(x) == str:
+        return x
+    elif isinstance(x, magma.Type):
+        return x.name.name
+    else:
+        return getattr(x, 'name', None)
 
 
 ''' Make more friendly type names for .yaml files '''
