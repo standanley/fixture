@@ -1,8 +1,8 @@
 import fault
 import magma
 
-def Real(limits, name=None):
-    class FixtureRealType(fault.RealType):
+def Real(limits=None, name=None):
+    class FixtureRealType(fault.ms_types.RealType):
         pass
     FixtureRealType.name = name
     FixtureRealType.limits = limits
@@ -11,7 +11,7 @@ def Real(limits, name=None):
 def RealIn(limits, name=None):
     return Real(limits, name)[magma.Direction.In]
     
-def RealOut(limits, name=None):
+def RealOut(limits=None, name=None):
     return Real(limits, name)[magma.Direction.Out]
 
 
@@ -101,7 +101,13 @@ def get_name(x):
     if type(x) == str:
         return x
     elif isinstance(x, magma.Type):
-        return x.name.name
+        n = x.name
+        if isinstance(n, magma.ArrayRef):
+            # TODO for a nested bus will the indices be the wrong order?
+            bus = get_name(n.array)
+            index = n.index
+            return f'{bus}<{index}>'
+        return n.name
     else:
         return getattr(x, 'name', None)
 
