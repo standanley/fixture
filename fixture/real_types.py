@@ -1,122 +1,49 @@
 import fault
 import magma
-#from magma.port import Port, Direction.In, Direction.Out, Direction.InOut
-from magma.t import Direction
-
-
-# this is a little strange since the types are actually classes, not instances
-# When the user says Thing(args) they feel like they're instantiating a class
-# Really they want to be instantiating a metaclass
-# But really really they're just calling a generator function
-
-class RealKind2(fault.RealKind):
-    def __init__(cls, name, bases, dct):
-        super().__init__(name, bases, dct)
-
-    #@classmethod
-    def flip(self):
-        if self.is_oriented(Direction.In):
-            temp = RealOut(getattr(self, 'limits', None))
-            if hasattr(self, 'name'):
-                temp.name = self.name
-            return temp
-        elif self.isoriented(Direction.Out):
-            temp = RealIn(getattr(self, 'limits', None))
-            if hasattr(self, 'name'):
-                temp.name = self.name
-            return temp
-        return self
-
-    def qualify(cls, direction):
-        if direction is None:
-            return Real(getattr(cls, 'limits', None))
-        elif direction == Direction.In:
-            return RealIn(getattr(cls, 'limits', None))
-        elif direction == Direction.Out:
-            return RealOut(getattr(cls, 'limits', None))
-        elif direction == Direction.InOut:
-            raise NotImplementedError
-            #return RealInOut(getattr(cls, 'limits', None))
-        return cls
-
-class RealType2(fault.real_type.RealType):
-    def __eq__(self, rhs):
-        return self.name == rhs.name
-    __hash__ = magma.Type.__hash__
-
-def RealIn(limits=None, name=None):
-    kwargs = {'direction':magma.Direction.In}
-    temp = RealKind2('Real', (RealType2,), kwargs)
-    temp.limits = limits
-    if name != None:
-        temp.name = name
-    return temp
-
-def RealOut(limits=None, name=None):
-    kwargs = {'direction':magma.Direction.Out}
-    temp = RealKind2('Real', (RealType2,), kwargs)
-    if name != None:
-        temp.name = name
-    temp.limits = limits
-    return temp
 
 def Real(limits=None, name=None):
-    kwargs = {}
-    temp = RealKind2('Real', (RealType2,), kwargs)
-    temp.limits = limits
-    if name != None:
-        temp.name = name
-    return temp
+    class FixtureRealType(fault.ms_types.RealType):
+        pass
+    FixtureRealType.name = name
+    FixtureRealType.limits = limits
+    return FixtureRealType
+
+def RealIn(limits, name=None):
+    return Real(limits, name)[magma.Direction.In]
+    
+def RealOut(limits=None, name=None):
+    return Real(limits, name)[magma.Direction.Out]
+
 
 '''
-class BinaryAnalogKind(magma.DigitalMeta):
-    @classmethod
-    def qualify(mcs, direction):
-        if direction is None:
-            return BinaryAnalog
-        elif direction == Direction.In:
-            return BinaryAnalogIn
-        elif direction == Direction.Out:
-            return BinaryAnalogOut
-        elif direction == Direction.InOut:
-            return BinaryAnalogInOut
-        return mcs
-
-    @classmethod
-    def flip(mcs):
-        if mcs.isoriented(Direction.In):
-            return BinaryAnalogOut
-        elif mcs.isoriented(Direction.Out):
-            return BinaryAnalogIn
-        return mcs
-
-
-def MakeBinaryAnalog(**kwargs):
-    return BinaryAnalogKind('BinaryAnalog', (BinaryAnalogKind, magma.Bit), kwargs)
-
-
-# TODO this is ugly now because BinaryAnalog is a funciton to return the type,
-# while BinaryAnalogIn is just the type itself
-def BinaryAnalog(limits=None):
-    assert limits==None, 'Bit type cannot have limits'
-    return MakeBinaryAnalog()
-
-#BinaryAnalog = MakeBinaryAnalog()
-BinaryAnalogIn = MakeBinaryAnalog(direction=Direction.In)
-BinaryAnalogOut = MakeBinaryAnalog(direction=Direction.Out)
-BinaryAnalogInOut = MakeBinaryAnalog(direction=Direction.InOut)
-
+The Binary Analog type accepts a value as input to be consistent with the 
+Real type, but that value must be None (or unspecified) because it does
+not make sense to have a BA port with a pinned value.
 '''
 
 class BinaryAnalogType(magma.Bit):
-    #def __init__(self):
-    #    super(BinaryAnalog, self).__init__()
+    # This is analogous to fault.RealType
     pass
 
-def BinaryAnalog(limits=None):
-    assert limits==None, 'Bit type cannot have limits'
-    return BinaryAnalogType
+def BinaryAnalog(value=None, name=None):
+    assert value is None, 'Binary analog port can not have a value'
+    class FixtureBaType(BinaryAnalogType):
+        pass
+    FixtureBaType.name = name
+    return FixtureBaType
 
+def BinaryAnalogIn(value=None, name=None):
+    return BinaryAnalog(value, name)[magma.Direction.In]
+
+# BA output does not really make sense
+#def BinaryAnalogOut(value=None, name=None):
+#    return BinaryAnalogType(value, name)[magma.Direction.Out]
+
+
+'''
+Like the BA type, we create a Bit type that accepts limits for consistency.
+If the user wants to use BitIn syntax they can use magma.BitIn
+'''
 def Bit(limits=None):
     assert limits==None, 'Bit type cannot have limits'
     return magma.Bit
@@ -125,19 +52,67 @@ def Array(n, t):
     return magma.Array[n, t]
 
 
-def TestVectorInput(limits=None, name='Unnamed test vector input', binary_analog=False):
-        temp = RealIn(limits)
-        temp.name = name
-        temp.binary_analog = binary_analog
-        return temp
+'''
+Various tools for sorting ports
+'''
+def get_type(x):
+    y = type(x) if isinstance(x, magma.Type) else x
+    z = y.T if issubclass(y, magma.Array) else y
+    return z
 
-def TestVectorOutput(name='Unnamed test vector output'):
-    temp = RealIn()
-    temp.name = name
-    return temp
+def is_real(x):
+    t = get_type(x)
+    # we will allow this to accept fault versions as well as fixture versions
+    return issubclass(t, fault.RealType)
+
+def is_binary_analog(x):
+    t = get_type(x)
+    return issubclass(t, BinaryAnalogType)
+
+def is_bit(x):
+    t = get_type(x)
+    if is_binary_analog(t):
+        return False
+    return issubclass(t, magma.Bit)
+
+def is_array(x):
+    t = type(x) if isinstance(x, magma.Type) else x
+    return issubclass(t, magma.Array)
+
+'''
+NOTE these functions are a little weird:
+When magma instantiates a port as part of a circuit declaration it explicitly
+flips the direction of the port. These functions take that into account. That
+means they will give the wrong answer if the user manually instantiates one
+of the real_types and does not flip it!
+'''
+def is_input(x):
+    if isinstance(x, magma.Type):
+        return not x.is_input()
+    else:
+        return x.is_input()
+def is_output(x):
+    if isinstance(x, magma.Type):
+        return not x.is_output()
+    else:
+        return x.is_output()
+
+def get_name(x):
+    if type(x) == str:
+        return x
+    elif isinstance(x, magma.Type):
+        n = x.name
+        if isinstance(n, magma.ArrayRef):
+            # TODO for a nested bus will the indices be the wrong order?
+            bus = get_name(n.array)
+            index = n.index
+            return f'{bus}<{index}>'
+        return n.name
+    else:
+        return getattr(x, 'name', None)
 
 
-''' Make more acceptable type names for .yaml files '''
+''' Make more friendly type names for .yaml files '''
 bit = Bit
 real = Real
 input = magma.In

@@ -1,5 +1,4 @@
 from fixture import TemplateMaster
-from fixture import TestVectorInput, TestVectorOutput
 from fixture.real_types import RealIn
 
 class DifferentialAmpTemplate(TemplateMaster):
@@ -12,8 +11,6 @@ class DifferentialAmpTemplate(TemplateMaster):
         }
 
         def input_domain(self):
-            #inp = TestVectorInput(self.inp.limits, 'inp')
-            #inn = TestVectorInput(self.inn.limits, 'inn')
             in_diff = RealIn(self.extras['limits_diff'], 'in_diff')
             in_cm = RealIn(self.extras['limits_cm'], 'in_cm')
             return [in_diff, in_cm]

@@ -1,5 +1,4 @@
 from fixture import TemplateMaster
-from fixture import TestVectorInput, TestVectorOutput
 
 class SimpleAmpTemplate(TemplateMaster):
     required_ports = ['in_single', 'out_single']

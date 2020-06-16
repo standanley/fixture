@@ -1,4 +1,8 @@
-from .real_types import RealIn, BinaryAnalog, RealOut, Array, input, output, TestVectorInput, TestVectorOutput
+# TODO this solves a problem where magma tries to use collections.abc before
+# importing it. Strangely, importing collections alone is not good enough
+import collections.abc
+
+from .real_types import RealIn, RealOut, BinaryAnalog, BinaryAnalogIn, Array
 from .template_master import TemplateMaster
 from .sampler import Sampler
 from .templates import *

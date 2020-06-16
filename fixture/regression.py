@@ -5,7 +5,6 @@ import pandas
 from itertools import combinations, product
 import magma
 import re
-from fault import RealKind
 from ast import literal_eval
 
 class Regression():
