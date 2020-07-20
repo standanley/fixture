@@ -2,7 +2,6 @@ from numpy import *
 from scipy import interpolate
 from scipy.linalg import toeplitz,pinv,inv
 from scipy.signal import invres,step,impulse
-import matplotlib.pyplot as plt
 import pickle
 
 from fixture import template_creation_utils
@@ -135,6 +134,7 @@ class ModalAnalysis(object):
         pass
 
 def main():
+    import matplotlib.pyplot as plt
     X = ModalAnalysis(0.999,100)
     system = ([2.0],[1.0,2.0,1.0])
     #system = ([2.0,1.0],[1.0,2.0,1.0])
