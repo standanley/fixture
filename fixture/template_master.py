@@ -4,6 +4,7 @@ import fault
 from .real_types import BinaryAnalogType
 from abc import ABC, abstractmethod
 import fixture
+import fixture.real_types as rt
 
 class TemplateMaster():
 
@@ -19,7 +20,6 @@ class TemplateMaster():
                 super()
                 #assert False, f'No required port named "{item}"'
 
-
     def __init__(self, circuit, port_mapping, run_callback, extras={}):
         '''
         circuit: The magma circuit
@@ -27,26 +27,44 @@ class TemplateMaster():
         params: a dictionary of template-specific parameters
         '''
 
+        # expand buses in port mapping
+        # the entire bus as well as each child with [] and <> endings are added
+        # TODO nested buses? I don't think there's a way to do that in the .yaml
+        self.mapping = {}
+        for t_name, c_name in port_mapping.items():
+            self.mapping[t_name] = c_name
+            p = getattr(circuit, c_name)
+            if isinstance(p, Array):
+                for i in range(p.N):
+                    sel = f'<{i}>'
+                    self.mapping[t_name+sel] = c_name+sel
+                    sel = f'[{i}]'
+                    self.mapping[t_name+sel] = c_name+sel
+
+        self.ports = self.Ports(circuit, self.mapping)
         self.dut = circuit
-        self.mapping = port_mapping
         self.extras = extras
         self.run = run_callback
-        self.ports = self.Ports(circuit, port_mapping)
+
 
         # by the time the template is instantiated, a child should have added this
         assert hasattr(self, 'required_ports')
         self.check_required_ports()
 
-        self.reverse_mapping = {v:k for k,v in port_mapping.items()}
+        self.reverse_mapping = {v:k for k,v in self.mapping.items()}
+        for k in self.reverse_mapping:
+            print(k)
 
         assert hasattr(self, 'tests')
         # replace test classes with instance
         self.tests = [T(self) for T in self.tests]
-        print(self.tests)
-        print(self.tests[0].extras)
 
 
-        # TODO sort optional vs required
+        # The required ports are completely handled by the template creator,
+        # so this code does not do much with required ports
+        # We do need to deal with optional ports, so we are going to sort them
+        # into different input/output types in sort_ports
+        # Test inputs are treated a lot like optional ports
         circuit_port_names = [name for name, _ in self.dut.IO.items()]
         optional_port_names = [name for name in circuit_port_names
                                if name not in self.mapping.values()]
@@ -65,30 +83,6 @@ class TemplateMaster():
              test.inputs_ba,
              test.inputs_analog,
              test.outputs_analog) = self.sort_ports(test_dimensions)
-
-    def go(self):
-        '''
-        Actually do the entire analysis of the circuit
-        '''
-        all_results = []
-        for test in self.tests:
-            tester = fault.Tester(self.dut)
-            tb = fixture.Testbench(self, tester, test)
-            tb.create_test_bench()
-
-            self.run(tester, name = str(test))
-
-            results_each_mode = tb.get_results()
-
-            params_by_mode = {}
-            for mode, results in enumerate(results_each_mode):
-                regression = fixture.Regression(self, test, results)
-                params_by_mode[mode] = regression.results
-
-            all_results.append(params_by_mode)
-
-        return all_results
-
                 
 
 
@@ -128,9 +122,12 @@ class TemplateMaster():
         ''' gives back a string to identify something port-like
         The input could be a port type or port instance, etc.
         '''
+        return rt.get_name(p)
         if type(p) == str:
             return p
-        elif hasattr(type(p), 'name'):
+        elif hasattr(p, 'name') and p.name is not None:
+            return str(p.name)
+        elif hasattr(type(p), 'name') and type(p).name is not None:
             name = str(type(p).name)
             #print('FIRST CASE', name)
             return name
@@ -146,15 +143,6 @@ class TemplateMaster():
             name = name.split('.')[-1]
             #print('RETURING NAME', name)
             return name
-        elif hasattr(p, 'name'):
-            return p.name
-        elif isinstance(p, fault.RealKind):
-            print(p.name)
-            raise NotImplementedError
-        elif isinstance(p, Array):
-            raise NotImplementedError
-        elif issubclass(type(p), fault.RealKind):
-            raise NotImplementedError
         else:
             print(p)
             print(type(p))
@@ -186,16 +174,18 @@ class TemplateMaster():
                     sort_port(port[i])
                 return
 
+            '''
             is_magma = issubclass(type(type(port)), magma.Kind) #any(port is p for p in self.dut.IO)
 
             port_type = type(port) if is_magma else port
             if port.isinout():
                 raise NotImplementedError
+            '''
 
-            if is_magma ^ port.isinput():
+            if rt.is_input(port):
                 # NOTE: I'm not sure why magma flips the directions of ports
                 # in a way that is confusing, but the above line seems to deal with it
-                if isinstance(port_type, fault.RealKind):
+                if rt.is_real(port):
                     assert hasattr(port, 'limits') and port.limits is not None, "Analog ports must have limits"
                     if type(port.limits) == str:
                         port.limits = ast.literal_eval(port.limits)
@@ -207,18 +197,18 @@ class TemplateMaster():
                     else:
                         assert False, f'Cannot understand limits {port.limits} for {port}'
 
-                elif issubclass(port_type, BinaryAnalogType):
+                elif rt.is_binary_analog(port):
                     inputs_ba.append(port)
                 # TODO used to be BitKind on the next line
-                elif isinstance(port, magma.Bit):
+                elif rt.is_bit(port):
                     inputs_true_digital.append(port)
                 else:
                     assert False, f'Cannot recognize port type {type(port)} for {port}'
 
-            elif is_magma ^ port.isoutput():
-                if isinstance(port_type, fault.RealKind):
+            elif rt.is_output(port):
+                if rt.is_real(port):
                     outputs_analog.append(port)
-                elif isinstance(port_type, magma.BitKind):
+                elif rt.is_bit(port):
                     # No support yet for optional digital because of the nonlinearity
                     raise NotImplementedError
                     outputs_digital.append(port)
@@ -252,11 +242,15 @@ class TemplateMaster():
     Subclass Test will be used to organize methods related to tests
     '''
     class Test(ABC):
+        # TODO perhaps put an init method that checks some parameter algebra
+        # has been specified
         def __init__(self, template):
             self.template = template
             #self.dut = template.dut
             self.ports = template.ports
             self.extras = template.extras
+            # TODO this assert was removed at one point, but seems necessary?
+            # I think it was to allow the algebra to be added later programatically?
             assert hasattr(self, 'parameter_algebra'), f'{self} should specify parameter_algebra!'
 
         @abstractmethod
@@ -285,3 +279,23 @@ class TemplateMaster():
             '''
             pass
     
+
+    def go(self):
+        '''
+        Actually do the entire analysis of the circuit
+        '''
+        for test in self.tests:
+            tester = fault.Tester(self.dut)
+            tb = fixture.Testbench(self, tester, test)
+            tb.create_test_bench()
+
+            self.run(tester)
+
+            results_each_mode = tb.get_results()
+
+            params_by_mode = {}
+            for mode, results in enumerate(results_each_mode):
+                regression = fixture.Regression(self, test, results)
+                params_by_mode[mode] = regression.results
+
+            return params_by_mode

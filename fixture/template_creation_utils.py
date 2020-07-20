@@ -264,4 +264,34 @@ def invert_function(xs, ys):
     endpoints = (new_xs[0], new_xs[-1])
     return interp1d(new_ys, new_xs, bounds_error=False, fill_value=endpoints)
             
-        
+
+def debug(test):
+    class DebugTest(test):
+
+        def debug(self, tester, port, duration):
+            r = tester.get_value(port, params={'style':'block', 'duration': duration})
+            self.debug_dict.append((port, r))
+
+        def testbench(self, *args, **kwargs):
+            self.debug_dict = []
+            print('CREATED DEBUG DICT')
+            retval = super().testbench(*args, **kwargs)
+            return (self.debug_dict, retval)
+
+        def analysis(self, reads):
+            debug_dict, reads_orig = reads
+
+            print('Doing analysis now')
+
+            import matplotlib.pyplot as plt
+            leg = []
+            for p, r in debug_dict:
+                leg.append(self.template.get_name_template(p))
+                plt.plot(r.value[0], r.value[1], '-+')
+            plt.grid()
+            plt.legend(leg)
+            plt.show()
+
+            return super().analysis(reads_orig)
+
+    return DebugTest

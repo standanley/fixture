@@ -1,6 +1,7 @@
 import fixture
 import fault
 import magma
+import pytest
 from pathlib import Path
 
 def reformat(results):
@@ -61,6 +62,8 @@ def plot(results, tf):
     plt.grid()
     plt.show()
 
+# Digital out not supported right now
+@pytest.mark.xfail
 def test_simple():
     print('\nTop of test')
 

@@ -1,5 +1,7 @@
-magma-lang==2.0.21
+coreir
+magma-lang
 fault
 statsmodels
 kratos
+vcdvcd
 

@@ -5,18 +5,22 @@ import random
 rand = random.random
 
 def get_simple_amp():
-    class UserAmpInterface(fixture.templates.SimpleAmpTemplate):
+    class UserAmpInterface(magma.Circuit):
         name = 'my_simple_amp_interface'
         IO = [
-            'my_in', fixture.RealIn((.5,.7)),
+            'my_in', fixture.RealIn((.5, .7)),
             'my_out', fixture.RealOut(),
             'vdd', fixture.RealIn(1.2),
             'vss', fixture.RealIn(0.0),
         ]
-        def mapping(self):
-            self.in_single = self.my_in
-            self.out_single = self.my_out
-    return UserAmpInterface
+
+    test = UserAmpInterface.my_in
+
+    mapping = {
+        "in_single": "my_in",
+        "out_single": "my_out"
+    }
+    return UserAmpInterface, mapping
 
 def get_parameterized_amp():
     class Parameterized(fixture.templates.SimpleAmpTemplate):
@@ -39,9 +43,19 @@ def get_parameterized_amp():
 
 def test_simple_amp():
     data = ({'in_single':[1, 2, 3, 4, 5], 'amp_output':[6,4,5,2,2]})
-    dut = get_simple_amp()
-    reg = Regression(dut, data)
+    dut, mapping = get_simple_amp()
+    '''
+    # TODO I don't think dut.IO is a valid mapping but it's good enough
+    mapping = {
+        'my_in': 'in_single',
+        'my_out': 'out_single'
+    }
+    '''
+    t = fixture.templates.SimpleAmpTemplate(dut, mapping, None, {})
+    reg = Regression(t, t.tests[0], data)
 
+'''
+TODO update these tests to the new Style of Template
 def test_parameterized_amp():
     data = ({'in_single':[1, 2, 3, 4, 5],
              'adj': [2, 5, 4, 1, 3],
@@ -102,12 +116,12 @@ def test_differential_amp():
             pass
 
     reg = Regression(Diff, data)
-
+'''
 
 
 
 if __name__ == '__main__':
-   #test_simple_amp()
+   test_simple_amp()
    #test_parameterized_amp()
-   test_differential_amp()
+   #test_differential_amp()
 

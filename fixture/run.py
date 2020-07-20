@@ -71,16 +71,6 @@ def _run(circuit_config_dict):
 
     tester = fault.Tester(UserCircuit)
 
-    DEBUG = False
-    if DEBUG:
-        # list of pins you want to plot after simulation
-        pins = ['input_a', 'input_b', 'output_', 'vdd']
-        DEBUG_DICT = {}
-        for p_name in pins:
-            p = getattr(UserCircuit, p_name)
-            gv = tester.get_value(p, params={'style':'block', 'duration':100e-6})
-            DEBUG_DICT[p_name] = gv
-
 
     # TODO fill in all args from SpiceTarget or remove this check
     approved_simulator_args = ['ic', 'vsup', 'bus_delim', 'ext_libs', 'inc_dirs',
@@ -104,9 +94,9 @@ def _run(circuit_config_dict):
     #    flags = [x for f in simulator_dict['flags'] for x in f.split()]
     #    simulator_dict['flags'] = flags
 
-    def run_callback(tester, name=''):
+    def run_callback(tester):
         print('calling with sim dict', simulator_dict)
-        simulator_dict['directory'] = f'build_{name}'
+        #simulator_dict['directory'] = f'build_{name}'
         tester.compile_and_run(test_config_dict['target'],
             simulator=test_config_dict['simulator'],
             clock_step_delay=0,
@@ -117,16 +107,16 @@ def _run(circuit_config_dict):
     t = Template(UserCircuit, mapping, run_callback, extras)
     params_by_mode = t.go()
 
-    if DEBUG:
-        vals = {k:v.value for k,v in DEBUG_DICT.items()}
-        pass
-        import matplotlib.pyplot as plt
-        leg = []
-        for k,v in vals.items():
-            plt.plot(v[0], v[1])
-            leg.append(k)
-        plt.legend(leg)
-        plt.show()
+    #if DEBUG:
+    #    vals = {k:v.value for k,v in DEBUG_DICT.items()}
+    #    pass
+    #    import matplotlib.pyplot as plt
+    #    leg = []
+    #    for k,v in vals.items():
+    #        plt.plot(v[0], v[1])
+    #        leg.append(k)
+    #    plt.legend(leg)
+    #    plt.show()
 
     if 'mgenero' in circuit_config_dict:
         mgenero_config_dir = circuit_config_dict['mgenero']

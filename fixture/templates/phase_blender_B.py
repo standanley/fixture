@@ -3,8 +3,8 @@ from fixture import RealIn
 from fixture.template_creation_utils import debug
 #from fixture.real_types import BinaryAnalogKind, TestVectorOutput
 
-class PhaseBlenderTemplate(TemplateMaster):
-    required_ports = ['in_a', 'in_b', 'sel', 'out']
+class PhaseBlenderTemplate_B(TemplateMaster):
+    required_ports = ['in_', 'sel', 'out']
 
     #@debug
     class Test1(TemplateMaster.Test):
@@ -30,8 +30,8 @@ class PhaseBlenderTemplate(TemplateMaster):
             # "random" value within the specified range
             #phase_offset = offset_range[0] + rand_phase_offset*(offset_range[1]-offset_range[0])
 
-            # self.debug(tester, self.ports.in_a, 1/freq*100)
-            # self.debug(tester, self.ports.in_b, 1/freq*100)
+            # self.debug(tester, self.ports.in_[0], 1/freq*100)
+            # self.debug(tester, self.ports.in_[1], 1/freq*100)
             # self.debug(tester, self.ports.out, 1/freq*100)
             # #self.debug(tester, self.template.dut.thm_sel_bld[0], 1/freq*100)
             # self.debug(tester, self.template.dut.sel[0], 1/freq*100)
@@ -39,11 +39,11 @@ class PhaseBlenderTemplate(TemplateMaster):
 
             phase_diff = values['in_phase_diff']
 
-            tester.poke(self.ports.in_a, 0, delay={
+            tester.poke(self.ports.in_[0], 0, delay={
                 'freq': freq,
                 })
             tester.delay(phase_diff / freq)
-            tester.poke(self.ports.in_b, 0, delay={
+            tester.poke(self.ports.in_[1], 0, delay={
                 'freq': freq,
                 })
 
@@ -59,26 +59,26 @@ class PhaseBlenderTemplate(TemplateMaster):
             #tester.expect(self.ports.out, 0, save_for_later=True)
 
             # these are just to force a wave dump on these nodes
-            # tester.read(self.ports.in_a)
-            # tester.read(self.ports.in_b)
+            # tester.read(self.ports.in_[0])
+            # tester.read(self.ports.in_[1])
             # tester.read(self.ports.sel[0])
             # tester.read(self.ports.sel[1])
             # tester.read(self.ports.sel[2])
-            #tester.expect(self.ports.in_a, 0, save_for_later=True)
-            #tester.expect(self.ports.in_b, 0, save_for_later=True)
+            #tester.expect(self.ports.in_[0], 0, save_for_later=True)
+            #tester.expect(self.ports.in_[1], 0, save_for_later=True)
             #tester.expect(self.ports.sel[0], 0, save_for_later=True)
             #tester.expect(self.ports.sel[1], 0, save_for_later=True)
             #tester.expect(self.ports.sel[2], 0, save_for_later=True)
 
             out_phase = tester.get_value(self.ports.out, params={
                 'style': 'phase',
-                'ref': self.ports.in_a
+                'ref': self.ports.in_[0]
                 })
 
             # wait a touch longer because I had issues when the simulation ended exactly as the measurement was taken
             tester.delay(2/freq)
-            tester.poke(self.ports.in_a, 0)
-            tester.poke(self.ports.in_b, 0)
+            tester.poke(self.ports.in_[0], 0)
+            tester.poke(self.ports.in_[1], 0)
             tester.delay(1/freq)
             return [out_phase]
 
