@@ -284,6 +284,7 @@ class TemplateMaster():
         '''
         Actually do the entire analysis of the circuit
         '''
+        params_by_mode_all = {}
         for test in self.tests:
             tester = fault.Tester(self.dut)
             tb = fixture.Testbench(self, tester, test)
@@ -298,4 +299,11 @@ class TemplateMaster():
                 regression = fixture.Regression(self, test, results)
                 params_by_mode[mode] = regression.results
 
-            return params_by_mode
+            # merge results from this test in results from all tests
+            for mode in params_by_mode:
+                if mode in params_by_mode_all:
+                    params_by_mode_all[mode].update(params_by_mode[mode])
+                else:
+                    params_by_mode_all[mode] = params_by_mode[mode]
+
+        return params_by_mode_all

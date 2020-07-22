@@ -201,10 +201,6 @@ class Regression():
 
         self.condense_required_ba(results)
 
-        print('param\tterm\tcoef')
-        for param,d in results.items():
-            for partial_term_optional, coef in d.items():
-                print('%s\t%s\t%.3e' % (param, partial_term_optional, coef))
 
         # TODO dump res to a yaml file
         self.results = results

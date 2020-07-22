@@ -107,6 +107,13 @@ def _run(circuit_config_dict):
     t = Template(UserCircuit, mapping, run_callback, extras)
     params_by_mode = t.go()
 
+    for mode, results in params_by_mode.items():
+        print('For mode', mode)
+        print('param\tterm\tcoef')
+        for param, d in results.items():
+            for partial_term_optional, coef in d.items():
+                print('%s\t%s\t%.3e' % (param, partial_term_optional, coef))
+
     #if DEBUG:
     #    vals = {k:v.value for k,v in DEBUG_DICT.items()}
     #    pass

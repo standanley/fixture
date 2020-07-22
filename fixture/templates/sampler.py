@@ -21,7 +21,7 @@ class SamplerTemplate(TemplateMaster):
             'Must have one clock for each output!')
 
 
-    # @template_creation_utils.debug
+    #@template_creation_utils.debug
     class StaticNonlinearityTest(TemplateMaster.Test):
         def __init__(self, *args, **kwargs):
             # set parameter algebra before parent checks it
@@ -82,10 +82,15 @@ class SamplerTemplate(TemplateMaster):
             #inv = template_creation_utils.invert_function(xs, results)
             #reconstruct_x = [inv(res) for res in results]
             #template_creation_utils.plot(xs, reconstruct_x)
+            template_creation_utils.plot(xs, results)
             self.template.temp_inv = template_creation_utils.invert_function(xs, results)
+
+            temp = self.template.temp_inv
+            template_creation_utils.plot(temp.y, temp.x)
 
             return ret
 
+    @template_creation_utils.debug
     class ApertureTest(TemplateMaster.Test):
         parameter_algebra = {
             't0': {'aperture_delay': '1'},
@@ -109,10 +114,10 @@ class SamplerTemplate(TemplateMaster):
             wait = 3 * settle
 
             # To see debug plots, also uncomment debug decorator for this class
-            #np = self.template.nonlinearity_points
-            #self.debug(tester, self.ports.clk[0], np*wait*2.2)
-            #self.debug(tester, self.ports.out[0], np*wait*2.2)
-            #self.debug(tester, self.ports.in_, np*wait*2.2)
+            np = self.template.nonlinearity_points
+            self.debug(tester, self.ports.clk[0], np*wait*2.2)
+            self.debug(tester, self.ports.out[0], np*wait*2.2)
+            self.debug(tester, self.ports.in_, np*wait*2.2)
 
             tester.delay(wait*0.2)
 
@@ -229,7 +234,8 @@ class SamplerTemplate(TemplateMaster):
 
             # Plot results
             ys_triangle = [piecewise(t, x_min) for t in ts]
-            template_creation_utils.plot(ts, (ys, ys_triangle))
+            legend = ['Measured', 'Fit']
+            template_creation_utils.plot(ts, (ys, ys_triangle), legend)
 
             # convert from normalized optimizer units to regular untis
             (t0, w, h, h2) = x_min
@@ -250,8 +256,9 @@ class SamplerTemplate(TemplateMaster):
             # response represented in the same way we should take derivative
             # and then negate it.
             #template_creation_utils.plot(xs, ys)
-
             #template_creation_utils.plot(xs, ys_mapped)
+            template_creation_utils.plot(xs, (ys, ys_mapped), ['Original', 'Mapped'])
+            print('JUST DID PLOTS')
 
 
             ys_flipped = [-y for y in ys_mapped]
