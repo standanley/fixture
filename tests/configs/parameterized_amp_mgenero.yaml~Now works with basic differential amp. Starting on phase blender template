@@ -1,0 +1,37 @@
+name: myamp_params
+filepath: ../spice/myamp_params.sp
+template: SimpleAmpTemplate
+pin:
+    vdd:
+        direction: input
+        datatype: real
+        value: 1.2
+    vss:
+        direction: input
+        datatype: real
+        value: 0
+    in_:
+        direction: input
+        datatype: real
+        value: (.2, 1.0)
+        template_pin: in_single
+    adj:
+        direction: input
+        datatype: real
+        value: (.45, .55)
+    ba:
+        direction: input
+        datatype: binary_analog
+        width: 4
+    ctrl:
+        direction: input
+        datatype: bit
+        width: 2
+    out:
+        direction: output
+        datatype: real
+        template_pin: out_single
+    vdd_internal:
+        direction: output
+        datatype: real
+approx_settling_time: 1e-3

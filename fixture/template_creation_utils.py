@@ -123,20 +123,23 @@ def debug(test):
 
         def testbench(self, *args, **kwargs):
             self.debug_dict = []
+            self.debug_plot_shown = False
             retval = super().testbench(*args, **kwargs)
             return (self.debug_dict, retval)
 
         def analysis(self, reads):
             debug_dict, reads_orig = reads
 
-            import matplotlib.pyplot as plt
-            leg = []
-            for p, r in debug_dict:
-                leg.append(self.template.get_name_template(p))
-                plt.plot(r.value[0], r.value[1], '-+')
-            plt.grid()
-            plt.legend(leg)
-            plt.show()
+            if not self.debug_plot_shown:
+                import matplotlib.pyplot as plt
+                leg = []
+                for p, r in debug_dict:
+                    leg.append(self.template.get_name_template(p))
+                    plt.plot(r.value[0], r.value[1], '-+')
+                plt.grid()
+                plt.legend(leg)
+                plt.show()
+                self.debug_plot_shown = True
 
             return super().analysis(reads_orig)
 

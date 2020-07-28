@@ -29,3 +29,4 @@ def test_generated():
 if __name__ == '__main__':
     test_generated()
     #test_ngspice()
+    #test_spectre()

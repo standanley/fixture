@@ -1,4 +1,4 @@
-N = 16
+N = 4
 
 def sel_pin(i):
     return f'thm_sel_bld[{i}]'
@@ -6,11 +6,11 @@ def sel_pin(i):
 def ph_pin(s):
     return f'ph_in[{s}]'
 
-#sel_pins_str = ' '.join([sel_pin(i) for i in range(N)])
-#subckt = f'.subckt phase_blender {ph_pin(1)} {ph_pin(0)} {sel_pins_str} ph_out vdd'
+sel_pins_str = ' '.join([sel_pin(i) for i in range(N)])
+subckt = f'.subckt phase_blender {ph_pin(1)} {ph_pin(0)} {sel_pins_str} ph_out vdd'
 
 # copy subckt from spf file so they match
-subckt = '.SUBCKT phase_blender ph_in[1] ph_in[0] thm_sel_bld[15] thm_sel_bld[10] thm_sel_bld[5] thm_sel_bld[14] thm_sel_bld[13] thm_sel_bld[12] thm_sel_bld[11] thm_sel_bld[9] thm_sel_bld[8] thm_sel_bld[6] thm_sel_bld[3] thm_sel_bld[2] thm_sel_bld[1] thm_sel_bld[0] thm_sel_bld[4] thm_sel_bld[7] ph_out vdd'
+#subckt = '.SUBCKT phase_blender ph_in[1] ph_in[0] thm_sel_bld[15] thm_sel_bld[10] thm_sel_bld[5] thm_sel_bld[14] thm_sel_bld[13] thm_sel_bld[12] thm_sel_bld[11] thm_sel_bld[9] thm_sel_bld[8] thm_sel_bld[6] thm_sel_bld[3] thm_sel_bld[2] thm_sel_bld[1] thm_sel_bld[0] thm_sel_bld[4] thm_sel_bld[7] ph_out vdd'
 
 def buff(i, s):
     na = f'MbufnA{i}_{s} buf_inv{i}_{s} {ph_pin(s)} 0 0 EENMOS w=.1u l=1u'

@@ -67,7 +67,7 @@ class Testbench():
         create tuples for the first test to run.
         '''
         # TODO how many samples?
-        num_samples = 20
+        num_samples = 1
         # sort input_domain dimensions into analog and ba
         # test_analog = []
         # test_ba = []

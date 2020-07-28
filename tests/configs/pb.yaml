@@ -37,7 +37,7 @@ pin:
         direction: input
         datatype: binary_analog
         width: 3
-        template_pin: sel
+        #template_pin: sel
     #sel:
     #    direction: input
     #    datatype: binary_analog
