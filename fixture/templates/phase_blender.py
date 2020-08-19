@@ -100,6 +100,37 @@ class PhaseBlenderTemplate(TemplateMaster):
             ret = {'out_delay': out_delay}
             return ret
 
+        def post_process(self, results):
+            # if the delay is close to 1 period we may have some measurements
+            # wrap around to the beginning of the next period. This tries to
+            # deal with that.
+            print(results)
+            period = 1/float(self.extras['frequency'])
+            # all the measured out_delays are in results['out_delay']
+            # we don't know where in the period they are clumped but we
+            # will assume they are all in one clump
+            # First find the gap between i and i+1
+            outs = results['out_delay']
+            N = len(outs)
+            gaps = []
+            outs_sorted = sorted(outs)
+            for i in range(N):
+                gap = outs_sorted[(i+1)%N] - outs_sorted[i]
+                if gap < 0:
+                    gap += period
+                gaps.append(gap)
+            biggest_gap = gaps.index(max(gaps))
+
+            # put our cut point at the end of the gap,
+            # anything smaller in value than the cut point should
+            # be moved forward one period
+            cut = outs_sorted[(biggest_gap+1)%N]
+            for i in range(N):
+                if outs[i] < cut:
+                    outs[i] += period
+
+            return results
+
     tests = [Test1]
 
 

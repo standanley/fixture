@@ -5,6 +5,7 @@ import fixture.modal_analysis as modal_analysis
 import numpy as np
 
 def plot(x, y, legend = None):
+    print('called to plot')
     import matplotlib.pyplot as plt
     if type(y) != tuple:
         y = (y,)
@@ -225,14 +226,14 @@ def invert_function(xs, ys):
                 # normal
                 new_xs.append(xs[i])
                 new_ys.append(ys_up[i])
-                print('normal', i)
+                #print('normal', i)
             else:
                 # start of flat region
                 frac = (ys_up[i] - ys[i-1]) / (ys[i] - ys[i-1])
                 new_x = xs[i-1] + frac * (xs[i] - xs[i-1])
                 new_xs.append(new_x)
                 new_ys.append(ys_up[i])
-                print('start of flat', i, frac, xs[i-1:i+2], new_x)
+                #print('start of flat', i, frac, xs[i-1:i+2], new_x)
         else:
             if ys_up[i] < ys_up[i+1] - float_eps:
                 # end of flat region
@@ -240,10 +241,10 @@ def invert_function(xs, ys):
                 new_x = xs[i] + frac * (xs[i+1] - xs[i])
                 new_xs.append(new_x)
                 new_ys.append(ys_up[i])
-                print('end of flat', i, frac, xs[i-1:i+2], new_x)
+                #print('end of flat', i, frac, xs[i-1:i+2], new_x)
             else:
                 # middle of flat region - no points necessary
-                print('middle of flat', i)
+                #print('middle of flat', i)
                 pass
 
     new_xs.append(xs[-1])

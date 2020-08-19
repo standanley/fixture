@@ -6,3 +6,4 @@ vsup: 1.2
 bus_delim: "[]"
 t_step: 5e-12
 # TODO: could also have libraries to include, etc.
+t_tr: 0.02e-9
