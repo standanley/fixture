@@ -6,3 +6,4 @@ from .phase_blender import PhaseBlenderTemplate
 from .phase_blender_B import PhaseBlenderTemplate_B
 from .oscillator import OscillatorTemplate
 from .sampler import SamplerTemplate
+from .sampler_custom import SamplerCustomTemplate

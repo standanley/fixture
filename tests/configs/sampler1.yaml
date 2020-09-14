@@ -18,6 +18,14 @@ pin:
         datatype: real
         template_pin: out
         width: 2
-approx_settling_time: 10e-6
+approx_settling_time: 100e-6
 
 test_config_file: ngspice_sampler.yaml
+
+clks:
+    unit: 1e-6
+    period: 10
+    
+    clk:
+        5: 1
+        10: 0

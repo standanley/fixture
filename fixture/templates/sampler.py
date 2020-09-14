@@ -2,6 +2,7 @@ from fixture import TemplateMaster
 from fixture import template_creation_utils
 from fixture import BinaryAnalogIn, RealIn
 
+import math
 import numpy as np
 from scipy.optimize import minimize
 from scipy.integrate import trapz
@@ -111,18 +112,29 @@ class SamplerTemplate(TemplateMaster):
     def __init__(self, *args, **kwargs):
         # Some magic constants, maybe pull these from config?
         # NOTE this is before super() because it is used for Test instantiation
-        self.nonlinearity_points = 10# 31
-        self.aperture_points = 100# 100
+        self.nonlinearity_points = 3 # 31
+        #self.aperture_points = 100# 100
 
         super().__init__(*args, **kwargs)
 
         # NOTE this must be after super() because it needs ports to be defined
-        assert (len(self.ports.out) == len(self.ports.clk),
-            'Must have one clock for each output!')
+        assert len(self.ports.out) == len(self.ports.clk), \
+            'Must have one clock for each output!'
 
+    def read_value(self, tester, port, wait):
+        tester.delay(wait)
+        return tester.get_value(port)
 
-    #@template_creation_utils.debug
+    def schedule_clk(self, tester, port, value, wait):
+        tester.poke(port, value, delay={'type': 'future', 'wait': wait})
+
+    def interpret_value(self, read):
+        return read.value
+
+    @template_creation_utils.debug
     class StaticNonlinearityTest(TemplateMaster.Test):
+        num_samples = 1
+
         def __init__(self, *args, **kwargs):
             # set parameter algebra before parent checks it
             nl_points = args[0].nonlinearity_points
@@ -136,13 +148,29 @@ class SamplerTemplate(TemplateMaster):
             return []
 
         def testbench(self, tester, values):
-            wait = 5 * float(self.extras['approx_settling_time'])
+            settle =  float(self.extras['clks']['unit']) * float(self.extras['clks']['period'])
+            wait = 2 * settle
 
             # To see debug plots, also uncomment debug decorator for this class
-            #np = self.template.nonlinearity_points
-            #self.debug(tester, self.ports.clk[0], np*wait*2.2)
-            #self.debug(tester, self.ports.out[0], np*wait*2.2)
-            #self.debug(tester, self.ports.in_, np*wait*2.2)
+            np = self.template.nonlinearity_points
+            self.debug(tester, self.ports.clk[0], np*wait*2.2)
+            self.debug(tester, self.ports.out[0], np*wait*2.2)
+            self.debug(tester, self.ports.in_, np*wait*2.2)
+
+            #self.debug(tester, self.template.dut.z_debug, np*wait*2.2)
+
+            self.debug(tester, self.template.dut.clk_v2t_e[0], np * wait * 2.2)
+            #self.debug(tester, self.template.dut.clk_v2t_e[1], np * wait * 2.2)
+            #self.debug(tester, self.template.dut.clk_v2t_eb[0], np * wait * 2.2)
+            #self.debug(tester, self.template.dut.clk_v2t_eb[1], np * wait * 2.2)
+            #self.debug(tester, self.template.dut.clk_v2t_gated[0], np * wait * 2.2)
+            #self.debug(tester, self.template.dut.clk_v2t_gated[1], np * wait * 2.2)
+            self.debug(tester, self.template.dut.clk_v2t_l[0], np * wait * 2.2)
+            #self.debug(tester, self.template.dut.clk_v2t_l[1], np * wait * 2.2)
+            #self.debug(tester, self.template.dut.clk_v2t_lb[0], np * wait * 2.2)
+            #self.debug(tester, self.template.dut.clk_v2t_lb[1], np * wait * 2.2)
+            #self.debug(tester, self.template.dut.clk_v2tb_gated[0], np * wait * 2.2)
+            #self.debug(tester, self.template.dut.clk_v2tb_gated[1], np * wait * 2.2)
 
             tester.delay(wait*0.2)
 
@@ -160,18 +188,19 @@ class SamplerTemplate(TemplateMaster):
                 tester.poke(self.ports.clk[0], 1)
                 tester.poke(self.ports.in_, dc)
 
+                self.template.schedule_clk(tester, self.ports.clk[0], 0, wait)
                 tester.delay(wait)
-                tester.poke(self.ports.clk[0], 0)
-                tester.delay(wait)
-                read = tester.get_value(self.ports.out[0])
+                #tester.poke(self.ports.clk[0], 0)
+
+                read = self.template.read_value(tester, self.ports.out[0], wait)
+
                 # small delay so value is not changed by start of next test
                 tester.delay(wait * 0.1)
                 results.append((dc, read))
-
             return results
 
         def analysis(self, reads):
-            results = [r.value for dc, r in reads]
+            results = [self.template.interpret_value(r) for dc, r in reads]
             xs = [dc for dc, r in reads]
 
             ret = {f'nl_{i}': v for i, v in enumerate(results)}
@@ -186,41 +215,51 @@ class SamplerTemplate(TemplateMaster):
             self.template.temp_inv = template_creation_utils.invert_function(xs, results)
 
             temp = self.template.temp_inv
-            #template_creation_utils.plot(temp.y, temp.x)
+            template_creation_utils.plot(temp.y, temp.x)
 
             return ret
 
     @template_creation_utils.debug
     class ApertureTest(TemplateMaster.Test):
+
+        # sample_out = should_be_1*value + slope * effective_delay
+        # effective_delay = alpha*value + beta*slope + gamma*1
+
         parameter_algebra = {
-            #'t0': {'aperture_delay': '1'},
-            #'w': {'aperture_w_left': '1'},
-            #'h': {'aperture_h_left': '1'},
-            # 'w2': {'aperture_w_right': '1'}, determined by area constraint
-            #'h2': {'aperture_h_right': '1'}
-            'aperture_alpha': {'alpha_const':'1', 'alpha_dir_adjust': 'step_dir'}
+            'sample_out': {'should_be_1': 'value',
+                           'alpha_times_scale': 'value*slope_over_scale',
+                           'beta_times_scale2': 'slope_over_scale**2',
+                           'gamma_times_scale': 'slope_over_scale'}
         }
+        num_samples = 5
 
         def input_domain(self):
             limits = self.ports.in_.limits
+            settle = 0.5 * float(self.extras['clks']['unit']) * float(self.extras['clks']['period'])
+            max_slope = 50 * (limits[1]-limits[0]) / settle
+
             #step_start = Real(limits=limits, name='step_start')
             #step_end = Real(limits=limits, name='step_end')
-            step_dir = BinaryAnalogIn(name='step_dir')
-            step_pos = RealIn(limits=(0,1), name='step_pos')
+            v = RealIn(limits=limits, name='value')
+            s = RealIn(limits=(-max_slope, max_slope), name='slope')
 
-            return [step_dir, step_pos]
+            return [v, s]
 
         def testbench(self, tester, values):
-            settle = float(self.extras['approx_settling_time'])
-            wait = 3 * settle
+            #settle = float(self.extras['approx_settling_time'])
+            settle = float(self.extras['clks']['unit']) * float(self.extras['clks']['period'])
+            wait = 1 * settle
+            v = values['value']
+            s = values['slope']
 
             # To see debug plots, also uncomment debug decorator for this class
             np = self.template.nonlinearity_points
-            self.debug(tester, self.ports.clk[0], np*wait*2.2)
-            self.debug(tester, self.ports.out[0], np*wait*2.2)
-            self.debug(tester, self.ports.in_, np*wait*2.2)
+            debug_length = np * wait * 10
+            self.debug(tester, self.ports.clk[0], debug_length)
+            self.debug(tester, self.ports.out[0], debug_length)
+            self.debug(tester, self.ports.in_, debug_length)
 
-            tester.delay(wait*0.2)
+            tester.delay(wait*0.1)
 
             # feed through to first output, leave the rest off
             # TODO should maybe leave half open, affects charge sharing?
@@ -229,138 +268,169 @@ class SamplerTemplate(TemplateMaster):
                 tester.poke(p, 0)
 
             limits = self.ports.in_.limits
-            step_start = 0.1#limits[0]
-            step_end = .7#limits[1]
-            limit_range = limits[1]-limits[0]
-            step_size = limit_range/4
-            step_start = limits[0] + (limit_range - step_size) * values['step_pos']
-            step_end = step_start + step_size
-            if values['step_dir']:
-                step_start, step_end = step_end, step_start
-            else:
+            limit_range = abs(limits[1]-limits[0])
+            max_ramp_time = settle/5 # TODO
+            if limit_range / abs(s) < max_ramp_time:
+                # use the full input range
+                start = (limits[0] if s > 0 else limits[1])
+                end = (limits[1] if s > 0 else limits[0])
+
+                t_clk = abs((v - start) / s) # TODO abs unnecessary?
+                self.template.schedule_clk(tester, self.ports.clk[0], 0, t_clk + wait)
+
+                tester.poke(self.ports.in_, start)
+                tester.delay(wait) # because of finite rise time of prev line
+                tester.poke(self.ports.in_, 0, delay={
+                    'type': 'ramp',
+                    'start': start,
+                    'stop': end,
+                    'rate': s,
+                    'etol': limit_range/20
+                })
+
+                tester.delay(t_clk)
+
+                # replaced with earlier schedule_clk
+                #tester.poke(self.ports.clk[0], 0)
+
+                # The read_value call actually does delay long enough for the thing to settle
+                read = self.template.read_value(tester, self.ports.out[0], wait)
+
+                tester.delay(abs(limit_range/s) - t_clk)
+                tester.delay(wait * 1)
+                print('Using full range for slope', s, ', time', abs(limit_range/s))
                 pass
 
-            num = self.template.aperture_points
-            t_min = -0.5 * settle
-            t_max = 0.25 * settle
-            results = []
-            for i in range(num):
-                t = t_min + i * (t_max - t_min) / (num-1)
-                tester.poke(self.ports.clk[0], 1)
-                tester.poke(self.ports.in_, step_start)
+            else:
+                # use the full ramp time
+                # TODO might be outside range
+                def clamp(x):
+                    if x < min(limits):
+                        return min(limits)
+                    elif x > max(limits):
+                        return max(limits)
+                    else:
+                        return x
+                ss = clamp(v - s * (max_ramp_time/2))
+                se = clamp(v + s * (max_ramp_time/2))
 
-                # the clock always happens at the same exact time,
-                # and we move the step earlier (t_min) to later (t_max)
 
-                if t < 0:
-                    # step first
-                    tester.delay(wait + t)
-                    tester.poke(self.ports.in_, step_end)
-                    tester.delay(-t)
-                    tester.poke(self.ports.clk[0], 0)
-                    tester.delay(wait)
-                else:
-                    # clock first
-                    tester.delay(wait)
-                    tester.poke(self.ports.clk[0], 0)
-                    tester.delay(t)
-                    tester.poke(self.ports.in_, step_end)
-                    tester.delay(wait - t)
+                tester.poke(self.ports.in_, ss)
+                tester.delay(wait) # because of finite rise time of prev line
+                tester.poke(self.ports.in_, 0, delay={
+                    'type': 'ramp',
+                    'start': ss,
+                    'stop': se,
+                    'rate': s,
+                    'etol': abs(se-ss)/20
+                })
 
-                read = tester.get_value(self.ports.out[0])
-                results.append((t, read))
+                tester.delay(abs((ss-v)/s))
+                tester.poke(self.ports.clk[0], 0)
+                read = self.template.read_value(tester, self.ports.out[0], wait)
 
-            return ((step_start, step_end), results)
+                tester.delay(max_ramp_time/2)
+                print('Using full time for slope', s, ', range', ss, se)
+
+            scale = 10**(int(math.log10(1/settle)))
+            slope_over_scale = s / scale
+            print('USING SCALE OF', scale)
+            return read, slope_over_scale
 
         def analysis(self, results):
-            (step_start, step_end), reads = results
-            xs = [float(x) for x,gv in reads]
-            ys = [float(gv.value) for x,gv in reads]
+            read, slope_over_scale = results
+            v = self.template.interpret_value(read)
+            v_mapped = self.template.temp_inv(v)
+            return {'sample_out': v_mapped, 'slope_over_scale': slope_over_scale}
 
-            ys_mapped = [self.template.temp_inv(y) for y in ys]
-            data = (step_start, step_end, xs, ys_mapped)
-            if hasattr(self, 'ys_mapped_data'):
-                self.ys_mapped_data.append(data)
-            else:
-                self.ys_mapped_data = [data]
-
-            # In this plot the left side is what we see of steps that happen
-            # early compared to the clock, and right side is steps that
-            # happen late, so the plot shows a falling edge.
-            # It's not time invariant with respect to a later step, it's sorta
-            # reverse time invariant - that means if we want the impulse
-            # response represented in the same way we should take derivative
-            # and then negate it.
-            #template_creation_utils.plot(xs, ys)
-            #template_creation_utils.plot(xs, ys_mapped)
-            xs_neg = [-1*x for x in xs]
-            print('About to do original/mapped plot')
-            #template_creation_utils.plot(xs_neg, (ys, ys_mapped), ['Original', 'Mapped'])
-            print('JUST DID PLOTS')
-
-
-            ys_flipped = [-y for y in ys_mapped]
-            #template_creation_utils.extract_pzs(5, 5, xs, ys_flipped)
-            step_size = ys_flipped[-1]-ys_flipped[0]
-            #t0, w, h, h2 = fit_step_response((xs, ys_flipped), step_size)
-            #return {'t0': t0,
-            #        'w': w,
-            #        'h': h,
-            #        'h2': h2}
-            (alpha,) = characterize_aperture_simple((xs, ys_flipped))
-            return {'aperture_alpha': alpha}
 
         def post_process(self, results):
-            data = self.ys_mapped_data
-            xs = [x*-1 for x in data[0][2]]
-            yss = []
-            yss_aligned = []
-            legend = []
-            for ss, se, _, ys in data:
-                yss.append(ys)
-                ys_aligned = [(y-ss)/(se-ss) for y in ys]
-                yss_aligned.append(ys_aligned)
-                legend.append(f'{ss:.2f} -> {se:.2f}')
+            vs, ss, samples, ss_scaled = results.values()
+            ss_vpns = [s/1e9 for s in ss]
 
-            template_creation_utils.plot(xs, tuple(yss), legend=legend)
-            template_creation_utils.plot(xs, tuple(yss_aligned), legend=legend)
+            should_be_1 = 0.996
+            alpha = -1.46e-12 * 1e9
+            beta = 8.88e-25 * 1e18
+            gamma = -2.37e-13 * 1e9
 
-            def get_delay(xs, ys):
-                # TODO fencpost error?
-                cross = (ys[-1] + ys[0]) / 2
-                i = sum(1 if y < cross else 0 for y in ys)
-                return xs[i]
-            voltages_up = []
-            crosses_up = []
-            voltages_down = []
-            crosses_down = []
-            #dirs = []
-            for ss, se, _, ys in data:
-                delay = get_delay(xs, ys)
+            def f(v, s):
+                return sum([
+                    should_be_1 * v,
+                    alpha * v*s,
+                    beta * s**2,
+                    gamma * s
+                ])
 
-                if ss > se:
-                    crosses_up.append(delay)
-                    voltages_up.append((ss+se)/2)
-                else:
-                    crosses_down.append(delay)
-                    voltages_down.append((ss+se)/2)
+            import numpy as np
+            X = np.arange(min(vs), max(vs), 0.01)
+            Y = np.arange(min(ss_vpns), max(ss_vpns), (max(ss_vpns) - min(ss_vpns))/100)
+            X, Y = np.meshgrid(X, Y)
+            #Z = [[f(x, y) for x,y in zip(xx, yy)] for xx, yy in zip(X, Y)]
+            Z = f(X, Y)
 
-
-            template_creation_utils.plot(voltages_up, crosses_up)
-            template_creation_utils.plot(voltages_down, crosses_down)
+            from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
             import matplotlib.pyplot as plt
-            plt.plot(voltages_up, crosses_up, '*')
-            plt.plot(voltages_down, crosses_down, '+')
-            plt.legend('Rising edge', 'Falling edge')
-            plt.grid()
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            ax.scatter(vs, ss_vpns, samples)
+            #ax.plot_surface(X, Y, Z, alpha=0.2)
+            ax.set_xlabel('Input Value (V)')
+            ax.set_ylabel('Input Slope (V / ns)')
+            ax.set_zlabel('Measured (V)')
             plt.show()
 
-
-
-
-
-            # just pass results through
             return results
+        #def post_process(self, results):
+        #    data = self.ys_mapped_data
+        #    xs = [x*-1 for x in data[0][2]]
+        #    yss = []
+        #    yss_aligned = []
+        #    legend = []
+        #    for ss, se, _, ys in data:
+        #        yss.append(ys)
+        #        ys_aligned = [(y-ss)/(se-ss) for y in ys]
+        #        yss_aligned.append(ys_aligned)
+        #        legend.append(f'{ss:.2f} -> {se:.2f}')
+
+        #    template_creation_utils.plot(xs, tuple(yss), legend=legend)
+        #    template_creation_utils.plot(xs, tuple(yss_aligned), legend=legend)
+
+        #    def get_delay(xs, ys):
+        #        # TODO fencpost error?
+        #        cross = (ys[-1] + ys[0]) / 2
+        #        i = sum(1 if y < cross else 0 for y in ys)
+        #        return xs[i]
+        #    voltages_up = []
+        #    crosses_up = []
+        #    voltages_down = []
+        #    crosses_down = []
+        #    #dirs = []
+        #    for ss, se, _, ys in data:
+        #        delay = get_delay(xs, ys)
+
+        #        if ss > se:
+        #            crosses_up.append(delay)
+        #            voltages_up.append((ss+se)/2)
+        #        else:
+        #            crosses_down.append(delay)
+        #            voltages_down.append((ss+se)/2)
+
+
+        #    template_creation_utils.plot(voltages_up, crosses_up)
+        #    template_creation_utils.plot(voltages_down, crosses_down)
+        #    import matplotlib.pyplot as plt
+        #    plt.plot(voltages_up, crosses_up, '*')
+        #    plt.plot(voltages_down, crosses_down, '+')
+        #    plt.legend('Rising edge', 'Falling edge')
+        #    plt.grid()
+        #    plt.show()
+
+
+
+
+
+        #    # just pass results through
+        #    return results
 
 
     tests = [StaticNonlinearityTest,

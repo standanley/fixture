@@ -134,9 +134,11 @@ def debug(test):
             if not self.debug_plot_shown:
                 import matplotlib.pyplot as plt
                 leg = []
+                bump = 0
                 for p, r in debug_dict:
                     leg.append(self.template.get_name_template(p))
-                    plt.plot(r.value[0], r.value[1], '-+')
+                    plt.plot(r.value[0], r.value[1] + bump, '-+')
+                    bump += 0.0 # useful for separating clock signals
                 plt.grid()
                 plt.legend(leg)
                 plt.show()
@@ -207,7 +209,7 @@ def invert_function(xs, ys):
     #ys = [float(y) + random.random()*0.02 for y in ys]
     xs = [float(x) for x in xs]
     #xs = list(range(len(xs)))
-    # TODO: this is broken for decreasing things
+    #TODO: this is broken for decreasing things
     if ys[0] > ys[-1]:
         temp = [-y for y in ys]
         temp2 = make_nondecreasing(temp)
@@ -217,7 +219,7 @@ def invert_function(xs, ys):
     
     new_xs = [xs[0]]
     new_ys = [ys_up[0]]
-    float_eps = 1e-10
+    float_eps = (ys_up[-1] - ys_up[0])*1e-10 # 1e-10
     for i in range(1, len(xs)-1):
         # look for flat regions
         # start
@@ -250,14 +252,12 @@ def invert_function(xs, ys):
     new_xs.append(xs[-1])
     new_ys.append(ys_up[-1])
 
-    '''
     import matplotlib.pyplot as plt
     plt.plot(xs, ys, '--')
     plt.plot(xs, ys_up, '+')
     plt.plot(new_xs, new_ys, '-x')
     plt.grid()
     plt.show()
-    '''
 
     # TODO I would like to give each flat region a slight tilt because it
     # would help in cases where the true curve is increasing but noise

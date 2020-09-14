@@ -47,7 +47,6 @@ class Testbench():
         return [scale(val) for val in vec]
 
 
-
     def set_pinned_inputs(self):
         for input_ in self.template.inputs_pinned:
             val = input_.limits
@@ -66,8 +65,8 @@ class Testbench():
         They are ordered such that zip(x_inputs, x_vectors[0]) would
         create tuples for the first test to run.
         '''
-        # TODO how many samples?
-        num_samples = 1
+        # TODO don't have a default; force test to set num_samples
+        num_samples = getattr(self.test, 'num_samples', 10)
         # sort input_domain dimensions into analog and ba
         # test_analog = []
         # test_ba = []
@@ -242,6 +241,10 @@ class Testbench():
 
             for k,v in results.items():
                 results_by_mode[m][k].append(v)
+
+        if hasattr(self.test, 'post_process'):
+            for mode in results_by_mode:
+                results_by_mode[mode] = self.test.post_process(results_by_mode[mode])
 
 
         self.results = [x for m,x in results_by_mode.items()]

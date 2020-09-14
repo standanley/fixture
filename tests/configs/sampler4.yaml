@@ -1,0 +1,98 @@
+name: sampler4
+filepath: ../spice/sampler4.sp
+template: SamplerCustomTemplate
+pin:
+    in_:
+        direction: input
+        datatype: real
+        # NMOS vth is 0.4 and vdd is 1.2, max pull up is 0.8
+        value: (0.6, 0.7)
+        template_pin: in_
+    clk_v2t:
+        direction: input
+        datatype: bit
+        template_pin: clk
+        width: 2
+    clk_v2tb:
+        direction: input
+        datatype: bit
+        template_pin: ignore
+        width: 2
+    clk_v2t_e:
+        direction: input
+        datatype: bit
+        template_pin: ignore
+        width: 2
+    clk_v2t_eb:
+        direction: input
+        datatype: bit
+        template_pin: ignore
+        width: 2
+    clk_v2t_l:
+        direction: input
+        datatype: bit
+        template_pin: ignore
+        width: 2
+    clk_v2t_lb:
+        direction: input
+        datatype: bit
+        template_pin: ignore
+        width: 2
+    clk_v2t_gated:
+        direction: input
+        datatype: bit
+        template_pin: ignore
+        width: 2
+    clk_v2tb_gated:
+        direction: input
+        datatype: bit
+        template_pin: ignore
+        width: 2
+    out:
+        direction: output
+        datatype: real
+        template_pin: out
+        width: 2
+    vdd:
+        direction: input
+        datatype: real
+        value: 1.2
+    z_debug:
+        direction: output
+        datatype: real
+#approx_settling_time: 50e-6
+
+test_config_file: ngspice_sampler.yaml
+
+clks:
+    unit: 4e-7
+    period: 250
+
+    clk_v2t:
+        125: 1
+        250: 0
+    clk_v2tb:
+        125: 0
+        250: 1
+
+    clk_v2t_e:
+        105: 1
+        230: 0
+    clk_v2t_eb:
+        105: 0
+        230: 1
+
+    clk_v2t_l:
+        145: 1
+        20:  0
+    clk_v2t_lb:
+        145: 0
+        20:  1
+
+    clk_v2t_gated:
+        125: 1
+        250: 0
+    clk_v2tb_gated:
+        125: 0
+        250: 1
+

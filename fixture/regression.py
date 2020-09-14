@@ -152,6 +152,29 @@ class Regression():
         data = {self.clean_string(k):v for k,v in data.items()}
         self.df = pandas.DataFrame(data)
 
+
+        '''
+        # For plotting some phase blender data
+        print(data)
+        thms = [
+            data['thm_sel_bld_0_'],
+            data['thm_sel_bld_1_'],
+            data['thm_sel_bld_2_'],
+            data['thm_sel_bld_3_'],
+        ]
+        temp_x = [sum([a, b, c, d]) for a,b,c,d in zip(*thms)]
+        temp_y = [od / ipd for od, ipd in zip(data['out_delay'], data['in_phase_delay'])]
+        import matplotlib.pyplot as plt
+        plt.plot(temp_x, temp_y, '*')
+        plt.grid()
+        plt.xlabel('Thermometer code')
+        plt.ylabel('out_delay')
+        plt.show()
+        '''
+
+
+
+
         self.consts ={}
         def create_const(rhs):
             '''
@@ -201,6 +224,31 @@ class Regression():
 
         self.condense_required_ba(results)
 
+        '''
+        # self-check
+        df = self.df
+        if 'sample_out' in self.df.columns:
+            print('Measured\tReconstructed')
+            for i in range(df.shape[0]):
+                measured = self.df['sample_out'][i]
+                def data(name):
+                    return self.df[name][i]
+                def res(name):
+                    return results[name]['const_1']
+                reconstructed = sum([
+                    data('value') * res('should_be_1'),
+                    data('value')*data('slope_over_scale') * res('alpha_times_scale'),
+                    data('slope_over_scale')**2 * res('beta_times_scale2'),
+                    data('slope_over_scale') * res('gamma_times_scale')
+                ])
+                naive = sum([
+                    data('value') * 1,
+                    data('value')*data('slope') * 0,
+                    data('slope')**2 * 0,
+                    data('slope') * 0
+                ])
+                print(measured, '\t', reconstructed, '\t', naive)
+        '''
 
         # TODO dump res to a yaml file
         self.results = results

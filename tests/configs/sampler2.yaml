@@ -18,6 +18,7 @@ pin:
         datatype: real
         template_pin: out
         width: 2
-approx_settling_time: 3e-9
+#approx_settling_time: 3e-9
+approx_settling_time: 3e-10
 
 test_config_file: ngspice_sampler2.yaml

@@ -65,7 +65,13 @@ def _run(circuit_config_dict):
     mapping = {}
     for name, p in pins.items():
         if 'template_pin' in p:
-            mapping[p['template_pin']] = name
+            if p['template_pin'] == 'ignore':
+                i = 0
+                while 'ignore'+str(i) in mapping:
+                    i += 1
+                mapping['ignore'+str(i)] = name
+            else:
+                mapping[p['template_pin']] = name
 
     extras = circuit_config_dict
 
