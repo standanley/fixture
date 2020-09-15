@@ -1,110 +1,8 @@
 from fixture import TemplateMaster
 from fixture import template_creation_utils
 from fixture import BinaryAnalogIn, RealIn
-
 import math
-import numpy as np
-from scipy.optimize import minimize
-from scipy.integrate import trapz
 
-
-
-def characterize_aperture_simple(step_response):
-    # assume you only get the value and slope at t=0
-    # what's the optimal reconstruction?
-    # we just find a scale factor alpha=integral(A(t)*t)
-    # The reconstruction is then alpha*slope+value, assuming integral(A(t))=1
-
-    ts_orig, hs = step_response
-
-    # convert step response to impulse
-    dts = np.diff(ts_orig)
-    dhs = np.diff(hs)
-    ys = dhs / dts
-    ts = ts_orig[:-1]
-    xs = [t*y for t,y in zip(ts, ys)]
-    alpha = trapz(ys, x=xs)
-    return [alpha]
-
-def fit_step_response(step_response, target_area):
-    '''
-    TODO: this function assumes uniform time steps
-    Given a measured aperture step response and known height
-    of the step (target_area for the impulse response), calculate
-    two best-fit triangles for the left and right halves.
-    t0 is the time of the peak of the triangle.
-    The left half of the triangle has width w and height h, the
-    right half has w2 and h2, we guarantee the combined area of
-    the triangles is target_area
-    '''
-    ts_orig, hs = step_response
-
-    # convert step response to impulse
-    dts = np.diff(ts_orig)
-    dhs = np.diff(hs)
-    ys = dhs / dts
-    ts = ts_orig[:-1]
-
-    # Initially guess the max point of the impulse response
-    # is the triangle peak, with 90% area to the left
-    t0_guess = ts[np.argmax(ys)]
-    h_guess = max(ys)
-    w_guess = target_area * .9 / (.5 * h_guess)
-    h2_guess = h_guess
-
-    # minimize function doesn't like when parameters
-    # are on wildly different scales, so we normalize
-    # by this unit
-    unit = 1 / t0_guess
-
-    x0 = np.array([t0_guess * unit, w_guess * unit, h_guess / unit, h2_guess / unit])
-
-    def piecewise(t, x):
-        '''
-        Given a time t and set of parameters x, find the height
-        of the triangle at time t (or 0 if outside the triangle)
-        '''
-        (t0, w, h, h2) = x
-        t0, w, h, h2 = t0 / unit, w / unit, h * unit, h2 * unit
-        area = .5 * w * h
-        area2 = target_area - area
-        w2 = area2 / (.5 * h2)
-        if t < t0 - w:
-            return 0
-        elif t < t0:
-            return h * (t - (t0 - w)) / w
-        elif t < t0 + w2:
-            return h2 * ((t0 + w2) - t) / w2
-        else:
-            return 0
-
-    def fun(x, ts, ys):
-        '''
-        Function to be passed to scipy.optimize.minimize
-        Determines total square error of triangle fit
-        '''
-        # retval = sum((y-piecewise(t, x))**2 for t, y in zip(ts, ys))
-        s = 0
-        for t, y in zip(ts, ys):
-            a = (y - piecewise(t, x))
-            b = a ** 2
-            s += b
-        retval = s
-        return retval
-
-    result = minimize(fun, x0, args=(ts, ys))
-    x_min = result.x
-
-    # Plot results
-    ys_triangle = [piecewise(t, x_min) for t in ts]
-    legend = ['Measured', 'Fit']
-    ts_negative = [-1*t for t in ts]
-    #template_creation_utils.plot(ts_negative, (ys, ys_triangle), legend)
-
-    # convert from normalized optimizer units to regular untis
-    (t0, w, h, h2) = x_min
-    result = (t0 / unit, w / unit, h * unit, h2 * unit)
-    return result
 
 class SamplerTemplate(TemplateMaster):
     required_ports = ['in_', 'clk', 'out']
@@ -113,7 +11,6 @@ class SamplerTemplate(TemplateMaster):
         # Some magic constants, maybe pull these from config?
         # NOTE this is before super() because it is used for Test instantiation
         self.nonlinearity_points = 3 # 31
-        #self.aperture_points = 100# 100
 
         super().__init__(*args, **kwargs)
 
@@ -125,8 +22,75 @@ class SamplerTemplate(TemplateMaster):
         tester.delay(wait)
         return tester.get_value(port)
 
+    #def schedule_clk(self, tester, port, value, wait):
+    #    tester.poke(port, value, delay={'type': 'future', 'wait': wait})
+
     def schedule_clk(self, tester, port, value, wait):
-        tester.poke(port, value, delay={'type': 'future', 'wait': wait})
+        clks = self.extras['clks']
+        main = self.get_name_circuit(port.name.array)
+        unit = float(clks['unit'])
+        period = clks['period']
+        clks = {k:v for k,v in clks.items() if (k!='unit' and k!='period')}
+        num_samplers = getattr(self.dut, main).N
+        desired_sampler = port.name.index
+
+
+        # To take our measurement we will play through played_periods,
+        # and then take a measurement based on the falling edge of the main
+        # clock during the measured_period (zero-indexed)
+        played_periods = 2
+        measured_period = 1
+
+        main_period_start_time = [t for t,v in clks[main].items() if v==1][0]
+
+        # shift the user-given period such that the main clock's
+        # rising edge just happened
+        # Presumably the sampling edge is now in the middle of the period
+
+        for i in range(num_samplers):
+            offset = ((i - desired_sampler + num_samplers) % num_samplers) / num_samplers
+            period_start_time = (main_period_start_time + period * offset) % period
+
+            clks_transform = {}
+
+            for clk in clks:
+                temp = []
+                for p in range(played_periods):
+                    for time, val in clks[clk].items():
+                        time_transform = time + (period - period_start_time)
+                        if time_transform > period:
+                            time_transform -= period
+                        #time_transform *= unit
+                        time_transform_shift = time_transform + (p - measured_period) * period
+                        temp.append((time_transform_shift, val))
+                clks_transform[clk] = sorted(temp)
+
+            # shift that one period s.t. the falling edge of the main clk
+            # happens after exactly "wait"
+            # simply ignore any edges that would've been in the past
+            # shift is the time in seconds from now until the period start
+            shift = wait - period_start_time * unit
+            if shift < 0:
+                print('Cannot run a full period when scheduling clk edges', i)
+
+            for clk, edges in clks_transform.items():
+                t = 0
+                waits = [0]
+                values = [0 if edges[0][1] else 1]
+                for time, value in edges:
+                    x = time * unit + shift
+                    if x < 0:
+                        print('Skipping edge', value, 'for', clk, i)
+                        continue
+                    waits.append(x - t)
+                    t = x
+                    values.append(value)
+                tester.poke(getattr(self.dut, clk)[i], 0, delay={
+                    'type': 'future',
+                    'waits': waits,
+                    'values': values
+                })
+
 
     def interpret_value(self, read):
         return read.value
@@ -190,7 +154,6 @@ class SamplerTemplate(TemplateMaster):
 
                 self.template.schedule_clk(tester, self.ports.clk[0], 0, wait)
                 tester.delay(wait)
-                #tester.poke(self.ports.clk[0], 0)
 
                 read = self.template.read_value(tester, self.ports.out[0], wait)
 
@@ -238,15 +201,12 @@ class SamplerTemplate(TemplateMaster):
             settle = 0.5 * float(self.extras['clks']['unit']) * float(self.extras['clks']['period'])
             max_slope = 50 * (limits[1]-limits[0]) / settle
 
-            #step_start = Real(limits=limits, name='step_start')
-            #step_end = Real(limits=limits, name='step_end')
             v = RealIn(limits=limits, name='value')
             s = RealIn(limits=(-max_slope, max_slope), name='slope')
 
             return [v, s]
 
         def testbench(self, tester, values):
-            #settle = float(self.extras['approx_settling_time'])
             settle = float(self.extras['clks']['unit']) * float(self.extras['clks']['period'])
             wait = 1 * settle
             v = values['value']
@@ -289,9 +249,6 @@ class SamplerTemplate(TemplateMaster):
                 })
 
                 tester.delay(t_clk)
-
-                # replaced with earlier schedule_clk
-                #tester.poke(self.ports.clk[0], 0)
 
                 # The read_value call actually does delay long enough for the thing to settle
                 read = self.template.read_value(tester, self.ports.out[0], wait)
@@ -380,61 +337,7 @@ class SamplerTemplate(TemplateMaster):
             plt.show()
 
             return results
-        #def post_process(self, results):
-        #    data = self.ys_mapped_data
-        #    xs = [x*-1 for x in data[0][2]]
-        #    yss = []
-        #    yss_aligned = []
-        #    legend = []
-        #    for ss, se, _, ys in data:
-        #        yss.append(ys)
-        #        ys_aligned = [(y-ss)/(se-ss) for y in ys]
-        #        yss_aligned.append(ys_aligned)
-        #        legend.append(f'{ss:.2f} -> {se:.2f}')
-
-        #    template_creation_utils.plot(xs, tuple(yss), legend=legend)
-        #    template_creation_utils.plot(xs, tuple(yss_aligned), legend=legend)
-
-        #    def get_delay(xs, ys):
-        #        # TODO fencpost error?
-        #        cross = (ys[-1] + ys[0]) / 2
-        #        i = sum(1 if y < cross else 0 for y in ys)
-        #        return xs[i]
-        #    voltages_up = []
-        #    crosses_up = []
-        #    voltages_down = []
-        #    crosses_down = []
-        #    #dirs = []
-        #    for ss, se, _, ys in data:
-        #        delay = get_delay(xs, ys)
-
-        #        if ss > se:
-        #            crosses_up.append(delay)
-        #            voltages_up.append((ss+se)/2)
-        #        else:
-        #            crosses_down.append(delay)
-        #            voltages_down.append((ss+se)/2)
-
-
-        #    template_creation_utils.plot(voltages_up, crosses_up)
-        #    template_creation_utils.plot(voltages_down, crosses_down)
-        #    import matplotlib.pyplot as plt
-        #    plt.plot(voltages_up, crosses_up, '*')
-        #    plt.plot(voltages_down, crosses_down, '+')
-        #    plt.legend('Rising edge', 'Falling edge')
-        #    plt.grid()
-        #    plt.show()
-
-
-
-
-
-        #    # just pass results through
-        #    return results
-
 
     tests = [StaticNonlinearityTest,
              ApertureTest]
-
-
 
