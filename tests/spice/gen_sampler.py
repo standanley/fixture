@@ -50,6 +50,10 @@ print('\n* ignore caps')
 for i, s in enumerate(ignore + ['vdd', 'z_debug']):
     print(f'Cignore{i} {s} 0 1f')
 
+print('\n* add some effect for late clock')
+print('Cslow slow 0 5p')
+print('Mslow slow clk_v2t_l discharge 0 EENMOS w=1u l=0.1u')
+
 print('\n* debug')
 print('Rdebug discharge_0 z_debug 0')
 

@@ -52,6 +52,13 @@ Cignore13 clk_v2tb_gated<1> 0 1f
 Cignore14 vdd 0 1f
 Cignore15 z_debug 0 1f
 
+* add some effect for late clock
+Cslow slow 0 10p
+Mlinvn0 0   clk_v2t_l<0> clk_v2t_l_inv 0   EENMOS w=1u   l=0.1u
+Mlinvp0 vdd clk_v2t_l<0> clk_v2t_l_inv vdd EEPMOS w=0.5u l=0.1u
+Mslown slow clk_v2t_l<0> discharge_0 0 EENMOS w=10u l=0.1u
+Mslowp slow clk_v2t_l_inv discharge_0 vdd EEPMOS w=10u l=0.1u
+
 * debug
 Rdebug discharge_0 z_debug 0
 

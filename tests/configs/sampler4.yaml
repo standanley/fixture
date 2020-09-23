@@ -85,6 +85,7 @@ clks:
     clk_v2t_l:
         145: 1
         20:  0
+        max_jitter: 20
     clk_v2t_lb:
         145: 0
         20:  1

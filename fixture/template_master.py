@@ -278,6 +278,14 @@ class TemplateMaster():
             Return a dict with keys matching parameters and their measured values
             '''
             pass
+
+        def debug(self, tester, port, duration):
+            '''
+            This method will be overridden when the @debug decorator from
+            template_creation_utils is added. Unfortunately this means this
+            input signature has to match
+            '''
+            pass
     
 
     def go(self):

@@ -40,6 +40,8 @@ class Regression():
             bus_index = port.name.index
             return '%s<%d>' % (bus_name, bus_index)
         else:
+            if type(port) == magma.DigitalMeta:
+                return port.name
             print('returning', str(port))
             return str(port)
 

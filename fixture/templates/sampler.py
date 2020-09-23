@@ -14,6 +14,16 @@ class SamplerTemplate(TemplateMaster):
 
         super().__init__(*args, **kwargs)
 
+        clks = self.extras['clks']
+        clks = {k: v for k, v in clks.items() if (k != 'unit' and k != 'period')}
+        domain = []
+        for clk, v in clks.items():
+            if 'max_jitter' in v:
+                x = v['max_jitter']
+                r = RealIn(limits=(-x, x), name=clk+'_jitter')
+                print('test')
+                self.inputs_analog.append(r)
+
         # NOTE this must be after super() because it needs ports to be defined
         assert len(self.ports.out) == len(self.ports.clk), \
             'Must have one clock for each output!'
@@ -25,7 +35,10 @@ class SamplerTemplate(TemplateMaster):
     #def schedule_clk(self, tester, port, value, wait):
     #    tester.poke(port, value, delay={'type': 'future', 'wait': wait})
 
-    def schedule_clk(self, tester, port, value, wait):
+    def get_clock_offset_domain(self):
+        return []
+
+    def schedule_clk(self, tester, port, value, wait, jitters={}):
         clks = self.extras['clks']
         main = self.get_name_circuit(port.name.array)
         unit = float(clks['unit'])
@@ -55,14 +68,18 @@ class SamplerTemplate(TemplateMaster):
 
             for clk in clks:
                 temp = []
+                jitter_name = clk + '_jitter'
+                jitter = jitters.get(jitter_name, 0)
                 for p in range(played_periods):
                     for time, val in clks[clk].items():
+                        if time == 'max_jitter':
+                            continue
                         time_transform = time + (period - period_start_time)
                         if time_transform > period:
                             time_transform -= period
                         #time_transform *= unit
                         time_transform_shift = time_transform + (p - measured_period) * period
-                        temp.append((time_transform_shift, val))
+                        temp.append((time_transform_shift + jitter, val))
                 clks_transform[clk] = sorted(temp)
 
             # shift that one period s.t. the falling edge of the main clk
@@ -97,7 +114,7 @@ class SamplerTemplate(TemplateMaster):
 
     @template_creation_utils.debug
     class StaticNonlinearityTest(TemplateMaster.Test):
-        num_samples = 1
+        num_samples = 1#3
 
         def __init__(self, *args, **kwargs):
             # set parameter algebra before parent checks it
@@ -109,32 +126,34 @@ class SamplerTemplate(TemplateMaster):
             super().__init__(*args, **kwargs)
 
         def input_domain(self):
-            return []
+            return self.template.get_clock_offset_domain()
 
         def testbench(self, tester, values):
+            #print('Chose jitter value', values['clk_v2t_l_jitter'], 'In static test')
             settle =  float(self.extras['clks']['unit']) * float(self.extras['clks']['period'])
             wait = 2 * settle
 
             # To see debug plots, also uncomment debug decorator for this class
             np = self.template.nonlinearity_points
-            self.debug(tester, self.ports.clk[0], np*wait*2.2)
-            self.debug(tester, self.ports.out[0], np*wait*2.2)
-            self.debug(tester, self.ports.in_, np*wait*2.2)
+            debug_time = np * wait * 22
+            self.debug(tester, self.ports.clk[0], debug_time)
+            self.debug(tester, self.ports.out[0], debug_time)
+            self.debug(tester, self.ports.in_, debug_time)
 
-            #self.debug(tester, self.template.dut.z_debug, np*wait*2.2)
+            #self.debug(tester, self.template.dut.z_debug, debug_time)
 
-            self.debug(tester, self.template.dut.clk_v2t_e[0], np * wait * 2.2)
-            #self.debug(tester, self.template.dut.clk_v2t_e[1], np * wait * 2.2)
-            #self.debug(tester, self.template.dut.clk_v2t_eb[0], np * wait * 2.2)
-            #self.debug(tester, self.template.dut.clk_v2t_eb[1], np * wait * 2.2)
-            #self.debug(tester, self.template.dut.clk_v2t_gated[0], np * wait * 2.2)
-            #self.debug(tester, self.template.dut.clk_v2t_gated[1], np * wait * 2.2)
-            self.debug(tester, self.template.dut.clk_v2t_l[0], np * wait * 2.2)
-            #self.debug(tester, self.template.dut.clk_v2t_l[1], np * wait * 2.2)
-            #self.debug(tester, self.template.dut.clk_v2t_lb[0], np * wait * 2.2)
-            #self.debug(tester, self.template.dut.clk_v2t_lb[1], np * wait * 2.2)
-            #self.debug(tester, self.template.dut.clk_v2tb_gated[0], np * wait * 2.2)
-            #self.debug(tester, self.template.dut.clk_v2tb_gated[1], np * wait * 2.2)
+            self.debug(tester, self.template.dut.clk_v2t_e[0], debug_time)
+            #self.debug(tester, self.template.dut.clk_v2t_e[1], debug_time)
+            #self.debug(tester, self.template.dut.clk_v2t_eb[0], debug_time)
+            #self.debug(tester, self.template.dut.clk_v2t_eb[1], debug_time)
+            #self.debug(tester, self.template.dut.clk_v2t_gated[0], debug_time)
+            #self.debug(tester, self.template.dut.clk_v2t_gated[1], debug_time)
+            self.debug(tester, self.template.dut.clk_v2t_l[0], debug_time)
+            #self.debug(tester, self.template.dut.clk_v2t_l[1], debug_time)
+            #self.debug(tester, self.template.dut.clk_v2t_lb[0], debug_time)
+            #self.debug(tester, self.template.dut.clk_v2t_lb[1], debug_time)
+            #self.debug(tester, self.template.dut.clk_v2tb_gated[0], debug_time)
+            #self.debug(tester, self.template.dut.clk_v2tb_gated[1], debug_time)
 
             tester.delay(wait*0.2)
 
@@ -152,7 +171,7 @@ class SamplerTemplate(TemplateMaster):
                 tester.poke(self.ports.clk[0], 1)
                 tester.poke(self.ports.in_, dc)
 
-                self.template.schedule_clk(tester, self.ports.clk[0], 0, wait)
+                self.template.schedule_clk(tester, self.ports.clk[0], 0, wait, values)
                 tester.delay(wait)
 
                 read = self.template.read_value(tester, self.ports.out[0], wait)
@@ -194,7 +213,7 @@ class SamplerTemplate(TemplateMaster):
                            'beta_times_scale2': 'slope_over_scale**2',
                            'gamma_times_scale': 'slope_over_scale'}
         }
-        num_samples = 5
+        num_samples = 20
 
         def input_domain(self):
             limits = self.ports.in_.limits
@@ -203,10 +222,11 @@ class SamplerTemplate(TemplateMaster):
 
             v = RealIn(limits=limits, name='value')
             s = RealIn(limits=(-max_slope, max_slope), name='slope')
-
-            return [v, s]
+            jitter_domain = self.template.get_clock_offset_domain()
+            return [v, s] + jitter_domain
 
         def testbench(self, tester, values):
+            print('Chose jitter value', values['clk_v2t_l_jitter'], 'in dynamic test')
             settle = float(self.extras['clks']['unit']) * float(self.extras['clks']['period'])
             wait = 1 * settle
             v = values['value']
@@ -214,10 +234,11 @@ class SamplerTemplate(TemplateMaster):
 
             # To see debug plots, also uncomment debug decorator for this class
             np = self.template.nonlinearity_points
-            debug_length = np * wait * 10
+            debug_length = np * wait * 30
             self.debug(tester, self.ports.clk[0], debug_length)
             self.debug(tester, self.ports.out[0], debug_length)
             self.debug(tester, self.ports.in_, debug_length)
+            self.debug(tester, self.template.dut.clk_v2t_l[0], debug_length)
 
             tester.delay(wait*0.1)
 
@@ -236,10 +257,10 @@ class SamplerTemplate(TemplateMaster):
                 end = (limits[1] if s > 0 else limits[0])
 
                 t_clk = abs((v - start) / s) # TODO abs unnecessary?
-                self.template.schedule_clk(tester, self.ports.clk[0], 0, t_clk + wait)
+                self.template.schedule_clk(tester, self.ports.clk[0], 0, t_clk + wait*2, values)
 
                 tester.poke(self.ports.in_, start)
-                tester.delay(wait) # because of finite rise time of prev line
+                tester.delay(wait*2) # because of finite rise time of prev line
                 tester.poke(self.ports.in_, 0, delay={
                     'type': 'ramp',
                     'start': start,
@@ -302,7 +323,7 @@ class SamplerTemplate(TemplateMaster):
 
 
         def post_process(self, results):
-            vs, ss, samples, ss_scaled = results.values()
+            vs, ss, jitter, samples, ss_scaled = list(results.values())[:5]
             ss_vpns = [s/1e9 for s in ss]
 
             should_be_1 = 0.996
@@ -329,15 +350,45 @@ class SamplerTemplate(TemplateMaster):
             import matplotlib.pyplot as plt
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='3d')
-            ax.scatter(vs, ss_vpns, samples)
+            ax.scatter(vs, jitter, samples)
             #ax.plot_surface(X, Y, Z, alpha=0.2)
             ax.set_xlabel('Input Value (V)')
-            ax.set_ylabel('Input Slope (V / ns)')
+            #ax.set_ylabel('Input Slope (V / ns)')
+            ax.set_ylabel('clk_v2t_l jitter (units)')
             ax.set_zlabel('Measured (V)')
             plt.show()
 
             return results
+    @template_creation_utils.debug
+    class SineTest(TemplateMaster.Test):
+        num_samples = 1
+        parameter_algebra = {}
 
-    tests = [StaticNonlinearityTest,
+        def input_domain(self):
+            return []
+
+        def testbench(self, tester, values):
+            settle = 0.5 * float(self.extras['clks']['unit']) * float(self.extras['clks']['period'])
+            tester.poke(self.ports.in_, 0, delay={
+                'type': 'sin',
+                'freq': 3e6
+            })
+            tester.poke(self.ports.clk[0], 0, delay={
+                'type': 'clock',
+                'freq': 10e6
+            })
+            debug_length = 1
+            self.debug(tester, self.ports.clk[0], debug_length)
+            self.debug(tester, self.ports.out[0], debug_length)
+            self.debug(tester, self.ports.in_, debug_length)
+            tester.delay(20*settle)
+            return []
+
+        def analysis(self, reads):
+            return reads
+
+
+    tests = [#SineTest,
+             StaticNonlinearityTest,
              ApertureTest]
 

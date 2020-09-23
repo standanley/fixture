@@ -104,8 +104,8 @@ class Testbench():
 
         self.optional_vectors = list(zip(*(samples_oa + samples_oba)))
         self.optional_inputs = self.template.inputs_analog + self.template.inputs_ba
-        self.test_vectors = list(zip(*(samples_ta + samples_tba)))
-        self.test_inputs = test_analog + test_ba
+        self.test_vectors = list(zip(*(samples_ta + samples_tba + samples_oa + samples_oba)))
+        self.test_inputs = test_analog + test_ba + self.optional_inputs
 
         if len(self.optional_vectors) == 0:
             self.optional_vectors = [()] * num_samples
@@ -136,7 +136,15 @@ class Testbench():
 
     def apply_optional_inputs(self, v_optional):
         zipped = zip(self.optional_inputs, v_optional)
+        def circuit_port(x):
+            ports = self.tester.circuit.circuit.interface.ports.values()
+
         for input_, val in zipped:
+            #if input_ in self.tester.circuit.circuit.IO.ports.values():
+            #    self.tester.poke(input_, val)
+            if type(input_) == magma.DigitalMeta:
+                print('Skipping input', input_, 'Because I think it is handled by the test')
+                continue
             self.tester.poke(input_, val)
 
     ''' optional ouput not supported at the moment
