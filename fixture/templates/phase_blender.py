@@ -6,7 +6,7 @@ from fixture.template_creation_utils import debug
 class PhaseBlenderTemplate(TemplateMaster):
     required_ports = ['in_a', 'in_b', 'out']
 
-    @debug
+    #@debug
     class Test1(TemplateMaster.Test):
         parameter_algebra = {
             'out_delay': {'gain':'in_phase_delay', 'offset':'1'}

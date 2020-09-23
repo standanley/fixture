@@ -1,5 +1,5 @@
 from fixture import TemplateMaster
-from fixture import template_creation_utils
+#from fixture import template_creation_utils
 from fixture import BinaryAnalogIn, RealIn
 import math
 
@@ -112,7 +112,7 @@ class SamplerTemplate(TemplateMaster):
     def interpret_value(self, read):
         return read.value
 
-    @template_creation_utils.debug
+    #@template_creation_utils.debug
     class StaticNonlinearityTest(TemplateMaster.Test):
         num_samples = 1#3
 
@@ -201,7 +201,7 @@ class SamplerTemplate(TemplateMaster):
 
             return ret
 
-    @template_creation_utils.debug
+    #@template_creation_utils.debug
     class ApertureTest(TemplateMaster.Test):
 
         # sample_out = should_be_1*value + slope * effective_delay
@@ -359,7 +359,7 @@ class SamplerTemplate(TemplateMaster):
             plt.show()
 
             return results
-    @template_creation_utils.debug
+    #@template_creation_utils.debug
     class SineTest(TemplateMaster.Test):
         num_samples = 1
         parameter_algebra = {}
