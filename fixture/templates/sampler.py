@@ -1,5 +1,5 @@
 from fixture import TemplateMaster
-#from fixture import template_creation_utils
+from fixture import template_creation_utils
 from fixture import BinaryAnalogIn, RealIn
 import math
 
@@ -114,7 +114,7 @@ class SamplerTemplate(TemplateMaster):
 
     #@template_creation_utils.debug
     class StaticNonlinearityTest(TemplateMaster.Test):
-        num_samples = 1#3
+        num_samples = 10#3
 
         def __init__(self, *args, **kwargs):
             # set parameter algebra before parent checks it
@@ -196,8 +196,8 @@ class SamplerTemplate(TemplateMaster):
             #template_creation_utils.plot(xs, results)
             self.template.temp_inv = template_creation_utils.invert_function(xs, results)
 
-            temp = self.template.temp_inv
-            template_creation_utils.plot(temp.y, temp.x)
+            #temp = self.template.temp_inv
+            #template_creation_utils.plot(temp.y, temp.x)
 
             return ret
 
@@ -222,6 +222,7 @@ class SamplerTemplate(TemplateMaster):
 
             v = RealIn(limits=limits, name='value')
             s = RealIn(limits=(-max_slope, max_slope), name='slope')
+            #s = RealIn(limits = (max_slope * .499, max_slope*.5), name = 'slope')
             jitter_domain = self.template.get_clock_offset_domain()
             return [v, s] + jitter_domain
 
@@ -326,12 +327,22 @@ class SamplerTemplate(TemplateMaster):
             vs, ss, jitter, samples, ss_scaled = list(results.values())[:5]
             ss_vpns = [s/1e9 for s in ss]
 
-            should_be_1 = 0.996
-            alpha = -1.46e-12 * 1e9
-            beta = 8.88e-25 * 1e18
-            gamma = -2.37e-13 * 1e9
+            #should_be_1 = 0.996
+            #alpha = -1.46e-12 * 1e9
+            #beta = 8.88e-25 * 1e18
+            #gamma = -2.37e-13 * 1e9
 
-            def f(v, s):
+            def f(v, s, j=0):
+                #should_be_1 = 1.002 + 0.001257 * j
+                #alpha = -0.005951 + 0.0002632 * j
+                #beta = 0.00009227 + 0.000004501 * j
+                #gamma = 0.003088 + (-0.0001502) * j
+
+                should_be_1 = 0.966 + 0.001234 * j
+                alpha = -0.03462 + 0.00216 * j
+                beta = -0.000004797 + 0.000007284 * j
+                gamma = 0.02213 + -0.001437 * j
+
                 return sum([
                     should_be_1 * v,
                     alpha * v*s,
@@ -341,17 +352,19 @@ class SamplerTemplate(TemplateMaster):
 
             import numpy as np
             X = np.arange(min(vs), max(vs), 0.01)
-            Y = np.arange(min(ss_vpns), max(ss_vpns), (max(ss_vpns) - min(ss_vpns))/100)
-            X, Y = np.meshgrid(X, Y)
+            #Y = np.arange(min(ss_vpns), max(ss_vpns), (max(ss_vpns) - min(ss_vpns))/100)
+            J = np.arange(min(jitter), max(jitter), (max(jitter) - min(jitter)) / 100)
+            X, J = np.meshgrid(X, J)
             #Z = [[f(x, y) for x,y in zip(xx, yy)] for xx, yy in zip(X, Y)]
-            Z = f(X, Y)
+            Z = f(X, 0, J)
 
             from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
             import matplotlib.pyplot as plt
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='3d')
             ax.scatter(vs, jitter, samples)
-            #ax.plot_surface(X, Y, Z, alpha=0.2)
+            ax.plot_surface(X, J, Z, alpha=0.5)
+
             ax.set_xlabel('Input Value (V)')
             #ax.set_ylabel('Input Slope (V / ns)')
             ax.set_ylabel('clk_v2t_l jitter (units)')
@@ -359,6 +372,7 @@ class SamplerTemplate(TemplateMaster):
             plt.show()
 
             return results
+
     #@template_creation_utils.debug
     class SineTest(TemplateMaster.Test):
         num_samples = 1
