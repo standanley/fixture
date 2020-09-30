@@ -12,17 +12,31 @@ class SamplerTemplate(TemplateMaster):
         # NOTE this is before super() because it is used for Test instantiation
         self.nonlinearity_points = 3 # 31
 
-        super().__init__(*args, **kwargs)
+        # we have to do this before getting input domains, which happens
+        # in the call to super
+        extras = args[3]
+        if 'clks' in extras:
+            settle = float(extras['clks']['unit']) * float(extras['clks']['period'])
+            extras['approx_settling_time'] = settle
 
-        clks = self.extras['clks']
-        clks = {k: v for k, v in clks.items() if (k != 'unit' and k != 'period')}
-        domain = []
-        for clk, v in clks.items():
-            if 'max_jitter' in v:
-                x = v['max_jitter']
-                r = RealIn(limits=(-x, x), name=clk+'_jitter')
-                print('test')
-                self.inputs_analog.append(r)
+
+        super().__init__(*args, **kwargs)
+        print('TEST 123')
+
+
+        if 'clks' in self.extras:
+            settle = float(self.extras['clks']['unit']) * float(self.extras['clks']['period'])
+            self.extras['approx_settling_time'] = settle
+
+            clks = self.extras['clks']
+            clks = {k: v for k, v in clks.items() if (k != 'unit' and k != 'period')}
+            domain = []
+            for clk, v in clks.items():
+                if 'max_jitter' in v:
+                    x = v['max_jitter']
+                    r = RealIn(limits=(-x, x), name=clk+'_jitter')
+                    print('test')
+                    self.inputs_analog.append(r)
 
         # NOTE this must be after super() because it needs ports to be defined
         assert len(self.ports.out) == len(self.ports.clk), \
@@ -39,6 +53,15 @@ class SamplerTemplate(TemplateMaster):
         return []
 
     def schedule_clk(self, tester, port, value, wait, jitters={}):
+        if 'clks' not in self.extras:
+            main = self.get_name_circuit(port.name.array)
+            tester.poke(port, 0, delay={
+                'type': 'future',
+                'waits': [wait],
+                'values': [value]
+            })
+            return
+
         clks = self.extras['clks']
         main = self.get_name_circuit(port.name.array)
         unit = float(clks['unit'])
@@ -130,7 +153,7 @@ class SamplerTemplate(TemplateMaster):
 
         def testbench(self, tester, values):
             #print('Chose jitter value', values['clk_v2t_l_jitter'], 'In static test')
-            settle =  float(self.extras['clks']['unit']) * float(self.extras['clks']['period'])
+            settle = float(self.extras['approx_settling_time'])
             wait = 2 * settle
 
             # To see debug plots, also uncomment debug decorator for this class
@@ -142,13 +165,13 @@ class SamplerTemplate(TemplateMaster):
 
             #self.debug(tester, self.template.dut.z_debug, debug_time)
 
-            self.debug(tester, self.template.dut.clk_v2t_e[0], debug_time)
+            #self.debug(tester, self.template.dut.clk_v2t_e[0], debug_time)
             #self.debug(tester, self.template.dut.clk_v2t_e[1], debug_time)
             #self.debug(tester, self.template.dut.clk_v2t_eb[0], debug_time)
             #self.debug(tester, self.template.dut.clk_v2t_eb[1], debug_time)
             #self.debug(tester, self.template.dut.clk_v2t_gated[0], debug_time)
             #self.debug(tester, self.template.dut.clk_v2t_gated[1], debug_time)
-            self.debug(tester, self.template.dut.clk_v2t_l[0], debug_time)
+            #self.debug(tester, self.template.dut.clk_v2t_l[0], debug_time)
             #self.debug(tester, self.template.dut.clk_v2t_l[1], debug_time)
             #self.debug(tester, self.template.dut.clk_v2t_lb[0], debug_time)
             #self.debug(tester, self.template.dut.clk_v2t_lb[1], debug_time)
@@ -217,7 +240,7 @@ class SamplerTemplate(TemplateMaster):
 
         def input_domain(self):
             limits = self.ports.in_.limits
-            settle = 0.5 * float(self.extras['clks']['unit']) * float(self.extras['clks']['period'])
+            settle = 0.5 * float(self.extras['approx_settling_time'])
             max_slope = 50 * (limits[1]-limits[0]) / settle
 
             v = RealIn(limits=limits, name='value')
@@ -227,8 +250,8 @@ class SamplerTemplate(TemplateMaster):
             return [v, s] + jitter_domain
 
         def testbench(self, tester, values):
-            print('Chose jitter value', values['clk_v2t_l_jitter'], 'in dynamic test')
-            settle = float(self.extras['clks']['unit']) * float(self.extras['clks']['period'])
+            #print('Chose jitter value', values['clk_v2t_l_jitter'], 'in dynamic test')
+            settle = float(self.extras['approx_settling_time'])
             wait = 1 * settle
             v = values['value']
             s = values['slope']
@@ -239,7 +262,7 @@ class SamplerTemplate(TemplateMaster):
             self.debug(tester, self.ports.clk[0], debug_length)
             self.debug(tester, self.ports.out[0], debug_length)
             self.debug(tester, self.ports.in_, debug_length)
-            self.debug(tester, self.template.dut.clk_v2t_l[0], debug_length)
+            #self.debug(tester, self.template.dut.clk_v2t_l[0], debug_length)
 
             tester.delay(wait*0.1)
 
@@ -324,6 +347,8 @@ class SamplerTemplate(TemplateMaster):
 
 
         def post_process(self, results):
+            # comment out next line for debug plots
+            return results
             vs, ss, jitter, samples, ss_scaled = list(results.values())[:5]
             ss_vpns = [s/1e9 for s in ss]
 
@@ -382,7 +407,7 @@ class SamplerTemplate(TemplateMaster):
             return []
 
         def testbench(self, tester, values):
-            settle = 0.5 * float(self.extras['clks']['unit']) * float(self.extras['clks']['period'])
+            settle = 0.5 * float(self.extras['approx_settling_time'])
             tester.poke(self.ports.in_, 0, delay={
                 'type': 'sin',
                 'freq': 3e6
