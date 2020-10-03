@@ -19,10 +19,7 @@ class SamplerTemplate(TemplateMaster):
             settle = float(extras['clks']['unit']) * float(extras['clks']['period'])
             extras['approx_settling_time'] = settle
 
-
         super().__init__(*args, **kwargs)
-        print('TEST 123')
-
 
         if 'clks' in self.extras:
             settle = float(self.extras['clks']['unit']) * float(self.extras['clks']['period'])
@@ -35,12 +32,18 @@ class SamplerTemplate(TemplateMaster):
                 if 'max_jitter' in v:
                     x = v['max_jitter']
                     r = RealIn(limits=(-x, x), name=clk+'_jitter')
-                    print('test')
                     self.inputs_analog.append(r)
 
         # NOTE this must be after super() because it needs ports to be defined
-        assert len(self.ports.out) == len(self.ports.clk), \
-            'Must have one clock for each output!'
+
+        if not hasattr(self.ports.clk, '__getitem__'):
+            #self.ports.mapping['clk'] = [self.ports.mapping['clk']]
+            #self.ports.mapping['out'] = [self.ports.mapping['out']]
+            pass
+        else:
+            assert len(self.ports.out) == len(self.ports.clk), \
+                'Must have one clock for each output!'
+
 
     def read_value(self, tester, port, wait):
         tester.delay(wait)
@@ -63,12 +66,17 @@ class SamplerTemplate(TemplateMaster):
             return
 
         clks = self.extras['clks']
-        main = self.get_name_circuit(port.name.array)
+        if hasattr(port, '__getitem__'):
+            main = self.get_name_circuit(port.name.array)
+            num_samplers = getattr(self.dut, main).N
+            desired_sampler = port.name.index
+        else:
+            main = self.get_name_circuit(port)
+            num_samplers = 1
+            desired_sampler = 0
         unit = float(clks['unit'])
         period = clks['period']
         clks = {k:v for k,v in clks.items() if (k!='unit' and k!='period')}
-        num_samplers = getattr(self.dut, main).N
-        desired_sampler = port.name.index
 
 
         # To take our measurement we will play through played_periods,
@@ -125,7 +133,12 @@ class SamplerTemplate(TemplateMaster):
                     waits.append(x - t)
                     t = x
                     values.append(value)
-                tester.poke(getattr(self.dut, clk)[i], 0, delay={
+                current_clk_bus = getattr(self.dut, clk)
+                if not hasattr(current_clk_bus, '__getitem__') and i==0:
+                    current_clk = current_clk_bus
+                else:
+                    current_clk = current_clk_bus[i]
+                tester.poke(current_clk, 0, delay={
                     'type': 'future',
                     'waits': waits,
                     'values': values
@@ -140,6 +153,7 @@ class SamplerTemplate(TemplateMaster):
         num_samples = 10#3
 
         def __init__(self, *args, **kwargs):
+            print("STATIC INIT")
             # set parameter algebra before parent checks it
             nl_points = args[0].nonlinearity_points
             self.parameter_algebra = {}
@@ -155,12 +169,13 @@ class SamplerTemplate(TemplateMaster):
             #print('Chose jitter value', values['clk_v2t_l_jitter'], 'In static test')
             settle = float(self.extras['approx_settling_time'])
             wait = 2 * settle
+            clk = self.ports.clk[0] if hasattr(self.ports.clk, '__getitem__') else self.ports.clk
 
             # To see debug plots, also uncomment debug decorator for this class
             np = self.template.nonlinearity_points
             debug_time = np * wait * 22
-            self.debug(tester, self.ports.clk[0], debug_time)
-            self.debug(tester, self.ports.out[0], debug_time)
+            self.debug(tester, clk, debug_time)
+            self.debug(tester, self.ports.out, debug_time)
             self.debug(tester, self.ports.in_, debug_time)
 
             #self.debug(tester, self.template.dut.z_debug, debug_time)
@@ -182,26 +197,32 @@ class SamplerTemplate(TemplateMaster):
 
             # feed through to first output, leave the rest off
             # TODO should maybe leave half open, affects charge sharing?
-            tester.poke(self.ports.clk[0], 1)
-            for p in self.ports.clk[1:]:
-                tester.poke(p, 0)
+            tester.poke(clk, 1)
+            if hasattr(self.ports.clk, '__getitem__'):
+                for p in self.ports.clk[1:]:
+                    tester.poke(p, 0)
 
             limits = self.ports.in_.limits
             num = self.template.nonlinearity_points
             results = []
             for i in range(num):
                 dc = limits[0] + i * (limits[1] - limits[0]) / (num-1)
-                tester.poke(self.ports.clk[0], 1)
+                tester.poke(clk, 1)
                 tester.poke(self.ports.in_, dc)
 
-                self.template.schedule_clk(tester, self.ports.clk[0], 0, wait, values)
+                self.template.schedule_clk(tester, clk, 0, wait, values)
                 tester.delay(wait)
 
-                read = self.template.read_value(tester, self.ports.out[0], wait)
+                if hasattr(self.ports.out, '__getitem__'):
+                    p = self.ports.out[0]
+                else:
+                    p = self.ports.out
+                read = self.template.read_value(tester, p, wait)
 
                 # small delay so value is not changed by start of next test
                 tester.delay(wait * 0.1)
                 results.append((dc, read))
+
             return results
 
         def analysis(self, reads):
@@ -236,7 +257,7 @@ class SamplerTemplate(TemplateMaster):
                            'beta_times_scale2': 'slope_over_scale**2',
                            'gamma_times_scale': 'slope_over_scale'}
         }
-        num_samples = 20
+        num_samples = 2
 
         def input_domain(self):
             limits = self.ports.in_.limits
@@ -255,12 +276,13 @@ class SamplerTemplate(TemplateMaster):
             wait = 1 * settle
             v = values['value']
             s = values['slope']
+            clk = self.ports.clk[0] if hasattr(self.ports.clk, '__getitem__') else self.ports.clk
 
             # To see debug plots, also uncomment debug decorator for this class
             np = self.template.nonlinearity_points
             debug_length = np * wait * 30
-            self.debug(tester, self.ports.clk[0], debug_length)
-            self.debug(tester, self.ports.out[0], debug_length)
+            self.debug(tester, clk, debug_length)
+            self.debug(tester, self.ports.out, debug_length)
             self.debug(tester, self.ports.in_, debug_length)
             #self.debug(tester, self.template.dut.clk_v2t_l[0], debug_length)
 
@@ -268,9 +290,10 @@ class SamplerTemplate(TemplateMaster):
 
             # feed through to first output, leave the rest off
             # TODO should maybe leave half open, affects charge sharing?
-            tester.poke(self.ports.clk[0], 1)
-            for p in self.ports.clk[1:]:
-                tester.poke(p, 0)
+            tester.poke(clk, 1)
+            if hasattr(self.ports.clk, '__getitem__'):
+                for p in self.ports.clk[1:]:
+                    tester.poke(p, 0)
 
             limits = self.ports.in_.limits
             limit_range = abs(limits[1]-limits[0])
@@ -281,7 +304,7 @@ class SamplerTemplate(TemplateMaster):
                 end = (limits[1] if s > 0 else limits[0])
 
                 t_clk = abs((v - start) / s) # TODO abs unnecessary?
-                self.template.schedule_clk(tester, self.ports.clk[0], 0, t_clk + wait*2, values)
+                self.template.schedule_clk(tester, clk, 0, t_clk + wait*2, values)
 
                 tester.poke(self.ports.in_, start)
                 tester.delay(wait*2) # because of finite rise time of prev line
@@ -296,7 +319,11 @@ class SamplerTemplate(TemplateMaster):
                 tester.delay(t_clk)
 
                 # The read_value call actually does delay long enough for the thing to settle
-                read = self.template.read_value(tester, self.ports.out[0], wait)
+                if hasattr(self.ports.out, '__getitem__'):
+                    p = self.ports.out[0]
+                else:
+                    p = self.ports.out
+                read = self.template.read_value(tester, p, wait)
 
                 tester.delay(abs(limit_range/s) - t_clk)
                 tester.delay(wait * 1)
@@ -318,6 +345,8 @@ class SamplerTemplate(TemplateMaster):
 
 
                 tester.poke(self.ports.in_, ss)
+                t_delay = abs((ss-v)/s)
+                self.template.schedule_clk(tester, clk, 0, t_delay + wait*2, values)
                 tester.delay(wait) # because of finite rise time of prev line
                 tester.poke(self.ports.in_, 0, delay={
                     'type': 'ramp',
@@ -327,9 +356,16 @@ class SamplerTemplate(TemplateMaster):
                     'etol': abs(se-ss)/20
                 })
 
-                tester.delay(abs((ss-v)/s))
-                tester.poke(self.ports.clk[0], 0)
-                read = self.template.read_value(tester, self.ports.out[0], wait)
+
+                tester.delay(t_delay)
+                # this is when the clk edge happens, but it's handled
+                # by schedule_clk
+                #tester.poke(clk, 0)
+                if hasattr(self.ports.out, '__getitem__'):
+                    p = self.ports.out[0]
+                else:
+                    p = self.ports.out
+                read = self.template.read_value(tester, p, wait)
 
                 tester.delay(max_ramp_time/2)
                 print('Using full time for slope', s, ', range', ss, se)
@@ -408,16 +444,17 @@ class SamplerTemplate(TemplateMaster):
 
         def testbench(self, tester, values):
             settle = 0.5 * float(self.extras['approx_settling_time'])
+            clk = self.ports.clk[0] if hasattr(self.ports.clk, '__getitem__') else self.ports.clk
             tester.poke(self.ports.in_, 0, delay={
                 'type': 'sin',
                 'freq': 3e6
             })
-            tester.poke(self.ports.clk[0], 0, delay={
+            tester.poke(clk, 0, delay={
                 'type': 'clock',
                 'freq': 10e6
             })
             debug_length = 1
-            self.debug(tester, self.ports.clk[0], debug_length)
+            self.debug(tester, clk, debug_length)
             self.debug(tester, self.ports.out[0], debug_length)
             self.debug(tester, self.ports.in_, debug_length)
             tester.delay(20*settle)
