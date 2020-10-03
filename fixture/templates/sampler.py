@@ -148,9 +148,10 @@ class SamplerTemplate(TemplateMaster):
     def interpret_value(self, read):
         return read.value
 
-    #@template_creation_utils.debug
+    @template_creation_utils.debug
     class StaticNonlinearityTest(TemplateMaster.Test):
         num_samples = 10#3
+        debug_name = 'static_nonlinearity_test'
 
         def __init__(self, *args, **kwargs):
             print("STATIC INIT")
@@ -245,8 +246,9 @@ class SamplerTemplate(TemplateMaster):
 
             return ret
 
-    #@template_creation_utils.debug
+    @template_creation_utils.debug
     class ApertureTest(TemplateMaster.Test):
+        debug_name = 'aperture_test'
 
         # sample_out = should_be_1*value + slope * effective_delay
         # effective_delay = alpha*value + beta*slope + gamma*1

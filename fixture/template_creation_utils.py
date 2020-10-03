@@ -141,7 +141,9 @@ def debug(test):
                     bump += 0.0 # useful for separating clock signals
                 plt.grid()
                 plt.legend(leg)
-                plt.show()
+                name = getattr(self, 'debug_name', 'test')
+                plt.savefig(name + '_plot')
+                #plt.show()
                 self.debug_plot_shown = True
 
             return super().analysis(reads_orig)

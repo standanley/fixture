@@ -1,7 +1,8 @@
 coreir
-magma-lang
+magma-lang=2.0.59
 fault
 statsmodels
 kratos
 vcdvcd
+matplotlib
 
