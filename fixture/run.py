@@ -114,6 +114,7 @@ def _run(circuit_config_dict):
     params_by_mode = t.go()
 
     for mode, results in params_by_mode.items():
+        print('\n\nFinal results:')
         print('For mode', mode)
         print('param\tterm\tcoef')
         for param, d in results.items():

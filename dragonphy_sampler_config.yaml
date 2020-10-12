@@ -1,15 +1,19 @@
-name: sampler5
-filepath: ../spice/sampler5.sp
+name: <TODO: insert name of spice subckt>
+filepath: <TODO: insert filepath for spice file (.sp or .spf probably)"
 template: SamplerCustomTemplate
 pin:
-    vdd:
-        direction: input
-        datatype: real
-        value: 1.2
+    # <TODO: in my test, the .subckt has a vdd input which I set up to be 1.2 volts below (commented out).
+    # I'm not sure if your vdd is set up as an input to the sampler, so you might need something different.
+    #vdd:
+    #    direction: input
+    #    datatype: real
+    #    value: 1.2
+
+    # Next are the inputs set up based on the verilog chip source
     Vin:
         direction: input
         datatype: real
-        value: (0.6, 0.7)
+        value: <TODO: put a range of input value, in Volts, in parentheses this spot, like "(0, 0.4)">
         template_pin: in_
     clk_v2t:
         direction: input
@@ -60,6 +64,8 @@ pin:
     #    width: 31
     #    value: 0
 
+    # <TODO: right now I pinned all 32 bits of ctl to zero instead of characterizing it. If 0 is a
+    # bad default input value, you can change the bits to a different voltage.>
     ctl<0>:
         direction: input
         datatype: real
@@ -190,10 +196,13 @@ pin:
         value: 0
 
 
-test_config_file: spectre.yaml #ngspice_sampler.yaml
-
+# <TODO: here I put the nominal behavior of the clocks. The period is set to 250ns, so
+# clk_v2t goes high after 125ns and then low again at 250. >
+# <TODO: if you want to characterize with respect to jitter, you can add the maximum allowed
+# jitter to any clock except the main one. If you uncomment the max_jitter line in clk_v2t_l,
+# it will characterize the sampler with clk_v2t_l coming between 20ns early and 20ns late.>
 clks:
-    unit: 4e-7
+    unit: 1e-9
     period: 250
 
     clk_v2t:
@@ -224,4 +233,9 @@ clks:
     clk_v2tb_gated:
         125: 0
         250: 1
+
+# <TODO: this points to another file that has some information about the simulator. Right now it's set
+# up to use spectre and you should not have to edit it. But if you need to add more command line args
+# to spectre, that is the place to do it.>
+test_config_file: dragonphy_test_spectre.yaml
 
