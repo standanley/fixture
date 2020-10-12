@@ -1,4 +1,3 @@
-git checkout dragonphy_prep
 ./install_fault.sh
 pip install -e .
 
