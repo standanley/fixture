@@ -10,7 +10,7 @@ class SamplerTemplate(TemplateMaster):
     def __init__(self, *args, **kwargs):
         # Some magic constants, maybe pull these from config?
         # NOTE this is before super() because it is used for Test instantiation
-        self.nonlinearity_points = 3 # 31
+        self.nonlinearity_points = 5 # 31
 
         # we have to do this before getting input domains, which happens
         # in the call to super
@@ -150,7 +150,7 @@ class SamplerTemplate(TemplateMaster):
 
     @template_creation_utils.debug
     class StaticNonlinearityTest(TemplateMaster.Test):
-        num_samples = 10#3
+        num_samples = 10
         debug_name = 'static_nonlinearity_test'
 
         def __init__(self, *args, **kwargs):
@@ -259,7 +259,7 @@ class SamplerTemplate(TemplateMaster):
                            'beta_times_scale2': 'slope_over_scale**2',
                            'gamma_times_scale': 'slope_over_scale'}
         }
-        num_samples = 2
+        num_samples = 30
 
         def input_domain(self):
             limits = self.ports.in_.limits
