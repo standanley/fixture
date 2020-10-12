@@ -1,6 +1,9 @@
+#!/bin/bash
 ./install_fault.sh
+pip install -r requirements.txt
 pip install -e .
 
+clear
 echo ""
 echo ""
 echo "You may need to 'module load spectre' and/or 'module load hspice'"
