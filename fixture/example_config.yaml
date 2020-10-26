@@ -1,0 +1,45 @@
+template: PhaseBlenderTemplate
+
+spice_name: myspicesubckt
+spice_io:
+  vdd:
+    direction: input
+    datatype: real
+    value: 1.2
+  vss:
+    direction: input
+    datatype: real
+    value: 0
+  phase<0>:
+    direction: input
+    datatype: digital
+    template_name: phase_a
+  phase<1>:
+    direction: input
+    datatype: digital
+    template_name: phase_b
+  phase_out:
+    direciton: output
+    datatype: digital
+
+  # optional
+  en:
+    direction: input
+    datatype: digital
+  v_bias:
+    direction: input
+    datatype: analog
+    value: (0.4, 0.8)
+  adj<7:0>:
+    direction: input
+    datatype: binary_analog
+
+template_info:
+  input_phase_diff:
+    value: (0.2, 0.3)
+
+test_info:
+  test1:
+    enable: True
+    samples: 20
+
