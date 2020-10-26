@@ -38,43 +38,37 @@ class EmptyTemplate():
             self.dut = dut
             self.mapping = {}
 
-        def map(self, spice_name, template_name,
-                spice_index=None, template_index=None):
+        def map(self, spice_name, template_name):
+            # recall that spice buses will always be expanded at this point
+
+            def assign_template(name, val):
+                '''
+                return "val", but if "name" is an entry in a bus, have "val"
+                packed appropriately into a list (or nested list). "existing"
+                is either nothing or a partially-populated list to be used
+                '''
+                #m = re.match('(.*)\\[[(0-9)]+\\](.*)', template_name)
+                indices = [g[1:-1] for g in re.findall('<[0-9]+>', name)]
+                name = re.match('^(.*?)(<[0-9]+>)*$').group(1)
+
+                def rec(x, indices):
+                    if len(indices)==0:
+                        return val
+                    i = indices[0]
+                    if x is None:
+                        x = []
+                    assert type(x) == list, f'Cannot overwrite value {x} with remaining indices {name}{indices}={val}'
+                    if len(x) < i+1:
+                        x += [None] * (i+1-len(x))
+                    x[i] = rec(x[i], indices[1:])
+                    return x
+
+                x = self.mapping.get(name, None)
+                v = rec(x, indices)
+                self.mapping[name] = v
+
             spice = getattr(self.dut, spice_name)
-
-            # helper function to create/expand template bus list and make entry
-            def template_bus_entry(spice_single):
-                if template_name not in self.mapping:
-                    self.mapping[template_name] = []
-                spice_entries = self.mapping[template_name]
-                if template_index >= len(spice_entries):
-                    num_missing = template_index - len(spice_entries) + 1
-                    spice_entries += [None] * num_missing
-                spice_entries[template_index] = spice_single
-
-            if spice_index is None and template_index is None:
-                if hasattr(spice, '__getitem__'):
-                    # whole-bus to whole-bus mapping
-                    spice_entries = []
-                    for port in spice:
-                        spice_entries.append(port)
-                    self.mapping[template_name] = spice_entries
-                else:
-                    # regular non-bus to non-bus
-                    self.mapping[template_name] = spice
-
-            elif spice_index is not None and template_index is None:
-                self.mapping[template_name] = spice[spice_index]
-
-            elif spice_index is None and template_index is not None:
-                template_bus_entry(spice)
-
-            elif spice_index is not None and template_index is not None:
-                template_bus_entry(spice[spice_index])
-
-            else:
-                # pretty sure we covered all cases
-                assert False
+            assign_template(template_name, spice)
 
 
         def __getattr__(self, item):
@@ -321,6 +315,7 @@ def parse_cfg(circuit_config_filename):
              'mybus<0>: {abc: def, 'template_name': 'req[3][0]'}}
             '''
             name = break_bus_name(pin_name)
+            # TODO: allow template_name to be a bus range
             if type(name) is str:
                 return {pin_name: pin_dict}
             else:
