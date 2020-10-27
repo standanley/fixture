@@ -1,5 +1,8 @@
 import fixture
+import magma
+from fixture import real_types
 import re
+import ast
 import yaml
 
 class SignalIn():
@@ -8,21 +11,22 @@ class SignalIn():
                  type_,
                  auto_set,
                  spice_name,
-                 template_name,
-                 bus_name,
-                 bus_i
+                 template_name#,
+                 #bus_name,
+                 #bus_i
             ):
+        # TODO: do we need bus info?
         self.value = value
         self.type_ = type_
         self.auto_set = auto_set
         self.spice_name = spice_name
         self.template_name = template_name
-        self.bus_name = bus_name
-        self.bus_i = bus_i
+        #self.bus_name = bus_name
+        #self.bus_i = bus_i
 
 
 class EmptyTemplate():
-    def __init__(self, config_data):
+    def __init__(self, config_data, dut):
         # Make sure template writer is doing things correctly
         assert hasattr(self, 'tests'), 'Template writer must designate tests'
         self.Test.template = self
@@ -30,7 +34,8 @@ class EmptyTemplate():
         # Now actual work that every template does
         self.signals_in = []
         self.buses_in = {}
-        self.parse_pin_info(config_data)
+        self.spice= self.Mapping(dut)
+        self.parse_spice_info(config_data['spice_io'])
 
 
     class Mapping():
@@ -49,7 +54,7 @@ class EmptyTemplate():
                 '''
                 #m = re.match('(.*)\\[[(0-9)]+\\](.*)', template_name)
                 indices = [g[1:-1] for g in re.findall('<[0-9]+>', name)]
-                name = re.match('^(.*?)(<[0-9]+>)*$').group(1)
+                name = re.match('^(.*?)(<[0-9]+>)*$', name).group(1)
 
                 def rec(x, indices):
                     if len(indices)==0:
@@ -79,14 +84,19 @@ class EmptyTemplate():
                 #assert False, f'No required port named "{item}"'
 
 
-    def parse_pin_info(self, pin_info):
+    def parse_spice_info(self, pin_info):
         self.signals = []
+        for name in pin_info:
+            d = pin_info[name]
+            d['spice_name'] = name
+            s = self.create_signal_in(d)
+            self.signals.append(d)
 
     def check_name_for_bus(self, name):
         '''
-        'myname' -> (False, None, None)
-        'myname<5> -> (True, 'myname', 5>
-        'myname<5><10> -> (True, 'myname<5>', 10)
+        'myname'  -> (False, None, None)
+        'myname< 5> -> (True, 'myname', 5>
+        'myname< 5><10> -> (True, 'myname<5>', 10)
         '''
         assert False, 'use break_bus_name instead?'
         if name == None:
@@ -120,27 +130,38 @@ class EmptyTemplate():
         value = pin_dict.get('value', None)
         type_ = pin_dict.get('type', 'analog')
         get_random = pin_dict.get('get_random',
-            (type(self.value) == tuple) or (type_ == 'binary_analog' and value == None))
+            (type(value) == tuple) or (type_ == 'binary_analog' and value == None))
         auto_set = pin_dict.get('auto_set',
             get_random or type(value) == int or type(value) == float)
         spice_name = pin_dict.get('spice_name', None)
-        template_name = pin_dict.get('template_pin', None)
+        template_name = pin_dict.get('template_name', None)
 
         # now think about buses
         # TODO right now we have no way of knowing whether a required pin
         # is a required bus, so we can't do all the sanity checks we want
-        is_entire_spice_bus = (spice_name is not None) and ('width' in pin_dict)
-        is_entry_in_spice_bus, spice_bus_name, spice_bus_i = \
-            self.check_name_for_bus(spice_name)
-        is_entry_in_req_bus, req_bus_name, req_bus_i = \
-            self.check_name_for_bus(template_name)
+        #is_entire_spice_bus = (spice_name is not None) and ('width' in pin_dict)
+        #is_entry_in_spice_bus, spice_bus_name, spice_bus_i = \
+        #    self.check_name_for_bus(spice_name)
+        #is_entry_in_req_bus, req_bus_name, req_bus_i = \
+        #    self.check_name_for_bus(template_name)
 
-        if template_name is not None and spice_name is not None:
-            spice_map_name = spice_bus_name if is_entry_in_spice_bus else spice_name
-            template_map_name = req_bus_name if is_entry_in_req_bus else template_name
-            self.spice.map(spice_map_name, template_map_name,
-                           spice_index = spice_bus_i,
-                           template_index = req_bus_i)
+        #if template_name is not None and spice_name is not None:
+        #    spice_map_name = spice_bus_name if is_entry_in_spice_bus else spice_name
+        #    template_map_name = req_bus_name if is_entry_in_req_bus else template_name
+        #    self.spice.map(spice_map_name, template_map_name,
+        #                   spice_index = spice_bus_i,
+        #                   template_index = req_bus_i)
+
+        if spice_name is not None and template_name is not None:
+            self.spice.map(spice_name, template_name)
+
+        s = SignalIn(
+            value,
+            type_,
+            auto_set,
+            spice_name,
+            template_name,
+        )
 
 
 
@@ -291,20 +312,21 @@ def break_bus_name(bus_name):
 
 def parse_cfg(circuit_config_filename):
     with open(circuit_config_filename) as f:
-        #d = yaml.safe_load(f)
+        d = yaml.safe_load(f)
         #d['filename'] = circuit_config_filename
 
-        #assert 'template' in d
-        #assert 'spice_name' in d
-        #assert 'spice_io' in d
+        assert 'template' in d
+        assert 'spice_name' in d
+        assert 'spice_io' in d
 
-        d = {
-            'spice_io': {
-                'bus1<2:0>[0:1]': {'dtype': 1, 'template_name': 'req'},
-                'sampler_clk_only': {'template_name': 'clk[0]'},
-                'pb<0>': {'template_name': 'pb_a'}
-            }
-        }
+
+        #d = {
+        #    'spice_io': {
+        #        'bus1<2:0>[0:1]': {'dtype': 1, 'template_name': 'req'},
+        #        'sampler_clk_only': {'template_name': 'clk[0]'},
+        #        'pb<0>': {'template_name': 'pb_a'}
+        #    }
+        #}
 
         # edit spice pins to break buses into their individual components
         def break_bus(pin_name, pin_dict):
@@ -333,14 +355,43 @@ def parse_cfg(circuit_config_filename):
         spice_io = d['spice_io']
         new_spice_io = {}
         for pin_name in spice_io.keys():
-            # TODO extract bus delim?
+            # TODO extract bus delim? update: I forgot why I wanted this...
             new_spice_io.update(break_bus(pin_name, spice_io[pin_name]))
         print(new_spice_io)
+        d['spice_io'] = new_spice_io
+
+        return d
 
 
 
 
 if __name__ == '__main__':
+
+
+    parsed = parse_cfg('./tests/configs/new_parameterized_amp.yaml')
+
+    # generate IO
+    io = []
+    pins = parsed['spice_io']
+    for name, p in pins.items():
+        dt = getattr(real_types, p['datatype'])
+        value = ast.literal_eval(str(p.get('value', None)))
+        dt = dt(value)
+        direction = getattr(real_types, p['direction'])
+        dt = direction(dt)
+        if 'width' in p:
+            dt = real_types.Array(p['width'], dt)
+        io += [name, dt]
+
+
+    class UserCircuit(magma.Circuit):
+        name = parsed['spice_name']
+        IO = io
+
+    t = fixture.SimpleAmpTemplate(parsed, UserCircuit)
+
+
+    exit()
 
     #print(EmptyTemplate.check_name_for_bus(None, 'testing<02>'))
     #print(EmptyTemplate.check_name_for_bus(None, 'testing<02>[50]'))

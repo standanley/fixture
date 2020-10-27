@@ -1,0 +1,49 @@
+spice_name: myamp_params
+filepath: ../spice/myamp_params.sp
+template: SimpleAmpTemplate
+spice_io:
+    vdd:
+        direction: input
+        datatype: real
+        value: 1.2
+    vss:
+        direction: input
+        datatype: real
+        value: 0
+    my_in:
+        direction: input
+        datatype: real
+        value: (.2, 1.0)
+        template_name: in_single
+    adj:
+        direction: input
+        datatype: real
+        value: (.45, .55)
+    ba:
+        direction: input
+        datatype: binary_analog
+        width: 4
+    # TODO true digital
+    ctrl<1:0>:
+        direction: input
+        datatype: real
+        value: 1.2
+    my_out:
+        direction: output
+        datatype: real
+        template_name: out_single
+    # todo arbitrary output?
+    vdd_internal:
+        direction: output
+        datatype: real
+
+template_info:
+    approx_settling_time:
+        value: 1e-3
+
+test_info:
+    Test1:
+        enable: True
+        samples: 20
+
+test_config_file: ngspice.yaml

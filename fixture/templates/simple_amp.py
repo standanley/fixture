@@ -1,9 +1,10 @@
-from fixture import TemplateMaster
+#from fixture import TemplateMaster
+from fixture.create_testbench2 import EmptyTemplate
 
-class SimpleAmpTemplate(TemplateMaster):
+class SimpleAmpTemplate(EmptyTemplate):
     required_ports = ['in_single', 'out_single']
 
-    class Test1(TemplateMaster.Test):
+    class Test1(EmptyTemplate.Test):
         parameter_algebra = {
             'amp_output': {'dcgain': 'in_single', 'offset': '1'}
         }
