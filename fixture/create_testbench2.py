@@ -9,6 +9,7 @@ class SignalIn():
     def __init__(self,
                  value,
                  type_,
+                 get_random,
                  auto_set,
                  spice_name,
                  template_name#,
@@ -18,6 +19,7 @@ class SignalIn():
         # TODO: do we need bus info?
         self.value = value
         self.type_ = type_
+        self.get_random = get_random
         self.auto_set = auto_set
         self.spice_name = spice_name
         self.template_name = template_name
@@ -33,8 +35,11 @@ class EmptyTemplate():
 
         # Now actual work that every template does
         self.signals_in = []
+        # NOTE each instance of test will make its own copy on instantiation
+        self.Test.signals_in = self.signals_in
         self.buses_in = {}
-        self.spice= self.Mapping(dut)
+        self.spice = self.Mapping(dut)
+        self.Test.spice = self.spice
         self.parse_spice_info(config_data['spice_io'])
 
 
@@ -85,36 +90,11 @@ class EmptyTemplate():
 
 
     def parse_spice_info(self, pin_info):
-        self.signals = []
         for name in pin_info:
             d = pin_info[name]
             d['spice_name'] = name
             s = self.create_signal_in(d)
-            self.signals.append(d)
-
-    def check_name_for_bus(self, name):
-        '''
-        'myname'  -> (False, None, None)
-        'myname< 5> -> (True, 'myname', 5>
-        'myname< 5><10> -> (True, 'myname<5>', 10)
-        '''
-        assert False, 'use break_bus_name instead?'
-        if name == None:
-            return (False, None, None)
-
-        def regex_escape(c):
-            if c in '[]\\^()|':
-                return '\\'+c
-            else:
-                return c
-        # NOTE these delims are searched for with regex, so [] need escaping
-        delims = ['<>', '[]']
-        for delim in delims:
-            open, close = regex_escape(delim[0]), regex_escape(delim[1])
-            match = re.match(f'^(.*){open}([0-9]*?){close}$', name)
-            if match:
-                return (True, match.group(1), int(match.group(2)))
-        return (False, None, None)
+            self.signals_in.append(s)
 
     #def create_signal_in(
     #        self,
@@ -158,10 +138,12 @@ class EmptyTemplate():
         s = SignalIn(
             value,
             type_,
+            get_random,
             auto_set,
             spice_name,
             template_name,
         )
+        return s
 
 
 
@@ -173,7 +155,7 @@ class EmptyTemplate():
         '''
         The sequence for a test is:
             __init__, which might set parameter algebra or calculate number of datapoints
-            get_signals
+            set_signals
             for i in range(num_points):
                 testbench
             run spice simulation
@@ -184,6 +166,9 @@ class EmptyTemplate():
             post_process2
 
         '''
+        def __init__(self):
+            # we will probably edit the signals to add test-specific ones
+            self.signals_in = self.signals_in.copy()
 
         '''
         The first three methods will almost always be overridden
@@ -191,8 +176,8 @@ class EmptyTemplate():
 
         parameter_algebra = []
 
-        def get_signals(self):
-            print('Running default get_signals')
+        def set_signals(self):
+            print('Running default set_signals')
             return []
 
         def testbench(self):
@@ -207,8 +192,29 @@ class EmptyTemplate():
         The remaining methods will usually not be overridden
         '''
 
+        def get_signal_by_template_name(self, name):
+            for s in self.signals_in:
+                if s.template_name == name:
+                    return s
+            for s in self.signals_out:
+                if s.template_name == name:
+                    return s
+            return None
+
+        def __getattr__(self, item):
+            s = self.get_signal_by_template_name(item)
+            if s:
+                return s
+            else:
+                # TODO do I return this?
+                return super()
+
 
 class TestbenchCreator:
+
+    def __init__(self, template):
+        self.template = template
+        #self.test = test
 
     def get_random(self, signals):
         analog = []
@@ -216,9 +222,9 @@ class TestbenchCreator:
         for s in signals:
             print(s)
             if s.get_random:
-                if s.type == 'analog':
+                if s.type_ == 'analog':
                     analog.append(s)
-                elif s.type == 'binary_analog':
+                elif s.type_ == 'binary_analog':
                     ba.append(s)
         samples = fixture.Sampler.get_orthogonal_samples(
             len(analog),
@@ -233,20 +239,21 @@ class TestbenchCreator:
 
         random = {}
         for s, r in zip(analog + ba, samples_T):
-            if s.type == 'analog':
+            if s.type_ == 'analog':
                 r = [scale(x, s.value) for x in r]
             random[s] = r
         return random
 
 
     def run(self, test):
-        assert isinstance(test, EmptyTemplate.Test)
+        assert isinstance(test, self.template.Test)
 
-        my_signals = self.get_signals()
-        self.signals = self.template.signals + my_signals
+        #my_signals = self.get_signals()
+        # TODO don't overwrite signals
+        test.set_signals()
 
         # get random inputs
-        self.random = self.get_random(self.signals)
+        self.random = self.get_random(test.signals_in)
         print('got random')
 
 class AmpTemplate(EmptyTemplate):
@@ -264,19 +271,6 @@ class AmpTemplate(EmptyTemplate):
 
     tests = [DCTest]
 
-
-
-#def create_testbench(test):
-#    assert isinstance(test, EmptyTemplate.Test)
-#
-#    test_signals = test.get_signals()
-
-def run(template, test_info):
-    assert isinstance(template, EmptyTemplate)
-
-    for test_name in test_info:
-        test = getattr(template, test_name)()
-        assert isinstance(test, EmptyTemplate.Test)
 
 def break_bus_name(bus_name):
     '''
@@ -355,8 +349,12 @@ def parse_cfg(circuit_config_filename):
         spice_io = d['spice_io']
         new_spice_io = {}
         for pin_name in spice_io.keys():
+            pin_d = spice_io[pin_name]
+            if 'value' in pin_d:
+                value = ast.literal_eval(str(pin_d['value']))
+                pin_d['value'] = value
             # TODO extract bus delim? update: I forgot why I wanted this...
-            new_spice_io.update(break_bus(pin_name, spice_io[pin_name]))
+            new_spice_io.update(break_bus(pin_name, pin_d))
         print(new_spice_io)
         d['spice_io'] = new_spice_io
 
@@ -375,7 +373,8 @@ if __name__ == '__main__':
     pins = parsed['spice_io']
     for name, p in pins.items():
         dt = getattr(real_types, p['datatype'])
-        value = ast.literal_eval(str(p.get('value', None)))
+        #value = ast.literal_eval(str(p.get('value', None)))
+        value = p.get('value', None)
         dt = dt(value)
         direction = getattr(real_types, p['direction'])
         dt = direction(dt)
@@ -389,27 +388,17 @@ if __name__ == '__main__':
         IO = io
 
     t = fixture.SimpleAmpTemplate(parsed, UserCircuit)
+    test1 = t.tests[0]()
+    tc = TestbenchCreator(t)
+    tc.run(test1)
 
 
     exit()
-
-    #print(EmptyTemplate.check_name_for_bus(None, 'testing<02>'))
-    #print(EmptyTemplate.check_name_for_bus(None, 'testing<02>[50]'))
-    #print(EmptyTemplate.check_name_for_bus(None, 'testing<0g>'))
-    #print(EmptyTemplate.check_name_for_bus(None, 'testing<0g>hi'))
-    print(break_bus_name('testing<02:5>'))
-    print(break_bus_name('testing<2:0>[5:0]'))
-    print(break_bus_name('testing<0:g>'))
-    print(break_bus_name('testing<0:5>hi'))
 
     parse_cfg('fixture/example_config.yaml')
 
     template_name = AmpTemplate
 
-
     tt = AmpTemplate('pin_info 456')
     c = tt.DCTest()
     c.run()
-
-
-    print('done')

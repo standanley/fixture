@@ -9,15 +9,16 @@ class SimpleAmpTemplate(EmptyTemplate):
             'amp_output': {'dcgain': 'in_single', 'offset': '1'}
         }
 
-        def input_domain(self):
+        def set_signals(self):
             # could also use fixture.RealIn(self.in_single.limits, 'my_name')
-            return [self.ports.in_single]
+            in_ = self.in_single
+            in_.get_random = True
 
         def testbench(self, tester, values):
-            tester.poke(self.ports.in_single, values['in_single'])
+            tester.poke(self.spice.in_single, values['in_single'])
             wait_time = float(self.extras['approx_settling_time'])*2
             tester.delay(wait_time)
-            return tester.get_value(self.ports.out_single)
+            return tester.get_value(self.spice.out_single)
 
         def analysis(self, reads):
             results = {'amp_output': reads.value}
