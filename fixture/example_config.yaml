@@ -39,7 +39,6 @@ template_info:
     value: (0.2, 0.3)
 
 test_info:
-  test1:
-    enable: True
+  Test1:
     samples: 20
 

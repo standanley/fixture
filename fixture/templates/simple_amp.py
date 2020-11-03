@@ -16,7 +16,7 @@ class SimpleAmpTemplate(EmptyTemplate):
 
         def testbench(self, tester, values):
             tester.poke(self.spice.in_single, values['in_single'])
-            wait_time = float(self.extras['approx_settling_time'])*2
+            wait_time = float(self.info['approx_settling_time'])*2
             tester.delay(wait_time)
             return tester.get_value(self.spice.out_single)
 

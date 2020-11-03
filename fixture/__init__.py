@@ -10,4 +10,4 @@ from .create_testbench import Testbench
 from .dump_yaml import dummy_dump
 from .regression import Regression
 from .mgenero_interface import dump_yaml
-from .run import run
+from .run import run, path_relative
