@@ -1,0 +1,227 @@
+name: sampler5
+filepath: ../spice/sampler5.sp
+template: SamplerCustomTemplate
+pin:
+    vdd:
+        direction: input
+        datatype: real
+        value: 1.2
+    Vin:
+        direction: input
+        datatype: real
+        value: (0.6, 0.7)
+        template_pin: in_
+    clk_v2t:
+        direction: input
+        datatype: bit
+        template_pin: clk
+        #width: 1
+    clk_v2tb:
+        direction: input
+        datatype: bit
+        template_pin: ignore
+    clk_v2t_e:
+        direction: input
+        datatype: bit
+        template_pin: ignore
+    clk_v2t_eb:
+        direction: input
+        datatype: bit
+        template_pin: ignore
+    clk_v2t_l:
+        direction: input
+        datatype: bit
+        template_pin: ignore
+    clk_v2t_lb:
+        direction: input
+        datatype: bit
+        template_pin: ignore
+    clk_v2t_gated:
+        direction: input
+        datatype: bit
+        template_pin: ignore
+    clk_v2tb_gated:
+        direction: input
+        datatype: bit
+        template_pin: ignore
+    v2t_out:
+        direction: output
+        datatype: real
+        template_pin: out
+    vcal:
+        direction: input
+        datatype: real
+        value: 0.5
+
+    # Use this to characterize with respect to ctl
+    #ctl:
+    #    direction: input
+    #    datatype: binary_analog
+    #    width: 31
+    #    value: 0
+
+    ctl<0>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<1>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<2>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<3>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<4>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<5>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<6>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<7>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<8>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<9>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<10>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<11>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<12>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<13>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<14>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<15>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<16>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<17>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<18>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<19>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<20>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<21>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<22>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<23>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<24>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<25>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<26>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<27>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<28>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<29>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<30>:
+        direction: input
+        datatype: real
+        value: 0
+    ctl<31>:
+        direction: input
+        datatype: real
+        value: 0
+
+
+test_config_file: spectre.yaml #ngspice_sampler.yaml
+
+clks:
+    unit: 4e-7
+    period: 250
+
+    clk_v2t:
+        125: 1
+        250: 0
+    clk_v2tb:
+        125: 0
+        250: 1
+
+    clk_v2t_e:
+        105: 1
+        230: 0
+    clk_v2t_eb:
+        105: 0
+        230: 1
+
+    clk_v2t_l:
+        145: 1
+        20:  0
+        #max_jitter: 20
+    clk_v2t_lb:
+        145: 0
+        20:  1
+
+    clk_v2t_gated:
+        125: 1
+        250: 0
+    clk_v2tb_gated:
+        125: 0
+        250: 1
+

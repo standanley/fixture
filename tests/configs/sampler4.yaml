@@ -68,32 +68,32 @@ clks:
     unit: 4e-7
     period: 250
 
-    clk_v2t:
+    clk_v2t<0>:
         125: 1
         250: 0
-    clk_v2tb:
+    clk_v2tb<0>:
         125: 0
         250: 1
 
-    clk_v2t_e:
+    clk_v2t_e<0>:
         105: 1
         230: 0
-    clk_v2t_eb:
+    clk_v2t_eb<0>:
         105: 0
         230: 1
 
-    clk_v2t_l:
+    clk_v2t_l<0>:
         145: 1
         20:  0
         max_jitter: 20
-    clk_v2t_lb:
+    clk_v2t_lb<0>:
         145: 0
         20:  1
 
-    clk_v2t_gated:
+    clk_v2t_gated<0>:
         125: 1
         250: 0
-    clk_v2tb_gated:
+    clk_v2tb_gated<0>:
         125: 0
         250: 1
 
