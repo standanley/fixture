@@ -5,20 +5,57 @@ from .real_types import BinaryAnalogType
 from abc import ABC, abstractmethod
 import fixture
 import fixture.real_types as rt
+import re
 
 class TemplateMaster():
 
     class Ports():
-        def __init__(self, dut, mapping):
+        def __init__(self, dut):
             self.dut = dut
-            self.mapping = mapping
+            self.mapping = {}
+
+        def by_signal(self, s):
+            assert s.spice_name is not None, 'Can only get spice object for signal with spice_name'
+            return getattr(self.dut, s.spice_name)
+
+        def map(self, spice_name, template_name):
+            # recall that spice buses will always be expanded at this point
+
+            def assign_template(name, val):
+                '''
+                return "val", but if "name" is an entry in a bus, have "val"
+                packed appropriately into a list (or nested list). "existing"
+                is either nothing or a partially-populated list to be used
+                '''
+                # m = re.match('(.*)\\[[(0-9)]+\\](.*)', template_name)
+                indices = [g[1:-1] for g in re.findall('<[0-9]+>', name)]
+                name = re.match('^(.*?)(<[0-9]+>)*$', name).group(1)
+
+                def rec(x, indices):
+                    if len(indices) == 0:
+                        return val
+                    i = indices[0]
+                    if x is None:
+                        x = []
+                    assert type(
+                        x) == list, f'Cannot overwrite value {x} with remaining indices {name}{indices}={val}'
+                    if len(x) < i + 1:
+                        x += [None] * (i + 1 - len(x))
+                    x[i] = rec(x[i], indices[1:])
+                    return x
+
+                x = self.mapping.get(name, None)
+                v = rec(x, indices)
+                self.mapping[name] = v
+
+            spice = getattr(self.dut, spice_name)
+            assign_template(template_name, spice)
 
         def __getattr__(self, item):
             if item in self.mapping:
-                return getattr(self.dut, self.mapping[item])
+                return self.mapping[item]
             else:
                 super()
-                #assert False, f'No required port named "{item}"'
 
     def __init__(self, circuit, port_mapping, run_callback, extras={}):
         '''
@@ -30,18 +67,11 @@ class TemplateMaster():
         # expand buses in port mapping
         # the entire bus as well as each child with [] and <> endings are added
         # TODO nested buses? I don't think there's a way to do that in the .yaml
-        self.mapping = {}
+        self.ports = self.Ports(circuit)
         for t_name, c_name in port_mapping.items():
-            self.mapping[t_name] = c_name
-            p = getattr(circuit, c_name)
-            if isinstance(p, Array):
-                for i in range(p.N):
-                    sel = f'<{i}>'
-                    self.mapping[t_name+sel] = c_name+sel
-                    sel = f'[{i}]'
-                    self.mapping[t_name+sel] = c_name+sel
+            self.ports.map(c_name, t_name)
 
-        self.ports = self.Ports(circuit, self.mapping)
+
         self.dut = circuit
         self.extras = extras
         self.run = run_callback
@@ -51,9 +81,10 @@ class TemplateMaster():
         assert hasattr(self, 'required_ports')
         self.check_required_ports()
 
-        self.reverse_mapping = {v:k for k,v in self.mapping.items()}
-        for k in self.reverse_mapping:
-            print(k)
+        # TODO reverse mapping?
+        self.reverse_mapping = {v:k for k,v in self.ports.mapping.items()}
+        for k in list(self.reverse_mapping.keys()):
+            self.reverse_mapping[k.name.name] = self.reverse_mapping[k]
 
         assert hasattr(self, 'tests')
         # replace test classes with instance
@@ -66,8 +97,9 @@ class TemplateMaster():
         # into different input/output types in sort_ports
         # Test inputs are treated a lot like optional ports
         circuit_port_names = [name for name, _ in self.dut.IO.items()]
+        # TODO following line may not work with buses
         optional_port_names = [name for name in circuit_port_names
-                               if name not in self.mapping.values()]
+                               if name not in port_mapping.values()]
         optional_ports = [getattr(self.dut, name) for name in optional_port_names]
         (self.inputs_pinned,
          self.inputs_true_digital,
@@ -105,7 +137,7 @@ class TemplateMaster():
         Checks that the template instantiator actually mapped all the required ports.
         '''
         for port_name in self.required_ports:
-            assert port_name in self.mapping, 'Did not associate port %s'%port_name
+            assert port_name in self.ports.mapping, 'Did not associate port %s'%port_name
 
     def get_name_template(self, p):
         '''

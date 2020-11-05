@@ -132,7 +132,13 @@ def test_simple_parameterized():
        )
 
     t = fixture.templates.SimpleAmpTemplate(UserAmp, mapping, run_callback, extras)
-    t.go()
+    params_by_mode = t.go()
+    for mode, results in params_by_mode.items():
+        print('For mode', mode)
+        print('param\tterm\tcoef')
+        for param, d in results.items():
+            for partial_term_optional, coef in d.items():
+                print('%s\t%s\t%.3e' % (param, partial_term_optional, coef))
 
     # print('Creating test bench')
     # # auto-create vectors for 1 analog dimension
