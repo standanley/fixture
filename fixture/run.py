@@ -8,6 +8,7 @@ import fixture.sampler as sampler
 import fixture.create_testbench as create_testbench
 from fixture import Regression
 import fixture.mgenero_interface as mgenero_interface
+import fixture.cfg_cleaner as cfg_cleaner
 
 def path_relative(path_to_config, path_from_config):
     ''' Interpret path names specified in config file
@@ -35,6 +36,8 @@ def run(circuit_config_filename):
     _run(circuit_config_dict)
 
 def _run(circuit_config_dict):
+    cfg_cleaner.edit_cfg(circuit_config_dict)
+
     # load test config data
     test_config_filename = circuit_config_dict['test_config_file']
     test_config_filename_abs = path_relative(circuit_config_dict['filename'], test_config_filename)
