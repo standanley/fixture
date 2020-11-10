@@ -28,8 +28,9 @@ class TemplateMaster():
                 is either nothing or a partially-populated list to be used
                 '''
                 # m = re.match('(.*)\\[[(0-9)]+\\](.*)', template_name)
-                indices = [g[1:-1] for g in re.findall('<[0-9]+>', name)]
-                name = re.match('^(.*?)(<[0-9]+>)*$', name).group(1)
+                indices_str = [g[1:-1] for g in re.findall('\[[0-9]+\]', name)]
+                name = re.match('^(.*?)(\[[0-9]+\])*$', name).group(1)
+                indices = [int(i) for i in indices_str]
 
                 def rec(x, indices):
                     if len(indices) == 0:
@@ -82,9 +83,9 @@ class TemplateMaster():
         self.check_required_ports()
 
         # TODO reverse mapping?
-        self.reverse_mapping = {v:k for k,v in self.ports.mapping.items()}
-        for k in list(self.reverse_mapping.keys()):
-            self.reverse_mapping[k.name.name] = self.reverse_mapping[k]
+        #self.reverse_mapping = {v:k for k,v in self.ports.mapping.items()}
+        #for k in list(self.reverse_mapping.keys()):
+        #    self.reverse_mapping[k.name.name] = self.reverse_mapping[k]
 
         assert hasattr(self, 'tests')
         # replace test classes with instance

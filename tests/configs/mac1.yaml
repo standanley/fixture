@@ -1,0 +1,27 @@
+name: mymac
+filepath: ../spice/mymac.sp
+template: MACTemplate
+pin:
+    vdd:
+        direction: input
+        datatype: real
+        value: 1.2
+    vss:
+        direction: input
+        datatype: real
+        value: 0
+    d<0:15><3:0>:
+        direction: input
+        datatype: binary_analog
+        template_pin: d
+    W<0:15><3:0>:
+        direction: input
+        datatype: binary_analog
+        template_pin: W
+    out:
+        direction: output
+        datatype: real
+        template_pin: out
+
+approx_settling_time: 1e-6
+test_config_file: ngspice.yaml

@@ -54,8 +54,8 @@ def edit_cfg(d):
             for i in indices:
                 pin_name = bus_name_sub % i
                 pin_dict_copy = pin_dict.copy()
-                if 'template_name' in pin_dict_copy:
-                    pin_dict_copy['template_name'] += f'[{i}]'
+                if 'template_pin' in pin_dict_copy:
+                    pin_dict_copy['template_pin'] += f'[{i}]'
                 ans.update(break_bus(pin_name, pin_dict_copy))
 
             return ans
