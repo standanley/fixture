@@ -9,6 +9,7 @@ import fixture.create_testbench as create_testbench
 from fixture import Regression
 import fixture.mgenero_interface as mgenero_interface
 import fixture.cfg_cleaner as cfg_cleaner
+from fixture.signals import create_signal
 
 def path_relative(path_to_config, path_from_config):
     ''' Interpret path names specified in config file
@@ -76,6 +77,14 @@ def _run(circuit_config_dict):
             else:
                 mapping[p['template_pin']] = name
 
+    signals = []
+    for pin_name, pin_value in pins.items():
+        pin_value['spice_name'] = pin_name
+        signal = create_signal(pin_value)
+        signals.append(signal)
+        pass
+
+
     extras = circuit_config_dict
 
     tester = fault.Tester(UserCircuit)
@@ -113,7 +122,7 @@ def _run(circuit_config_dict):
             **simulator_dict
         )
 
-    t = Template(UserCircuit, mapping, run_callback, extras)
+    t = Template(UserCircuit, mapping, run_callback, extras, signals)
     params_by_mode = t.go()
 
     for mode, results in params_by_mode.items():

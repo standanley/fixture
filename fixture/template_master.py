@@ -58,16 +58,15 @@ class TemplateMaster():
             else:
                 super()
 
-    def __init__(self, circuit, port_mapping, run_callback, extras={}):
+    def __init__(self, circuit, port_mapping, run_callback, extras={}, signals=[]):
         '''
         circuit: The magma circuit
         port_mapping: a dictionary of {template_name: circuit_name} for required pins
         params: a dictionary of template-specific parameters
         '''
 
-        # expand buses in port mapping
-        # the entire bus as well as each child with [] and <> endings are added
-        # TODO nested buses? I don't think there's a way to do that in the .yaml
+        self.signals = signals
+
         self.ports = self.Ports(circuit)
         for t_name, c_name in port_mapping.items():
             self.ports.map(c_name, t_name)
@@ -84,6 +83,7 @@ class TemplateMaster():
 
         # TODO reverse mapping?
         #self.reverse_mapping = {v:k for k,v in self.ports.mapping.items()}
+        self.reverse_mapping = {s.spice_name: s.template_name for s in self.signals if s.spice_name is not None}
         #for k in list(self.reverse_mapping.keys()):
         #    self.reverse_mapping[k.name.name] = self.reverse_mapping[k]
 

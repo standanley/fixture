@@ -104,13 +104,27 @@ class Regression():
         we have to break that term into multiple terms.
         This function edits rhs in place to split terms with an array.
         '''
+
+        def is_part_of_bus(pin):
+            def my_in(x, ys):
+                for y in ys:
+                    if x is y:
+                        return True
+                return False
+            mapping = test.template.ports.mapping
+            for k, v in mapping.items():
+                if type(v) == list and my_in(pin, v):
+                    return (True, k)
+            return (False, '')
+
         to_be_deleted = set()
         to_be_added = {}
         for arr_req in test.inputs_ba:
-            if isinstance(arr_req.name, magma.ref.ArrayRef):
+            if is_part_of_bus(arr_req)[0]: #isinstance(arr_req.name, magma.ref.ArrayRef):
                 #bus_name = str(arr_req.name.array.name)
                 #inst_name = str(arr_req.name).split('.')[-1]
-                bus_name = test.template.get_name_template(arr_req.name.array)
+                #bus_name = test.template.get_name_template(arr_req.name.array)
+                bus_name = is_part_of_bus(arr_req)[1]
                 inst_name = test.template.get_name_template(arr_req)
                 new_name = self.clean_string(inst_name)
                 search_str = r'\b' + bus_name + r'\b'
