@@ -13,7 +13,8 @@ class SimpleAmpTemplate(TemplateMaster):
             return [self.ports.in_single]
 
         def testbench(self, tester, values):
-            tester.poke(self.ports.in_single, values['in_single'])
+            in_single = self.ports.in_single
+            tester.poke(in_single, values[in_single])
             wait_time = float(self.extras['approx_settling_time'])*2
             tester.delay(wait_time)
             return tester.get_value(self.ports.out_single)
