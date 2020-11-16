@@ -1,5 +1,5 @@
-name: mymac
-filepath: ../spice/mymac.sp
+name: my_mac
+filepath: ../spice/generated_mac.sp
 template: MACTemplate
 pin:
     vdd:
