@@ -19,14 +19,12 @@ pin:
         direction: input
         datatype: real
         value: (.45, .55)
-    ba:
+    ba<3:0>:
         direction: input
         datatype: binary_analog
-        width: 4
-    ctrl:
+    ctrl<1:0>:
         direction: input
         datatype: bit
-        width: 2
     my_out:
         direction: output
         datatype: real

@@ -186,11 +186,11 @@ class Testbench():
                 vals.append(test_inputs[port])
             test_inputs[bus] = vals
 
-        ## in addition to using pins as keys, also use their string names
-        #for p, v in list(test_inputs.items()):
-        #    # TODO is the next line ok?
-        #    name = self.template.get_name_template(p)
-        #    test_inputs[name] = v
+        # in addition to using pins as keys, also use their string names
+        for p, v in list(test_inputs.items()):
+            # TODO is the next line ok?
+            name = self.template.get_name_template(p)
+            test_inputs[name] = v
 
         # turn lists of bits into magma BitVector types
         for name, val in test_inputs.items():

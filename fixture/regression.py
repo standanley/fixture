@@ -161,9 +161,13 @@ class Regression():
         {pin:[x1, ...], ...}
         '''
 
+        def get_name(x):
+            # we prefer the template name, but if that doesn't exist then get something else
+            pass
+
         self.component_tag = '_component_'
         # translate from circuit names to template names
-        data = {template.get_name_template(k): v for k, v in data.items()}
+        data = {template.get_name_regression(k): v for k, v in data.items()}
         data[self.one_literal] = [1 for _ in list(data.values())[0]]
         data = {self.clean_string(k):v for k,v in data.items()}
         self.df = pandas.DataFrame(data)

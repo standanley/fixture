@@ -15,25 +15,24 @@ pin:
         datatype: real
         value: (.5, .7)
         template_pin: inp
-    outp:
-        direction: output
-        datatype: real
-        template_pin: outp
     inn:
         direction: input
         datatype: real
         value: (.5, .7)
         template_pin: inn
+    outp:
+        direction: output
+        datatype: real
+        template_pin: outp
     outn:
         direction: output
         datatype: real
         template_pin: outn
 
     # optional pins
-#     en:
-#         direction: input
-#         datatype: bit
-#         width: 1
+    en:
+         direction: input
+         datatype: bit
     adj:
         direction: input
         datatype: real

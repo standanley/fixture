@@ -30,12 +30,13 @@ class MACTemplate(TemplateMaster):
             wait_time = float(self.extras['approx_settling_time'])*2
             tester.delay(wait_time)
 
-            reads = []
-            for out_word in self.ports.out:
-                read_word = []
-                for out_bit in out_word:
-                    read_word.append(tester.get_value(out_bit))
-                reads.append(read_word)
+            #reads = []
+            #for out_word in self.ports.out:
+            #    read_word = []
+            #    for out_bit in out_word:
+            #        read_word.append(tester.get_value(out_bit))
+            #    reads.append(read_word)
+            reads = [tester.get_value(self.ports.out)]
             return reads
 
         def analysis(self, reads):

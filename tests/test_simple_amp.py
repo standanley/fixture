@@ -2,6 +2,7 @@ import fixture
 import fault
 import magma
 from pathlib import Path
+import pytest
 
 def transpose(x):
     return list(zip(*list(x)))
@@ -50,6 +51,7 @@ def plot(results, tf):
     plt.grid()
     plt.show()
 
+@pytest.mark.skip('Has not been updated to new TemplateMaster instatiation style')
 def test_simple():
     print('\nTop of test')
 
@@ -100,6 +102,7 @@ def test_simple():
 
     #regression = fixture.Regression(MyAmp, results_reformatted)
 
+@pytest.mark.skip('Has not been updated to new TemplateMaster instatiation style')
 def test_simple_parameterized():
     class UserAmp(magma.Circuit):
         name = 'myamp_params'

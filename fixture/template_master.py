@@ -140,16 +140,58 @@ class TemplateMaster():
         for port_name in self.required_ports:
             assert port_name in self.ports.mapping, 'Did not associate port %s'%port_name
 
+    def get_signal_from_spice(self, spice):
+        spice_name = str(spice.name)
+        for s in self.signals:
+            if s.spice_name == spice_name:
+                return s
+        raise AttributeError(f'Could not find signal with spice name: {spice_name}')
+
+    # TODO this method is a bit hacky, I'd like to fix it by making the caller a
+    # little more responsible about which types it's allowed to pass
+    def get_name_regression(self, p):
+        if type(p) == str:
+            return p
+
+        template_name = self.get_name_template(p)
+        if template_name is not None:
+            return template_name
+
+        if isinstance(p, magma.Digital):
+            s = self.get_signal_from_spice(p)
+            n = s.spice_name
+            if n is not None:
+                return n
+
+        assert False, 'todo'
+
     def get_name_template(self, p):
         '''
         Gets the name of a port or real type with a preference for the name
         known to the template designer.
         '''
-        circuit_name = self.get_name_circuit(p)
-        try:
-            return self.reverse_mapping[circuit_name]
-        except KeyError:
-            return circuit_name
+
+        if type(p) == str:
+            # TODO check that it's template and not spice?
+            return p
+
+        # TODO right now this returns None if the signal has no template name, although raising might be better
+        # If you change it, you will have to update regression where it depends on this behavior
+        if type(p) == fixture.signals.SignalIn:
+            return p.template_name
+        if type(p) == fixture.signals.SignalOut:
+            return p.template_name
+
+        # TODO what is the difference between Digital and DigitalMeta?
+        # right now I'm using that to differentiate between spice pins and FixtureRealType s
+        if isinstance(p, magma.Digital):
+            # look in signals for spice_name
+            s = self.get_signal_from_spice(p)
+            return self.get_name_template(s)
+        if isinstance(p, magma.DigitalMeta):
+            return p.name
+
+        raise AttributeError(f'Could not find template name for object {p}')
 
     def get_name_circuit(self, p):
         ''' gives back a string to identify something port-like
