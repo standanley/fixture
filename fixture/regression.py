@@ -161,10 +161,6 @@ class Regression():
         {pin:[x1, ...], ...}
         '''
 
-        def get_name(x):
-            # we prefer the template name, but if that doesn't exist then get something else
-            pass
-
         self.component_tag = '_component_'
         # translate from circuit names to template names
         data = {template.get_name_regression(k): v for k, v in data.items()}
@@ -219,9 +215,12 @@ class Regression():
                     pass
 
         results = {}
+        results_models = {}
         for lhs, rhs in test.parameter_algebra.items():
             lhs, rhs = self.parse_parameter_algebra(lhs, rhs)
 
+            # TODO I want a better model for this so we can evaluate later
+            # e.g. given the inputs, what does the pin_expr evaluate to?
             optional_pin_expr = self.get_optional_pin_expression(template)
 
             self.convert_required_ba(test, rhs)
@@ -241,6 +240,8 @@ class Regression():
             for k,v in result.items():
                 assert not k in results, 'Parameter %s found in multiple parameter algebra formulas'
                 results[k] = v
+
+            results_models[lhs] = stat_results
 
         self.condense_required_ba(results)
 
@@ -272,6 +273,7 @@ class Regression():
 
         # TODO dump res to a yaml file
         self.results = results
+        self.results_models = results_models
 
     # @classmethod
     def un_create_const(self, name):

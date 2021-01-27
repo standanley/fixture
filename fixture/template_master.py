@@ -354,6 +354,16 @@ class TemplateMaster():
             '''
             pass
 
+        def post_regression(self, regression_models):
+            '''
+            After regression is run, this is called for additional post-processing.
+            It it passed a dictionary with regression models {lhs: model}
+            See model.model.data for the data used in the regression
+            See model.predict() for the model's estimates for teh regression data
+            See model.predict(new_data) to see the model's predictions on a new input
+            '''
+            return {}
+
         def debug(self, tester, port, duration):
             '''
             This method will be overridden when the @debug decorator from
@@ -380,7 +390,13 @@ class TemplateMaster():
             params_by_mode = {}
             for mode, results in enumerate(results_each_mode):
                 regression = fixture.Regression(self, test, results)
-                params_by_mode[mode] = regression.results
+
+                # TODO this should really be handled in create_testbench
+                temp = test.post_regression(regression.results_models)
+
+                rr = dict(regression.results)
+                rr.update(temp)
+                params_by_mode[mode] = rr
 
             # merge results from this test in results from all tests
             for mode in params_by_mode:

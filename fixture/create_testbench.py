@@ -250,6 +250,7 @@ class Testbench():
             for k,v in results.items():
                 results_by_mode[m][k].append(v)
 
+        # TODO there should maybe be a default implementation that does nothing?
         if hasattr(self.test, 'post_process'):
             for mode in results_by_mode:
                 results_by_mode[mode] = self.test.post_process(results_by_mode[mode])

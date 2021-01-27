@@ -4,10 +4,10 @@
 .subckt my_mac D<0><0> D<0><1> D<0><2> D<0><3> D<1><0> D<1><1> D<1><2> D<1><3> W<0><0> W<0><1> W<0><2> W<0><3> W<1><0> W<1><1> W<1><2> W<1><3> outn outp vdd vss z_debug
 
 * Switch Models
-.model MUL_SW      SW(Ron=1 Roff=1000 Vt=1.7999999999999998 Vh=-0.1)
-.model MUL_SW_INV  SW(Ron=1000 Roff=1 Vt=1.7999999999999998 Vh=-0.1)
-.model DIFF_SW     SW(Ron=1 Roff=1000 Vt=1.2)
-.model DIFF_SW_INV SW(Ron=1000 Roff=1 Vt=1.2)
+.model MUL_SW      SW(Ron=1 Roff=1000000 Vt=1.7999999999999998 Vh=-0.1)
+.model MUL_SW_INV  SW(Ron=1000000 Roff=1 Vt=1.7999999999999998 Vh=-0.1)
+.model DIFF_SW     SW(Ron=1 Roff=1000000 Vt=1.2)
+.model DIFF_SW_INV SW(Ron=1000000 Roff=1 Vt=1.2)
 
 * One bit multiply
 Emul_vcvs_<0><0><0> mul_temp_ideal<0><0><0> d<0><0> W<0><0> vss 1
@@ -204,81 +204,86 @@ Cmul_temp_<1><3><3> mul_temp<1><3><3> vss 100p
 Cmul_<1><3><3> mul<1><3><3> vss 100p
 
 * Scale and add
-Emul_scale_<0><0><0> mul_scaled<0><0><0> vss mul<0><0><0> vss 0.005333333333333333
+Emul_scale_<0><0><0> mul_scaled<0><0><0> vss mul<0><0><0> vss 0.0044444444444444444
 Esum_<0><0><0> sum<0><0><0> vss mul_scaled<0><0><0> vss 1
-Emul_scale_<0><0><1> mul_scaled<0><0><1> vss mul<0><0><1> vss 0.010666666666666666
+Emul_scale_<0><0><1> mul_scaled<0><0><1> vss mul<0><0><1> vss 0.008888888888888889
 Esum_<0><0><1> sum<0><0><1> sum<0><0><0> mul_scaled<0><0><1> vss 1
-Emul_scale_<0><0><2> mul_scaled<0><0><2> vss mul<0><0><2> vss 0.021333333333333333
+Emul_scale_<0><0><2> mul_scaled<0><0><2> vss mul<0><0><2> vss 0.017777777777777778
 Esum_<0><0><2> sum<0><0><2> sum<0><0><1> mul_scaled<0><0><2> vss 1
-Emul_scale_<0><0><3> mul_scaled<0><0><3> vss mul<0><0><3> vss 0.042666666666666665
+Emul_scale_<0><0><3> mul_scaled<0><0><3> vss mul<0><0><3> vss 0.035555555555555556
 Esum_<0><0><3> sum<0><0><3> sum<0><0><2> mul_scaled<0><0><3> vss 1
-Emul_scale_<0><1><0> mul_scaled<0><1><0> vss mul<0><1><0> vss 0.010666666666666666
+Emul_scale_<0><1><0> mul_scaled<0><1><0> vss mul<0><1><0> vss 0.008888888888888889
 Esum_<0><1><0> sum<0><1><0> sum<0><0><3> mul_scaled<0><1><0> vss 1
-Emul_scale_<0><1><1> mul_scaled<0><1><1> vss mul<0><1><1> vss 0.021333333333333333
+Emul_scale_<0><1><1> mul_scaled<0><1><1> vss mul<0><1><1> vss 0.017777777777777778
 Esum_<0><1><1> sum<0><1><1> sum<0><1><0> mul_scaled<0><1><1> vss 1
-Emul_scale_<0><1><2> mul_scaled<0><1><2> vss mul<0><1><2> vss 0.042666666666666665
+Emul_scale_<0><1><2> mul_scaled<0><1><2> vss mul<0><1><2> vss 0.035555555555555556
 Esum_<0><1><2> sum<0><1><2> sum<0><1><1> mul_scaled<0><1><2> vss 1
-Emul_scale_<0><1><3> mul_scaled<0><1><3> vss mul<0><1><3> vss 0.08533333333333333
+Emul_scale_<0><1><3> mul_scaled<0><1><3> vss mul<0><1><3> vss 0.07111111111111111
 Esum_<0><1><3> sum<0><1><3> sum<0><1><2> mul_scaled<0><1><3> vss 1
-Emul_scale_<0><2><0> mul_scaled<0><2><0> vss mul<0><2><0> vss 0.021333333333333333
+Emul_scale_<0><2><0> mul_scaled<0><2><0> vss mul<0><2><0> vss 0.017777777777777778
 Esum_<0><2><0> sum<0><2><0> sum<0><1><3> mul_scaled<0><2><0> vss 1
-Emul_scale_<0><2><1> mul_scaled<0><2><1> vss mul<0><2><1> vss 0.042666666666666665
+Emul_scale_<0><2><1> mul_scaled<0><2><1> vss mul<0><2><1> vss 0.035555555555555556
 Esum_<0><2><1> sum<0><2><1> sum<0><2><0> mul_scaled<0><2><1> vss 1
-Emul_scale_<0><2><2> mul_scaled<0><2><2> vss mul<0><2><2> vss 0.08533333333333333
+Emul_scale_<0><2><2> mul_scaled<0><2><2> vss mul<0><2><2> vss 0.07111111111111111
 Esum_<0><2><2> sum<0><2><2> sum<0><2><1> mul_scaled<0><2><2> vss 1
-Emul_scale_<0><2><3> mul_scaled<0><2><3> vss mul<0><2><3> vss 0.17066666666666666
+Emul_scale_<0><2><3> mul_scaled<0><2><3> vss mul<0><2><3> vss 0.14222222222222222
 Esum_<0><2><3> sum<0><2><3> sum<0><2><2> mul_scaled<0><2><3> vss 1
-Emul_scale_<0><3><0> mul_scaled<0><3><0> vss mul<0><3><0> vss 0.042666666666666665
+Emul_scale_<0><3><0> mul_scaled<0><3><0> vss mul<0><3><0> vss 0.035555555555555556
 Esum_<0><3><0> sum<0><3><0> sum<0><2><3> mul_scaled<0><3><0> vss 1
-Emul_scale_<0><3><1> mul_scaled<0><3><1> vss mul<0><3><1> vss 0.08533333333333333
+Emul_scale_<0><3><1> mul_scaled<0><3><1> vss mul<0><3><1> vss 0.07111111111111111
 Esum_<0><3><1> sum<0><3><1> sum<0><3><0> mul_scaled<0><3><1> vss 1
-Emul_scale_<0><3><2> mul_scaled<0><3><2> vss mul<0><3><2> vss 0.17066666666666666
+Emul_scale_<0><3><2> mul_scaled<0><3><2> vss mul<0><3><2> vss 0.14222222222222222
 Esum_<0><3><2> sum<0><3><2> sum<0><3><1> mul_scaled<0><3><2> vss 1
-Emul_scale_<0><3><3> mul_scaled<0><3><3> vss mul<0><3><3> vss 0.3413333333333333
+Emul_scale_<0><3><3> mul_scaled<0><3><3> vss mul<0><3><3> vss 0.28444444444444444
 Esum_<0><3><3> sum<0><3><3> sum<0><3><2> mul_scaled<0><3><3> vss 1
-Emul_scale_<1><0><0> mul_scaled<1><0><0> vss mul<1><0><0> vss 0.005333333333333333
+Emul_scale_<1><0><0> mul_scaled<1><0><0> vss mul<1><0><0> vss 0.0044444444444444444
 Esum_<1><0><0> sum<1><0><0> sum<0><3><3> mul_scaled<1><0><0> vss 1
-Emul_scale_<1><0><1> mul_scaled<1><0><1> vss mul<1><0><1> vss 0.010666666666666666
+Emul_scale_<1><0><1> mul_scaled<1><0><1> vss mul<1><0><1> vss 0.008888888888888889
 Esum_<1><0><1> sum<1><0><1> sum<1><0><0> mul_scaled<1><0><1> vss 1
-Emul_scale_<1><0><2> mul_scaled<1><0><2> vss mul<1><0><2> vss 0.021333333333333333
+Emul_scale_<1><0><2> mul_scaled<1><0><2> vss mul<1><0><2> vss 0.017777777777777778
 Esum_<1><0><2> sum<1><0><2> sum<1><0><1> mul_scaled<1><0><2> vss 1
-Emul_scale_<1><0><3> mul_scaled<1><0><3> vss mul<1><0><3> vss 0.042666666666666665
+Emul_scale_<1><0><3> mul_scaled<1><0><3> vss mul<1><0><3> vss 0.035555555555555556
 Esum_<1><0><3> sum<1><0><3> sum<1><0><2> mul_scaled<1><0><3> vss 1
-Emul_scale_<1><1><0> mul_scaled<1><1><0> vss mul<1><1><0> vss 0.010666666666666666
+Emul_scale_<1><1><0> mul_scaled<1><1><0> vss mul<1><1><0> vss 0.008888888888888889
 Esum_<1><1><0> sum<1><1><0> sum<1><0><3> mul_scaled<1><1><0> vss 1
-Emul_scale_<1><1><1> mul_scaled<1><1><1> vss mul<1><1><1> vss 0.021333333333333333
+Emul_scale_<1><1><1> mul_scaled<1><1><1> vss mul<1><1><1> vss 0.017777777777777778
 Esum_<1><1><1> sum<1><1><1> sum<1><1><0> mul_scaled<1><1><1> vss 1
-Emul_scale_<1><1><2> mul_scaled<1><1><2> vss mul<1><1><2> vss 0.042666666666666665
+Emul_scale_<1><1><2> mul_scaled<1><1><2> vss mul<1><1><2> vss 0.035555555555555556
 Esum_<1><1><2> sum<1><1><2> sum<1><1><1> mul_scaled<1><1><2> vss 1
-Emul_scale_<1><1><3> mul_scaled<1><1><3> vss mul<1><1><3> vss 0.08533333333333333
+Emul_scale_<1><1><3> mul_scaled<1><1><3> vss mul<1><1><3> vss 0.07111111111111111
 Esum_<1><1><3> sum<1><1><3> sum<1><1><2> mul_scaled<1><1><3> vss 1
-Emul_scale_<1><2><0> mul_scaled<1><2><0> vss mul<1><2><0> vss 0.021333333333333333
+Emul_scale_<1><2><0> mul_scaled<1><2><0> vss mul<1><2><0> vss 0.017777777777777778
 Esum_<1><2><0> sum<1><2><0> sum<1><1><3> mul_scaled<1><2><0> vss 1
-Emul_scale_<1><2><1> mul_scaled<1><2><1> vss mul<1><2><1> vss 0.042666666666666665
+Emul_scale_<1><2><1> mul_scaled<1><2><1> vss mul<1><2><1> vss 0.035555555555555556
 Esum_<1><2><1> sum<1><2><1> sum<1><2><0> mul_scaled<1><2><1> vss 1
-Emul_scale_<1><2><2> mul_scaled<1><2><2> vss mul<1><2><2> vss 0.08533333333333333
+Emul_scale_<1><2><2> mul_scaled<1><2><2> vss mul<1><2><2> vss 0.07111111111111111
 Esum_<1><2><2> sum<1><2><2> sum<1><2><1> mul_scaled<1><2><2> vss 1
-Emul_scale_<1><2><3> mul_scaled<1><2><3> vss mul<1><2><3> vss 0.17066666666666666
+Emul_scale_<1><2><3> mul_scaled<1><2><3> vss mul<1><2><3> vss 0.14222222222222222
 Esum_<1><2><3> sum<1><2><3> sum<1><2><2> mul_scaled<1><2><3> vss 1
-Emul_scale_<1><3><0> mul_scaled<1><3><0> vss mul<1><3><0> vss 0.042666666666666665
+Emul_scale_<1><3><0> mul_scaled<1><3><0> vss mul<1><3><0> vss 0.035555555555555556
 Esum_<1><3><0> sum<1><3><0> sum<1><2><3> mul_scaled<1><3><0> vss 1
-Emul_scale_<1><3><1> mul_scaled<1><3><1> vss mul<1><3><1> vss 0.08533333333333333
+Emul_scale_<1><3><1> mul_scaled<1><3><1> vss mul<1><3><1> vss 0.07111111111111111
 Esum_<1><3><1> sum<1><3><1> sum<1><3><0> mul_scaled<1><3><1> vss 1
-Emul_scale_<1><3><2> mul_scaled<1><3><2> vss mul<1><3><2> vss 0.17066666666666666
+Emul_scale_<1><3><2> mul_scaled<1><3><2> vss mul<1><3><2> vss 0.14222222222222222
 Esum_<1><3><2> sum<1><3><2> sum<1><3><1> mul_scaled<1><3><2> vss 1
-Emul_scale_<1><3><3> mul_scaled<1><3><3> vss mul<1><3><3> vss 0.3413333333333333
+Emul_scale_<1><3><3> mul_scaled<1><3><3> vss mul<1><3><3> vss 0.28444444444444444
 Esum_<1><3><3> sum<1><3><3> sum<1><3><2> mul_scaled<1><3><3> vss 1
 
-* Single-ended to differential conversion
-Ediff_pos diff_pos vss sum<1><3><3> vdd 1
-Ediff_neg diff_neg vss sum<1><3><3> vdd -1
-Sdiff_outp1 outp vss    sum<1><3><3> vss DIFF_SW_INV
-Sdiff_outp2 outp diff_pos sum<1><3><3> vss DIFF_SW
-Sdiff_outn1 outn diff_neg sum<1><3><3> vss DIFF_SW_INV
-Sdiff_outn2 outn vss    sum<1><3><3> vss DIFF_SW
+* Add white noise
+Vnoise noise vss trnoise(1, 1e-6, 0, 0)
+Enoise ss_noisy sum<1><3><3> noise vss 0.01
 
 * Debug output
-Rdebug z_debug mul<1><3><3> 0.1
+Rdebug z_debug ss_noisy 0.1
+Cdebug z_debug vss 100p
+
+* Single-ended to differential conversion
+Ediff_pos diff_pos vss ss_noisy vdd 1
+Ediff_neg diff_neg vss ss_noisy vdd -1
+Sdiff_outp1 outp vss    ss_noisy vss DIFF_SW_INV
+Sdiff_outp2 outp diff_pos ss_noisy vss DIFF_SW
+Sdiff_outn1 outn diff_neg ss_noisy vss DIFF_SW_INV
+Sdiff_outn2 outn vss    ss_noisy vss DIFF_SW
 
 * End subcircuit for my_mac
 .ends

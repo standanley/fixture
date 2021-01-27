@@ -12,6 +12,7 @@ class PhaseBlenderTemplate(TemplateMaster):
             'out_delay': {'gain':'in_phase_delay', 'offset':'1'}
         }
 
+
         def input_domain(self):
             # offset range is in units of "periods", so 0.5 means in_a and in_b are in quadrature
             offset_range = self.extras.get('phase_offset_range', (0, .5))

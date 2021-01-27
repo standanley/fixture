@@ -49,6 +49,9 @@ class SamplerTemplate(TemplateMaster):
         tester.delay(wait)
         return tester.get_value(port)
 
+    def interpret_value(self, read):
+        return read.value
+
     #def schedule_clk(self, tester, port, value, wait):
     #    tester.poke(port, value, delay={'type': 'future', 'wait': wait})
 
@@ -145,9 +148,6 @@ class SamplerTemplate(TemplateMaster):
                 })
 
 
-    def interpret_value(self, read):
-        return read.value
-
     #@template_creation_utils.debug
     class StaticNonlinearityTest(TemplateMaster.Test):
         num_samples = 10#3
@@ -202,6 +202,12 @@ class SamplerTemplate(TemplateMaster):
                 for p in self.ports.clk[1:]:
                     tester.poke(p, 0)
 
+            # get output port
+            if hasattr(self.ports.out, '__getitem__'):
+                p = self.ports.out[0]
+            else:
+                p = self.ports.out
+
             limits = self.ports.in_.limits
             num = self.template.nonlinearity_points
             results = []
@@ -213,10 +219,7 @@ class SamplerTemplate(TemplateMaster):
                 self.template.schedule_clk(tester, clk, 0, wait, values)
                 tester.delay(wait)
 
-                if hasattr(self.ports.out, '__getitem__'):
-                    p = self.ports.out[0]
-                else:
-                    p = self.ports.out
+                # delays time "wait" for things to settle before reading
                 read = self.template.read_value(tester, p, wait)
 
                 # small delay so value is not changed by start of next test
