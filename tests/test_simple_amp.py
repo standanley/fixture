@@ -3,6 +3,10 @@ import fault
 import magma
 from pathlib import Path
 import pytest
+import os
+
+def file_relative_to_test(fname):
+    return os.path.join(os.path.dirname(__file__), fname)
 
 def transpose(x):
     return list(zip(*list(x)))
@@ -165,8 +169,13 @@ def test_simple_parameterized():
 
     # regression = fixture.Regression(MyAmp, results_reformatted)
 
+def test_skywater():
+    circuit_fname = file_relative_to_test('configs/simple_amp_sky130.yaml')
+    fixture.run(circuit_fname)
+
     
 if __name__ == '__main__':
     #test_simple()
-    test_simple_parameterized()
+    #test_simple_parameterized()
+    test_skywater()
 

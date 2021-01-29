@@ -1,8 +1,10 @@
 from fixture import TemplateMaster
+from fixture.template_creation_utils import debug
 
 class SimpleAmpTemplate(TemplateMaster):
     required_ports = ['in_single', 'out_single']
 
+    #@debug
     class Test1(TemplateMaster.Test):
         parameter_algebra = {
             'amp_output': {'dcgain': 'in_single', 'offset': '1'}
@@ -13,6 +15,8 @@ class SimpleAmpTemplate(TemplateMaster):
             return [self.ports.in_single]
 
         def testbench(self, tester, values):
+            self.debug(tester, self.ports.in_single, 1)
+            self.debug(tester, self.ports.out_single, 1)
             in_single = self.ports.in_single
             tester.poke(in_single, values[in_single])
             wait_time = float(self.extras['approx_settling_time'])*2
