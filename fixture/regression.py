@@ -90,7 +90,7 @@ class Regression():
         return ' + '.join(terms)
 
 
-    # @classmethod
+    @classmethod
     def clean_string(self, s):
         # discrepency between the way spice and magma do braces
         # also Patsy won't use < in a variable name

@@ -4,6 +4,7 @@ import yaml
 import os
 from magma import Array
 import fixture.real_types as rt
+import fixture.regression as regression
 
 '''
 A parameter file for mgenero looks like this:
@@ -113,6 +114,9 @@ def create_interface(template, collateral_dict):
         p = getattr(circuit, p_name)
         spice_name = template.get_name_circuit(p)
         template_name = template.get_name_template(p)
+        if template_name == None:
+            template_name = spice_name
+        template_name = regression.Regression.clean_string(template_name)
         # this next line key should not be spice name
         pins[template_name] = create_pin(p, spice_name)
 

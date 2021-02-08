@@ -11,6 +11,7 @@ class PhaseBlenderTemplate(TemplateMaster):
         parameter_algebra = {
             'out_delay': {'gain':'in_phase_delay', 'offset':'1'}
         }
+        num_samples = 100
 
 
         def input_domain(self):
@@ -130,6 +131,14 @@ class PhaseBlenderTemplate(TemplateMaster):
                 if outs[i] < cut:
                     outs[i] += period
 
+            # TODO check this. also, probably should either edit in place or return, not both
+            results['out_delay'] = outs
+
+            ## avoid precision issues in regression
+            ## TODO fix this next line
+            #in_phase_delay = self.inputs_analog[0]
+            #for k in ['out_delay', in_phase_delay]:
+            #    results[k] = [x*1e6 for x in results[k]]
             return results
 
     tests = [Test1]
