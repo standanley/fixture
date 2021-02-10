@@ -3,6 +3,9 @@ from fixture.template_creation_utils import debug
 
 class SimpleAmpTemplate(TemplateMaster):
     required_ports = ['in_single', 'out_single']
+    required_info = {
+        'approx_settling_time': 'Approximate time it takes for amp to settle within 99% (s)'
+    }
 
     #@debug
     class Test1(TemplateMaster.Test):

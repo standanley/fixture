@@ -7,6 +7,9 @@ class OscillatorTemplate(TemplateMaster):
         parameter_algebra = {
             'frequency': 'const'
         }
+        required_info = {
+            'approx_frequency': 'Ballpark guess for the output frequency (Hz)'
+        }
 
         def input_domain(self):
             return []

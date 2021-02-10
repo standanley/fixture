@@ -50,6 +50,9 @@ class DifferentialAmpTemplate(TemplateMaster):
             'outp': {'A':'inp', 'B':'inn', 'offsetp':'1'},
             'outn': {'C':'inp', 'D':'inn', 'offsetn':'1'}
         }
+        required_info = {
+            'approx_settling_time': 'Approximate time it takes for amp to settle within 99% (s)'
+        }
         num_samples = 100
 
         def input_domain(self):

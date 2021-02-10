@@ -3,6 +3,7 @@ from fixture import TemplateMaster
 class ContinuousComparatorTemplate(TemplateMaster):
     __name__ = 'comparator_template'
     required_ports = ['in_', 'out']
+    required_info = {}
 
     @classmethod
     def specify_test_inputs(self):

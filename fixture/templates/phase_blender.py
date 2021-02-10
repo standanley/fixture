@@ -5,6 +5,10 @@ from fixture.template_creation_utils import debug
 
 class PhaseBlenderTemplate(TemplateMaster):
     required_ports = ['in_a', 'in_b', 'out']
+    required_info = {
+        'phase_offset_range': 'phase offset between in_a and in_b, must be between 0 and 1',
+        'frequency': 'Input clock frequency (Hz)'
+    }
 
     #@debug
     class Test1(TemplateMaster.Test):

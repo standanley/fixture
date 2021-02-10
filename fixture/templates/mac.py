@@ -4,6 +4,9 @@ import fixture
 
 class MACTemplate(TemplateMaster):
     required_ports = ['d', 'W', 'outp', 'outn']
+    required_info = {
+        'approx_settling_time': 'Approximate time it takes for amp to settle within 99% (s)'
+    }
 
     #@template_creation_utils.debug
     class Test1(TemplateMaster.Test):
@@ -108,7 +111,7 @@ class MACTemplate(TemplateMaster):
             def get_regression_name(p):
                 signal = self.template.get_signal_from_spice(p)
                 s = self.template.get_name_regression(signal)
-                return fixture.regression.Regression.clean_string(None, s)
+                return fixture.regression.Regression.clean_string(s)
 
             model = list(regression_models.values())[0]
             data = model.model.data

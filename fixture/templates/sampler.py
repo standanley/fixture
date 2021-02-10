@@ -6,6 +6,9 @@ import math
 
 class SamplerTemplate(TemplateMaster):
     required_ports = ['in_', 'clk', 'out']
+    required_info = {
+        'approx_settling_time': 'Approximate time it takes for amp to settle within 99% (s)'
+    }
 
     def __init__(self, *args, **kwargs):
         # Some magic constants, maybe pull these from config?
