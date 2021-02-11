@@ -13,12 +13,11 @@ TAB = '    '
 def make_config(spice_filename, template_name, skip_writing_file=False):
     template = getattr(fixture.templates, template_name)
     circuit = fault.spice_target.DeclareFromSpice(spice_filename)
-    print(circuit)
 
     circuit_name = circuit.name
     ports = circuit.IO.ports
-    for name in ports.keys():
-        print(name)
+    #for name in ports.keys():
+    #    print(name)
 
     lines = [header]
     lines.append(f'name: {circuit_name}')
