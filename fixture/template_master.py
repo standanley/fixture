@@ -142,6 +142,8 @@ class TemplateMaster():
 
     def get_signal_from_spice(self, spice):
         spice_name = str(spice.name)
+        # For some reason, the prefix is included when spice.name is a magma.ref.ArrayRef
+        spice_name = spice_name.split('.')[-1]
         for s in self.signals:
             if s.spice_name == spice_name:
                 return s

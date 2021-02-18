@@ -1,0 +1,25 @@
+name: myamp
+filepath: ../spice/myamp_sky130.sp
+template: SimpleAmpTemplate
+pin:
+    vdd:
+        direction: input
+        datatype: real
+        value: 1.2
+    vss:
+        direction: input
+        datatype: real
+        value: 0
+    in_:
+        direction: input
+        datatype: real
+        value: (.8, 1.2)
+        template_pin: in_single
+    out:
+        direction: output
+        datatype: real
+        template_pin: out_single
+
+approx_settling_time: 1e-6
+
+test_config_file: ngspice_sky130.yaml
