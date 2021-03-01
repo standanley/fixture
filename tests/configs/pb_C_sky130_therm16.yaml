@@ -1,0 +1,37 @@
+name: phase_blender
+filepath: ../spice/pb_sky130_therm16.sp
+template: PhaseBlenderTemplate_C
+pin:
+    vdd:
+        direction: input
+        datatype: real
+        value: 1.8
+#     gnd:
+#         direction: input
+#         datatype: real
+#         value: 0
+    ph_in[1]:
+        direction: input
+        datatype: bit
+        template_pin: in_b
+    ph_in[0]:
+        direction: input
+        datatype: bit
+        template_pin: in_a
+    ph_out:
+        direction: output
+        datatype: bit
+        template_pin: out
+    thm_sel_bld[0:15]:
+        direction: input
+        datatype: binary_analog
+        #template_pin: sel
+frequency: 500e6
+#phase_offset_range: [.2, 0.2]
+#phase_offset_range: [.2, 0.3]
+phase_offset_range: [.08, 0.12]
+
+#mgenero: pb_mgenero.yaml
+
+#test_config_file: ngspice.yaml
+test_config_file: ngspice_sky130.yaml

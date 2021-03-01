@@ -10,14 +10,14 @@ class PhaseBlenderTemplate_C(TemplateMaster):
         'frequency': 'Input clock frequency (Hz)'
     }
 
-    #@debug
+    @debug
     class Test1(TemplateMaster.Test):
         parameter_algebra = {
             'out_delay': {'gain':'in_phase_delay', 'offset':'1'}
             #'out_delay': {'offset': '1'}
             #'out_delay': {'offset_a': 'sel_therm', 'offset_b': '1'}
         }
-        num_samples = 50
+        num_samples = 200
 
 
         def input_domain(self):
@@ -130,16 +130,17 @@ class PhaseBlenderTemplate_C(TemplateMaster):
 
         def post_regression(self, regression_models):
 
-            def new_pred_fun(x, dt, abcd):
-                a, b, c, d = abcd
+            def new_pred_fun(x, dt, abcdef):
+                a, b, c, d, e, f = abcdef
                 alpha = a * x + b
                 beta = c * x + d
+                gamma = e * x + f
                 if alpha < dt:
-                    print('CASE AAA', alpha, dt + (1 - dt/alpha) * beta)
-                    return alpha
+                    #print('CASE AAA', alpha, dt + (1 - dt/alpha) * beta)
+                    return alpha + gamma
                 else:
-                    print('CASE B', alpha, dt + (1 - dt/alpha) * beta)
-                    return dt + (1 - dt/alpha) * beta
+                    #print('CASE B', alpha, dt + (1 - dt/alpha) * beta)
+                    return dt + (1 - dt/alpha) * beta + gamma
 
 
             model = list(regression_models.values())[0]
@@ -161,57 +162,60 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='3d')
 
-            xs = [sum(v[6:10]) for v in vectors]
+            xs = [sum(v[len(v)//2+1:]) for v in vectors]
             ys = [v[0] for v in vectors]
             zs = measured
             ax.scatter(xs, ys, zs, color='b')
 
 
 
-            def opt_fun(abcd_scaled):
-                abcd = abcd_scaled * 1e-10
-                new_preds = [new_pred_fun(x, y, abcd) for x, y in zip(xs, ys)]
+            def opt_fun(abcdef_scaled):
+                abcdef = abcdef_scaled * 1e-10
+                new_preds = [new_pred_fun(x, y, abcdef) for x, y in zip(xs, ys)]
                 errors = [(new_pred - pred)*1e10 for new_pred, pred in zip(new_preds, predictions)]
                 error = sum(x**2 for x in errors)
 
                 x = 2
-                alpha = abcd[0] * x + abcd[1]
-                beta = abcd[2] * x + abcd[3]
+                alpha = abcdef[0] * x + abcdef[1]
+                beta = abcdef[2] * x + abcdef[3]
 
-                alpha_min = abcd[0]* 0 + abcd[1]
-                alpha_max = abcd[0]* 3 + abcd[1]
+                alpha_min = abcdef[0]* 0 + abcdef[1]
+                alpha_max = abcdef[0]* 3 + abcdef[1]
                 r = lambda x: f'{x:.3e}'
-                print('abcd', [r(x) for x in abcd_scaled], '\tamin,amax', r(alpha_min), r(alpha_max), 'error', r(error))
+                print('abcdef', [r(x) for x in abcdef_scaled],
+                      '\tamin,amax', r(alpha_min), r(alpha_max), alpha_min < ys[0] < alpha_max,
+                      'error', r(error))
 
                 return error
 
 
             linear_slope = 2.1e-2 / 500e6
             linear_const = 1.465e-1 / 500e6 - 1.5e-10
-            abcd0 = [linear_slope, linear_const, linear_slope, linear_const*2.5]
-            abcd0_scaled = [x * 1e10 for x in abcd0]
+            abcdef0 = [linear_slope, linear_const, linear_slope, linear_const*1.5, 0, 0]
+            abcdef0_scaled = [x * 1e10 for x in abcdef0]
 
             import scipy
-            opt_result = scipy.optimize.minimize(opt_fun, abcd0_scaled)
-            abcd_opt_scaled = opt_result.x
-            abcd_opt = [x*1e-10 for x in abcd_opt_scaled]
+            opt_result = scipy.optimize.minimize(opt_fun, abcdef0_scaled)
+            abcdef_opt_scaled = opt_result.x
+            abcdef_opt = [x*1e-10 for x in abcdef_opt_scaled]
 
-            preds_opt = [new_pred_fun(x, y, abcd_opt) for x, y in zip(xs, ys)]
-            preds_0 = [new_pred_fun(x, y, abcd0) for x, y in zip(xs, ys)]
+            preds_opt = [new_pred_fun(x, y, abcdef_opt) for x, y in zip(xs, ys)]
+            preds_0 = [new_pred_fun(x, y, abcdef0) for x, y in zip(xs, ys)]
 
             #surf = ax.plot_trisurf(xs, ys, preds_opt, linewidth=0, alpha=0.5, color='r')
             ax.scatter(xs, ys, preds_opt, color='r')
-            ax.scatter(xs, ys, preds_0, color='g')
+            ax.scatter(xs, ys, predictions, color='g')
 
 
             plt.show()
 
-            plt.scatter(xs, preds_opt)
-            tempxs = [0, 1, 2, 3, 4]
-            tempys = [abcd_opt[0]*tempx + abcd_opt[1] for tempx in tempxs]
-            tempys2 = [new_pred_fun(tempx, ys[0], abcd_opt) for tempx in tempxs]
+            plt.scatter(xs, zs)
+            tempxs = list(range(17))
+            #tempys = [abcd_opt[0]*tempx + abcd_opt[1] for tempx in tempxs]
+            #tempys2 = [new_pred_fun(tempx, ys[0], abcd_opt) for tempx in tempxs]
+            tempys = [new_pred_fun(tempx, ys[0], abcdef_opt) for tempx in tempxs]
             plt.plot(tempxs, tempys)
-            plt.plot(tempxs, tempys2)
+            #plt.plot(tempxs, tempys2)
             plt.show()
 
 

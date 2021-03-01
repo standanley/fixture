@@ -31,8 +31,12 @@ def test_sky130():
     circuit_fname = file_relative_to_test('configs/pb_sky130.yaml')
     fixture.run(circuit_fname)
 
-def test_sky130_C():
+def test_C_sky130():
     circuit_fname = file_relative_to_test('configs/pb_C_sky130.yaml')
+    fixture.run(circuit_fname)
+
+def test_C_sky130_therm16():
+    circuit_fname = file_relative_to_test('configs/pb_C_sky130_therm16.yaml')
     fixture.run(circuit_fname)
 
 if __name__ == '__main__':
@@ -40,4 +44,4 @@ if __name__ == '__main__':
     #test_ngspice()
     #test_spectre()
     #test_sky130()
-    test_sky130_C()
+    test_C_sky130_therm16()

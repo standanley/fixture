@@ -1,4 +1,4 @@
-N = 4
+N = 16
 BINARY_WEIGHTING = False
 
 # NOTE the skywater PDK seems to use um, although this file treats them as the spice default, m

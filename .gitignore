@@ -4,6 +4,7 @@ __pycache__/
 build/
 junk/
 tmp/
+tests/spice/temporary
 
 *.swp
 *.egg-info

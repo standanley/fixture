@@ -1,6 +1,7 @@
 import math
 import itertools
 import random
+random.seed(4)
 
 class Sampler:
     @classmethod
