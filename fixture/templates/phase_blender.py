@@ -13,7 +13,8 @@ class PhaseBlenderTemplate(TemplateMaster):
     #@debug
     class Test1(TemplateMaster.Test):
         parameter_algebra = {
-            'out_delay': {'gain':'in_phase_delay', 'offset':'1'}
+            #'out_delay': {'gain':'in_phase_delay', 'offset':'1'}
+            'out_delay': {'offset': '1'}
         }
         num_samples = 100
 

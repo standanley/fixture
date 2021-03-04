@@ -115,10 +115,16 @@ def _run(circuit_config_dict):
     def run_callback(tester):
         print('calling with sim dict', simulator_dict)
         #simulator_dict['directory'] = f'build_{name}'
+
+        no_run = False
+        if no_run:
+            print('SKIPPING SIMULATION, using results from last time')
+
         tester.compile_and_run(test_config_dict['target'],
             simulator=test_config_dict['simulator'],
             clock_step_delay=0,
             tmp_dir=False,
+            no_run=no_run,
             **simulator_dict
         )
 
@@ -130,7 +136,26 @@ def _run(circuit_config_dict):
         print('param\tterm\tcoef')
         for param, d in results.items():
             for partial_term_optional, coef in d.items():
+                #temp = coef * 225/1.2
                 print('%s\t%s\t%.3e' % (param, partial_term_optional, coef))
+
+    # TEST for differential stuff
+    #import numpy as np
+    #a, b, c, d = [params_by_mode[0][x]['1'] for x in ['A', 'B', 'C', 'D']]
+    #abcd = np.array([[a, b], [c, d]])
+    #m = np.array([[1, -1], [.5, .5]])
+    #minv = np.linalg.inv(m)
+    #[[w, x], [y, z]] = m @ abcd @ minv
+    #print('w', w)
+    #print('x', x)
+    #print('y', y)
+    #print('z', z)
+    #w1, x1, y1, z1 = [params_by_mode[0][x]['1'] for x in ['gain', 'gain_from_cm', 'gain_to_cm', 'cm_gain']]
+    #print('w1', w1)
+    #print('x1', x1)
+    #print('y1', y1)
+    #print('z1', z1)
+
 
     #if DEBUG:
     #    vals = {k:v.value for k,v in DEBUG_DICT.items()}

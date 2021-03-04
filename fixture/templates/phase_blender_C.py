@@ -10,14 +10,14 @@ class PhaseBlenderTemplate_C(TemplateMaster):
         'frequency': 'Input clock frequency (Hz)'
     }
 
-    @debug
+    #@debug
     class Test1(TemplateMaster.Test):
         parameter_algebra = {
             'out_delay': {'gain':'in_phase_delay', 'offset':'1'}
             #'out_delay': {'offset': '1'}
             #'out_delay': {'offset_a': 'sel_therm', 'offset_b': '1'}
         }
-        num_samples = 200
+        num_samples = 50
 
 
         def input_domain(self):
@@ -129,6 +129,8 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             return results
 
         def post_regression(self, regression_models):
+            return {}
+            import numpy as np
 
             def new_pred_fun(x, dt, abcdef):
                 a, b, c, d, e, f = abcdef
@@ -156,16 +158,22 @@ class PhaseBlenderTemplate_C(TemplateMaster):
                 return [temp(x) for x in vector[1:5]]
             c = [get_color(vector) for vector in vectors]
 
-            import numpy as np
-            import matplotlib.pyplot as plt
-
-            fig = plt.figure()
-            ax = fig.add_subplot(111, projection='3d')
-
             xs = [sum(v[len(v)//2+1:]) for v in vectors]
             ys = [v[0] for v in vectors]
             zs = measured
-            ax.scatter(xs, ys, zs, color='b')
+            xs = np.array(xs)
+            ys = np.array(ys)
+            zs = np.array(zs)
+
+            # linear regression
+            # lin_pred = a*(x*y) + b*x + c*y + d
+            dat = np.zeros((len(xs), 4))
+            dat[:, 0] = (xs * ys)
+            dat[:, 1] = (xs)
+            dat[:, 2] = (ys)
+            dat[:, 3] = np.ones((len(xs)))
+            lin = np.linalg.inv(dat.T @ dat) @ dat.T @ zs
+            preds_lin = dat @ lin
 
 
 
@@ -202,10 +210,27 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             preds_opt = [new_pred_fun(x, y, abcdef_opt) for x, y in zip(xs, ys)]
             preds_0 = [new_pred_fun(x, y, abcdef0) for x, y in zip(xs, ys)]
 
+
+            # PLOTS
+
+            import matplotlib.pyplot as plt
+
+            fig = plt.figure(1)
+            ax = fig.add_subplot(111, projection='3d')
+
+            ax.scatter(xs, ys, zs, color='b')
             #surf = ax.plot_trisurf(xs, ys, preds_opt, linewidth=0, alpha=0.5, color='r')
             ax.scatter(xs, ys, preds_opt, color='r')
-            ax.scatter(xs, ys, predictions, color='g')
+            e_opt = sum(((zs-preds_opt)*1e10)**2)
+            ax.set_title(f'Predictions with new model, {e_opt:.3e}')
 
+
+            fig2 = plt.figure(2)
+            ax2 = fig2.add_subplot(111, projection='3d')
+            ax2.scatter(xs, ys, zs, color='b')
+            ax2.scatter(xs, ys, preds_lin, color='g')
+            e_lin = sum(((zs - preds_lin)*1e10)**2)
+            ax2.set_title(f'Predictions with linear model, {e_lin:.3e}')
 
             plt.show()
 
