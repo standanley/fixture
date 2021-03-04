@@ -1,0 +1,34 @@
+name: myamp
+filepath: ../spice/myamp_differential.sp
+template: DifferentialAmpTemplateB
+pin:
+    vdd:
+        direction: input
+        datatype: real
+        value: 3
+    #vss:
+    #    direction: input
+    #    datatype: real
+    #    value: 0
+    inp:
+        direction: input
+        datatype: real
+        template_pin: inp
+    outp:
+        direction: output
+        datatype: real
+        template_pin: outp
+    inn:
+        direction: input
+        datatype: real
+        template_pin: inn
+    outn:
+        direction: output
+        datatype: real
+        template_pin: outn
+
+approx_settling_time: 1e-3
+limits_diff: (-0.03, 0.03)
+limits_cm: (1.15, 1.25)
+
+test_config_file: ngspice.yaml
