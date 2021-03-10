@@ -1,5 +1,6 @@
 from fixture import TemplateMaster
-from fixture import RealIn
+#from fixture import RealIn
+from fixture.signals import create_input_domain_signal
 from fixture.template_creation_utils import debug
 #from fixture.real_types import BinaryAnalogKind, TestVectorOutput
 
@@ -25,12 +26,14 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             offset_range = self.extras.get('phase_offset_range', (0, .5))
             freq = float(self.extras['frequency'])
             offset_delay_range = tuple((offset / freq for offset in offset_range))
+            '''
             diff = RealIn(offset_delay_range)
             # TODO make this part of the instantiation of RealIn
             diff.name = 'in_phase_delay'
-
             # could make a new test vector with same params as sel, or just use sel itself
             # new_sel = Array(len(self.sel), BinaryAnalog)
+            '''
+            diff = create_input_domain_signal('in_phase_delay', offset_delay_range)
             return [diff]
 
         def testbench(self, tester, values):

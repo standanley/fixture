@@ -79,7 +79,7 @@ def _run(circuit_config_dict):
 
     signals = []
     for pin_name, pin_value in pins.items():
-        pin_value['spice_name'] = pin_name
+        pin_value['spice_pin'] = getattr(UserCircuit, pin_name)
         signal = create_signal(pin_value)
         signals.append(signal)
         pass
@@ -116,7 +116,7 @@ def _run(circuit_config_dict):
         print('calling with sim dict', simulator_dict)
         #simulator_dict['directory'] = f'build_{name}'
 
-        no_run = False
+        no_run = True
         if no_run:
             print('SKIPPING SIMULATION, using results from last time')
 

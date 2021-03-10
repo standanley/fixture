@@ -110,12 +110,13 @@ class TemplateMaster():
 
         for test in self.tests:
             test_dimensions = test.input_domain()
+            test.signals = test_dimensions
             #td_insts = [td() for td in test_dimensions]
-            (test.inputs_pinned,
-             test.inputs_true_digital,
-             test.inputs_ba,
-             test.inputs_analog,
-             test.outputs_analog) = self.sort_ports(test_dimensions)
+            #(test.inputs_pinned,
+            # test.inputs_true_digital,
+            # test.inputs_ba,
+            # test.inputs_analog,
+            # test.outputs_analog) = self.sort_ports(test_dimensions)
                 
 
 
@@ -154,6 +155,14 @@ class TemplateMaster():
     def get_name_regression(self, p):
         if type(p) == str:
             return p
+
+        tn = getattr(p, 'template_name', None)
+        if tn is not None:
+            return tn
+        sn = getattr(p, 'spice_name', None)
+        if sn is not None:
+            return sn
+        assert False, 'todo'
 
         template_name = self.get_name_template(p)
         if template_name is not None:

@@ -119,7 +119,10 @@ class Regression():
 
         to_be_deleted = set()
         to_be_added = {}
-        for arr_req in test.inputs_ba:
+        test_inputs_ba = [s for s in test.signals if s.type_ == 'binary_analog']
+        for arr_req in test_inputs_ba:
+            # TODO not sure whether this works with new Signal interface
+            assert False, 'untested'
             if is_part_of_bus(arr_req)[0]: #isinstance(arr_req.name, magma.ref.ArrayRef):
                 #bus_name = str(arr_req.name.array.name)
                 #inst_name = str(arr_req.name).split('.')[-1]

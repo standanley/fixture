@@ -64,9 +64,11 @@ class Testbench():
         then self.optional_vectors, self.test_vectors as lists.
         They are ordered such that zip(x_inputs, x_vectors[0]) would
         create tuples for the first test to run.
+        NEW STRATEGY
+        set self.test_vectors to a dict of {signal: list}
         '''
         # TODO don't have a default; force test to set num_samples
-        num_samples = getattr(self.test, 'num_samples', 10)
+        self.num_sample_points = getattr(self.test, 'num_samples', 10)
         # sort input_domain dimensions into analog and ba
         # test_analog = []
         # test_ba = []
@@ -75,8 +77,38 @@ class Testbench():
         #         test_analog.append(test_dim)
         #     else:
         #         test_ba.append(test_dim)
-        test_analog = self.test.inputs_analog
-        test_ba = self.test.inputs_ba
+        all_signals = self.template.signals + self.test.signals
+        random_signals = [s for s in all_signals
+            if isinstance(s, fixture.signals.SignalIn) and s.get_random]
+        random_analog = [s for s in random_signals if s.type_ == 'analog']
+        random_ba = [s for s in random_signals if s.type_ == 'binary_analog']
+
+        sample_points = fixture.Sampler.get_orthogonal_samples(
+            len(random_analog),
+            len(random_ba),
+            self.num_sample_points
+        )
+
+        # Scale samples and put them into a dictionary
+        # it's important that keys is all the analog then all the ba to match Sampler
+        keys = random_analog + random_ba
+        test_vectors = {}
+        for i, s in enumerate(keys):
+            sample_values_unscaled = [sp[i] for sp in sample_points]
+            if s.type_ == 'analog':
+                assert type(s.value) == tuple and len(s.value) == 2, 'bad value '+str(s)
+                sample_values = self.scale_vector(sample_values_unscaled, s.value)
+            else:
+                sample_values = sample_values_unscaled
+            test_vectors[s] = sample_values
+
+        self.test_vectors = test_vectors
+        return
+
+    '''
+
+        #test_analog = self.test.inputs_analog
+        #test_ba = self.test.inputs_ba
 
         # get random values with fixture.Sampler
         num_oa = len(self.template.inputs_analog)
@@ -111,6 +143,7 @@ class Testbench():
             self.optional_vectors = [()] * num_samples
         if len(self.test_vectors) == 0:
             self.test_vectors = [()] * num_samples
+    '''
     """
     def set_test_vectors(self, vectors, prescaled = False):
         '''
@@ -134,18 +167,12 @@ class Testbench():
             raise NotImplementedError
     """
 
-    def apply_optional_inputs(self, v_optional):
-        zipped = zip(self.optional_inputs, v_optional)
-        def circuit_port(x):
-            ports = self.tester.circuit.circuit.interface.ports.values()
-
-        for input_, val in zipped:
-            #if input_ in self.tester.circuit.circuit.IO.ports.values():
-            #    self.tester.poke(input_, val)
-            if type(input_) == magma.DigitalMeta:
-                print('Skipping input', input_, 'Because I think it is handled by the test')
+    def apply_optional_inputs(self, i):
+        for s in self.test_vectors.keys():
+            if not s.auto_set:
                 continue
-            self.tester.poke(input_, val)
+            self.tester.poke(s.spice_pin, self.test_vectors[s][i])
+
 
     ''' optional ouput not supported at the moment
     def read_optional_outputs(self):
@@ -165,12 +192,19 @@ class Testbench():
         return results
     '''
 
-    def run_test_vector(self, vec_test, vec_optional):
-        self.apply_optional_inputs(vec_optional)
+    def run_test_point(self, i):
+        self.apply_optional_inputs(i)
 
         # TODO consider breaking the rest of this into another function
         test_inputs = {}
 
+        for s in self.test_vectors.keys():
+            if not s.auto_set:
+                assert s.template_name is not None, 'Not auto_set but not template? '+str(s)
+                test_inputs[s] = self.test_vectors[s][i]
+                test_inputs[s.template_name] = self.test_vectors[s][i]
+
+        '''
         # Add values with the ports as keys. Also note buses
         buses = set()
         for input_, val in zip(self.test_inputs, vec_test):
@@ -196,6 +230,7 @@ class Testbench():
         for name, val in test_inputs.items():
             if type(val) == list:
                 test_inputs[name] = BitVector[len(val)](val)
+        '''
 
         reads = self.test.testbench(self.tester, test_inputs)
         return reads
@@ -217,20 +252,21 @@ class Testbench():
         self.true_digital_modes = list(product(range(2), repeat=num_digital))
         for digital_mode in self.true_digital_modes:
             self.set_digital_mode(digital_mode)
-            for v_optional, v_test in zip(self.optional_vectors, self.test_vectors):
-                reads = self.run_test_vector(v_test, v_optional)
-                self.result_processing_list.append((digital_mode, v_test, v_optional, reads))
+            #for v_optional, v_test in zip(self.optional_vectors, self.test_vectors):
+            #    reads = self.run_test_vector(v_test, v_optional)
+            #    self.result_processing_list.append((digital_mode, v_test, v_optional, reads))
+            for i in range(self.num_sample_points):
+                reads = self.run_test_point(i)
+                self.result_processing_list.append((digital_mode, i, reads))
 
     def get_results(self):
         ''' Return results in the following format:
         for mode: for [in, out]: {pin:[x1, x2, x3, ...], }
         '''
-        results_by_mode = {m:{} for m in self.true_digital_modes}
-        for m, req, opt, reads in self.result_processing_list:
+        results_by_mode = {m: dict(self.test_vectors) for m in self.true_digital_modes}
+        for m, i, reads in self.result_processing_list:
             results_out_req = self.test.analysis(reads)
             if not isinstance(results_out_req, dict):
-                results_out_req = [results_out_req]
-                # TODO I think we should assert fail here rather than try to fix it
                 assert False, 'Return from process_single_test should be a dict'
 
             for k,v in results_out_req.items():
@@ -239,16 +275,31 @@ class Testbench():
             # TODO: optional outputs
             # results_out_opt = self.process_optional_outputs()
 
+
+            '''
             results_in_req = {k:v for k,v in zip(self.test_inputs, req)}
             results_in_opt = {k:v for k,v in zip(self.optional_inputs, opt)}
 
             results = {**results_in_req, **results_in_opt, **results_out_req}
+            '''
 
+            '''
+            # put inputs into results dictionary
+            results = results_out_req
+            for k, vs in self.test_vectors.items():
+                results[k] = vs[i]
+            
+            # we have to initialize here because we can't know keys before calling test.analysis
             if len(results_by_mode[m]) == 0:
-                results_by_mode[m] = {k:[] for k in results}
+                results_by_mode[m] = {k:[] for k in results_out_req}
+            '''
 
-            for k,v in results.items():
+            for k,v in results_out_req.items():
+                if k not in results_by_mode[m]:
+                    assert i == 0, f'result {k} seen first at sample {i}'
+                    results_by_mode[m][k] = []
                 results_by_mode[m][k].append(v)
+
 
         # TODO there should maybe be a default implementation that does nothing?
         if hasattr(self.test, 'post_process'):
