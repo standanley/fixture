@@ -54,7 +54,8 @@ def create_signal(pin_dict):
     if pin_dict['direction'] == 'input':
         value = pin_dict.get('value', None)
         get_random = pin_dict.get('get_random',
-                                  (type(value) == tuple) or (type_ == 'binary_analog' and value == None))
+                                  template_name is None and (
+                                  (type(value) == tuple) or (type_ == 'binary_analog' and value == None)))
         auto_set = pin_dict.get('auto_set',
                                 get_random or type(value) == int or type(value) == float)
 

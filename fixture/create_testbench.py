@@ -77,7 +77,7 @@ class Testbench():
         #         test_analog.append(test_dim)
         #     else:
         #         test_ba.append(test_dim)
-        all_signals = self.template.signals + self.test.signals
+        all_signals = self.test.signals
         random_signals = [s for s in all_signals
             if isinstance(s, fixture.signals.SignalIn) and s.get_random]
         random_analog = [s for s in random_signals if s.type_ == 'analog']

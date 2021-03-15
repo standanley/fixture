@@ -13,9 +13,10 @@ class DACTemplate(TemplateMaster):
         }
 
         def input_domain(self):
-            return self.ports.in_
+            return self.signals.by_template_name('in_')
 
         def testbench(self, tester, values):
+            test = self.ports
             for bit in self.ports.in_:
                 tester.poke(bit, values[bit])
 
