@@ -2,6 +2,7 @@ import fixture
 import fault
 from itertools import product
 from numpy import ndarray
+from fixture.signals import SignalIn
 
 import magma
 from hwtypes import BitVector
@@ -48,13 +49,16 @@ class Testbench():
 
 
     def set_pinned_inputs(self):
-        for input_ in self.template.inputs_pinned:
-            val = input_.limits
-            self.tester.poke(input_, val)
+        for s in self.test.signals:
+            if isinstance(s, SignalIn) and s.auto_set:
+                if not s.get_random:
+                    assert isinstance(s.value, float) or isinstance(s.value, int), f'Unknown pin value for {s}'
+                    self.tester.poke(s.spice_pin, s.value)
 
     def set_digital_mode(self, mode):
-        for input_, val in zip(self.template.inputs_true_digital, mode):
-            self.tester.poke(input_, val)
+        true_digital = [s for s in self.test.signals if isinstance(s, SignalIn) and s.type_ == 'true_digital']
+        for s, val in zip(true_digital, mode):
+            self.tester.poke(s.spice_pin, val)
 
     def get_test_vectors(self):
         '''
@@ -248,7 +252,8 @@ class Testbench():
         self.result_processing_list = []
         self.set_pinned_inputs()
 
-        num_digital = len(self.template.inputs_true_digital)
+        true_digital = [s for s in self.test.signals if isinstance(s, SignalIn) and s.type_ == 'true_digital']
+        num_digital = len(true_digital)
         self.true_digital_modes = list(product(range(2), repeat=num_digital))
         for digital_mode in self.true_digital_modes:
             self.set_digital_mode(digital_mode)

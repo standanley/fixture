@@ -58,11 +58,13 @@ class Regression():
         interaction_a_ba = False
         interaction_ba_ba = False
 
-        opt_a, opt_ba = template.inputs_analog, template.inputs_ba
+        # TODO is s.get_random and s.auto_set the right condition?
+        optional_signals = [s for s in template.signals if hasattr(s, 'get_random') and s.get_random and s.auto_set]
+        opt_a = [s.spice_name for s in optional_signals if s.type_ == 'analog']
+        opt_ba = [s.spice_name for s in optional_signals if s.type_ == 'binary_analog']
 
         terms = [cls.one_literal]
-        for a_port in opt_a:
-            a = cls.get_spice_name(a_port)
+        for a in opt_a:
             for i in range(1, analog_order + 1):
                 if i == 1:
                     terms.append(a)
@@ -70,14 +72,12 @@ class Regression():
                     terms.append('I(%s**%d)' % (a, i))
                     #terms.append('%s**%d' % (a, i))
 
-        for ba_port in opt_ba:
-            ba = cls.get_spice_name(ba_port)
+        for ba in opt_ba:
             terms.append(ba)
 
 
         def interact(iterator):
-            for a_port, b_port in iterator:
-                a, b = cls.get_spice_name(a_port), cls.get_spice_name(b_port)
+            for a, b in iterator:
                 terms.append('%s:%s' % (a, b))
 
         if interaction_a_a:
@@ -120,6 +120,13 @@ class Regression():
         to_be_deleted = set()
         to_be_added = {}
         test_inputs_ba = [s for s in test.signals if s.type_ == 'binary_analog']
+
+        for s in test.signals:
+            if s.template_name is not None and s.type_ == 'binary_analog':
+                assert False, 'TODO required ba'
+        return
+
+
         for arr_req in test_inputs_ba:
             # TODO not sure whether this works with new Signal interface
             assert False, 'untested'

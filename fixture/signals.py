@@ -28,6 +28,7 @@ class SignalOut():
                  #get_random,
                  #auto_set,
                  spice_name,
+                 spice_pin,
                  template_name#,
                  #bus_name,
                  #bus_i
@@ -37,6 +38,7 @@ class SignalOut():
         # TODO auto read?
         #self.auto_set = auto_set
         self.spice_name = spice_name
+        self.spice_pin = spice_pin
         self.template_name = template_name
         #self.bus_name = bus_name
         #self.bus_i = bus_i
@@ -73,6 +75,7 @@ def create_signal(pin_dict):
     elif pin_dict['direction'] == 'output':
         s = SignalOut(type_,
                       spice_name,
+                      spice_pin,
                       template_name)
         return s
     else:

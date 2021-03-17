@@ -1,4 +1,5 @@
 import sys, yaml, ast, os
+import fixture.config_parse as config_parse
 from pathlib import Path
 import magma
 import fault
@@ -8,8 +9,6 @@ import fixture.sampler as sampler
 import fixture.create_testbench as create_testbench
 from fixture import Regression
 import fixture.mgenero_interface as mgenero_interface
-import fixture.cfg_cleaner as cfg_cleaner
-from fixture.signals import create_signal
 
 def path_relative(path_to_config, path_from_config):
     ''' Interpret path names specified in config file
@@ -37,57 +36,10 @@ def run(circuit_config_filename):
     _run(circuit_config_dict)
 
 def _run(circuit_config_dict):
-    cfg_cleaner.edit_cfg(circuit_config_dict)
 
-    # load test config data
-    test_config_filename = circuit_config_dict['test_config_file']
-    test_config_filename_abs = path_relative(circuit_config_dict['filename'], test_config_filename)
-    with open(test_config_filename_abs) as f:
-        test_config_dict = yaml.safe_load(f)
-    if 'num_cycles' not in test_config_dict and test_config_dict['target'] != 'spice':
-        test_config_dict['num_cycles'] = 10**9 # default 1 second, will quit early if $finish is reached
-
-    Template = getattr(templates, circuit_config_dict['template'])
-
-    # generate IO
-    io = []
-    pins = circuit_config_dict['pin']
-    for name, p in pins.items():
-        dt = getattr(real_types, p['datatype'])
-        value = ast.literal_eval(str(p.get('value', None)))
-        dt = dt(value)
-        direction = getattr(real_types, p['direction'])
-        dt = direction(dt)
-        if 'width' in p:
-            dt = real_types.Array(p['width'], dt)
-        io += [name, dt]
-
-    class UserCircuit(magma.Circuit):
-        name = circuit_config_dict['name']
-        IO = io
-
-    mapping = {}
-    for name, p in pins.items():
-        if 'template_pin' in p:
-            if p['template_pin'] == 'ignore':
-                i = 0
-                while 'ignore'+str(i) in mapping:
-                    i += 1
-                mapping['ignore'+str(i)] = name
-            else:
-                mapping[p['template_pin']] = name
-
-    signals = []
-    for pin_name, pin_value in pins.items():
-        pin_value['spice_pin'] = getattr(UserCircuit, pin_name)
-        signal = create_signal(pin_value)
-        signals.append(signal)
-        pass
-
-
-    extras = circuit_config_dict
-
+    UserCircuit, template_name, signals, test_config_dict, extras = config_parse.parse_config(circuit_config_dict)
     tester = fault.Tester(UserCircuit)
+    TemplateClass = getattr(templates, template_name)
 
 
     # TODO fill in all args from SpiceTarget or remove this check
@@ -128,7 +80,8 @@ def _run(circuit_config_dict):
             **simulator_dict
         )
 
-    t = Template(UserCircuit, mapping, run_callback, extras, signals)
+    mapping = None
+    t = TemplateClass(UserCircuit, mapping, run_callback, extras, signals)
     params_by_mode = t.go()
 
     for mode, results in params_by_mode.items():

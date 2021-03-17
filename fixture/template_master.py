@@ -100,6 +100,9 @@ class TemplateMaster():
         def __init__(self, signal_manager):
             self.sm = signal_manager
 
+        def __len__(self):
+            return len(self.sm.signals)
+
         def __getattr__(self, name):
             if name == '__len__':
                 assert False, 'unexpected, who is asking?'
@@ -202,6 +205,7 @@ class TemplateMaster():
         self.tests = [T(self) for T in self.tests]
 
 
+        '''
         # The required ports are completely handled by the template creator,
         # so this code does not do much with required ports
         # We do need to deal with optional ports, so we are going to sort them
@@ -217,6 +221,7 @@ class TemplateMaster():
          self.inputs_ba,
          self.inputs_analog,
          self.outputs_analog) = self.sort_ports(optional_ports)
+         '''
 
         for test in self.tests:
             # TODO create a copy here - we don't want the template editing this
