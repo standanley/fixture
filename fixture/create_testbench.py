@@ -84,8 +84,8 @@ class Testbench():
         all_signals = self.test.signals
         random_signals = [s for s in all_signals
             if isinstance(s, fixture.signals.SignalIn) and s.get_random]
-        random_analog = [s for s in random_signals if s.type_ == 'analog']
-        random_ba = [s for s in random_signals if s.type_ == 'binary_analog']
+        random_analog = [s for s in random_signals if s.type_ in ['analog', 'real']]
+        random_ba = [s for s in random_signals if s.type_ in ['binary_analog', 'bit']]
 
         sample_points = fixture.Sampler.get_orthogonal_samples(
             len(random_analog),
@@ -207,6 +207,8 @@ class Testbench():
                 assert s.template_name is not None, 'Not auto_set but not template? '+str(s)
                 test_inputs[s] = self.test_vectors[s][i]
                 test_inputs[s.template_name] = self.test_vectors[s][i]
+                if hasattr(s, 'spice_pin'):
+                    test_inputs[s.spice_pin] = self.test_vectors[s][i]
 
         '''
         # Add values with the ports as keys. Also note buses

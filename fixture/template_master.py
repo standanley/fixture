@@ -110,7 +110,7 @@ class TemplateMaster():
                 if isinstance(s, list):
                     return [get_spice(x) for x in s]
                 else:
-                    return s.spice_pin
+                    return s.spice_pin if hasattr(s, 'spice_pin') else None
 
             return get_spice(signals)
 

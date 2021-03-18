@@ -12,11 +12,14 @@ pin:
         value: 0
     d<0:1><3:0>:
         direction: input
-        datatype: binary_analog
+        # NOTE the values here behave a lot like binary_analog, but fixture
+        # does not need to consider them as ba because not every bit affects
+        # every output parameter
+        datatype: bit
         #template_pin: d
     W<0:1><3:0>:
         direction: input
-        datatype: binary_analog
+        datatype: bit
         #template_pin: W
     outp:
         direction: output
