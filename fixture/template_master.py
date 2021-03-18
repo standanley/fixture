@@ -41,7 +41,7 @@ class TemplateMaster():
                     if result_old is None:
                         result_old = []
                     result_new = result_old + [None] * max(0, indices[0] - len(result_old) + 1)
-                    result_new[indices[0]] = s
+                    result_new[indices[0]] = updated(result_new[indices[0]], s, indices[1:])
                     return result_new
 
             def parse_name(sig_name, goal_name):
@@ -71,16 +71,14 @@ class TemplateMaster():
 
         def from_spice_name(self, spice_name):
             ans = self.search('spice_name', spice_name)
-            assert ans is not None, f'No signal with spice name {spice_name}'
+            if ans is None:
+                raise KeyError(f'No signal with spice name {spice_name}')
             return ans
 
         def from_template_name(self, template_name):
-            #for s in self.signals:
-            #    if s.template_name == template_name:
-            #        return s
-            #assert False, f'No signal with template name {template_name}'
             ans = self.search('template_name', template_name)
-            assert ans is not None, f'No signal with template name {template_name}'
+            if ans is None:
+                raise KeyError(f'No signal with template name {template_name}')
             return ans
 
         def add_signal(self, s):

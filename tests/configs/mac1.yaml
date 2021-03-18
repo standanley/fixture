@@ -13,23 +13,30 @@ pin:
     d<0:1><3:0>:
         direction: input
         datatype: binary_analog
-        template_pin: d
+        #template_pin: d
     W<0:1><3:0>:
         direction: input
         datatype: binary_analog
-        template_pin: W
+        #template_pin: W
     outp:
         direction: output
         datatype: real
-        template_pin: outp
+        #template_pin: outp
     outn:
         direction: output
         datatype: real
-        template_pin: outn
+        #template_pin: outn
 
     z_debug:
         direction: output
         datatype: real
 
-approx_settling_time: 1e-6
+template_pins:
+    d<0:1><3:0>: d<0:1><3:0>
+    W<0:1><3:0>: W<0:1><3:0>
+    outp: outp
+    outn: outn
+
+extras:
+    approx_settling_time: 1e-6
 test_config_file: ngspice.yaml

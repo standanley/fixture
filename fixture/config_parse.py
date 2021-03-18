@@ -5,6 +5,7 @@ from fixture.signals import create_signal
 import magma
 import fault
 import ast
+import re
 
 
 def path_relative(path_to_config, path_from_config):
@@ -18,14 +19,34 @@ def path_relative(path_to_config, path_from_config):
     res = os.path.join(folder, path_from_config)
     return res
 
-def break_bus_name2(name):
+def expanded(name, prefix=''):
     '''
-    'myname'  ->  'myname'
-    'myname[0:2]<1:0>'  ->  [['myname[0]<1>', 'myname[0]<0>'], ['myname[1]<1>', ...], ...]
+    'myname'  ->  ['myname']
+    'myname{0:2}<1:0>[4]'  ->  [['myname{0}<1>[4]', 'myname{0}<0>[4]'], ['myname{1}<1>[4]', ...], ...]
     :param name: name which may or may not be a bus
     :return:
     '''
-    return name
+
+    braces = ['[:]', '<:>', '{:}']
+    for b in braces:
+        regex = f'(.*?){re.escape(b[0])}([0-9]*){re.escape(b[1])}([0-9]*){re.escape(b[2])}(.*)'
+        m = re.match(regex, name)
+        if m is not None:
+            bus_name = m.group(1)
+            start = int(m.group(2))
+            end = int(m.group(3))
+            post = m.group(4)
+            direction = 1 if end >= start else -1
+            indices = range(start, end+direction, direction)
+            wires = []
+
+            return [expanded(post, prefix + bus_name + f'{b[0]}{i}{b[2]}') for i in indices]
+
+            for bn in flattened(bus_name):
+                wires += [bn + f'{b[0]}{i}{b[2]}' for i in indices]
+            return wires
+    return prefix + name
+
     assert False, 'todo'
     return None
 
@@ -74,7 +95,6 @@ def parse_config(circuit_config_dict):
         else:
             assert False, f'Direction for {name} must be "input" or "output", not "{direction}"'
 
-        value = ast.literal_eval(str(p.get('value', None)))
         io += [name, dt]
 
     class UserCircuit(magma.Circuit):
@@ -85,8 +105,8 @@ def parse_config(circuit_config_dict):
     s2t_mapping = {}
     template_pins = circuit_config_dict['template_pins']
     for template_name, spice_name in template_pins.items():
-        template_name_broken = break_bus_name2(template_name)
-        spice_name_broken = break_bus_name2(spice_name)
+        template_name_expanded = expanded(template_name)
+        spice_name_expanded = expanded(spice_name)
         def equate(t, s):
             err_msg = f'Mismatched bus dimensions for {template_name}, {spice_name}'
             assert type(t) == type(s), err_msg
@@ -96,7 +116,7 @@ def parse_config(circuit_config_dict):
                 assert len(t) == len(s), err_msg
                 for t2, s2 in zip(t, s):
                     equate(t2, s2)
-        equate(template_name_broken, spice_name_broken)
+        equate(template_name_expanded, spice_name_expanded)
 
     #mapping = {}
     #for name, p in pins.items():
@@ -112,10 +132,15 @@ def parse_config(circuit_config_dict):
     signals = []
     for pin_name, pin_value in pins.items():
         pin_value['spice_pin'] = getattr(UserCircuit, pin_name)
+        value = ast.literal_eval(str(pin_value.get('value', None)))
+        pin_value['value'] = value
         if pin_name in s2t_mapping:
-            pin_value['template_pin'] = s2t_mapping[pin_name]
+            pin_value['template_pin'] = s2t_mapping.pop(pin_name)
+
         signal = create_signal(pin_value)
         signals.append(signal)
+    assert len(s2t_mapping) == 0, f'Unrecognized spice pin "{list(s2t_mapping)[0]}" in template_pin mapping'
+
 
 
     template_class_name = circuit_config_dict['template']
