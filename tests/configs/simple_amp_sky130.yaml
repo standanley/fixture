@@ -14,12 +14,15 @@ pin:
         direction: input
         datatype: real
         value: (.8, 1.2)
-        template_pin: in_single
     out:
         direction: output
         datatype: real
-        template_pin: out_single
 
-approx_settling_time: 1e-6
+template_pins:
+    in_single: in_
+    out_single: out
+
+extras:
+    approx_settling_time: 1e-6
 
 test_config_file: ngspice_sky130.yaml

@@ -48,11 +48,10 @@ pin:
         datatype: bit
         template_pin: ignore
         width: 2
-    out:
+    out<0:1>:
         direction: output
         datatype: real
         template_pin: out
-        width: 2
     vdd:
         direction: input
         datatype: real
@@ -60,7 +59,13 @@ pin:
     z_debug:
         direction: output
         datatype: real
-#approx_settling_time: 50e-6
+
+template_pins:
+   in_: in_
+   out<0:1>: out<0:1>
+
+extras:
+    #approx_settling_time: 50e-6
 
 test_config_file: ngspice_sampler.yaml
 

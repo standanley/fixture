@@ -7,17 +7,19 @@ pin:
         datatype: real
         # NMOS vth is 0.4 and vdd is 1.2, max pull up is 0.8
         value: (0, 0.8)
-        template_pin: in_
-    clk:
+    clk<0:1>:
         direction: input
         datatype: bit
-        template_pin: clk
-        width: 2
-    out:
+    out<0:1>:
         direction: output
         datatype: real
-        template_pin: out
-        width: 2
-approx_settling_time: 10e-6
+
+template_pins:
+   in_: in
+   clk<0:1>: clk<0:1>
+   out<0:1>: out<0:1>
+
+extras:
+    approx_settling_time: 10e-6
 
 test_config_file: mlingua.yaml

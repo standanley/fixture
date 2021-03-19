@@ -42,4 +42,5 @@ template_pins:
 
 extras:
     approx_settling_time: 1e-6
+
 test_config_file: ngspice.yaml
