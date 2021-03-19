@@ -6,93 +6,10 @@ from abc import ABC, abstractmethod
 import fixture
 import fixture.real_types as rt
 import re
+from fixture.signals import SignalManager
 
 class TemplateMaster():
 
-    class SignalManager:
-        def __init__(self, signals=None):
-            if signals is None:
-                signals = []
-
-            self.signals = []
-            for s in signals:
-                self.add_signal(s)
-
-        def search(self, attr, name):
-            # look through signals for buses containing name
-            # return a signal or python list of signals, or list of lists...
-            # attr should be either spice_name or template_name
-            braces_open = '[<{'
-            braces_close = ']>}'
-            #re_braces_open = '(' + '|'.join(re.escape(b) for b in braces_open) + ')'
-            #re_braces_close= '(' + '|'.join(re.escape(b) for b in braces_close) + ')'
-            re_braces_open = '[' + re.escape(braces_open) +']'
-            re_braces_close= '[' + re.escape(braces_close) + ']'
-            re_index = re_braces_open + '[0-9]+' + re_braces_close
-
-            result = None
-
-            def updated(result_old, s, indices):
-                if indices == []:
-                    assert result_old is None
-                    return s
-                else:
-                    assert result_old is None or type(result_old) == list
-                    if result_old is None:
-                        result_old = []
-                    result_new = result_old + [None] * max(0, indices[0] - len(result_old) + 1)
-                    result_new[indices[0]] = updated(result_new[indices[0]], s, indices[1:])
-                    return result_new
-
-            def parse_name(sig_name, goal_name):
-                if sig_name is None:
-                    return None
-                test = f'^{re.escape(goal_name)}(({re_index})*)$'
-                m = re.match(test, sig_name)
-                if not m:
-                    return None
-                indices_str = m.group(1)
-                indices_split = [g[1:-1] for g in re.findall(re_index, indices_str)]
-                indices = [int(i) for i in indices_split]
-                return indices
-
-            for s in self.signals:
-                indices = parse_name(getattr(s, attr), name)
-                if indices is not None:
-                    result = updated(result, s, indices)
-
-            return result
-
-        def from_spice_pin(self, spice_pin):
-            for s in self.signals:
-                if s.spice_pin == spice_pin:
-                    return s
-            assert False, f'No signal with spice pin {spice_pin}'
-
-        def from_spice_name(self, spice_name):
-            ans = self.search('spice_name', spice_name)
-            if ans is None:
-                raise KeyError(f'No signal with spice name {spice_name}')
-            return ans
-
-        def from_template_name(self, template_name):
-            ans = self.search('template_name', template_name)
-            if ans is None:
-                raise KeyError(f'No signal with template name {template_name}')
-            return ans
-
-        def add_signal(self, s):
-            # add signal to self.signals
-            # used to update bus info but now that is done every query instead
-            return self.signals.append(s)
-
-        def __add__(self, o):
-            assert isinstance(o, type(self))
-            # TODO why is SignalManager out of scope here?
-            return type(self)(self.signals + o.signals)
-
-        def __iter__(self):
-            return iter(self.signals)
 
     class Ports():
         def __init__(self, signal_manager):
@@ -174,7 +91,7 @@ class TemplateMaster():
         params: a dictionary of template-specific parameters
         '''
 
-        self.signals = self.SignalManager(signals)
+        self.signals = SignalManager(signals)
 
         self.ports = self.Ports(self.signals)
 
@@ -222,14 +139,13 @@ class TemplateMaster():
          '''
 
         for test in self.tests:
-            # TODO create a copy here - we don't want the template editing this
-            test.signals = self.signals
+            test.signals = self.signals.copy()
             test_dimensions = test.input_domain()
             for s in test_dimensions:
                 s.get_random = True
+                if s not in test.signals:
+                    test.signals.append(s)
 
-            # TODO a merge of these? this kinda sucks
-            test.signals += self.SignalManager(test_dimensions)
             #td_insts = [td() for td in test_dimensions]
             #(test.inputs_pinned,
             # test.inputs_true_digital,

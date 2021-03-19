@@ -13,7 +13,7 @@ class DACTemplate(TemplateMaster):
         }
 
         def input_domain(self):
-            return self.signals.by_template_name('in_')
+            return self.signals.from_template_name('in_')
 
         def testbench(self, tester, values):
             test = self.ports

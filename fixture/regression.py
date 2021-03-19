@@ -103,51 +103,29 @@ class Regression():
         when the parameter algebra contains an Array (most likely ba required input),
         we have to break that term into multiple terms.
         This function edits rhs in place to split terms with an array.
+        The param is also split accordingly, and tagged with self.component_tag.
         '''
 
-        def is_part_of_bus(pin):
-            def my_in(x, ys):
-                for y in ys:
-                    if x is y:
-                        return True
-                return False
-            mapping = test.template.ports.mapping
-            for k, v in mapping.items():
-                if type(v) == list and my_in(pin, v):
-                    return (True, k)
-            return (False, '')
+        template_bus_names = [n for n in test.template.required_ports if
+                       type(test.signals.from_template_name(n)) == list]
 
         to_be_deleted = set()
         to_be_added = {}
-        test_inputs_ba = [s for s in test.signals if s.type_ == 'binary_analog']
+        for key_term in rhs:
+            for n in template_bus_names:
+                search_str = '\\b' + n + '\\b'
+                if re.search(search_str, key_term):
+                    # the required bus is in this term
+                    to_be_deleted.add(key_term)
+                    for bit in test.signals.from_template_name(n):
+                        bit_name = self.clean_string(bit.template_name)
+                        new_key_term = re.sub(search_str, bit_name, key_term)
+                        new_param = rhs[key_term] + self.component_tag + bit_name
+                        to_be_added[new_key_term] = new_param
 
-        for s in test.signals:
-            if s.template_name is not None and s.type_ == 'binary_analog':
-                assert False, 'TODO required ba'
-        return
-
-
-        for arr_req in test_inputs_ba:
-            # TODO not sure whether this works with new Signal interface
-            assert False, 'untested'
-            if is_part_of_bus(arr_req)[0]: #isinstance(arr_req.name, magma.ref.ArrayRef):
-                #bus_name = str(arr_req.name.array.name)
-                #inst_name = str(arr_req.name).split('.')[-1]
-                #bus_name = test.template.get_name_template(arr_req.name.array)
-                bus_name = is_part_of_bus(arr_req)[1]
-                inst_name = test.template.get_name_template(arr_req)
-                new_name = self.clean_string(inst_name)
-                search_str = r'\b' + bus_name + r'\b'
-
-                for key_term in rhs:
-                    if re.search(search_str, key_term):
-                        to_be_deleted.add(key_term)
-                        new_key_term = re.sub(search_str, new_name, key_term)
-                        to_be_added[new_key_term] = rhs[key_term] + self.component_tag + inst_name
-        for d in to_be_deleted:
-            del rhs[d]
-        for k, v in to_be_added.items():
-            rhs[k] = v
+        for key in to_be_deleted:
+            del rhs[key]
+        rhs.update(to_be_added)
 
     def condense_required_ba(self, results):
         buss = defaultdict(list)
