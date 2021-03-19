@@ -24,8 +24,8 @@ class DifferentialAmpTemplate(TemplateMaster):
         def input_domain(self):
             #inp = TestVectorInput(self.inp.limits, 'inp')
             #inn = TestVectorInput(self.inn.limits, 'inn')
-            inp = self.ports.inp
-            inn = self.ports.inn
+            inp = self.signals.from_template_name('inp')
+            inn = self.signals.from_template_name('inn')
             return [inp, inn]
 
         def testbench(self, tester, value):

@@ -144,7 +144,7 @@ class TemplateMaster():
             for s in test_dimensions:
                 s.get_random = True
                 if s not in test.signals:
-                    test.signals.append(s)
+                    test.signals.add_signal(s)
 
             #td_insts = [td() for td in test_dimensions]
             #(test.inputs_pinned,

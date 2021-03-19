@@ -28,7 +28,7 @@ pin:
     # optional pins
     en:
          direction: input
-         datatype: bit
+         datatype: true_digital
     adj:
         direction: input
         datatype: real
@@ -41,7 +41,7 @@ template_pins:
     outn: outn
     
 extras:
-    approx_settling_time$\: 1e-3
+    approx_settling_time: 1e-3
 
 mgenero: ./../../mgenero_4/differential_amp_mgenero_config.yaml
 
