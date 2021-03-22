@@ -57,6 +57,16 @@ def parse_test_cfg(test_config_filename_abs):
         test_config_dict['num_cycles'] = 10**9 # default 1 second, will quit early if $finish is reached
     return test_config_dict
 
+def parse_extras(extras):
+    for k, v in extras.items():
+        if type(v) == str:
+            try:
+                v_parsed = ast.literal_eval(v)
+                extras[k] = v_parsed
+            except ValueError:
+                # just leave it as a string
+                pass
+    return extras
 
 def parse_config(circuit_config_dict):
 
@@ -144,5 +154,5 @@ def parse_config(circuit_config_dict):
 
 
     template_class_name = circuit_config_dict['template']
-    extras = circuit_config_dict['extras']
+    extras = parse_extras(circuit_config_dict['extras'])
     return (UserCircuit, template_class_name, signals, test_config_dict, extras)

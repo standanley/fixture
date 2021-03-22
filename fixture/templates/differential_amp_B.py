@@ -1,7 +1,6 @@
 from fixture import TemplateMaster
-from fixture.real_types import RealIn
-
 from fixture.template_creation_utils import dynamic, debug
+from fixture.signals import create_input_domain_signal
 
 class DifferentialAmpTemplate(TemplateMaster):
     required_ports = ['inp', 'inn', 'outp', 'outn']
@@ -56,8 +55,8 @@ class DifferentialAmpTemplate(TemplateMaster):
         num_samples = 100
 
         def input_domain(self):
-            in_diff = RealIn(self.extras['limits_diff'], 'in_diff')
-            in_cm = RealIn(self.extras['limits_cm'], 'in_cm')
+            in_diff = create_input_domain_signal('in_diff', self.extras['limits_diff'])
+            in_cm = create_input_domain_signal('in_cm', self.extras['limits_cm'])
             return [in_diff, in_cm]
 
         def testbench(self, tester, value):

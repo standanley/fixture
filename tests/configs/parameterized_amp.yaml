@@ -23,7 +23,7 @@ pin:
         datatype: binary_analog
     ctrl<1:0>:
         direction: input
-        datatype: bit
+        datatype: true_digital
     my_out:
         direction: output
         datatype: real

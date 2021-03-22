@@ -169,6 +169,10 @@ def test_simple_parameterized():
 
     # regression = fixture.Regression(MyAmp, results_reformatted)
 
+def test_simple_config():
+    circuit_fname = file_relative_to_test('configs/parameterized_amp.yaml')
+    fixture.run(circuit_fname)
+
 def test_skywater():
     circuit_fname = file_relative_to_test('configs/simple_amp_sky130.yaml')
     fixture.run(circuit_fname)
