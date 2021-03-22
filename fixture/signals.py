@@ -1,4 +1,5 @@
 import re
+import numbers
 
 class SignalIn():
     def __init__(self,
@@ -52,8 +53,9 @@ def create_signal(pin_dict):
     template_name = pin_dict.get('template_pin', None)
 
     if template_name is None:
-        optional_types = ['real', 'binary_analog', 'true_digital']
-        assert type_ in optional_types, f'Optional datatype for {spice_name} must be {optional_types}, not {type_}'
+        pinned = isinstance(pin_dict.get('value', None), numbers.Number)
+        optional_types = ['analog', 'binary_analog', 'true_digital']
+        assert pinned or type_ in optional_types, f'Optional datatype for {spice_name} must be {optional_types}, not {type_}'
 
     if pin_dict['direction'] == 'input':
         value = pin_dict.get('value', None)

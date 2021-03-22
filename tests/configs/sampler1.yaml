@@ -7,27 +7,28 @@ pin:
         datatype: real
         # NMOS vth is 0.4 and vdd is 1.2, max pull up is 0.8
         value: (0, 0.8)
-    clk:
+    clk<0:1>:
         direction: input
         datatype: bit
-    out:
+    out<0:1>:
         direction: output
         datatype: real
 
 template_pins:
    in_: in_
-   clk: clk
+   clk: clk<1>
    out<0:1>: out<0:1>
+   ignore<0>: clk<0>
 
 extras:
     approx_settling_time: 100e-6
+    clks:
+        unit: 1e-6
+        period: 10
+        
+        clk<1>:
+            5: 1
+            10: 0
 
 test_config_file: ngspice_sampler.yaml
 
-clks:
-    unit: 1e-6
-    period: 10
-    
-    clk:
-        5: 1
-        10: 0

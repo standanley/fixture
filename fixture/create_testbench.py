@@ -99,7 +99,7 @@ class Testbench():
         test_vectors = {}
         for i, s in enumerate(keys):
             sample_values_unscaled = [sp[i] for sp in sample_points]
-            if s.type_ == 'analog':
+            if s.type_ in ['analog', 'real']:
                 assert type(s.value) == tuple and len(s.value) == 2, 'bad value '+str(s)
                 sample_values = self.scale_vector(sample_values_unscaled, s.value)
             else:

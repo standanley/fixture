@@ -71,7 +71,6 @@ class SamplerTemplate(TemplateMaster):
 
     def schedule_clk(self, tester, port, value, wait, jitters={}):
         if 'clks' not in self.extras:
-            main = self.get_name_circuit(port.name.array)
             tester.poke(port, 0, delay={
                 'type': 'future',
                 'waits': [wait],
