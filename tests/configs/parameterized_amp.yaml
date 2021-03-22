@@ -16,7 +16,7 @@ pin:
         value: (.2, 1.0)
     adj:
         direction: input
-        datatype: real
+        datatype: analog
         value: (.45, .55)
     ba<3:0>:
         direction: input

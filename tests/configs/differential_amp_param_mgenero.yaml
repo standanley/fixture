@@ -31,7 +31,7 @@ pin:
          datatype: true_digital
     adj:
         direction: input
-        datatype: real
+        datatype: analog
         value: (0, 1.2)
 
 template_pins:

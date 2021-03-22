@@ -52,12 +52,12 @@ def create_signal(pin_dict):
     spice_name = None if spice_pin is None else str(spice_pin)
     template_name = pin_dict.get('template_pin', None)
 
-    if template_name is None:
-        pinned = isinstance(pin_dict.get('value', None), numbers.Number)
-        optional_types = ['analog', 'binary_analog', 'true_digital']
-        assert pinned or type_ in optional_types, f'Optional datatype for {spice_name} must be {optional_types}, not {type_}'
-
     if pin_dict['direction'] == 'input':
+        if template_name is None:
+            pinned = isinstance(pin_dict.get('value', None), numbers.Number)
+            optional_types = ['analog', 'binary_analog', 'true_digital']
+            assert pinned or type_ in optional_types, f'Optional datatype for {spice_name} must be {optional_types}, not {type_}'
+
         value = pin_dict.get('value', None)
         get_random = pin_dict.get('get_random',
                                   template_name is None and (
