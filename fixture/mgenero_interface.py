@@ -5,6 +5,7 @@ import os
 from magma import Array
 import fixture.real_types as rt
 import fixture.regression as regression
+from fixture.signals import SignalIn
 
 '''
 A parameter file for mgenero looks like this:
@@ -26,7 +27,7 @@ A parameter file for mgenero looks like this:
 def binary(x, y):
     return [(x//(i+1))%2 for i in range(y)]
 
-def dump_yaml(dut, params_by_mode):
+def dump_yaml(template, params_by_mode):
     d = {}
     for mode, params in params_by_mode.items():
 #        # TODO I haven't found a good way to deal with required BA, so this is a bit of a hack
@@ -48,13 +49,15 @@ def dump_yaml(dut, params_by_mode):
 #                    new_factor = f'{bit}*{factor}'
 #                    params[name][new_factor] = coef
 
+        # TODO for required BA mgenero needs us to treat them as a bus
+        # maybe we can loop through required pins and check whether each is a bus?
 
         for param, terms in params.items():
             if len(params_by_mode) == 1:
                 mode_dict = {'dummy_digitalmode': 0}
             else:
                 # mode dict keys are true digital pins
-                names = [dut.get_name_circuit(p) for p in dut.inputs_true_digital]
+                names = [s.spice_name for s in template.signals if s.type_ == 'true_digital']
                 mode_dict = {name:x for name,x in zip(names, binary(mode, len(names)))}
             coefs_by_mode = d.get(param, [])
             coefs_this_mode = {
@@ -80,45 +83,34 @@ def create_interface(template, collateral_dict):
                 return True
         return False
 
-    def create_pin(p, spice_name):
+    def create_pin(s):
         d = {}
         # key for this whole dict is template name, value for key "name" is spice name
-        d['name'] = spice_name
-        d['description'] = str(p)
+        d['name'] = s.spice_name
+        d['description'] = f'Template: "{s.template_name}", Circuit: "{s.spice_name}"'
         # TODO inout?
-        d['direction'] = 'input' if not p.isinput() else 'output'
+        d['direction'] = 'input' if isinstance(s, SignalIn) else 'output'
         # pwl
         # logic can mean true digital or clock ...
         # vectorsize is # bits
         # Let's assume real for real and logic for digital/ba
-        isreal = rt.is_real(p)
+        isreal = s.type_ in ['real', 'analog']
         d['datatype'] = 'real' if isreal else 'logic'
-        d['is_optional'] = my_in(p,
-            (template.inputs_analog + template.inputs_ba + template.inputs_pinned))
+        d['is_optional'] = s.template_name is None
 
-        # TODO array of reals?
-        if isinstance(p, Array):
-            d['vectorsize'] = len(p)
+        # we treat buses as individual bits, so we never use vectorsize
+        # d['vectorsize'] = 1
 
         return d
 
-    ## mapping from fixture template name to spice name
-    #pin_name_mapping = {}
-    #for template_port_name in circuit.required_ports:
-    #    template_port = getattr(circuit, template_port_name)
-    #    # TODO use the mgenero template name for the key
-    #    pin_name_mapping[template_port] = template_port.fixture_name
-
     pins = {}
-    for p_name, _ in circuit.IO.items():
-        p = getattr(circuit, p_name)
-        spice_name = template.get_name_circuit(p)
-        template_name = template.get_name_template(p)
-        if template_name == None:
-            template_name = spice_name
-        template_name = regression.Regression.clean_string(template_name)
-        # this next line key should not be spice name
-        pins[template_name] = create_pin(p, spice_name)
+    for s in template.signals:
+        if isinstance(s, SignalIn) and s.spice_name is not None:
+            # TODO I forget why we prefer template name here...
+            # TODO for required BA mgenero needs us to treat them as a bus
+            # maybe we can loop through required pins and check whether each is a bus?
+            name = s.template_name if s.template_name is not None else s.spice_name
+            pins[name] = create_pin(s)
 
     interface = {}
     interface['pin'] = pins
