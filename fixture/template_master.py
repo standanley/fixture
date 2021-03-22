@@ -174,10 +174,11 @@ class TemplateMaster():
         '''
         Checks that the template instantiator actually mapped all the required ports.
         '''
-        # TODO fix this
-        #for port_name in self.required_ports:
-        #    assert port_name in self.ports.mapping, 'Did not associate port %s'%port_name
-        pass
+        for port_name in self.required_ports:
+            try:
+                self.signals.from_template_name(port_name)
+            except KeyError:
+                assert False, 'Did not associate required port %s'%port_name
 
     def get_signal_from_spice(self, spice):
         spice_name = str(spice.name)
