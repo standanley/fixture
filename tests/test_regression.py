@@ -1,5 +1,6 @@
 import fixture
 from fixture import Regression
+from fixture import signals
 import fault, magma
 import random
 rand = random.random
@@ -44,15 +45,24 @@ def get_parameterized_amp():
 def test_simple_amp():
     data = ({'in_single':[1, 2, 3, 4, 5], 'amp_output':[6,4,5,2,2]})
     dut, mapping = get_simple_amp()
-    '''
-    # TODO I don't think dut.IO is a valid mapping but it's good enough
-    mapping = {
-        'my_in': 'in_single',
-        'my_out': 'out_single'
-    }
-    '''
-    t = fixture.templates.SimpleAmpTemplate(dut, mapping, None, {})
+    s_in = signals.SignalIn(
+        None,
+        'real',
+        None,
+        None,
+        'spice_in',
+        None,
+        'in_single'
+    )
+    s_out = signals.SignalOut(
+        'real',
+        'spice_out',
+        None,
+        'out_single'
+    )
+    t = fixture.templates.SimpleAmpTemplate(dut, None, None, signals=[s_in, s_out])
     reg = Regression(t, t.tests[0], data)
+    # TODO actually check the results in reg
 
 '''
 TODO update these tests to the new Style of Template

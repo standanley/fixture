@@ -142,6 +142,7 @@ class TemplateMaster():
             test.signals = self.signals.copy()
             test_dimensions = test.input_domain()
             for s in test_dimensions:
+                assert isinstance(s, fixture.signals.SignalIn), 'input_domain must return SignalIn objects'
                 s.get_random = True
                 if s not in test.signals:
                     test.signals.add_signal(s)

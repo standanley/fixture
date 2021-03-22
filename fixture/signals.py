@@ -181,3 +181,10 @@ class SignalManager:
 
     def __iter__(self):
         return iter(self.signals)
+
+    def __getattr__(self, item):
+        try:
+            return self.from_template_name(item)
+        except KeyError:
+            raise AttributeError
+

@@ -13,7 +13,6 @@ pin:
     out<0:1>:
         direction: output
         datatype: real
-        template_pin: out
 
 template_pins:
    in_: in_

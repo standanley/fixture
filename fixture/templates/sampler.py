@@ -1,6 +1,7 @@
 from fixture import TemplateMaster
 from fixture import template_creation_utils
 from fixture import BinaryAnalogIn, RealIn
+from fixture import signals
 import math
 
 
@@ -34,8 +35,15 @@ class SamplerTemplate(TemplateMaster):
             for clk, v in clks.items():
                 if 'max_jitter' in v:
                     x = v['max_jitter']
-                    r = RealIn(limits=(-x, x), name=clk+'_jitter')
-                    self.inputs_analog.append(r)
+                    self.signals.add_signal(signals.SignalIn(
+                        (-x, x),
+                        'bit',
+                        True,
+                        False,
+                        None,
+                        None,
+                        clk+'_jitter'
+                    ))
 
         # NOTE this must be after super() because it needs ports to be defined
 
@@ -72,6 +80,13 @@ class SamplerTemplate(TemplateMaster):
             return
 
         clks = self.extras['clks']
+
+        for s_ignore in self.signals.ignore:
+            if s_ignore is None:
+                continue
+            if s_ignore.spice_name not in clks:
+                tester.poke(s_ignore.spice_pin, 0)
+
         if hasattr(port, '__getitem__'):
             main = self.get_name_circuit(port.name.array)
             num_samplers = getattr(self.dut, main).N
@@ -211,7 +226,7 @@ class SamplerTemplate(TemplateMaster):
             else:
                 p = self.ports.out
 
-            limits = self.ports.in_.limits
+            limits = self.signals.in_.value
             num = self.template.nonlinearity_points
             results = []
             for i in range(num):
@@ -266,14 +281,15 @@ class SamplerTemplate(TemplateMaster):
         num_samples = 2
 
         def input_domain(self):
-            limits = self.ports.in_.limits
+            limits = self.signals.from_template_name('in_').value
             settle = 0.5 * float(self.extras['approx_settling_time'])
             max_slope = 50 * (limits[1]-limits[0]) / settle
 
-            v = RealIn(limits=limits, name='value')
-            s = RealIn(limits=(-max_slope, max_slope), name='slope')
+            v = signals.create_input_domain_signal('value', limits)
+            s = signals.create_input_domain_signal('slope', (-max_slope, max_slope))
             #s = RealIn(limits = (max_slope * .499, max_slope*.5), name = 'slope')
             jitter_domain = self.template.get_clock_offset_domain()
+
             return [v, s] + jitter_domain
 
         def testbench(self, tester, values):
@@ -301,7 +317,7 @@ class SamplerTemplate(TemplateMaster):
                 for p in self.ports.clk[1:]:
                     tester.poke(p, 0)
 
-            limits = self.ports.in_.limits
+            limits = self.signals.in_.value
             limit_range = abs(limits[1]-limits[0])
             max_ramp_time = settle/5 # TODO
             if limit_range / abs(s) < max_ramp_time:
