@@ -1,8 +1,10 @@
 from fixture import TemplateMaster
+from fixture import template_creation_utils
 
 class OscillatorTemplate(TemplateMaster):
     required_ports = ['out']
 
+    #@template_creation_utils.debug
     class Test1(TemplateMaster.Test):
         parameter_algebra = {
             'frequency': 'const'
@@ -15,9 +17,13 @@ class OscillatorTemplate(TemplateMaster):
             return []
 
         def testbench(self, tester, values):
+            self.debug(tester, self.ports.out, 1)
+            self.debug(tester, self.signals.from_spice_name('adj').spice_pin, 1)
             approx_period = 1 / float(self.extras['approx_frequency'])
             tester.delay(approx_period * 20)
-            return tester.get_value(self.ports.out, params={'style':'frequency'})
+            res = tester.get_value(self.ports.out, params={'style':'frequency'})
+            #res = tester.get_value(self.ports.out)
+            return res
 
         @classmethod
         def analysis(self, read):

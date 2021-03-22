@@ -12,7 +12,7 @@ pin:
         value: 0
     adj:
         direction: input
-        datatype: real
+        datatype: analog
         value: (1.4, 1.5)
     out:
         direction: output
