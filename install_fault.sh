@@ -6,3 +6,5 @@ git checkout fixture_master
 pip install -e .
 popd
 
+pip freeze
+
