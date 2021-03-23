@@ -173,6 +173,8 @@ def test_simple_config():
     circuit_fname = file_relative_to_test('configs/parameterized_amp.yaml')
     fixture.run(circuit_fname)
 
+@pytest.mark.skipif(not os.path.exists(file_relative_to_test('../sky130/skywater-pdk')),
+                    reason='Sky130 not installed')
 def test_skywater():
     circuit_fname = file_relative_to_test('configs/simple_amp_sky130.yaml')
     fixture.run(circuit_fname)
