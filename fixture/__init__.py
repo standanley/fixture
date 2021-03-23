@@ -1,14 +1,3 @@
-try:
-    from pip._internal.operations import freeze
-except ImportError:  # pip < 10.0
-    from pip.operations import freeze
-
-print('PIP FREEZE')
-x = freeze.freeze()
-for p in x:
-    print p
-print()
-
 import collections.abc
 from .real_types import RealIn, BinaryAnalog, RealOut, Array, input, output, Real, BinaryAnalogIn # , TestVectorInput, TestVectorOutput
 # TODO this solves a problem where magma tries to use collections.abc before
