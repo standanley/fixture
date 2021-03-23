@@ -26,6 +26,8 @@ def test_generated():
     fixture.run(circuit_fname)
 
 
+@pytest.mark.skipif(not os.path.exists(file_relative_to_test('../sky130/skywater-pdk')),
+                    reason='Sky130 not installed')
 def test_sky130():
     circuit_fname = file_relative_to_test('configs/pb_sky130.yaml')
     fixture.run(circuit_fname)
