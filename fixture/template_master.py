@@ -1,11 +1,8 @@
 import ast
 from magma import *
 import fault
-from .real_types import BinaryAnalogType
 from abc import ABC, abstractmethod
 import fixture
-import fixture.real_types as rt
-import re
 from fixture.signals import SignalManager
 
 class TemplateMaster():
@@ -247,6 +244,7 @@ class TemplateMaster():
         ''' gives back a string to identify something port-like
         The input could be a port type or port instance, etc.
         '''
+        assert False, 'should not be used any more'
         return rt.get_name(p)
         if type(p) == str:
             return p
@@ -292,6 +290,7 @@ class TemplateMaster():
         outputs_analog = []
         
         def sort_port(port):
+            assert False, 'unused'
 
             # recurse for arrays
             if isinstance(port, Array):

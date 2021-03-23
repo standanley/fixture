@@ -1,6 +1,5 @@
 from fixture import TemplateMaster
 from fixture import template_creation_utils
-from fixture import BinaryAnalogIn, RealIn
 from fixture import signals
 import math
 
@@ -86,8 +85,8 @@ class SamplerTemplate(TemplateMaster):
             if s_ignore.spice_name not in clks:
                 tester.poke(s_ignore.spice_pin, 0)
 
-        if hasattr(port, '__getitem__'):
-            main = self.get_name_circuit(port.name.array)
+        if False: #hasattr(port, '__getitem__'):
+            main = None#self.get_name_circuit(port.name.array)
             num_samplers = getattr(self.dut, main).N
             desired_sampler = port.name.index
         else:
@@ -286,7 +285,6 @@ class SamplerTemplate(TemplateMaster):
 
             v = signals.create_input_domain_signal('value', limits)
             s = signals.create_input_domain_signal('slope', (-max_slope, max_slope))
-            #s = RealIn(limits = (max_slope * .499, max_slope*.5), name = 'slope')
             jitter_domain = self.template.get_clock_offset_domain()
 
             return [v, s] + jitter_domain

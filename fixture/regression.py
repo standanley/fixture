@@ -12,8 +12,8 @@ class Regression():
     # ones, so we manually add a column of ones with the following name
     one_literal = 'const_1'
 
-    # @classmethod
-    def parse_parameter_algebra(self, lhs, rhs):
+    @staticmethod
+    def parse_parameter_algebra(lhs, rhs):
         '''
         Removes spaces, wraps in I(), and flips RHS terms so expr is the key
         :param f:
@@ -30,8 +30,8 @@ class Regression():
             res[clean(v)] = k.replace(' ', '_')
         return (clean(lhs), res)
 
-    # @classmethod
-    def get_spice_name(cls, port):
+    @staticmethod
+    def get_spice_name(port):
         # TODO: this has to match the way fault does it in spice_target
         # I think that this conversion should be broken out into a method in fault
         if isinstance(port.name, magma.ref.ArrayRef):
@@ -45,7 +45,7 @@ class Regression():
             print('returning', str(port))
             return str(port)
 
-    # @classmethod
+    @classmethod
     def get_optional_pin_expression(cls, template):
         '''
         Given the magma circuit template, look at the optional pins and create a
@@ -70,7 +70,6 @@ class Regression():
                     terms.append(a)
                 else:
                     terms.append('I(%s**%d)' % (a, i))
-                    #terms.append('%s**%d' % (a, i))
 
         for ba in opt_ba:
             terms.append(ba)
@@ -89,14 +88,12 @@ class Regression():
 
         return ' + '.join(terms)
 
-
-    @classmethod
-    def clean_string(cls, s):
+    @staticmethod
+    def clean_string(s):
         # discrepency between the way spice and magma do braces
         # also Patsy won't use < in a variable name
         temp = s.replace('<', '_').replace('>', '_')
         return temp.replace('[', '_').replace(']', '_')
-
 
     def convert_required_ba(self, test, rhs):
         '''
@@ -156,30 +153,8 @@ class Regression():
         data = {self.clean_string(k):v for k,v in data.items()}
         self.df = pandas.DataFrame(data)
 
-
-        '''
-        # For plotting some phase blender data
-        print(data)
-        thms = [
-            data['thm_sel_bld_0_'],
-            data['thm_sel_bld_1_'],
-            data['thm_sel_bld_2_'],
-            data['thm_sel_bld_3_'],
-        ]
-        temp_x = [sum([a, b, c, d]) for a,b,c,d in zip(*thms)]
-        temp_y = [od / ipd for od, ipd in zip(data['out_delay'], data['in_phase_delay'])]
-        import matplotlib.pyplot as plt
-        plt.plot(temp_x, temp_y, '*')
-        plt.grid()
-        plt.xlabel('Thermometer code')
-        plt.ylabel('out_delay')
-        plt.show()
-        '''
-
-
-
-
         self.consts ={}
+
         def create_const(rhs):
             '''
             pandas gets confused when you put a constant in the formula,
@@ -213,17 +188,11 @@ class Regression():
 
             self.convert_required_ba(test, rhs)
             create_const(rhs)
-            #print('param algebra is now', lhs, rhs)
-            #print(self.df)
 
             formula = self.make_formula(lhs, rhs, optional_pin_expr)
-            #print('formula was', formula)
-            #formula = 'amp_output ~ adj + constant_ones'
-            #print('changed to ', formula)
 
             stats_model = smf.ols(formula, self.df)
             stat_results = stats_model.fit()
-            #print(results.summary())
             result = self.parse_coefs(stat_results, rhs)
             for k,v in result.items():
                 assert not k in results, 'Parameter %s found in multiple parameter algebra formulas'
@@ -233,42 +202,10 @@ class Regression():
 
         self.condense_required_ba(results)
 
-        '''
-        # self-check
-        df = self.df
-        if 'sample_out' in self.df.columns:
-            print('Measured\tReconstructed')
-            for i in range(df.shape[0]):
-                measured = self.df['sample_out'][i]
-                def data(name):
-                    return self.df[name][i]
-                def res(name):
-                    return results[name]['const_1']
-                reconstructed = sum([
-                    data('value') * res('should_be_1'),
-                    data('value')*data('slope_over_scale') * res('alpha_times_scale'),
-                    data('slope_over_scale')**2 * res('beta_times_scale2'),
-                    data('slope_over_scale') * res('gamma_times_scale')
-                ])
-                naive = sum([
-                    data('value') * 1,
-                    data('value')*data('slope') * 0,
-                    data('slope')**2 * 0,
-                    data('slope') * 0
-                ])
-                print(measured, '\t', reconstructed, '\t', naive)
-        '''
-
         # TODO dump res to a yaml file
         self.results = results
         self.results_models = results_models
 
-    # @classmethod
-    def un_create_const(self, name):
-        if name in self.consts:
-            return self.consts[name]
-        else:
-            return name
 
     # @classmethod
     def make_formula(self, lhs, rhs, optional_pin_expr):

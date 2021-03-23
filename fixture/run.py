@@ -1,14 +1,10 @@
-import sys, yaml, ast, os
+import sys, yaml, os
 import fixture.config_parse as config_parse
 from pathlib import Path
-import magma
 import fault
 import fixture.templates as templates
-import fixture.real_types as real_types
-import fixture.sampler as sampler
-import fixture.create_testbench as create_testbench
-from fixture import Regression
 import fixture.mgenero_interface as mgenero_interface
+
 
 def path_relative(path_to_config, path_from_config):
     ''' Interpret path names specified in config file
@@ -21,6 +17,7 @@ def path_relative(path_to_config, path_from_config):
     res = os.path.join(folder, path_from_config)
     return res
 
+
 def edit_paths(config_dict, config_filename, params):
     for param in params:
         if param in config_dict:
@@ -28,12 +25,14 @@ def edit_paths(config_dict, config_filename, params):
             new = path_relative(config_filename, old)
             config_dict[param] = new
 
+
 def run(circuit_config_filename):
     with open(circuit_config_filename) as f:
         circuit_config_dict = yaml.safe_load(f)
         circuit_config_dict['filename'] = circuit_config_filename
     edit_paths(circuit_config_dict, circuit_config_filename, ['filepath', 'mgenero'])
     _run(circuit_config_dict)
+
 
 def _run(circuit_config_dict):
 
@@ -89,37 +88,7 @@ def _run(circuit_config_dict):
         print('param\tterm\tcoef')
         for param, d in results.items():
             for partial_term_optional, coef in d.items():
-                #temp = coef * 225/1.2
                 print('%s\t%s\t%.3e' % (param, partial_term_optional, coef))
-
-    # TEST for differential stuff
-    #import numpy as np
-    #a, b, c, d = [params_by_mode[0][x]['1'] for x in ['A', 'B', 'C', 'D']]
-    #abcd = np.array([[a, b], [c, d]])
-    #m = np.array([[1, -1], [.5, .5]])
-    #minv = np.linalg.inv(m)
-    #[[w, x], [y, z]] = m @ abcd @ minv
-    #print('w', w)
-    #print('x', x)
-    #print('y', y)
-    #print('z', z)
-    #w1, x1, y1, z1 = [params_by_mode[0][x]['1'] for x in ['gain', 'gain_from_cm', 'gain_to_cm', 'cm_gain']]
-    #print('w1', w1)
-    #print('x1', x1)
-    #print('y1', y1)
-    #print('z1', z1)
-
-
-    #if DEBUG:
-    #    vals = {k:v.value for k,v in DEBUG_DICT.items()}
-    #    pass
-    #    import matplotlib.pyplot as plt
-    #    leg = []
-    #    for k,v in vals.items():
-    #        plt.plot(v[0], v[1])
-    #        leg.append(k)
-    #    plt.legend(leg)
-    #    plt.show()
 
     if 'mgenero' in circuit_config_dict:
         mgenero_config_dir = circuit_config_dict['mgenero']
@@ -138,10 +107,7 @@ def _run(circuit_config_dict):
         mgenero_interface.create_all(t, mgenero_params, params_by_mode)
 
 
-
 if __name__ == '__main__':
     args = sys.argv
     circuit_config_filename = args[1]
-    #test_config_filename = args[2]
     run(circuit_config_filename)
-

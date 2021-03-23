@@ -19,6 +19,7 @@ def path_relative(path_to_config, path_from_config):
     res = os.path.join(folder, path_from_config)
     return res
 
+
 def expanded(name, prefix=''):
     '''
     'myname'  ->  ['myname']
@@ -38,17 +39,10 @@ def expanded(name, prefix=''):
             post = m.group(4)
             direction = 1 if end >= start else -1
             indices = range(start, end+direction, direction)
-            wires = []
 
             return [expanded(post, prefix + bus_name + f'{b[0]}{i}{b[2]}') for i in indices]
-
-            for bn in flattened(bus_name):
-                wires += [bn + f'{b[0]}{i}{b[2]}' for i in indices]
-            return wires
     return prefix + name
 
-    assert False, 'todo'
-    return None
 
 def parse_test_cfg(test_config_filename_abs):
     with open(test_config_filename_abs) as f:
@@ -56,6 +50,7 @@ def parse_test_cfg(test_config_filename_abs):
     if 'num_cycles' not in test_config_dict and test_config_dict['target'] != 'spice':
         test_config_dict['num_cycles'] = 10**9 # default 1 second, will quit early if $finish is reached
     return test_config_dict
+
 
 def parse_extras(extras):
     for k, v in extras.items():
@@ -76,9 +71,6 @@ def parse_config(circuit_config_dict):
     test_config_filename = circuit_config_dict['test_config_file']
     test_config_filename_abs = path_relative(circuit_config_dict['filename'], test_config_filename)
     test_config_dict = parse_test_cfg(test_config_filename_abs)
-
-    #Template = getattr(templates, circuit_config_dict['template'])
-
 
     # Create magma pins for each pin, not signals yet
     io = []
@@ -128,17 +120,6 @@ def parse_config(circuit_config_dict):
                     equate(t2, s2)
         equate(template_name_expanded, spice_name_expanded)
 
-    #mapping = {}
-    #for name, p in pins.items():
-    #    if 'template_pin' in p:
-    #        if p['template_pin'] == 'ignore':
-    #            i = 0
-    #            while 'ignore'+str(i) in mapping:
-    #                i += 1
-    #            mapping['ignore'+str(i)] = name
-    #        else:
-    #            mapping[p['template_pin']] = name
-
     signals = []
     for pin_name, pin_value in pins.items():
         pin_value['spice_pin'] = getattr(UserCircuit, pin_name)
@@ -151,8 +132,6 @@ def parse_config(circuit_config_dict):
         signals.append(signal)
     assert len(s2t_mapping) == 0, f'Unrecognized spice pin "{list(s2t_mapping)[0]}" in template_pin mapping'
 
-
-
     template_class_name = circuit_config_dict['template']
     extras = parse_extras(circuit_config_dict['extras'])
-    return (UserCircuit, template_class_name, signals, test_config_dict, extras)
+    return UserCircuit, template_class_name, signals, test_config_dict, extras

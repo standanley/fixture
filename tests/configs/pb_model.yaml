@@ -1,6 +1,7 @@
 name: myphaseblender
 filepath: ../models/pb_model.sv
-template: PhaseBlenderTemplate_B
+# TODO I haven't really checked this since changing it from _B to _C
+template: PhaseBlenderTemplate_C
 pin:
 #    vdd:
 #        direction: input

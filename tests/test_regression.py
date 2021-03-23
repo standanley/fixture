@@ -9,10 +9,10 @@ def get_simple_amp():
     class UserAmpInterface(magma.Circuit):
         name = 'my_simple_amp_interface'
         IO = [
-            'my_in', fixture.RealIn((.5, .7)),
-            'my_out', fixture.RealOut(),
-            'vdd', fixture.RealIn(1.2),
-            'vss', fixture.RealIn(0.0),
+            'my_in', fault.RealIn,
+            'my_out', fault.RealOut,
+            'vdd', fault.RealIn,
+            'vss', fault.RealIn,
         ]
 
     test = UserAmpInterface.my_in
@@ -24,17 +24,22 @@ def get_simple_amp():
     return UserAmpInterface, mapping
 
 def get_parameterized_amp():
+    assert False, 'Have not debugged this yet'
     class Parameterized(fixture.templates.SimpleAmpTemplate):
         name = 'my_parameterized_amp'
         IO = [
-            'my_in', fixture.RealIn((.5,.7)),
-            'my_out', fixture.RealOut(),
-            'vdd', fixture.RealIn(1.2),
-            'vss', fixture.RealIn(0.0),
-            'ba', fixture.Array(4, fixture.input(fixture.BinaryAnalog())),
-            'adj', fixture.RealIn((.45,.55)),
-            'ctrl', fixture.input(magma.Bits[2]),
-            'vdd_internal', fixture.RealOut()
+            'my_in', fault.RealIn,
+            'my_out', fault.RealOut,
+            'vdd', fault.RealIn,
+            'vss', fault.RealIn,
+            'ba<0>', magma.BitIn,
+            'ba<1>', magma.BitIn,
+            'ba<2>', magma.BitIn,
+            'ba<3>', magma.BitIn,
+            'adj', fault.RealIn,
+            'ctrl<0>', magma.BitIn,
+            'ctrl<1>', magma.BitIn,
+            'vdd_internal', fault.RealOut()
         ]
         def mapping(self):
             self.in_single = self.my_in
@@ -131,7 +136,7 @@ def test_differential_amp():
 
 
 if __name__ == '__main__':
-   test_simple_amp()
-   #test_parameterized_amp()
+   #test_simple_amp()
+   test_parameterized_amp()
    #test_differential_amp()
 

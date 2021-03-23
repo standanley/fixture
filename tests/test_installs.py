@@ -104,4 +104,4 @@ def test_ngspice2():
 
 
 if __name__ == '__main__':
-    test_ngspice2()
+    test_ngspice()

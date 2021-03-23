@@ -9,7 +9,6 @@ header = '''
 '''
 TAB = '    '
 
-
 def make_config(spice_filename, template_name, skip_writing_file=False):
     template = getattr(fixture.templates, template_name)
     circuit = fault.spice_target.DeclareFromSpice(spice_filename)

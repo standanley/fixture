@@ -2,9 +2,6 @@ from collections import defaultdict
 
 import yaml
 import os
-from magma import Array
-import fixture.real_types as rt
-import fixture.regression as regression
 from fixture.signals import SignalIn
 
 '''

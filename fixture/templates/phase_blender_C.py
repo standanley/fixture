@@ -1,8 +1,6 @@
 from fixture import TemplateMaster
-#from fixture import RealIn
 from fixture.signals import create_input_domain_signal
-from fixture.template_creation_utils import debug
-#from fixture.real_types import BinaryAnalogKind, TestVectorOutput
+
 
 class PhaseBlenderTemplate_C(TemplateMaster):
     required_ports = ['in_a', 'in_b', 'out']
