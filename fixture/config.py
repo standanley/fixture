@@ -52,10 +52,6 @@ def make_config(spice_filename, template_name, skip_writing_file=False):
             f.write(text)
     return text
 
-def test_pb():
-    text = make_config('/home/dstanley/research/fixture/tests/spice/myphaseblender.sp', 'SimpleAmpTemplate', True)
-    print(text)
-
 
 if __name__ == '__main__':
     args = sys.argv
