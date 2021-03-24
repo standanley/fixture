@@ -140,6 +140,16 @@ class Regression():
                 for coef, value in terms.items():
                     results[bus][f'{bit}*{coef}'] = value
 
+    @staticmethod
+    def regression_name(s):
+        if type(s) == str:
+            return s
+        if s.template_name is not None:
+            return s.template_name
+        else:
+            assert s.spice_name is not None, f'Signal {s} has neither template nor spice name!'
+            return s.spice_name
+
     def __init__(self, template, test, data):
         '''
         Incoming data should be of the form 
@@ -148,7 +158,7 @@ class Regression():
 
         self.component_tag = '_component_'
         # translate from circuit names to template names
-        data = {template.get_name_regression(k): v for k, v in data.items()}
+        data = {self.regression_name(k): v for k, v in data.items()}
         data[self.one_literal] = [1 for _ in list(data.values())[0]]
         data = {self.clean_string(k):v for k,v in data.items()}
         self.df = pandas.DataFrame(data)

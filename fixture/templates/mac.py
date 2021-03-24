@@ -1,5 +1,6 @@
 from fixture import TemplateMaster
 from fixture import template_creation_utils
+from fixture import regression
 import fixture
 
 class MACTemplate(TemplateMaster):
@@ -112,9 +113,9 @@ class MACTemplate(TemplateMaster):
                 import matplotlib.pyplot as plt
 
             def get_regression_name(p):
-                signal = self.template.get_signal_from_spice(p)
-                s = self.template.get_name_regression(signal)
-                return fixture.regression.Regression.clean_string(s)
+                signal = self.template.signals.from_spice_name(str(p))
+                s = regression.Regression.regression_name(signal)
+                return regression.Regression.clean_string(s)
 
             model = list(regression_models.values())[0]
             data = model.model.data
