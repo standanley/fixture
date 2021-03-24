@@ -68,9 +68,10 @@ class SamplerTemplate(TemplateMaster):
     def get_clock_offset_domain(self):
         return []
 
-    def schedule_clk(self, tester, port, value, wait, jitters={}):
+    def schedule_clk(self, tester, main, value, wait, jitters={}):
         if 'clks' not in self.extras:
-            tester.poke(port, 0, delay={
+            # TODO make this better please
+            tester.poke(main.spice_pin, 0, delay={
                 'type': 'future',
                 'waits': [wait],
                 'values': [value]
@@ -85,17 +86,18 @@ class SamplerTemplate(TemplateMaster):
             if s_ignore.spice_name not in clks:
                 tester.poke(s_ignore.spice_pin, 0)
 
-        if False: #hasattr(port, '__getitem__'):
-            main = None#self.get_name_circuit(port.name.array)
-            num_samplers = getattr(self.dut, main).N
-            desired_sampler = port.name.index
+        if isinstance(self.signals.clk, list):
+            clk_list = self.signals.clk
+            num_samplers = len(clk_list)
+            desired_sampler = clk_list.index(main)
         else:
-            main = self.get_name_circuit(port)
+            #main = self.get_name_circuit(port)
             num_samplers = 1
             desired_sampler = 0
         unit = float(clks['unit'])
         period = clks['period']
-        clks = {k:v for k,v in clks.items() if (k!='unit' and k!='period')}
+        clks = {self.signals.from_spice_name(k): v for k,v in clks.items()
+                if (k!='unit' and k!='period')}
 
 
         # To take our measurement we will play through played_periods,
@@ -118,7 +120,8 @@ class SamplerTemplate(TemplateMaster):
 
             for clk in clks:
                 temp = []
-                jitter_name = clk + '_jitter'
+                name = clk[0].spice_name if isinstance(clk, list) else clk.spice_name
+                jitter_name = name + '_jitter'
                 jitter = jitters.get(jitter_name, 0)
                 for p in range(played_periods):
                     for time, val in clks[clk].items():
@@ -152,12 +155,12 @@ class SamplerTemplate(TemplateMaster):
                     waits.append(x - t)
                     t = x
                     values.append(value)
-                current_clk_bus = getattr(self.dut, clk)
-                if not hasattr(current_clk_bus, '__getitem__') and i==0:
-                    current_clk = current_clk_bus
+                #current_clk_bus = getattr(self.dut, clk)
+                if not hasattr(clk, '__getitem__'):
+                    current_clk = clk
                 else:
-                    current_clk = current_clk_bus[i]
-                tester.poke(current_clk, 0, delay={
+                    current_clk = clk[i]
+                tester.poke(current_clk.spice_pin, 0, delay={
                     'type': 'future',
                     'waits': waits,
                     'values': values
@@ -185,12 +188,13 @@ class SamplerTemplate(TemplateMaster):
             #print('Chose jitter value', values['clk_v2t_l_jitter'], 'In static test')
             settle = float(self.extras['approx_settling_time'])
             wait = 2 * settle
-            clk = self.ports.clk[0] if hasattr(self.ports.clk, '__getitem__') else self.ports.clk
+            clk = self.signals.clk[0] if hasattr(self.signals.clk, '__getitem__') else self.signals.clk
+            assert isinstance(clk, signals.SignalIn)
 
             # To see debug plots, also uncomment debug decorator for this class
             np = self.template.nonlinearity_points
             debug_time = np * wait * 22
-            self.debug(tester, clk, debug_time)
+            self.debug(tester, clk.spice_pin, debug_time)
             self.debug(tester, self.ports.out, debug_time)
             self.debug(tester, self.ports.in_, debug_time)
 
@@ -213,7 +217,7 @@ class SamplerTemplate(TemplateMaster):
 
             # feed through to first output, leave the rest off
             # TODO should maybe leave half open, affects charge sharing?
-            tester.poke(clk, 1)
+            tester.poke(clk.spice_pin, 1)
             if hasattr(self.ports.clk, '__getitem__'):
                 for p in self.ports.clk[1:]:
                     tester.poke(p, 0)
@@ -229,7 +233,7 @@ class SamplerTemplate(TemplateMaster):
             results = []
             for i in range(num):
                 dc = limits[0] + i * (limits[1] - limits[0]) / (num-1)
-                tester.poke(clk, 1)
+                tester.poke(clk.spice_pin, 1)
                 tester.poke(self.ports.in_, dc)
 
                 self.template.schedule_clk(tester, clk, 0, wait, values)
@@ -295,12 +299,13 @@ class SamplerTemplate(TemplateMaster):
             wait = 1 * settle
             v = values['value']
             s = values['slope']
-            clk = self.ports.clk[0] if hasattr(self.ports.clk, '__getitem__') else self.ports.clk
+            clk = self.signals.clk[0] if hasattr(self.signals.clk, '__getitem__') else self.signals.clk
+            assert isinstance(clk, signals.SignalIn)
 
             # To see debug plots, also uncomment debug decorator for this class
             np = self.template.nonlinearity_points
             debug_length = np * wait * 30
-            self.debug(tester, clk, debug_length)
+            self.debug(tester, clk.spice_pin, debug_length)
             self.debug(tester, self.ports.out, debug_length)
             self.debug(tester, self.ports.in_, debug_length)
             #self.debug(tester, self.template.dut.clk_v2t_l[0], debug_length)
@@ -309,7 +314,7 @@ class SamplerTemplate(TemplateMaster):
 
             # feed through to first output, leave the rest off
             # TODO should maybe leave half open, affects charge sharing?
-            tester.poke(clk, 1)
+            tester.poke(clk.spice_pin, 1)
             if hasattr(self.ports.clk, '__getitem__'):
                 for p in self.ports.clk[1:]:
                     tester.poke(p, 0)

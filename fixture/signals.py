@@ -24,6 +24,9 @@ class SignalIn():
         #self.bus_name = bus_name
         #self.bus_i = bus_i
 
+    def __str__(self):
+        return f'<{str(self.template_name)} / {self.spice_name}>'
+
 class SignalOut():
     def __init__(self,
                  #value,
