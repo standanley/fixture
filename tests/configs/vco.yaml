@@ -12,12 +12,16 @@ pin:
         value: 0
     adj:
         direction: input
-        datatype: real
+        datatype: analog
         value: (1.4, 1.5)
     out:
         direction: output
         datatype: real
-        template_pin: out
-approx_frequency: 100e3
+
+template_pins:
+    out: out
+
+extras:
+    approx_frequency: 100e3
 
 test_config_file: ngspice_osc.yaml

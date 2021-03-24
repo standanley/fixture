@@ -1,6 +1,7 @@
 import math
 import itertools
 import random
+random.seed(4)
 
 class Sampler:
     @classmethod
@@ -93,47 +94,6 @@ class Sampler:
                 point.append(p)
             points.append(point)
         return points
-    """
-    @classmethod
-    def get_samples_for_circuit(cls, circuit, num_samples):
-        '''Generate orthogonal samples based on circuit IO.
-        Returns a triply-nested list like the following
-        for each 2^D true digital combination:
-            for each N/(2^D) vector allocated to that combo:
-                for each input in (analog + ba):
-                    random sample
-        Example for dig=1, analog=2, ba=3, N=3:
-        [[[.5, .7, 1, 1, 0],
-         ], # end digital=0
-         [[.2, .9, 1, 0, 0],
-          [.1, .3, 0, 1, 1],
-         ] # end digital=1
-        ]
-        '''
-        assert isinstance(circuit, TemplateKind), 'For now, can only get samples for a templatized circuit'
-
-        def is_analog(p):
-            return isinstance(type(p), RealKind)
-
-        pins_sampled = circuit.inputs_optional + circuit.inputs_required
-        ports_a = [p for p in pins_sampled if is_analog(p)]
-        ports_ba = [p for p in pins_sampled if not is_analog(p)]
-
-        num_digital = len(circuit.inputs_true_digital)
-        input_vectors = []
-        modes = 2**num_digital
-        for i in range(modes):
-            N = num_samples // modes + ((num_samples%modes)*i)//modes 
-            ss = cls.get_orthogonal_samples(len(ports_a), len(ports_ba), N)
-
-
-            labels = ports_a + ports_ba
-            ss_transpose = zip(*ss)
-            ss_labeled = {l:list(xs) for l,xs in zip(labels, ss_transpose)}
-            input_vectors.append(ss_labeled)
-        return input_vectors
-    """
-
 
     def assert_lhs(samples):
         # print('samples', samples)

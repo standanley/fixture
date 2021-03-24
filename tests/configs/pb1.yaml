@@ -14,25 +14,27 @@ pin:
         direction: input
         datatype: bit
         #value: (0, 1.2)
-        template_pin: in_a
     input_b:
         direction: input
         datatype: bit
         #value: (0, 1.2)
-        template_pin: in_b
     output_:
         direction: output
         datatype: bit
-        template_pin: out
-    sel:
+    sel<2:0>:
         direction: input
         datatype: binary_analog
-        width: 3
-        #template_pin: sel
-frequency: 1000000.0
-#phase_offset_range: [.2, 0.21]
-phase_offset_range: [.25, 0.250001]
-#phase_offset_range: [.10, 0.100001]
+
+template_pins:
+   in_a: input_a
+   in_b: input_b
+   out: output_
+
+extras:
+    frequency: 1000000.0
+    #phase_offset_range: [.2, 0.21]
+    phase_offset_range: [.25, 0.250001]
+    #phase_offset_range: [.10, 0.100001]
 
 mgenero: pb_mgenero.yaml
 

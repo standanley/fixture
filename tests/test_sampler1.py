@@ -7,7 +7,6 @@ import pytest
 def file_relative_to_test(fname):
     return os.path.join(os.path.dirname(__file__), fname)
 
-@pytest.mark.xfail(reason='Sampler model not ready')
 def test_sampler1():
     circuit_fname = file_relative_to_test('configs/sampler1.yaml')
 
@@ -24,7 +23,7 @@ def test_sampler3():
 
     fixture.run(circuit_fname)
 
-@pytest.mark.xfail(reason='Sampler model not ready')
+#@pytest.mark.xfail(reason='Sampler model not ready')
 def test_sampler4():
     circuit_fname = file_relative_to_test('configs/sampler4.yaml')
 

@@ -17,12 +17,15 @@ class DifferentialAmpTemplate(TemplateMaster):
                 'offset_to_cm': '1'
             }
         }
+        required_info = {
+            'approx_settling_time': 'Approximate time it takes for amp to settle within 99% (s)'
+        }
 
         def input_domain(self):
             #inp = TestVectorInput(self.inp.limits, 'inp')
             #inn = TestVectorInput(self.inn.limits, 'inn')
-            inp = self.ports.inp
-            inn = self.ports.inn
+            inp = self.signals.from_template_name('inp')
+            inn = self.signals.from_template_name('inn')
             return [inp, inn]
 
         def testbench(self, tester, value):

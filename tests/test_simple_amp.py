@@ -2,6 +2,11 @@ import fixture
 import fault
 import magma
 from pathlib import Path
+import pytest
+import os
+
+def file_relative_to_test(fname):
+    return os.path.join(os.path.dirname(__file__), fname)
 
 def transpose(x):
     return list(zip(*list(x)))
@@ -50,6 +55,7 @@ def plot(results, tf):
     plt.grid()
     plt.show()
 
+@pytest.mark.skip('Has not been updated to new TemplateMaster instatiation style')
 def test_simple():
     print('\nTop of test')
 
@@ -100,6 +106,7 @@ def test_simple():
 
     #regression = fixture.Regression(MyAmp, results_reformatted)
 
+@pytest.mark.skip('Has not been updated to new TemplateMaster instatiation style')
 def test_simple_parameterized():
     class UserAmp(magma.Circuit):
         name = 'myamp_params'
@@ -132,7 +139,13 @@ def test_simple_parameterized():
        )
 
     t = fixture.templates.SimpleAmpTemplate(UserAmp, mapping, run_callback, extras)
-    t.go()
+    params_by_mode = t.go()
+    for mode, results in params_by_mode.items():
+        print('For mode', mode)
+        print('param\tterm\tcoef')
+        for param, d in results.items():
+            for partial_term_optional, coef in d.items():
+                print('%s\t%s\t%.3e' % (param, partial_term_optional, coef))
 
     # print('Creating test bench')
     # # auto-create vectors for 1 analog dimension
@@ -156,8 +169,19 @@ def test_simple_parameterized():
 
     # regression = fixture.Regression(MyAmp, results_reformatted)
 
+def test_simple_config():
+    circuit_fname = file_relative_to_test('configs/parameterized_amp.yaml')
+    fixture.run(circuit_fname)
+
+@pytest.mark.skipif(not os.path.exists(file_relative_to_test('../sky130/skywater-pdk')),
+                    reason='Sky130 not installed')
+def test_skywater():
+    circuit_fname = file_relative_to_test('configs/simple_amp_sky130.yaml')
+    fixture.run(circuit_fname)
+
     
 if __name__ == '__main__':
     #test_simple()
-    test_simple_parameterized()
+    #test_simple_parameterized()
+    test_skywater()
 

@@ -14,12 +14,15 @@ pin:
         direction: input
         datatype: real
         value: (.4, .8)
-        template_pin: in_single
     out:
         direction: output
         datatype: real
-        template_pin: out_single
-test: print('TEST FROM CONFIG')
-approx_settling_time: 1e-3
+
+template_pins:
+    in_single: in_
+    out_single: out
+
+extras:
+    approx_settling_time: 1e-3
 
 test_config_file: ngspice.yaml

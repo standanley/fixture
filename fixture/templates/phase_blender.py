@@ -1,28 +1,28 @@
 from fixture import TemplateMaster
-from fixture import RealIn
-from fixture.template_creation_utils import debug
-#from fixture.real_types import BinaryAnalogKind, TestVectorOutput
+from fixture.signals import create_input_domain_signal
 
 class PhaseBlenderTemplate(TemplateMaster):
     required_ports = ['in_a', 'in_b', 'out']
+    required_info = {
+        'phase_offset_range': 'phase offset between in_a and in_b, must be between 0 and 1',
+        'frequency': 'Input clock frequency (Hz)'
+    }
 
     #@debug
     class Test1(TemplateMaster.Test):
         parameter_algebra = {
-            'out_delay': {'gain':'in_phase_delay', 'offset':'1'}
+            #'out_delay': {'gain':'in_phase_delay', 'offset':'1'}
+            'out_delay': {'offset': '1'}
         }
+        num_samples = 100
+
 
         def input_domain(self):
             # offset range is in units of "periods", so 0.5 means in_a and in_b are in quadrature
             offset_range = self.extras.get('phase_offset_range', (0, .5))
             freq = float(self.extras['frequency'])
             offset_delay_range = tuple((offset / freq for offset in offset_range))
-            diff = RealIn(offset_delay_range)
-            # TODO make this part of the instantiation of RealIn
-            diff.name = 'in_phase_delay'
-
-            # could make a new test vector with same params as sel, or just use sel itself
-            # new_sel = Array(len(self.sel), BinaryAnalog)
+            diff = create_input_domain_signal('in_phase_delay', offset_delay_range)
             return [diff]
 
         def testbench(self, tester, values):
@@ -129,6 +129,14 @@ class PhaseBlenderTemplate(TemplateMaster):
                 if outs[i] < cut:
                     outs[i] += period
 
+            # TODO check this. also, probably should either edit in place or return, not both
+            results['out_delay'] = outs
+
+            ## avoid precision issues in regression
+            ## TODO fix this next line
+            #in_phase_delay = self.inputs_analog[0]
+            #for k in ['out_delay', in_phase_delay]:
+            #    results[k] = [x*1e6 for x in results[k]]
             return results
 
     tests = [Test1]

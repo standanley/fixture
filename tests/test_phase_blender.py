@@ -1,5 +1,4 @@
 import fixture
-import subprocess
 import os
 import shutil
 import pytest
@@ -26,7 +25,28 @@ def test_generated():
 
     fixture.run(circuit_fname)
 
+
+@pytest.mark.skipif(not os.path.exists(file_relative_to_test('../sky130/skywater-pdk')),
+                    reason='Sky130 not installed')
+def test_sky130():
+    circuit_fname = file_relative_to_test('configs/pb_sky130.yaml')
+    fixture.run(circuit_fname)
+
+@pytest.mark.skipif(not os.path.exists(file_relative_to_test('../sky130/skywater-pdk')),
+                    reason='Sky130 not installed')
+def test_C_sky130():
+    circuit_fname = file_relative_to_test('configs/pb_C_sky130.yaml')
+    fixture.run(circuit_fname)
+
+@pytest.mark.skipif(not os.path.exists(file_relative_to_test('../sky130/skywater-pdk')),
+                    reason='Sky130 not installed')
+def test_C_sky130_therm16():
+    circuit_fname = file_relative_to_test('configs/pb_C_sky130_therm16.yaml')
+    fixture.run(circuit_fname)
+
 if __name__ == '__main__':
     #test_generated()
-    #test_ngspice()
-    test_spectre()
+    test_ngspice()
+    #test_spectre()
+    #test_C_sky130()
+    #test_C_sky130_therm16()

@@ -1,6 +1,7 @@
 name: myphaseblender
 filepath: ../models/pb_model.sv
-template: PhaseBlenderTemplate_B
+# TODO I haven't really checked this since changing it from _B to _C
+template: PhaseBlenderTemplate_C
 pin:
 #    vdd:
 #        direction: input
@@ -10,23 +11,26 @@ pin:
 #        direction: input
 #        datatype: real
 #        value: 0
-    ph_in:
+    ph_in[0:1]:
         direction: input
         datatype: bit
         #value: (0, 1.2)
-        width: 2
-        template_pin: in_
     ph_out:
         direction: output
         datatype: bit
-        template_pin: out
     thm_sel_bld:
         direction: input
         datatype: binary_analog
         width: 16
-        template_pin: sel
-frequency: 1000000.0
-phase_offset_range: [.2, 0.21]
+
+template_pins:
+   in_a: ph_in[0]
+   in_b: ph_in[1]
+   out: ph_out
+
+extras:
+    frequency: 1000000.0
+    phase_offset_range: [.2, 0.21]
 
 test_config_file: mlingua.yaml
 

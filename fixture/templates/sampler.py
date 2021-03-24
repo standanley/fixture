@@ -1,11 +1,14 @@
 from fixture import TemplateMaster
 from fixture import template_creation_utils
-from fixture import BinaryAnalogIn, RealIn
+from fixture import signals
 import math
 
 
 class SamplerTemplate(TemplateMaster):
     required_ports = ['in_', 'clk', 'out']
+    required_info = {
+        'approx_settling_time': 'Approximate time it takes for amp to settle within 99% (s)'
+    }
 
     def __init__(self, *args, **kwargs):
         # Some magic constants, maybe pull these from config?
@@ -31,8 +34,15 @@ class SamplerTemplate(TemplateMaster):
             for clk, v in clks.items():
                 if 'max_jitter' in v:
                     x = v['max_jitter']
-                    r = RealIn(limits=(-x, x), name=clk+'_jitter')
-                    self.inputs_analog.append(r)
+                    self.signals.add_signal(signals.SignalIn(
+                        (-x, x),
+                        'bit',
+                        True,
+                        False,
+                        None,
+                        None,
+                        clk+'_jitter'
+                    ))
 
         # NOTE this must be after super() because it needs ports to be defined
 
@@ -49,16 +59,19 @@ class SamplerTemplate(TemplateMaster):
         tester.delay(wait)
         return tester.get_value(port)
 
+    def interpret_value(self, read):
+        return read.value
+
     #def schedule_clk(self, tester, port, value, wait):
     #    tester.poke(port, value, delay={'type': 'future', 'wait': wait})
 
     def get_clock_offset_domain(self):
         return []
 
-    def schedule_clk(self, tester, port, value, wait, jitters={}):
+    def schedule_clk(self, tester, main, value, wait, jitters={}):
         if 'clks' not in self.extras:
-            main = self.get_name_circuit(port.name.array)
-            tester.poke(port, 0, delay={
+            # TODO make this better please
+            tester.poke(main.spice_pin, 0, delay={
                 'type': 'future',
                 'waits': [wait],
                 'values': [value]
@@ -66,17 +79,25 @@ class SamplerTemplate(TemplateMaster):
             return
 
         clks = self.extras['clks']
-        if hasattr(port, '__getitem__'):
-            main = self.get_name_circuit(port.name.array)
-            num_samplers = getattr(self.dut, main).N
-            desired_sampler = port.name.index
+
+        for s_ignore in self.signals.ignore:
+            if s_ignore is None:
+                continue
+            if s_ignore.spice_name not in clks:
+                tester.poke(s_ignore.spice_pin, 0)
+
+        if isinstance(self.signals.clk, list):
+            clk_list = self.signals.clk
+            num_samplers = len(clk_list)
+            desired_sampler = clk_list.index(main)
         else:
-            main = self.get_name_circuit(port)
+            #main = self.get_name_circuit(port)
             num_samplers = 1
             desired_sampler = 0
         unit = float(clks['unit'])
         period = clks['period']
-        clks = {k:v for k,v in clks.items() if (k!='unit' and k!='period')}
+        clks = {self.signals.from_spice_name(k): v for k,v in clks.items()
+                if (k!='unit' and k!='period')}
 
 
         # To take our measurement we will play through played_periods,
@@ -99,7 +120,8 @@ class SamplerTemplate(TemplateMaster):
 
             for clk in clks:
                 temp = []
-                jitter_name = clk + '_jitter'
+                name = clk[0].spice_name if isinstance(clk, list) else clk.spice_name
+                jitter_name = name + '_jitter'
                 jitter = jitters.get(jitter_name, 0)
                 for p in range(played_periods):
                     for time, val in clks[clk].items():
@@ -133,20 +155,17 @@ class SamplerTemplate(TemplateMaster):
                     waits.append(x - t)
                     t = x
                     values.append(value)
-                current_clk_bus = getattr(self.dut, clk)
-                if not hasattr(current_clk_bus, '__getitem__') and i==0:
-                    current_clk = current_clk_bus
+                #current_clk_bus = getattr(self.dut, clk)
+                if not hasattr(clk, '__getitem__'):
+                    current_clk = clk
                 else:
-                    current_clk = current_clk_bus[i]
-                tester.poke(current_clk, 0, delay={
+                    current_clk = clk[i]
+                tester.poke(current_clk.spice_pin, 0, delay={
                     'type': 'future',
                     'waits': waits,
                     'values': values
                 })
 
-
-    def interpret_value(self, read):
-        return read.value
 
     #@template_creation_utils.debug
     class StaticNonlinearityTest(TemplateMaster.Test):
@@ -169,12 +188,13 @@ class SamplerTemplate(TemplateMaster):
             #print('Chose jitter value', values['clk_v2t_l_jitter'], 'In static test')
             settle = float(self.extras['approx_settling_time'])
             wait = 2 * settle
-            clk = self.ports.clk[0] if hasattr(self.ports.clk, '__getitem__') else self.ports.clk
+            clk = self.signals.clk[0] if hasattr(self.signals.clk, '__getitem__') else self.signals.clk
+            assert isinstance(clk, signals.SignalIn)
 
             # To see debug plots, also uncomment debug decorator for this class
             np = self.template.nonlinearity_points
             debug_time = np * wait * 22
-            self.debug(tester, clk, debug_time)
+            self.debug(tester, clk.spice_pin, debug_time)
             self.debug(tester, self.ports.out, debug_time)
             self.debug(tester, self.ports.in_, debug_time)
 
@@ -197,26 +217,29 @@ class SamplerTemplate(TemplateMaster):
 
             # feed through to first output, leave the rest off
             # TODO should maybe leave half open, affects charge sharing?
-            tester.poke(clk, 1)
+            tester.poke(clk.spice_pin, 1)
             if hasattr(self.ports.clk, '__getitem__'):
                 for p in self.ports.clk[1:]:
                     tester.poke(p, 0)
 
-            limits = self.ports.in_.limits
+            # get output port
+            if hasattr(self.ports.out, '__getitem__'):
+                p = self.ports.out[0]
+            else:
+                p = self.ports.out
+
+            limits = self.signals.in_.value
             num = self.template.nonlinearity_points
             results = []
             for i in range(num):
                 dc = limits[0] + i * (limits[1] - limits[0]) / (num-1)
-                tester.poke(clk, 1)
+                tester.poke(clk.spice_pin, 1)
                 tester.poke(self.ports.in_, dc)
 
                 self.template.schedule_clk(tester, clk, 0, wait, values)
                 tester.delay(wait)
 
-                if hasattr(self.ports.out, '__getitem__'):
-                    p = self.ports.out[0]
-                else:
-                    p = self.ports.out
+                # delays time "wait" for things to settle before reading
                 read = self.template.read_value(tester, p, wait)
 
                 # small delay so value is not changed by start of next test
@@ -260,14 +283,14 @@ class SamplerTemplate(TemplateMaster):
         num_samples = 2
 
         def input_domain(self):
-            limits = self.ports.in_.limits
+            limits = self.signals.from_template_name('in_').value
             settle = 0.5 * float(self.extras['approx_settling_time'])
             max_slope = 50 * (limits[1]-limits[0]) / settle
 
-            v = RealIn(limits=limits, name='value')
-            s = RealIn(limits=(-max_slope, max_slope), name='slope')
-            #s = RealIn(limits = (max_slope * .499, max_slope*.5), name = 'slope')
+            v = signals.create_input_domain_signal('value', limits)
+            s = signals.create_input_domain_signal('slope', (-max_slope, max_slope))
             jitter_domain = self.template.get_clock_offset_domain()
+
             return [v, s] + jitter_domain
 
         def testbench(self, tester, values):
@@ -276,12 +299,13 @@ class SamplerTemplate(TemplateMaster):
             wait = 1 * settle
             v = values['value']
             s = values['slope']
-            clk = self.ports.clk[0] if hasattr(self.ports.clk, '__getitem__') else self.ports.clk
+            clk = self.signals.clk[0] if hasattr(self.signals.clk, '__getitem__') else self.signals.clk
+            assert isinstance(clk, signals.SignalIn)
 
             # To see debug plots, also uncomment debug decorator for this class
             np = self.template.nonlinearity_points
             debug_length = np * wait * 30
-            self.debug(tester, clk, debug_length)
+            self.debug(tester, clk.spice_pin, debug_length)
             self.debug(tester, self.ports.out, debug_length)
             self.debug(tester, self.ports.in_, debug_length)
             #self.debug(tester, self.template.dut.clk_v2t_l[0], debug_length)
@@ -290,12 +314,12 @@ class SamplerTemplate(TemplateMaster):
 
             # feed through to first output, leave the rest off
             # TODO should maybe leave half open, affects charge sharing?
-            tester.poke(clk, 1)
+            tester.poke(clk.spice_pin, 1)
             if hasattr(self.ports.clk, '__getitem__'):
                 for p in self.ports.clk[1:]:
                     tester.poke(p, 0)
 
-            limits = self.ports.in_.limits
+            limits = self.signals.in_.value
             limit_range = abs(limits[1]-limits[0])
             max_ramp_time = settle/5 # TODO
             if limit_range / abs(s) < max_ramp_time:

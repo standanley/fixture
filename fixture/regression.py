@@ -12,8 +12,8 @@ class Regression():
     # ones, so we manually add a column of ones with the following name
     one_literal = 'const_1'
 
-    # @classmethod
-    def parse_parameter_algebra(self, lhs, rhs):
+    @staticmethod
+    def parse_parameter_algebra(lhs, rhs):
         '''
         Removes spaces, wraps in I(), and flips RHS terms so expr is the key
         :param f:
@@ -30,8 +30,8 @@ class Regression():
             res[clean(v)] = k.replace(' ', '_')
         return (clean(lhs), res)
 
-    # @classmethod
-    def get_spice_name(cls, port):
+    @staticmethod
+    def get_spice_name(port):
         # TODO: this has to match the way fault does it in spice_target
         # I think that this conversion should be broken out into a method in fault
         if isinstance(port.name, magma.ref.ArrayRef):
@@ -45,7 +45,7 @@ class Regression():
             print('returning', str(port))
             return str(port)
 
-    # @classmethod
+    @classmethod
     def get_optional_pin_expression(cls, template):
         '''
         Given the magma circuit template, look at the optional pins and create a
@@ -58,26 +58,25 @@ class Regression():
         interaction_a_ba = False
         interaction_ba_ba = False
 
-        opt_a, opt_ba = template.inputs_analog, template.inputs_ba
+        # TODO is s.get_random and s.auto_set the right condition?
+        optional_signals = [s for s in template.signals if hasattr(s, 'get_random') and s.get_random and s.auto_set]
+        opt_a = [s.spice_name for s in optional_signals if s.type_ == 'analog']
+        opt_ba = [s.spice_name for s in optional_signals if s.type_ == 'binary_analog']
 
         terms = [cls.one_literal]
-        for a_port in opt_a:
-            a = cls.get_spice_name(a_port)
+        for a in opt_a:
             for i in range(1, analog_order + 1):
                 if i == 1:
                     terms.append(a)
                 else:
                     terms.append('I(%s**%d)' % (a, i))
-                    #terms.append('%s**%d' % (a, i))
 
-        for ba_port in opt_ba:
-            ba = cls.get_spice_name(ba_port)
+        for ba in opt_ba:
             terms.append(ba)
 
 
         def interact(iterator):
-            for a_port, b_port in iterator:
-                a, b = cls.get_spice_name(a_port), cls.get_spice_name(b_port)
+            for a, b in iterator:
                 terms.append('%s:%s' % (a, b))
 
         if interaction_a_a:
@@ -89,41 +88,41 @@ class Regression():
 
         return ' + '.join(terms)
 
-
-    # @classmethod
-    def clean_string(self, s):
+    @staticmethod
+    def clean_string(s):
         # discrepency between the way spice and magma do braces
         # also Patsy won't use < in a variable name
         temp = s.replace('<', '_').replace('>', '_')
         return temp.replace('[', '_').replace(']', '_')
-
 
     def convert_required_ba(self, test, rhs):
         '''
         when the parameter algebra contains an Array (most likely ba required input),
         we have to break that term into multiple terms.
         This function edits rhs in place to split terms with an array.
+        The param is also split accordingly, and tagged with self.component_tag.
         '''
+
+        template_bus_names = [n for n in test.template.required_ports if
+                       type(test.signals.from_template_name(n)) == list]
+
         to_be_deleted = set()
         to_be_added = {}
-        for arr_req in test.inputs_ba:
-            if isinstance(arr_req.name, magma.ref.ArrayRef):
-                #bus_name = str(arr_req.name.array.name)
-                #inst_name = str(arr_req.name).split('.')[-1]
-                bus_name = test.template.get_name_template(arr_req.name.array)
-                inst_name = test.template.get_name_template(arr_req)
-                new_name = self.clean_string(inst_name)
-                search_str = r'\b' + bus_name + r'\b'
+        for key_term in rhs:
+            for n in template_bus_names:
+                search_str = '\\b' + n + '\\b'
+                if re.search(search_str, key_term):
+                    # the required bus is in this term
+                    to_be_deleted.add(key_term)
+                    for bit in test.signals.from_template_name(n):
+                        bit_name = self.clean_string(bit.template_name)
+                        new_key_term = re.sub(search_str, bit_name, key_term)
+                        new_param = rhs[key_term] + self.component_tag + bit_name
+                        to_be_added[new_key_term] = new_param
 
-                for key_term in rhs:
-                    if re.search(search_str, key_term):
-                        to_be_deleted.add(key_term)
-                        new_key_term = re.sub(search_str, new_name, key_term)
-                        to_be_added[new_key_term] = rhs[key_term] + self.component_tag + inst_name
-        for d in to_be_deleted:
-            del rhs[d]
-        for k, v in to_be_added.items():
-            rhs[k] = v
+        for key in to_be_deleted:
+            del rhs[key]
+        rhs.update(to_be_added)
 
     def condense_required_ba(self, results):
         buss = defaultdict(list)
@@ -141,6 +140,16 @@ class Regression():
                 for coef, value in terms.items():
                     results[bus][f'{bit}*{coef}'] = value
 
+    @staticmethod
+    def regression_name(s):
+        if type(s) == str:
+            return s
+        if s.template_name is not None:
+            return s.template_name
+        else:
+            assert s.spice_name is not None, f'Signal {s} has neither template nor spice name!'
+            return s.spice_name
+
     def __init__(self, template, test, data):
         '''
         Incoming data should be of the form 
@@ -149,35 +158,13 @@ class Regression():
 
         self.component_tag = '_component_'
         # translate from circuit names to template names
-        data = {template.get_name_template(k): v for k, v in data.items()}
+        data = {self.regression_name(k): v for k, v in data.items()}
         data[self.one_literal] = [1 for _ in list(data.values())[0]]
         data = {self.clean_string(k):v for k,v in data.items()}
         self.df = pandas.DataFrame(data)
 
-
-        '''
-        # For plotting some phase blender data
-        print(data)
-        thms = [
-            data['thm_sel_bld_0_'],
-            data['thm_sel_bld_1_'],
-            data['thm_sel_bld_2_'],
-            data['thm_sel_bld_3_'],
-        ]
-        temp_x = [sum([a, b, c, d]) for a,b,c,d in zip(*thms)]
-        temp_y = [od / ipd for od, ipd in zip(data['out_delay'], data['in_phase_delay'])]
-        import matplotlib.pyplot as plt
-        plt.plot(temp_x, temp_y, '*')
-        plt.grid()
-        plt.xlabel('Thermometer code')
-        plt.ylabel('out_delay')
-        plt.show()
-        '''
-
-
-
-
         self.consts ={}
+
         def create_const(rhs):
             '''
             pandas gets confused when you put a constant in the formula,
@@ -201,66 +188,34 @@ class Regression():
                     pass
 
         results = {}
+        results_models = {}
         for lhs, rhs in test.parameter_algebra.items():
             lhs, rhs = self.parse_parameter_algebra(lhs, rhs)
 
+            # TODO I want a better model for this so we can evaluate later
+            # e.g. given the inputs, what does the pin_expr evaluate to?
             optional_pin_expr = self.get_optional_pin_expression(template)
 
             self.convert_required_ba(test, rhs)
             create_const(rhs)
-            #print('param algebra is now', lhs, rhs)
-            #print(self.df)
 
             formula = self.make_formula(lhs, rhs, optional_pin_expr)
-            #print('formula was', formula)
-            #formula = 'amp_output ~ adj + constant_ones'
-            #print('changed to ', formula)
 
             stats_model = smf.ols(formula, self.df)
             stat_results = stats_model.fit()
-            #print(results.summary())
             result = self.parse_coefs(stat_results, rhs)
             for k,v in result.items():
                 assert not k in results, 'Parameter %s found in multiple parameter algebra formulas'
                 results[k] = v
 
-        self.condense_required_ba(results)
+            results_models[lhs] = stat_results
 
-        '''
-        # self-check
-        df = self.df
-        if 'sample_out' in self.df.columns:
-            print('Measured\tReconstructed')
-            for i in range(df.shape[0]):
-                measured = self.df['sample_out'][i]
-                def data(name):
-                    return self.df[name][i]
-                def res(name):
-                    return results[name]['const_1']
-                reconstructed = sum([
-                    data('value') * res('should_be_1'),
-                    data('value')*data('slope_over_scale') * res('alpha_times_scale'),
-                    data('slope_over_scale')**2 * res('beta_times_scale2'),
-                    data('slope_over_scale') * res('gamma_times_scale')
-                ])
-                naive = sum([
-                    data('value') * 1,
-                    data('value')*data('slope') * 0,
-                    data('slope')**2 * 0,
-                    data('slope') * 0
-                ])
-                print(measured, '\t', reconstructed, '\t', naive)
-        '''
+        self.condense_required_ba(results)
 
         # TODO dump res to a yaml file
         self.results = results
+        self.results_models = results_models
 
-    # @classmethod
-    def un_create_const(self, name):
-        if name in self.consts:
-            return self.consts[name]
-        else:
-            return name
 
     # @classmethod
     def make_formula(self, lhs, rhs, optional_pin_expr):

@@ -7,52 +7,33 @@ pin:
         datatype: real
         # NMOS vth is 0.4 and vdd is 1.2, max pull up is 0.8
         value: (0.6, 0.7)
-        template_pin: in_
-    clk_v2t:
+    clk_v2t<0:1>:
         direction: input
         datatype: bit
-        template_pin: clk
-        width: 2
-    clk_v2tb:
+    clk_v2tb<0:1>:
         direction: input
         datatype: bit
-        template_pin: ignore
-        width: 2
-    clk_v2t_e:
+    clk_v2t_e<0:1>:
         direction: input
         datatype: bit
-        template_pin: ignore
-        width: 2
-    clk_v2t_eb:
+    clk_v2t_eb<0:1>:
         direction: input
         datatype: bit
-        template_pin: ignore
-        width: 2
-    clk_v2t_l:
+    clk_v2t_l<0:1>:
         direction: input
         datatype: bit
-        template_pin: ignore
-        width: 2
-    clk_v2t_lb:
+    clk_v2t_lb<0:1>:
         direction: input
         datatype: bit
-        template_pin: ignore
-        width: 2
-    clk_v2t_gated:
+    clk_v2t_gated<0:1>:
         direction: input
         datatype: bit
-        template_pin: ignore
-        width: 2
-    clk_v2tb_gated:
+    clk_v2tb_gated<0:1>:
         direction: input
         datatype: bit
-        template_pin: ignore
-        width: 2
-    out:
+    out<0:1>:
         direction: output
         datatype: real
-        template_pin: out
-        width: 2
     vdd:
         direction: input
         datatype: real
@@ -60,40 +41,56 @@ pin:
     z_debug:
         direction: output
         datatype: real
-#approx_settling_time: 50e-6
+
+template_pins:
+   in_: in_
+   out<0:1>: out<0:1>
+   clk<0:1>: clk_v2t<0:1>
+   #ignore[0:1]: clk_v2t<0:1>
+   ignore[2:3]: clk_v2tb<0:1>
+   ignore[4:5]: clk_v2t_e<0:1>
+   ignore[6:7]: clk_v2t_eb<0:1>
+   ignore[8:9]: clk_v2t_l<0:1>
+   ignore[10:11]: clk_v2t_lb<0:1>
+   ignore[12:13]: clk_v2t_gated<0:1>
+   ignore[14:15]: clk_v2tb_gated<0:1>
+
+
 
 test_config_file: ngspice_sampler.yaml
 
-clks:
-    unit: 4e-7
-    period: 250
+extras:
+    #approx_settling_time: 50e-6
+    clks:
+        unit: 4e-7
+        period: 250
 
-    clk_v2t<0>:
-        125: 1
-        250: 0
-    clk_v2tb<0>:
-        125: 0
-        250: 1
+        clk_v2t<0>:
+            125: 1
+            250: 0
+        clk_v2tb<0>:
+            125: 0
+            250: 1
 
-    clk_v2t_e<0>:
-        105: 1
-        230: 0
-    clk_v2t_eb<0>:
-        105: 0
-        230: 1
+        clk_v2t_e<0>:
+            105: 1
+            230: 0
+        clk_v2t_eb<0>:
+            105: 0
+            230: 1
 
-    clk_v2t_l<0>:
-        145: 1
-        20:  0
-        max_jitter: 20
-    clk_v2t_lb<0>:
-        145: 0
-        20:  1
+        clk_v2t_l<0>:
+            145: 1
+            20:  0
+            max_jitter: 20
+        clk_v2t_lb<0>:
+            145: 0
+            20:  1
 
-    clk_v2t_gated<0>:
-        125: 1
-        250: 0
-    clk_v2tb_gated<0>:
-        125: 0
-        250: 1
+        clk_v2t_gated<0>:
+            125: 1
+            250: 0
+        clk_v2tb_gated<0>:
+            125: 0
+            250: 1
 

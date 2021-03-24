@@ -14,26 +14,28 @@ pin:
         direction: input
         datatype: real
         value: (.2, 1.0)
-        template_pin: in_single
     adj:
         direction: input
         datatype: real
         value: (.45, .55)
-    ba:
+    ba<0:3>:
         direction: input
         datatype: binary_analog
-        width: 4
-    ctrl:
+    ctrl<0:2>:
         direction: input
-        datatype: bit
-        width: 2
+        datatype: true_digital
     out:
         direction: output
         datatype: real
-        template_pin: out_single
     vdd_internal:
         direction: output
         datatype: real
-approx_settling_time: 1e-3
+
+template_pins:
+    in_single: in_
+    out_single: out
+
+extras:
+    approx_settling_time: 1e-3
 
 test_config_file: ngspice.yaml

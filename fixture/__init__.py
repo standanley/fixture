@@ -1,5 +1,4 @@
 import collections.abc
-from .real_types import RealIn, BinaryAnalog, RealOut, Array, input, output, Real, BinaryAnalogIn # , TestVectorInput, TestVectorOutput
 # TODO this solves a problem where magma tries to use collections.abc before
 # importing it. Strangely, importing collections alone is not good enough
 

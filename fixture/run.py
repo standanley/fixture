@@ -1,13 +1,10 @@
-import sys, yaml, ast, os
+import sys, yaml, os
+import fixture.config_parse as config_parse
 from pathlib import Path
-import magma
 import fault
 import fixture.templates as templates
-import fixture.real_types as real_types
-import fixture.sampler as sampler
-import fixture.create_testbench as create_testbench
-from fixture import Regression
 import fixture.mgenero_interface as mgenero_interface
+
 
 def path_relative(path_to_config, path_from_config):
     ''' Interpret path names specified in config file
@@ -20,12 +17,14 @@ def path_relative(path_to_config, path_from_config):
     res = os.path.join(folder, path_from_config)
     return res
 
+
 def edit_paths(config_dict, config_filename, params):
     for param in params:
         if param in config_dict:
             old = config_dict[param]
             new = path_relative(config_filename, old)
             config_dict[param] = new
+
 
 def run(circuit_config_filename):
     with open(circuit_config_filename) as f:
@@ -34,48 +33,12 @@ def run(circuit_config_filename):
     edit_paths(circuit_config_dict, circuit_config_filename, ['filepath', 'mgenero'])
     _run(circuit_config_dict)
 
+
 def _run(circuit_config_dict):
-    # load test config data
-    test_config_filename = circuit_config_dict['test_config_file']
-    test_config_filename_abs = path_relative(circuit_config_dict['filename'], test_config_filename)
-    with open(test_config_filename_abs) as f:
-        test_config_dict = yaml.safe_load(f)
-    if 'num_cycles' not in test_config_dict and test_config_dict['target'] != 'spice':
-        test_config_dict['num_cycles'] = 10**9 # default 1 second, will quit early if $finish is reached
 
-    Template = getattr(templates, circuit_config_dict['template'])
-
-    # generate IO
-    io = []
-    pins = circuit_config_dict['pin']
-    for name, p in pins.items():
-        dt = getattr(real_types, p['datatype'])
-        value = ast.literal_eval(str(p.get('value', None)))
-        dt = dt(value)
-        direction = getattr(real_types, p['direction'])
-        dt = direction(dt)
-        if 'width' in p:
-            dt = real_types.Array(p['width'], dt)
-        io += [name, dt]
-
-    class UserCircuit(magma.Circuit):
-        name = circuit_config_dict['name']
-        IO = io
-
-    mapping = {}
-    for name, p in pins.items():
-        if 'template_pin' in p:
-            if p['template_pin'] == 'ignore':
-                i = 0
-                while 'ignore'+str(i) in mapping:
-                    i += 1
-                mapping['ignore'+str(i)] = name
-            else:
-                mapping[p['template_pin']] = name
-
-    extras = circuit_config_dict
-
+    UserCircuit, template_name, signals, test_config_dict, extras = config_parse.parse_config(circuit_config_dict)
     tester = fault.Tester(UserCircuit)
+    TemplateClass = getattr(templates, template_name)
 
 
     # TODO fill in all args from SpiceTarget or remove this check
@@ -103,14 +66,21 @@ def _run(circuit_config_dict):
     def run_callback(tester):
         print('calling with sim dict', simulator_dict)
         #simulator_dict['directory'] = f'build_{name}'
+
+        no_run = False
+        if no_run:
+            print('SKIPPING SIMULATION, using results from last time')
+
         tester.compile_and_run(test_config_dict['target'],
             simulator=test_config_dict['simulator'],
             clock_step_delay=0,
             tmp_dir=False,
+            no_run=no_run,
             **simulator_dict
         )
 
-    t = Template(UserCircuit, mapping, run_callback, extras)
+    mapping = None
+    t = TemplateClass(UserCircuit, mapping, run_callback, extras, signals)
     params_by_mode = t.go()
 
     for mode, results in params_by_mode.items():
@@ -119,17 +89,6 @@ def _run(circuit_config_dict):
         for param, d in results.items():
             for partial_term_optional, coef in d.items():
                 print('%s\t%s\t%.3e' % (param, partial_term_optional, coef))
-
-    #if DEBUG:
-    #    vals = {k:v.value for k,v in DEBUG_DICT.items()}
-    #    pass
-    #    import matplotlib.pyplot as plt
-    #    leg = []
-    #    for k,v in vals.items():
-    #        plt.plot(v[0], v[1])
-    #        leg.append(k)
-    #    plt.legend(leg)
-    #    plt.show()
 
     if 'mgenero' in circuit_config_dict:
         mgenero_config_dir = circuit_config_dict['mgenero']
@@ -148,10 +107,7 @@ def _run(circuit_config_dict):
         mgenero_interface.create_all(t, mgenero_params, params_by_mode)
 
 
-
 if __name__ == '__main__':
     args = sys.argv
     circuit_config_filename = args[1]
-    #test_config_filename = args[2]
     run(circuit_config_filename)
-

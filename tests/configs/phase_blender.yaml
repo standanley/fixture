@@ -2,14 +2,14 @@ name: phase_blender
 filepath: ../spice/phase_blender.spf
 template: PhaseBlenderTemplate
 pin:
-#     vdd:
-#         direction: input
-#         datatype: real
-#         value: 1.2
-#     gnd:
-#         direction: input
-#         datatype: real
-#         value: 0
+     vdd:
+         direction: input
+         datatype: real
+         value: 1.2
+     gnd:
+         direction: input
+         datatype: real
+         value: 0
     ph_in[0]:
         direction: input
         datatype: real
@@ -29,8 +29,9 @@ pin:
         datatype: binary_analog
         width: 16
         template_pin: sel
+        
 frequency: 1000000.0
-phase_offset_range: [.2, 0.21]
+phase_offset_range: (.2, 0.25)
 
 #mgenero: ../../mgenero_3/mgenero_config.yaml
 
