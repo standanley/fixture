@@ -10,5 +10,11 @@ def test_pb():
     text = config.make_config(circuit_filename, 'SimpleAmpTemplate', True)
     print(text)
 
+def test_pb_interactive():
+    circuit_filename_relative = 'spice/myphaseblender.sp'
+    circuit_filename = file_relative_to_test(circuit_filename_relative)
+    text = config.make_config_interactive(circuit_filename, 'SimpleAmpTemplate', True)
+    print(text)
+
 if __name__ == '__main__':
-    test_pb()
+    test_pb_interactive()
