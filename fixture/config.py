@@ -21,6 +21,7 @@ def make_config_interactive(spice_filename, template_name, skip_writing_file=Fal
     form = []
     config = []
     js = []
+    js_startup = []
 
     def form_entry(id):
         return f'<span id="{id}"></span>'
@@ -44,6 +45,8 @@ def make_config_interactive(spice_filename, template_name, skip_writing_file=Fal
         js.append(f'{TAB}document.getElementById("{id}").innerHTML = value;')
         js.append(f'}}')
 
+        js_startup.append(f'{id}_fun();')
+
     def dropdown(id, title, options):
         ''' takes care of form and js '''
         form_id = id + '_select'
@@ -58,10 +61,12 @@ def make_config_interactive(spice_filename, template_name, skip_writing_file=Fal
         js.append('')
         js.append(f'function {id}_fun() {{')
         js.append(f'{TAB}value = document.getElementById("{form_id}").value;')
-        js.append(f'{TAB}document.getElementById("{id}").innerHTML = value;')
+        js.append(f'{TAB}document.getElementById("{id}").innerHTML= value;')
         js.append(f'}}')
 
-    def text(id, title):
+        js_startup.append(f'{id}_fun();')
+
+    def text(id, title, optional_key=None):
         ''' takes care of form and js '''
         form_id = id + '_text'
         form.append('')
@@ -71,8 +76,16 @@ def make_config_interactive(spice_filename, template_name, skip_writing_file=Fal
         js.append('')
         js.append(f'function {id}_fun() {{')
         js.append(f'{TAB}value = document.getElementById("{form_id}").value;')
-        js.append(f'{TAB}document.getElementById("{id}").innerHTML = value;')
+        js.append(f'{TAB}form_span = document.getElementById("{id}");')
+        if optional_key is None:
+            js.append(f'{TAB}form_span.innerHTML = value;')
+        else:
+            js.append(f'{TAB}if (value=="") {{form_span.innerHTML = value;}}')
+            # NOTE this always inserts an extra blank line ... which is okay for my usage so far
+            js.append(f'{TAB}else {{form_span.innerHTML = "        {optional_key}: "+value+"\\n";}}')
         js.append(f'}}')
+
+        js_startup.append(f'{id}_fun();')
 
 
 
@@ -103,7 +116,26 @@ def make_config_interactive(spice_filename, template_name, skip_writing_file=Fal
         type_options = ['TODO', 'bit', 'real', 'analog', 'binary_analog', 'true_digital']
         dropdown(type_id, f'"{pin_name}" Data Type:', type_options)
 
+        value_id = pin_name_clean + '_value'
+        config.append(form_entry(value_id))
+        text(value_id, f'"{pin_name}" Value (float for pinned value, pair of floats for range, or blank): ', 'value')
+
+    # mapping
+    pin_choices = ['TODO', *ports.keys()]
+    form.append('<br>')
+    config.append('')
+    config.append('# Mapping between template and user pins')
+    config.append('template_pins:')
+    for required in template.required_ports:
+        required_clean = html.escape(required).replace('&', '_').replace(';', '_')
+        map_name = required_clean + '_map'
+
+        config.append(f'{TAB}{required}: {form_entry(map_name)}')
+        dropdown(map_name, f'Circuit port that corresponds to required port "{required}": ', pin_choices)
+
+
     # extras
+    form.append('<br>')
     config.append('')
     config.append('# Additional template-required information')
     config.append('extras:')
@@ -112,10 +144,19 @@ def make_config_interactive(spice_filename, template_name, skip_writing_file=Fal
         config.append(f'{TAB}{html.escape(k)}: {form_entry(extra_id)}')
         text(extra_id, v)
 
+    temp = '''
+function test() {
+        var newWindow = window.open("name.yaml", "_blank");
+        debugger;
+        newWindow.document.write("test:\\n    attr: yep\\n");
+    }
+
+    test();
+'''
 
     form_text = '<form>\n    ' + '\n    '.join(form) + '\n</form>'
     config_text = '<hr><br>\n<pre>\n' + '\n'.join(config) + '\n</pre>'
-    js_text = '<script type="text/javascript">\n    ' + '\n    '.join(js) + '\n</script>'
+    js_text = '<script type="text/javascript">\n    ' + '\n    '.join(js+js_startup)+temp + '\n</script>'
 
     everything = '\n\n'.join([html_header, form_text, config_text, js_text])
     return everything
