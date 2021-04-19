@@ -20,7 +20,7 @@ def break_bus_name(bus_name):
     delims = ['<:>', '[:]']
     for delim in delims:
         open, mid, close = regex_escape(delim[0]), regex_escape(delim[1]), regex_escape(delim[2])
-        match = re.match(f'^(.*?){open}([0-9])+:([0-9]+){close}(.*)$', bus_name)
+        match = re.match(f'^(.*?){open}([0-9]+):([0-9]+){close}(.*)$', bus_name)
         if match:
             bus_name = match.group(1)
             start = int(match.group(2))
