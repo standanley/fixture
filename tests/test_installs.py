@@ -49,6 +49,8 @@ def test_ngspice():
     tester.expect(MyAmp.out, None, above=0.64, below=0.65)
     r1 = tester.get_value(MyAmp.out)
 
+    tester.delay(1e-3)
+
     tester.poke(MyAmp.in_, 0.84)
     tester.expect(MyAmp.out, None, above=0.37, below=0.38)
     r2 = tester.get_value(MyAmp.out)
@@ -93,6 +95,8 @@ def test_ngspice2():
     tester.poke(MyAmp.vdd, 1.2)
     tester.poke(MyAmp.in_, 0.7)
     tester.expect(MyAmp.out, .81, above=0.81, below=0.82)
+
+    tester.delay(1e-3)
 
     tester.poke(MyAmp.in_, 0.8)
     tester.expect(MyAmp.out, .5, above=0.50, below=0.51)
