@@ -52,7 +52,9 @@ class SignalOut():
 def create_signal(pin_dict):
     type_ = pin_dict.get('datatype', 'analog')
     spice_pin = pin_dict.get('spice_pin', None)
-    spice_name = None if spice_pin is None else str(spice_pin)
+    spice_name = None if spice_pin is None else (
+        pin_dict['spice_name'] if 'spice_name' in pin_dict else str(spice_pin)
+    )
     template_name = pin_dict.get('template_pin', None)
 
     if pin_dict['direction'] == 'input':
@@ -99,6 +101,52 @@ def create_input_domain_signal(name, value, spice_pin=None):
         name
     )
 
+# TODO is it good practice to have all these variables in the signal namespace?
+braces_open = '[<{'
+braces_close = ']>}'
+# re_braces_open = '(' + '|'.join(re.escape(b) for b in braces_open) + ')'
+# re_braces_close= '(' + '|'.join(re.escape(b) for b in braces_close) + ')'
+re_braces_open = '[' + re.escape(braces_open) + ']'
+re_braces_close = '[' + re.escape(braces_close) + ']'
+re_num = '[0-9]+'
+re_index = re_braces_open + re_num + re_braces_close
+re_index_range = re_braces_open + re_num + ':' + re_num + re_braces_close
+re_index_range_groups = f'({re_braces_open})({re_num}):({re_num})({re_braces_close})'
+
+def expanded(name):
+    '''
+    'myname'  ->  'myname'
+    'myname{0:2}<1:0>[4]'  ->  [['myname{0}<1>[4]', 'myname{0}<0>[4]'], ['myname{1}<1>[4]', ...], ...]
+    :param name: name which may or may not be a bus
+    :return:
+    '''
+    indices = re.findall(re_index + '|' + re_index_range, name)
+    bus_name = re.sub(re_index + '|' + re_index_range, '', name)
+    indices_parsed = []
+    for index in indices:
+        m = re.match(re_index, index)
+        if m is not None:
+            indices_parsed.append((index[0], index[1:-1], index[-1]))
+        else:
+            m = re.match(re_index_range_groups, index)
+            indices_parsed.append((m.group(1), m.group(2), m.group(3), m.group(4)))
+
+    def make_names(prefix, indices):
+        if len(indices) == 0:
+            return prefix
+        index = indices[0]
+        if len(index) == 3:
+            # don't create a list for this one
+            return make_names(f'{prefix}{index[0]}{index[1]}{index[2]}', indices[1:])
+        else:
+            start = int(index[1])
+            end = int(index[2])
+            direction = 1 if end >= start else -1
+            i_s = range(start, end+direction, direction)
+            return [make_names(f'{prefix}{index[0]}{i}{index[3]}', indices[1:]) for i in i_s]
+
+    return bus_name, make_names(bus_name, indices_parsed)
+
 
 class SignalManager:
     def __init__(self, signals=None):
@@ -113,13 +161,6 @@ class SignalManager:
         # look through signals for buses containing name
         # return a signal or python list of signals, or list of lists...
         # attr should be either spice_name or template_name
-        braces_open = '[<{'
-        braces_close = ']>}'
-        #re_braces_open = '(' + '|'.join(re.escape(b) for b in braces_open) + ')'
-        #re_braces_close= '(' + '|'.join(re.escape(b) for b in braces_close) + ')'
-        re_braces_open = '[' + re.escape(braces_open) +']'
-        re_braces_close= '[' + re.escape(braces_close) + ']'
-        re_index = re_braces_open + '[0-9]+' + re_braces_close
 
         result = None
 
