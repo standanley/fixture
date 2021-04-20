@@ -159,6 +159,11 @@ function test() {
     js_text = '<script type="text/javascript">\n    ' + '\n    '.join(js+js_startup)+temp + '\n</script>'
 
     everything = '\n\n'.join([html_header, form_text, config_text, js_text])
+
+    if not skip_writing_file:
+        with open(f'{circuit_name}_config_helper.html', 'w') as f:
+            f.write(everything)
+
     return everything
 
 
@@ -214,5 +219,6 @@ if __name__ == '__main__':
         print('Must specify spice_filename and template_name as command line arguments')
     spice_filename = args[1]
     template_name = args[2]
-    make_config_interactive(spice_filename, template_name)
+    text = make_config_interactive(spice_filename, template_name)
+
 

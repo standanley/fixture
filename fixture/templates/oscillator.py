@@ -3,14 +3,14 @@ from fixture import template_creation_utils
 
 class OscillatorTemplate(TemplateMaster):
     required_ports = ['out']
+    required_info = {
+        'approx_frequency': 'Ballpark guess for the output frequency (Hz)'
+    }
 
     #@template_creation_utils.debug
     class Test1(TemplateMaster.Test):
         parameter_algebra = {
             'frequency': 'const'
-        }
-        required_info = {
-            'approx_frequency': 'Ballpark guess for the output frequency (Hz)'
         }
 
         def input_domain(self):
