@@ -99,6 +99,9 @@ def parse_config(circuit_config_dict):
         else:
             assert False, f'Direction for {name} must be "input" or "output", not "{direction}"'
 
+        # Do 2 things:
+        # go through all nested buses and add flattened version to io_signal_info
+        # go through all nested buses to build magma type matching heirarchy
         bus_name, name_expanded = expanded(name)
         signal_info = []
         def descend(name_or_list, indices):
