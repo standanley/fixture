@@ -1,0 +1,5 @@
+target: system-verilog
+simulator: iverilog
+
+# I think this is required for all systemverilog that uses read_domain
+dump_waveforms: True
