@@ -97,7 +97,11 @@ def make_config_interactive(spice_filename, template_name, skip_writing_file=Fal
 
     # circuit name
     config.append(f'name: {circuit_name}')
-    text('circuit_filepath', 'Filepath to circuit definition', 'filepath: ')
+    text('circuit_filepath', 'Filepath to circuit definition')
+    config.append(f'filepath: {form_entry("circuit_filepath")}')
+    config.append(f'template: {template_name}')
+    
+    
 
     # pins
     config.append('\n# pins')
@@ -146,6 +150,18 @@ def make_config_interactive(spice_filename, template_name, skip_writing_file=Fal
         config.append(f'{TAB}{html.escape(k)}: {form_entry(extra_id)}')
         text(extra_id, v)
 
+    # test config
+    test_config_tag = 'test_config_tag'
+    text(test_config_tag, 'Filepath to test configuration .yaml file (e.g. ngspice.yaml): ')
+    config.append('\n# Location of test configuration information')
+    config.append(f'test_config_file: {form_entry(test_config_tag)}')
+
+    # mgenero config
+    # TODO this should not be hard coded
+    config.append('\n# mGenero configuration file')
+    config.append('mgenero: ./mgenero_config.yaml')
+    
+
     temp = '''
 function test() {
         var newWindow = window.open("name.yaml", "_blank");
@@ -164,8 +180,11 @@ function test() {
     everything = '\n\n'.join([html_header, form_text, config_text, js_text])
 
     if not skip_writing_file:
-        with open(f'{circuit_name}_config_helper.html', 'w') as f:
+        out_filename = f'{circuit_name}_config_helper.html'
+        with open(out_filename, 'w') as f:
             f.write(everything)
+        print('Please open your config helper:')
+        print(out_filename)
 
     return everything
 

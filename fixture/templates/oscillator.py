@@ -20,7 +20,7 @@ class OscillatorTemplate(TemplateMaster):
             #self.debug(tester, self.ports.out, 1)
             #self.debug(tester, self.signals.from_spice_name('adj').spice_pin, 1)
             approx_period = 1 / float(self.extras['approx_frequency'])
-            tester.delay(approx_period * 20)
+            tester.delay(approx_period * 5)
             res = tester.get_value(self.ports.out, params={'style':'frequency'})
             #res = tester.get_value(self.ports.out)
             return res
