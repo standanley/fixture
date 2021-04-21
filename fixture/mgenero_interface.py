@@ -2,7 +2,7 @@ from collections import defaultdict
 
 import yaml
 import os
-from fixture.signals import SignalIn
+from fixture.signals import SignalIn, SignalOut
 
 '''
 A parameter file for mgenero looks like this:
@@ -102,7 +102,7 @@ def create_interface(template, collateral_dict):
 
     pins = {}
     for s in template.signals:
-        if isinstance(s, SignalIn) and s.spice_name is not None:
+        if (isinstance(s, SignalIn) or isinstance(s, SignalOut)) and s.spice_name is not None:
             # TODO I forget why we prefer template name here...
             # TODO for required BA mgenero needs us to treat them as a bus
             # maybe we can loop through required pins and check whether each is a bus?

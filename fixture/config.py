@@ -96,10 +96,12 @@ def make_config_interactive(spice_filename, template_name, skip_writing_file=Fal
     ports = circuit.IO.ports
 
     # circuit name
-    config.append(f'circuit_name: {circuit_name}')
+    config.append(f'name: {circuit_name}')
+    text('circuit_filepath', 'Filepath to circuit definition', 'filepath: ')
 
     # pins
     config.append('\n# pins')
+    config.append('pin:')
     for pin_name in ports.keys():
 
         pin_name_clean = html.escape(pin_name).replace('&', '_').replace(';', '_')
@@ -153,12 +155,18 @@ function test() {
 
     test();
 '''
+    temp = ''
 
     form_text = '<form>\n    ' + '\n    '.join(form) + '\n</form>'
     config_text = '<hr><br>\n<pre>\n' + '\n'.join(config) + '\n</pre>'
     js_text = '<script type="text/javascript">\n    ' + '\n    '.join(js+js_startup)+temp + '\n</script>'
 
     everything = '\n\n'.join([html_header, form_text, config_text, js_text])
+
+    if not skip_writing_file:
+        with open(f'{circuit_name}_config_helper.html', 'w') as f:
+            f.write(everything)
+
     return everything
 
 
@@ -214,5 +222,6 @@ if __name__ == '__main__':
         print('Must specify spice_filename and template_name as command line arguments')
     spice_filename = args[1]
     template_name = args[2]
-    make_config_interactive(spice_filename, template_name)
+    text = make_config_interactive(spice_filename, template_name)
+
 

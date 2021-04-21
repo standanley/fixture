@@ -10,3 +10,4 @@ from .dump_yaml import dummy_dump
 from .regression import Regression
 from .mgenero_interface import dump_yaml
 from .run import run
+#from .config import config
