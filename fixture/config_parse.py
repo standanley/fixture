@@ -20,30 +20,6 @@ def path_relative(path_to_config, path_from_config):
     return res
 
 
-def old_expanded(name, prefix=''):
-    '''
-    'myname'  ->  'myname'
-    'myname{0:2}<1:0>[4]'  ->  [['myname{0}<1>[4]', 'myname{0}<0>[4]'], ['myname{1}<1>[4]', ...], ...]
-    :param name: name which may or may not be a bus
-    :return:
-    '''
-
-    braces = ['[:]', '<:>', '{:}']
-    for b in braces:
-        regex = f'(.*?){re.escape(b[0])}([0-9]*){re.escape(b[1])}([0-9]*){re.escape(b[2])}(.*)'
-        m = re.match(regex, name)
-        if m is not None:
-            bus_name = m.group(1)
-            start = int(m.group(2))
-            end = int(m.group(3))
-            post = m.group(4)
-            direction = 1 if end >= start else -1
-            indices = range(start, end+direction, direction)
-
-            return [expanded(post, prefix + bus_name + f'{b[0]}{i}{b[2]}') for i in indices]
-    return prefix + name
-
-
 def parse_test_cfg(test_config_filename_abs):
     with open(test_config_filename_abs) as f:
         test_config_dict = yaml.safe_load(f)
