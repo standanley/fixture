@@ -10,10 +10,13 @@ pin:
 #         direction: input
 #         datatype: real
 #         value: 0
-    ph_in[1]:
-        direction: input
-        datatype: bit
-    ph_in[0]:
+#    ph_in[1]:
+#        direction: input
+#        datatype: bit
+#    ph_in[0]:
+#        direction: input
+#        datatype: bit
+    ph_in[0:1]:
         direction: input
         datatype: bit
     ph_out:
