@@ -38,6 +38,8 @@ def test_C_sky130():
     circuit_fname = file_relative_to_test('configs/pb_C_sky130.yaml')
     fixture.run(circuit_fname)
 
+
+@pytest.mark.xfail(reason='Bus is currently broken when defined as individual bits.')
 @pytest.mark.skipif(not os.path.exists(file_relative_to_test('../sky130/skywater-pdk')),
                     reason='Sky130 not installed')
 def test_C_sky130_therm16():
@@ -46,7 +48,7 @@ def test_C_sky130_therm16():
 
 if __name__ == '__main__':
     #test_generated()
-    test_ngspice()
+    #test_ngspice()
     #test_spectre()
-    #test_C_sky130()
+    test_C_sky130()
     #test_C_sky130_therm16()

@@ -8,6 +8,9 @@ simulator: ncsim
 #    - -y ${mLINGUA_DIR}/samples/stim
 #    - -y ${mLINGUA_DIR}/samples/meas
 #    - -y ${mLINGUA_DIR}/samples/misc
+
+# I think this is required for all systemverilog that uses read_domain
+dump_waveforms: True
     
 defines:
     # DaVE-related defines

@@ -3,6 +3,7 @@ simulator: ngspice
 #ic: {vss: 0}
 vsup: 1.8
 t_step: 2.0e-11
+bus_delim: '[]'
 # TODO: could also have libraries to include, etc.
 # I think ext_libs is verilog only
 #ext_libs: "../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/models/sky130.lib.spice"
