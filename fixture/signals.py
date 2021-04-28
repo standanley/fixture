@@ -197,7 +197,8 @@ class SignalManager:
 
     def from_spice_pin(self, spice_pin):
         for s in self.signals:
-            if s.spice_pin == spice_pin:
+            # magma does not like doing pin equality
+            if repr(s.spice_pin) == repr(spice_pin):
                 return s
         assert False, f'No signal with spice pin {spice_pin}'
 
