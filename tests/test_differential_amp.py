@@ -23,6 +23,6 @@ def test_by_config(config):
     fixture.run(circuit_fname)
 
 if __name__ == '__main__':
-    test_by_config(names[0])
+    test_by_config(names[2])
     pass
 

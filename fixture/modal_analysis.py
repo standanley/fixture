@@ -8,6 +8,7 @@ from fixture import template_creation_utils
 
 
 class ModalAnalysis(object):
+    debug = True
     ''' Fit an step response measurement to a linear system model '''
     def __init__(self, rho_threshold = 0.999, N_degree = 50):
         ''' set constraints on calculation '''
@@ -19,7 +20,8 @@ class ModalAnalysis(object):
         h_impulse = diff(h)/diff(t) # get impulse response from step response
         t_impulse = t[:-1]+diff(t)/2.0 # time adjustment, take the mid-point
 
-        template_creation_utils.plot(t_impulse, h_impulse)
+        if self.debug:
+            template_creation_utils.plot(t_impulse, h_impulse)
         f = open('temp_impulse_response.pickle', 'wb')
         pickle.dump((t_impulse, h_impulse), f)
         f.close()
@@ -28,7 +30,7 @@ class ModalAnalysis(object):
     
     def fit_impulseresponse(self,h,t):
         #for N in range(2,self.N_degree):
-        for N in range(1,self.N_degree):
+        for N in range(1,self.N_degree+1):
             print('Trying degree', N)
             ls_result = self.leastsquare_complexexponential(h,t,N)
             if ls_result['failed'] and N >=3:
@@ -45,10 +47,11 @@ class ModalAnalysis(object):
 
     def compare_impulseresponse(self,h1,h2):
 
-        import matplotlib.pyplot as plt
-        plt.plot(h1, '-*')
-        plt.plot(h2, '-*')
-        plt.show()
+        if self.debug:
+            import matplotlib.pyplot as plt
+            plt.plot(h1, '-*')
+            plt.plot(h2, '-*')
+            plt.show()
 
 
         h1 = h1.flatten()

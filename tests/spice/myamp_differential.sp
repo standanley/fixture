@@ -24,6 +24,13 @@ V1 N002 0 .6
 *R4 N001 outn 50k
 R5 N001 0 1k
 
+
+* simulate FO1 cap load
+Mload2 0 outn 0 0 EENMOS l=.1u w=2000u
+Mload3 0 outp 0 0 EENMOS l=.1u w=2000u
+C2 outp 0 1p
+C3 outn 0 1p
+
 .model EENMOS NMOS (VTO=0.4 KP=432E-6 GAMMA=0.2 PHI=.88)
 .model EEPMOS PMOS (VTO=-0.4 KP=122E-6 GAMMA=0.2 PHI=.88)
 .ends myamp

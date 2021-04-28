@@ -30,7 +30,7 @@ template_pins:
     outn: outn
 
 extras:
-    approx_settling_time: 1e-3
+    approx_settling_time: 10e-9
     limits_diff: (-0.03, 0.03)
     limits_cm: (1.15, 1.25)
 
