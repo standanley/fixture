@@ -136,7 +136,7 @@ def debug(test):
                 leg = []
                 bump = 0
                 for p, r in debug_dict:
-                    leg.append(self.template.get_name_template(p))
+                    leg.append(str(self.template.signals.from_spice_pin(p)))
                     plt.plot(r.value[0], r.value[1] + bump, '-+')
                     bump += 0.0 # useful for separating clock signals
                 plt.grid()

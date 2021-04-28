@@ -68,7 +68,7 @@ def _run(circuit_config_dict):
         print('calling with sim dict', simulator_dict)
         #simulator_dict['directory'] = f'build_{name}'
 
-        no_run = False
+        no_run = True
         no_run_dict = {}
         if no_run:
             print('SKIPPING SIMULATION, using results from last time')
