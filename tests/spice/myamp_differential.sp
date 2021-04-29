@@ -28,8 +28,13 @@ R5 N001 0 1k
 * simulate FO1 cap load
 Mload2 0 outn 0 0 EENMOS l=.1u w=2000u
 Mload3 0 outp 0 0 EENMOS l=.1u w=2000u
-C2 outp 0 1p
-C3 outn 0 1p
+C2 outp 0 .5p
+C3 outn 0 .5p
+Rrload2p load2p outp 300
+Rrload2n load2n outn 300
+Ccload2p load2p 0 .5p
+Ccload2n load2n 0 .5p
+
 
 .model EENMOS NMOS (VTO=0.4 KP=432E-6 GAMMA=0.2 PHI=.88)
 .model EEPMOS PMOS (VTO=-0.4 KP=122E-6 GAMMA=0.2 PHI=.88)
