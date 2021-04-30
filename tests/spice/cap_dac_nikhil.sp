@@ -1,6 +1,43 @@
 * DAC from Nikhil's EE272B project
 
-.subckt vin vlow vref dac_8bit q0 q1 q2 q3 q4 q5 q6 q7 vcom_buf VDD GND
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/cells/nfet_01v8/sky130_fd_pr__nfet_01v8__tt.corner.spice
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/cells/nfet_01v8_lvt/sky130_fd_pr__nfet_01v8_lvt__tt.corner.spice
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/cells/pfet_01v8/sky130_fd_pr__pfet_01v8__tt.corner.spice
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/cells/nfet_03v3_nvt/sky130_fd_pr__nfet_03v3_nvt__tt.corner.spice
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/cells/nfet_05v0_nvt/sky130_fd_pr__nfet_05v0_nvt__tt.corner.spice
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/cells/esd_nfet_01v8/sky130_fd_pr__esd_nfet_01v8__tt.corner.spice
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/cells/pfet_01v8_lvt/sky130_fd_pr__pfet_01v8_lvt__tt.corner.spice
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/cells/pfet_01v8_hvt/sky130_fd_pr__pfet_01v8_hvt__tt.corner.spice
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/cells/esd_pfet_g5v0d10v5/sky130_fd_pr__esd_pfet_g5v0d10v5__tt.corner.spice
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/cells/pfet_g5v0d10v5/sky130_fd_pr__pfet_g5v0d10v5__tt.corner.spice
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/cells/pfet_g5v0d16v0/sky130_fd_pr__pfet_g5v0d16v0__tt.corner.spice
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/cells/nfet_g5v0d10v5/sky130_fd_pr__nfet_g5v0d10v5__tt.corner.spice
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/cells/nfet_g5v0d16v0/sky130_fd_pr__nfet_g5v0d16v0__tt_discrete.corner.spice
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/cells/esd_nfet_g5v0d10v5/sky130_fd_pr__esd_nfet_g5v0d10v5__tt.corner.spice
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/models/corners/tt/nonfet.spice
+* Mismatch parameters
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/cells/nfet_01v8/sky130_fd_pr__nfet_01v8__mismatch.corner.spice
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/cells/pfet_01v8/sky130_fd_pr__pfet_01v8__mismatch.corner.spice
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/cells/nfet_01v8_lvt/sky130_fd_pr__nfet_01v8_lvt__mismatch.corner.spice
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/cells/pfet_01v8_lvt/sky130_fd_pr__pfet_01v8_lvt__mismatch.corner.spice
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/cells/pfet_01v8_hvt/sky130_fd_pr__pfet_01v8_hvt__mismatch.corner.spice
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/cells/nfet_g5v0d10v5/sky130_fd_pr__nfet_g5v0d10v5__mismatch.corner.spice
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/cells/pfet_g5v0d10v5/sky130_fd_pr__pfet_g5v0d10v5__mismatch.corner.spice
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/cells/nfet_05v0_nvt/sky130_fd_pr__nfet_05v0_nvt__mismatch.corner.spice
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/cells/nfet_03v3_nvt/sky130_fd_pr__nfet_03v3_nvt__mismatch.corner.spice
+* Resistor../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/Capacitor
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/models/r+c/res_typical__cap_typical.spice
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/models/r+c/res_typical__cap_typical__lin.spice
+* Special cells
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/models/corners/tt/specialized_cells.spice
+* All models
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/models/all.spice
+* Corner
+.include ../sky130/skywater-pdk/libraries/sky130_fd_pr/latest/models/corners/tt/rf.spice
+
+
+
+.subckt dac_8bit vin vlow vref q0 q1 q2 q3 q4 q5 q6 q7 sample vcom_buf VDD GND
 
 * from dac_8bit_commands.spice
 * I removed vdd=1.8 because I'll take that from off-chip
@@ -48,43 +85,11 @@ x1 vcom_buf vlow comp_out comp_outm adc_clk latched_comparator_folded
 x2 vcom_buf vcom vcom_buf se_fold_casc_wide_swing_opamp
 **** begin user architecture code
 
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/cells/nfet_01v8/sky130_fd_pr__nfet_01v8__tt.corner.spice
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/cells/nfet_01v8_lvt/sky130_fd_pr__nfet_01v8_lvt__tt.corner.spice
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/cells/pfet_01v8/sky130_fd_pr__pfet_01v8__tt.corner.spice
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/cells/nfet_03v3_nvt/sky130_fd_pr__nfet_03v3_nvt__tt.corner.spice
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/cells/nfet_05v0_nvt/sky130_fd_pr__nfet_05v0_nvt__tt.corner.spice
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/cells/esd_nfet_01v8/sky130_fd_pr__esd_nfet_01v8__tt.corner.spice
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/cells/pfet_01v8_lvt/sky130_fd_pr__pfet_01v8_lvt__tt.corner.spice
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/cells/pfet_01v8_hvt/sky130_fd_pr__pfet_01v8_hvt__tt.corner.spice
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/cells/esd_pfet_g5v0d10v5/sky130_fd_pr__esd_pfet_g5v0d10v5__tt.corner.spice
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/cells/pfet_g5v0d10v5/sky130_fd_pr__pfet_g5v0d10v5__tt.corner.spice
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/cells/pfet_g5v0d16v0/sky130_fd_pr__pfet_g5v0d16v0__tt.corner.spice
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/cells/nfet_g5v0d10v5/sky130_fd_pr__nfet_g5v0d10v5__tt.corner.spice
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/cells/nfet_g5v0d16v0/sky130_fd_pr__nfet_g5v0d16v0__tt_discrete.corner.spice
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/cells/esd_nfet_g5v0d10v5/sky130_fd_pr__esd_nfet_g5v0d10v5__tt.corner.spice
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/models/corners/tt/nonfet.spice
-* Mismatch parameters
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/cells/nfet_01v8/sky130_fd_pr__nfet_01v8__mismatch.corner.spice
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/cells/pfet_01v8/sky130_fd_pr__pfet_01v8__mismatch.corner.spice
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/cells/nfet_01v8_lvt/sky130_fd_pr__nfet_01v8_lvt__mismatch.corner.spice
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/cells/pfet_01v8_lvt/sky130_fd_pr__pfet_01v8_lvt__mismatch.corner.spice
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/cells/pfet_01v8_hvt/sky130_fd_pr__pfet_01v8_hvt__mismatch.corner.spice
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/cells/nfet_g5v0d10v5/sky130_fd_pr__nfet_g5v0d10v5__mismatch.corner.spice
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/cells/pfet_g5v0d10v5/sky130_fd_pr__pfet_g5v0d10v5__mismatch.corner.spice
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/cells/nfet_05v0_nvt/sky130_fd_pr__nfet_05v0_nvt__mismatch.corner.spice
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/cells/nfet_03v3_nvt/sky130_fd_pr__nfet_03v3_nvt__mismatch.corner.spice
-* Resistor~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/Capacitor
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/models/r+c/res_typical__cap_typical.spice
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/models/r+c/res_typical__cap_typical__lin.spice
-* Special cells
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/models/corners/tt/specialized_cells.spice
-* All models
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/models/all.spice
-* Corner
-.include ~/skywater-pdk/libraries/sky130_fd_pr_ngspice/latest/models/corners/tt/rf.spice
 
 **** end user architecture code
 **.ends
+
+.ends
 
 * expanding   symbol:
 *+  /home/users/nhpoole/ee272b/ee272b_mixed_signal_mmwave_accelerator/designs/inv.sym # of pins=2
@@ -397,7 +402,8 @@ XM1 vo_cs vo_cs VDD VDD sky130_fd_pr__pfet_01v8_lvt L='Lbias' W='Wbias' nf=1 ad=
 .GLOBAL GND
 **** begin user architecture code
 
-.include dac_8bit_commands.spice
+* TODO I commented this out, hope it's ok
+*.include dac_8bit_commands.spice
 
 **** end user architecture code
 ** flattened .save nodes

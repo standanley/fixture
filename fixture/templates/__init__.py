@@ -8,4 +8,5 @@ from .oscillator import OscillatorTemplate
 from .sampler import SamplerTemplate
 from .sampler_custom import SamplerCustomTemplate
 from .mac import MACTemplate
-from .cap_dac import DACTemplate
+from .dac import DACTemplate
+from .cap_dac import CapDACTemplate

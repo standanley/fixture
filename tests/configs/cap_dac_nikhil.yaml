@@ -1,0 +1,84 @@
+name: dac_8bit
+filepath: ../spice/cap_dac_nikhil.sp
+template: CapDACTemplate
+pin:
+    vin:
+        direction: input
+        datatype: real
+        value: (0.7, 1.2)
+    vlow:
+        direction: input
+        datatype: analog
+        value: 0.7
+    vref:
+        direction: input
+        datatype: analog
+        value: 1.2
+
+    q0:
+        direction: input
+        datatype: bit
+
+    q1:
+        direction: input
+        datatype: bit
+
+    q2:
+        direction: input
+        datatype: bit
+
+    q3:
+        direction: input
+        datatype: bit
+
+    q4:
+        direction: input
+        datatype: bit
+
+    q5:
+        direction: input
+        datatype: bit
+
+    q6:
+        direction: input
+        datatype: bit
+
+    q7:
+        direction: input
+        datatype: bit
+
+    sample:
+        direction: input
+        datatype: bit
+
+    vcom_buf:
+        direction: output
+        datatype: real
+
+    VDD:
+        direction: input
+        datatype: real
+        value: 1.8
+    GND:
+        direction: input
+        datatype: real
+        value: 0
+
+
+template_pins:
+    ctrl_in[0]: q0
+    ctrl_in[1]: q1
+    ctrl_in[2]: q2
+    ctrl_in[3]: q3
+    ctrl_in[4]: q4
+    ctrl_in[5]: q5
+    ctrl_in[6]: q6
+    ctrl_in[7]: q7
+    sample_in: vin
+    out: vcom_buf
+    clk: sample
+
+extras:
+    approx_settling_time: 5e-6
+
+test_config_file: ngspice_sky130.yaml

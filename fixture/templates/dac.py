@@ -2,55 +2,45 @@ from fixture import TemplateMaster
 import itertools
 from fixture.template_creation_utils import debug
 
-class CapDACTemplate(TemplateMaster):
-    required_ports = ['sample_in', 'ctrl_in', 'clk', 'out']
+class DACTemplate(TemplateMaster):
+    required_ports = ['in_', 'outp', 'outn']
 
     @debug
     class Test1(TemplateMaster.Test):
         parameter_algebra = {
-            'out': {'gain_in': 'sample_in*ctrl_in', 'gain': 'ctrl_in',
-                    'offset_in': 'sample_in', 'offset': '1'},
+            'outp': {'gainp': 'in_', 'offsetp': '1'},
+            'outn': {'gainn': 'in_', 'offsetn': '1'}
         }
         required_info = {
             'approx_settling_time': 'Approximate time it takes for amp to settle within 99% (s)'
         }
 
         def input_domain(self):
-            ctrl_in = self.signals.from_template_name('ctrl_in')
-            sample_in = self.signals.sample_in
-            return [*ctrl_in, sample_in]
+            return self.signals.from_template_name('in_')
 
         def testbench(self, tester, values):
-            wait_time = self.extras['approx_settling_time'] * 2
 
-            self.debug(tester, self.ports.ctrl_in[0], 1)
-            self.debug(tester, self.ports.ctrl_in[1], 1)
-            self.debug(tester, self.ports.clk, 1)
-            self.debug(tester, self.ports.sample_in, 1)
-            self.debug(tester, self.ports.out, 1)
+            self.debug(tester, self.ports.in_[0], 1)
+            self.debug(tester, self.ports.in_[1], 1)
+            self.debug(tester, self.ports.outp, 1)
+            self.debug(tester, self.ports.outn, 1)
 
-            # reset bits
-            for bit in self.ports.ctrl_in:
-                tester.poke(bit, 0)
 
-            # sample input
-            tester.poke(self.ports.sample_in, values['sample_in'])
-            tester.poke(self.ports.clk, 1)
+            test = self.ports
+            for bit in self.ports.in_:
+                tester.poke(bit, values[bit])
+
+            wait_time = float(self.extras['approx_settling_time'])*2
             tester.delay(wait_time)
-            tester.poke(self.ports.clk, 0)
 
-            # flip appropriate bits
-            for bit in self.signals.ctrl_in:
-                tester.poke(bit.spice_pin, values[bit])
-
-            # read
-            tester.delay(wait_time)
-            read = tester.get_value(self.ports.out)
-
-            return read
+            reads = {
+                'outn': tester.get_value(self.ports.outn),
+                'outp': tester.get_value(self.ports.outp)
+            }
+            return reads
 
         def analysis(self, reads):
-            results = {'out': reads.value}
+            results = {k:float(v.value) for k,v in reads.items()}
             return results
 
     @debug
@@ -106,7 +96,7 @@ class CapDACTemplate(TemplateMaster):
             return results
 
 
-    tests = [Test1]
+    tests = [INLTest, Test1]
 
     
 
