@@ -107,6 +107,9 @@ def create_interface(template, collateral_dict):
         d['datatype'] = 'real' if isreal else 'logic'
         d['is_optional'] = s.template_name is None
 
+        if hasattr(s, 'value') and s.value is not None:
+            d['value'] = str(s.value)
+
         # we treat buses as individual bits, so we never use vectorsize
         # d['vectorsize'] = 1
 
