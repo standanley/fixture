@@ -73,6 +73,8 @@ PWLMethod pm=new;
 
 $$Pin.print_map() $$# map between user pin names and generic ones
 
+$$Pin.print_asserts() $$# assert valid ranges
+
 
 // edited 5/5/2021 to make create outp_pwl and outn_pwl
 // because I want inputs to be real, not pwl. Changed references in code from outp to outp_pwl
