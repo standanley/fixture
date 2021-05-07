@@ -26,7 +26,7 @@ pin:
     v_fz:
         direction: input
         datatype: analog
-        value: (0.6, 1.4)
+        value: (0.4, 1.4)
 
 
 template_pins:

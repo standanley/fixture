@@ -34,15 +34,23 @@ class ModalAnalysis(object):
                 h_norepeat[-1] = hh
 
 
-        no_sample = 250
+        no_sample = len(t_norepeat)
 
-        spline_fn = interpolate.InterpolatedUnivariateSpline(t_norepeat, h_norepeat)
-        # t = linspace(t[0],t[-1],no_sample)
-        # TODO i intentionally cut off the first point below to see if it would fix problems but it did not
-        # if the problems go away, we should try putting that point back
-        t_interp = linspace(t[0], t[-1], no_sample)
-        t_interp = t_interp[1:-1]
-        h_interp = spline_fn(t_interp)
+        #spline_fn = interpolate.InterpolatedUnivariateSpline(t_norepeat, h_norepeat)
+        ## t = linspace(t[0],t[-1],no_sample)
+        ## TODO i intentionally cut off the first point below to see if it would fix problems but it did not
+        ## if the problems go away, we should try putting that point back
+        #t_interp = linspace(t_norepeat[0], t_norepeat[-1], no_sample)
+        ##t_interp = t_interp[1:-1]
+        #h_interp = spline_fn(t_interp)
+        # I DO want to cut the first 2 off here, otherwise derivative is weird
+        # First is in case fault gave us one time step early, second because
+        # derivative is still settling
+        t_interp, h_interp = t_norepeat[2:], h_norepeat[2:]
+
+        # this is temporary, for the ctle specifically
+        CTLE_CUTOFF = 10
+        t_interp, h_interp = t_norepeat[CTLE_CUTOFF:], h_norepeat[CTLE_CUTOFF:]
 
         h_impulse = diff(h_interp)/diff(t_interp) # get impulse response from step response
         t_impulse = t_interp[:-1]+diff(t_interp)/2.0 # time adjustment, take the mid-point
@@ -53,25 +61,25 @@ class ModalAnalysis(object):
         h_impulse_crop = h_impulse[:last_interesting_index]
         t_impulse_crop = t_impulse[:last_interesting_index]
 
-        no_sample_impulse = 20
-        spline_fn = interpolate.UnivariateSpline(t_impulse_crop, h_impulse_crop, k=1)#, s=len(h_impulse_crop)**2*1e9)
+        no_sample_impulse = 10
+        spline_fn = interpolate.UnivariateSpline(t_impulse_crop, h_impulse_crop, k=3)#, s=len(h_impulse_crop)**2*1e9)
         # I believe the smoothing factor is the maximum MSE of the re-done points
         # so we want higher numbers so it can be more lax
         spline_fn.set_smoothing_factor((1e7)**2*len(t_impulse_crop))
         t_impulse_interp = linspace(t_impulse_crop[0], t_impulse_crop[-1], no_sample_impulse)
-        t_impulse_interp = t_impulse_interp[1:-1]
+        #t_impulse_interp = t_impulse_interp[1:-1]
         h_impulse_interp = spline_fn(t_impulse_interp)
 
 
         if self.debug:
-            plt.plot(t, h)
-            plt.plot(t_interp, h_interp)
+            plt.plot(t, h, '-+')
+            plt.plot(t_interp, h_interp, '-+')
             plt.grid()
             plt.show()
 
-            plt.plot(t_impulse, h_impulse)
+            plt.plot(t_impulse, h_impulse, '+')
             plt.plot(t_impulse_crop, h_impulse_crop)
-            plt.plot(t_impulse_interp, h_impulse_interp)
+            plt.plot(t_impulse_interp, h_impulse_interp, '-+')
             plt.grid()
             plt.show()
 
