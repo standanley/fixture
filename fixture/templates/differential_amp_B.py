@@ -160,7 +160,7 @@ class DifferentialAmpTemplate(TemplateMaster):
                 outn = outp[0], resampled_outn
 
             # we want to cut some off, but leave at least 60-15*2 ??
-            CUTOFF = min(max(0, len(outp[0]) - 60), 15)
+            CUTOFF = 0#min(max(0, len(outp[0]) - 60), 15)
 
             outdiff = outp[0], outp[1] - outn[1]
 
