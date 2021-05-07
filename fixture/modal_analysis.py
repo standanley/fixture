@@ -49,6 +49,7 @@ class ModalAnalysis(object):
         t_interp, h_interp = t_norepeat[2:], h_norepeat[2:]
 
         # this is temporary, for the ctle specifically
+        # Needed 10 for clock feedthrough, but many for other thing...
         CTLE_CUTOFF = 10
         t_interp, h_interp = t_norepeat[CTLE_CUTOFF:], h_norepeat[CTLE_CUTOFF:]
 
@@ -58,8 +59,9 @@ class ModalAnalysis(object):
 
 
         last_interesting_index = where(abs(h_impulse) > max(abs(h_impulse))/1000)[0][-1]
-        h_impulse_crop = h_impulse[:last_interesting_index]
-        t_impulse_crop = t_impulse[:last_interesting_index]
+        first_good_index = argmax(abs(h_impulse))
+        h_impulse_crop = h_impulse[first_good_index:last_interesting_index]
+        t_impulse_crop = t_impulse[first_good_index:last_interesting_index]
 
         no_sample_impulse = 10
         spline_fn = interpolate.UnivariateSpline(t_impulse_crop, h_impulse_crop, k=3)#, s=len(h_impulse_crop)**2*1e9)

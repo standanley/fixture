@@ -4,8 +4,8 @@ template: DifferentialAmpTemplateB
 pin:
     vdd:
         direction: input
-        datatype: real
-        value: 3
+        datatype: analog
+        value: (2.7, 3.3)
     #vss:
     #    direction: input
     #    datatype: real
@@ -34,4 +34,4 @@ extras:
     limits_diff: (-0.03, 0.03)
     limits_cm: (1.15, 1.25)
 
-test_config_file: ngspice.yaml
+test_config_file: ngspice_small_tstep.yaml
