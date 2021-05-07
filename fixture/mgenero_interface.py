@@ -3,6 +3,7 @@ from collections import defaultdict
 import yaml
 import os
 from fixture.signals import SignalIn, SignalOut
+import re
 
 '''
 A parameter file for mgenero looks like this:
@@ -24,7 +25,7 @@ A parameter file for mgenero looks like this:
 def binary(x, y):
     return [(x//(i+1))%2 for i in range(y)]
 
-def dump_yaml(template, params_by_mode):
+def dump_yaml(template, params_by_mode, mapping):
     d = {}
     for mode, params in params_by_mode.items():
 #        # TODO I haven't found a good way to deal with required BA, so this is a bit of a hack
@@ -49,6 +50,13 @@ def dump_yaml(template, params_by_mode):
         # TODO for required BA mgenero needs us to treat them as a bus
         # maybe we can loop through required pins and check whether each is a bus?
 
+        def convert_term_to_verilog(term):
+            # square
+            term = re.sub('I\\((.*)\\*\\*2\\)', '\\1*\\1', term)
+            # cube
+            term = re.sub('I\\((.*)\\*\\*3\\)', '\\1*\\1*\\1', term)
+            return term
+
         for param, terms in params.items():
             if len(params_by_mode) == 1:
                 mode_dict = {'dummy_digitalmode': 0}
@@ -57,12 +65,16 @@ def dump_yaml(template, params_by_mode):
                 names = [s.spice_name for s in template.signals if s.type_ == 'true_digital']
                 mode_dict = {name:x for name,x in zip(names, binary(mode, len(names)))}
             coefs_by_mode = d.get(param, [])
+            terms_verilog = {convert_term_to_verilog(k): v for k,v in terms.items()}
             coefs_this_mode = {
                     'mode': mode_dict,
-                    'coef': terms
-                }
+                    #'coef': terms
+                    'coef': terms_verilog
+            }
             coefs_by_mode.append(coefs_this_mode)
-            d[param] = coefs_by_mode
+
+            param_mapped = mapping.get(param, param)
+            d[param_mapped] = coefs_by_mode
 
     #print('hello', d['gain'][0]['mode'])
 
@@ -120,6 +132,9 @@ def create_interface(template, collateral_dict):
     cfg['pin'] = pins
     cfg['module_name'] = circuit.name
 
+    interface.update(collateral_dict['interface_extras'])
+    cfg.update(collateral_dict['circuit_extras'])
+
     interface_text = yaml.dump(interface)
     cfg_text = yaml.dump(cfg)
     return interface_text, cfg_text
@@ -128,7 +143,7 @@ def create_interface(template, collateral_dict):
 
 def create_all(template, config, params):
     # TODO:
-    params_text = dump_yaml(template, params)
+    params_text = dump_yaml(template, params, config.get('mapping', {}))
     interface_text, circuit_text = create_interface(template, config)
     generate_text = get_generate_text(config['template_name'])
     directory = config['build_folder']

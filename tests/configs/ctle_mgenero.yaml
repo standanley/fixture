@@ -1,0 +1,48 @@
+build_folder: ./ctle_mgenero_build
+template_name: ../amplifier.template.sv
+
+modelparam:
+  v_os:
+    description: input-referred static offset voltage
+    datatype: real
+    value: 0.0
+  etol_v_icm:
+    description: resolution of input common-mode voltage (inp+inn)/2.0
+    datatype: real
+    value: 0.01
+  etol_vdd:
+    description: resolution of vdd
+    datatype: real
+    value: 0.01
+  etol_f:
+    description: error tolerance of a filter
+    datatype: real
+    value: 0.0001
+
+# verilog template name: fixture template name
+# for new models this should always be 1:1
+# will later be translated to pair spice name with verilog name
+mapping:
+    gain: dcgain
+    cm_offset: v_oc
+    const_p1: fp1
+    const_p2: fp2
+    const_z1: fz1
+
+circuit_extras:
+    metric:
+        filter:
+            description: 'placeholder'
+            value: p2z1
+
+interface_extras:
+    metric: # optional behaviors to be incorporated in a model
+        compression:
+            description: Gain compression behavior
+        filter:
+            description: Implement filter for dynamic behavior
+            value: # user will choose one in the list
+              - p1
+              - p2
+              - p2z1
+

@@ -45,7 +45,7 @@ def _run(circuit_config_dict):
     approved_simulator_args = ['ic', 'vsup', 'bus_delim', 'ext_libs', 'inc_dirs',
                                'defines', 'flags', 't_step', 'num_cycles',
                                'conn_order', 'no_run', 'directory', 't_tr',
-                               'dump_waveforms']
+                               'dump_waveforms', 'timescale']
     simulator_dict = {k:v for k,v in test_config_dict.items() if k in approved_simulator_args}
 
     # make sure to put the circuit file location in the right arg
@@ -68,12 +68,12 @@ def _run(circuit_config_dict):
         print('calling with sim dict', simulator_dict)
         #simulator_dict['directory'] = f'build_{name}'
 
-        no_run = True
+        no_run = False
         no_run_dict = {}
         if no_run:
             print('SKIPPING SIMULATION, using results from last time')
             # I pass it in this dict because no_run=False doesn't work for all simulators
-            no_run_dict['no_run'] = True
+            no_run_dict['no_run'] = False
 
         tester.compile_and_run(test_config_dict['target'],
             simulator=test_config_dict['simulator'],
