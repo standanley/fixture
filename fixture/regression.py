@@ -53,7 +53,7 @@ class Regression():
         '''
 
         # TODO pull these out of some dict
-        analog_order = 2
+        analog_order = template.extras.get('analog_order', 1)
         interaction_a_a = False
         interaction_a_ba = False
         interaction_ba_ba = False
