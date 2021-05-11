@@ -38,7 +38,8 @@ def extract_pzs(nps, nzs, x, y):
     #plot(x, y)
 
     ma = modal_analysis.ModalAnalysis(rho_threshold=1, N_degree=max(nps, nzs))
-    tf = ma.fit_stepresponse(y - y[0], x)
+    #tf = ma.fit_stepresponse(y - y[0], x)
+    tf = ma.fit_step_response_direct(x - x[0], y, nps)
     zs = np.roots(tf['num']) / (2*np.pi)
     ps = np.roots(tf['den']) / (2*np.pi)
     print('GOT PZs')
@@ -342,32 +343,37 @@ import numpy as np
 # This is fine
 #h_step = 6 * np.exp(-1.6 * t) - 5 * np.exp(-1.5 * t)
 
-#t = np.array(range(1000)) * 0.002 * 1e-9
-## should be a zero at 8.9G, and you can see the poles
-#h_step = 90e9 * np.exp(-3.5e9 * t) - 115e9 * np.exp(-2e9 * t)
-#
-#h = np.concatenate(([0], np.cumsum(h_step)))
-#h = np.cumsum(h_step)
-##print('h', h)
-#h += np.random.normal(0, 1000e9, h.shape)
-#
-#import scipy
-#import matplotlib.pyplot as plt
-#
-##h_smooth = scipy.ndimage.gaussian_filter1d(h, 2, mode='nearest')
-#t2 = np.array(range(1000)) * 0.002 * 1e-9
-#spline = scipy.interpolate.UnivariateSpline(t*1e9, h*1e-9, s=3)
-#spline.set_smoothing_factor(1e16)
-#h_smooth = spline(t2*1e9)
+t = np.array(range(100)) * 0.02 * 1e-9
+# should be a zero at 8.9G, and you can see the poles
+h_impulse = 90e9 * np.exp(-3.5e9 * t) - 115e9 * np.exp(-2e9 * t)
+
+#h_impulse = np.concatenate(([0], np.cumsum(h_impulse)))
+h = np.cumsum(h_impulse)
+#print('h', h)
+h += np.random.normal(0, 1e9, h.shape)
+
+import scipy
+import matplotlib.pyplot as plt
+
+#h_smooth = scipy.ndimage.gaussian_filter1d(h, 2, mode='nearest')
+t2 = np.array(range(1000)) * 0.002 * 1e-9
+spline = scipy.interpolate.UnivariateSpline(t*1e9, h*1e-9, s=3)
+spline.set_smoothing_factor(1e16)
+h_smooth = spline(t2*1e9)
 #plt.plot(t*1e9, h*1e-9, 'ro')
 #plt.plot(t2*1e9, h_smooth, 'g+')
 #plt.grid()
 #plt.show()
-#
-#exit()
-#
-#h[1] += 0.2
-#no_sample = len(h)
-#extract_pzs(2, 1, t, h)
-#
-#########
+
+
+h[1] += 0.2
+no_sample = len(h)
+
+
+#t = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+#h_step = 5 * np.exp(-.7 * t) + -6 * np.exp(-.3 * t) + 1
+#h_step = 2**t + 3**t - 1
+
+extract_pzs(2, 1, t, h)
+
+########
