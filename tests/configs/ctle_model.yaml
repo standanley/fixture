@@ -39,6 +39,7 @@ extras:
     approx_settling_time: 500e-12
     limits_diff: (-0.05, 0.05)
     limits_cm: (.9, .95)
+    analog_order: 2
 
 test_config_file: mlingua.yaml
 

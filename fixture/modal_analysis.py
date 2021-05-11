@@ -53,7 +53,7 @@ class ModalAnalysis(object):
         CTLE_CUTOFF = 10
         t_interp, h_interp = t_norepeat[CTLE_CUTOFF:], h_norepeat[CTLE_CUTOFF:]
 
-        h_impulse = diff(h_interp)/diff(t_interp) # get impulse response from step response
+        #h_impulse = diff(h_interp)/diff(t_interp) # get impulse response from step response
         t_impulse = t_interp[:-1]+diff(t_interp)/2.0 # time adjustment, take the mid-point
 
 
@@ -254,16 +254,17 @@ class ModalAnalysis(object):
             h = spline_fn(t)
 
 
-        import matplotlib.pyplot as plt
-        plt.plot(t, h, '-*')
-        plt.show()
+        if self.debug:
+            import matplotlib.pyplot as plt
+            plt.plot(t, h, '-*')
+            plt.show()
 
         h = h.reshape(no_sample,1)
         t = t.reshape(no_sample,1)
 
         # TODO stride
-        desired_dT = t[-1] - t[0] / 10
-        stride = 1#max(1, round(desired_dT / (t[1] - t[0])))
+        desired_dT = (t[-1] - t[0]) / 10
+        stride = max(1, int(np.round(desired_dT / (t[1] - t[0]))))
         dT = t[stride] - t[0]
         M = no_sample - N # no of equations
 
@@ -297,17 +298,16 @@ class ModalAnalysis(object):
         #A0 = vstack((ones(A.shape[1]),A)).getA1()
 
         # TODO I think we also subtract (stride-1)
-        assert stride == 1
-        m = no_sample - N - 1
+        m = no_sample - (N+1) * stride
         def data(start):
             return h[start:start+m].reshape((m,))
 
         # AX = B
         A = np.stack(
-            (-data(1+i) + data(0) for i in range(N-1, -1, -1)),
+            (-data((1+i)*stride) + data(0) for i in range(N-1, -1, -1)),
             1
         )
-        B = (-data(N+1) + data(0)).reshape((m,1))
+        B = (-data((1+N)*stride) + data(0)).reshape((m,1))
         X = np.linalg.pinv(A) @ B
         X_coeffs = np.concatenate(([1], -X.reshape((N,)), [sum(X)-1]))
         roots = np.roots(X_coeffs)
@@ -347,7 +347,12 @@ class ModalAnalysis(object):
         # expansion, numerators are Z[i], denominators are (s-P[i])
         # TODO not sure about tol here, I think it should be 0 since we never
         # generate special terms for repeated zeros
-        num,den = invres(Z.getA1(),P.getA1(),zeros(size(P)),tol=1e-4,rtype='avg')
+
+        index_zero_pole = np.argmin(abs(P))
+        P_impulse = np.delete(P, index_zero_pole)
+        Z_impulse = np.delete(Z, index_zero_pole)
+        num,den = invres(Z_impulse.getA1(),P_impulse.getA1(),
+                         zeros(size(P_impulse)),tol=1e-4,rtype='avg')
         error = False
         if not error:
             print(num, den)
@@ -357,10 +362,11 @@ class ModalAnalysis(object):
         h_estimated = Q.transpose()*Z
         h_estimated = h_estimated.real.getA1()
 
-        plt.plot(t, h, '+')
-        plt.plot(t, h_estimated, '-+')
-        plt.grid()
-        plt.show()
+        if self.debug:
+            plt.plot(t, h, '+')
+            plt.plot(t, h_estimated, '-+')
+            plt.grid()
+            plt.show()
 
         return dict(h_impulse=h,h_estimated=h_estimated,num=num,den=den,failed=error)
 
