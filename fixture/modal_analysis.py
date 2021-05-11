@@ -1,7 +1,7 @@
 from numpy import *
 from scipy import interpolate
 from scipy.linalg import toeplitz,pinv,inv
-from scipy.signal import invres,step,impulse
+from scipy.signal import invres,step,impulse, residue
 import pickle
 import matplotlib.pyplot as plt
 
@@ -260,6 +260,9 @@ class ModalAnalysis(object):
             plt.show()
 
         h = h.reshape(no_sample,1)
+        # TODO step response always starts at 0. But does this fix
+        # mess with scaline and dc gain?
+        h -= h[0]
         t = t.reshape(no_sample,1)
 
         # TODO stride
@@ -327,19 +330,19 @@ class ModalAnalysis(object):
         # Unlike math.log and np.log, scimath.log is fine with log(-5)
         import numpy as np
         log = np.lib.scimath.log
-        P = np.matrix(log(roots) / dT).transpose()
+        P_step = np.matrix(log(roots) / dT).transpose()
 
         # STEP 2: We have the poles (speeds of decay), now find magnitudes
         # Basic strategy is just linear regression on the magnitude of each
         # frequency component
         # Rows of Q are exponential decays at various frequencies
-        Q = exp(P * t.transpose())
+        Q_step = exp(P_step * t.transpose())
 
         # Do linear regression to find h as a linear combination of rows of Q
         # Z is a coefficient for each row of Q
         # NOTE Z is NOT the zeros. It's the coefficients for each 1/(s-p) term
         # in the Laplace transform
-        Z = pinv(matrix(Q.transpose()))*matrix(h)
+        Z_step = pinv(matrix(Q_step.transpose()))*matrix(h)
 
         # STEP 3: use magnitudes of components to find the zeros
         # Go from A/(s-p1) + B/(s-p2) to rational polynomial coefficients
@@ -348,27 +351,60 @@ class ModalAnalysis(object):
         # TODO not sure about tol here, I think it should be 0 since we never
         # generate special terms for repeated zeros
 
-        index_zero_pole = np.argmin(abs(P))
-        P_impulse = np.delete(P, index_zero_pole)
-        Z_impulse = np.delete(Z, index_zero_pole)
-        num,den = invres(Z_impulse.getA1(),P_impulse.getA1(),
-                         zeros(size(P_impulse)),tol=1e-4,rtype='avg')
-        error = False
-        if not error:
-            print(num, den)
-        num = num.real
-        den = den.real
+        num,den = invres(Z_step.getA1(),P_step.getA1(),
+                         zeros(size(P_step)),tol=1e-4,rtype='avg')
 
-        h_estimated = Q.transpose()*Z
+        # for a step response, we should have N poles plus a pole at 0,
+        # and N-1 zeros. This means our num polynomial should be a degree
+        # lower than usual for this many poles, i.e. leading coeff is 0
+        #assert len(num) == len(den)-2 or abs(num[0]) < 1e-10
+        if len(num) != len(den)-2:
+            num = np.delete(num, 0)
+
+        # now factor the top and bottom
+        zs_step = np.roots(num)
+        ps_step = np.roots(den)
+
+
+        # remove the pole at 0 and the highest zero
+        index_integrator_pole = np.argmin(abs(ps_step))
+        P_impulse = np.delete(ps_step, index_integrator_pole).reshape((N,))
+        #index_large_zero = np.argmax(abs(zs_step))
+        #Z_impulse = np.delete(zs_step, index_large_zero).reshape((N-1,))
+        Z_impulse = zs_step
+
+        # we're done, but for debug we want to produce the time-domain again
+        # and we will compare to the step response, so add the pole at 0
+        num_test = np.poly(Z_impulse)
+        P_impulse_integrated = np.concatenate((P_impulse, [0]))
+        den_test = np.poly(P_impulse_integrated)
+        res_test, p_test, _ = residue(num_test, den_test)
+        # q_test * exp(den_test * t), with dot product & outer product
+        #h_test = (q_test.reshape((1,N-1)) @
+        #          np.exp(den_test.reshape((N-1,1)),
+        #                 t.reshape((1, len(t)))))
+        h_test = np.dot(res_test, np.exp(np.outer(p_test, t)))
+        # TODO this will break when DC gain is zero
+        scaling_test = (Z_step[0] / res_test[0]).item()
+        h_test = h_test * scaling_test
+        h_test = h_test.real
+
+        h_estimated = Q_step.transpose() * Z_step
         h_estimated = h_estimated.real.getA1()
-
         if self.debug:
-            plt.plot(t, h, '+')
-            plt.plot(t, h_estimated, '-+')
+            plt.plot(t, h, 'o')
+            plt.plot(t, h_estimated, '--+')
+            plt.plot(t, h_test, '-+')
             plt.grid()
             plt.show()
 
-        return dict(h_impulse=h,h_estimated=h_estimated,num=num,den=den,failed=error)
+        num = num.real
+        den = den.real
+
+
+
+        num, den = np.poly(Z_impulse).real, np.poly(P_impulse).real
+        return dict(h_impulse=h,h_estimated=h_estimated,num=num,den=den)
 
     def fit_transferfunction(self,H,f):
         ''' Fit a frequency response measurement to a linear system model '''
