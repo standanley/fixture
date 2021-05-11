@@ -12,7 +12,9 @@ def file_relative_to_test(fname):
 names = [
     'configs/differential_amp.yaml',
     'configs/differential_amp_B.yaml',
-    'configs/differential_amp2_B.yaml'
+    'configs/differential_amp2_B.yaml',
+    'configs/ctle.yaml',
+    'configs/ctle_model.yaml'
 ]
 
 @pytest.mark.parametrize('config', names)
@@ -23,6 +25,6 @@ def test_by_config(config):
     fixture.run(circuit_fname)
 
 if __name__ == '__main__':
-    test_by_config(names[2])
+    test_by_config(names[4])
     pass
 
