@@ -9,7 +9,7 @@ from fixture import template_creation_utils
 
 
 class ModalAnalysis(object):
-    debug = True
+    debug = False
     ''' Fit an step response measurement to a linear system model '''
     def __init__(self, rho_threshold = 0.999, N_degree = 50):
         ''' set constraints on calculation '''
@@ -241,8 +241,37 @@ class ModalAnalysis(object):
         h_estimated = h_estimated.real.getA1()
         return dict(h_impulse=h,h_estimated=h_estimated,num=num,den=den,failed=error)
 
+    def constrained_regression(self, A, B, C, D):
+        import numpy as np
+        # Find matrix X that minimizes AX-B, under the constraint CX=D
+        # N is # datapoints, M is (constrained) x dimension, p is # constraints
+        n = A.shape[0]
+        m = A.shape[1]
+        p = C.shape[0]
 
-    def fit_step_response_direct(self, t, h, N):
+        # Step 1: find E, F such that E*X_tilde+F always produces valid X
+        # fill in rows of C with orthogonal vectors until it's square
+        # TODO make sure these are orthogonal ... but they probably are
+        C_extension = np.random.rand(m-p, m)
+        C_tilde = np.vstack((C, C_extension))
+        C_tilde_inv = np.linalg.inv(C_tilde)
+        E = C_tilde_inv[:, p:]
+        F = C_tilde_inv[:, :p] @ D
+
+        # Step 2: Use X=E*X_tilde+F to re-frame linear regression for X_tilde
+        # A (E*X_tilde + F) = B
+        # A E X_tilde = B - A F_tilde
+        A_tilde = A @ E
+        B_tilde = B - (A @ F)
+
+        # Step 3: solve linear regression in tilde space
+        X_tilde = pinv(A_tilde) @ B_tilde
+
+        # Step 4: Use E and F to get back from tilde space
+        X = E @ X_tilde + F
+        return X
+
+    def fit_step_response_direct(self, t, h, NP, NZ):
         import numpy as np
         no_sample = len(t)
         # TODO float equality?
@@ -269,7 +298,7 @@ class ModalAnalysis(object):
         desired_dT = (t[-1] - t[0]) / 10
         stride = max(1, int(np.round(desired_dT / (t[1] - t[0]))))
         dT = t[stride] - t[0]
-        M = no_sample - N # no of equations
+        M = no_sample - NP # no of equations
 
         # STEP 1: Extract N poles. This is the difficult step
         # Goal: if h looks like a superposition of N c*e^(wt) components,
@@ -300,19 +329,18 @@ class ModalAnalysis(object):
 
         #A0 = vstack((ones(A.shape[1]),A)).getA1()
 
-        # TODO I think we also subtract (stride-1)
-        m = no_sample - (N+1) * stride
+        m = no_sample - (NP+1) * stride
         def data(start):
             return h[start:start+m].reshape((m,))
 
         # AX = B
         A = np.stack(
-            (-data((1+i)*stride) + data(0) for i in range(N-1, -1, -1)),
+            (-data((1+i)*stride) + data(0) for i in range(NP-1, -1, -1)),
             1
         )
-        B = (-data((1+N)*stride) + data(0)).reshape((m,1))
+        B = (-data((1+NP)*stride) + data(0)).reshape((m,1))
         X = np.linalg.pinv(A) @ B
-        X_coeffs = np.concatenate(([1], -X.reshape((N,)), [sum(X)-1]))
+        X_coeffs = np.concatenate(([1], -X.reshape((NP,)), [sum(X)-1]))
         roots = np.roots(X_coeffs)
 
 
@@ -336,13 +364,23 @@ class ModalAnalysis(object):
         # Basic strategy is just linear regression on the magnitude of each
         # frequency component
         # Rows of Q are exponential decays at various frequencies
-        Q_step = exp(P_step * t.transpose())
+        # NZ makes this a little more difficult: we want to find a magnitude
+        # for each of these things, but we require that when we do the inverse
+        # residual calculation, the resulting numerator polynomial has a degree
+        # of only NZ, which is likely smaller than what it wants
+        Q_step = np.exp(P_step * t.transpose())
 
         # Do linear regression to find h as a linear combination of rows of Q
         # Z is a coefficient for each row of Q
         # NOTE Z is NOT the zeros. It's the coefficients for each 1/(s-p) term
         # in the Laplace transform
-        Z_step = pinv(matrix(Q_step.transpose()))*matrix(h)
+        # TODO fewer zeros
+        Z_step = self.constrained_regression(Q_step.transpose(),
+                                             h,
+                                             np.ones((1, NP+1)),
+                                             np.array([0]).reshape((1,1)))
+
+
 
         # STEP 3: use magnitudes of components to find the zeros
         # Go from A/(s-p1) + B/(s-p2) to rational polynomial coefficients
@@ -368,7 +406,7 @@ class ModalAnalysis(object):
 
         # remove the pole at 0 and the highest zero
         index_integrator_pole = np.argmin(abs(ps_step))
-        P_impulse = np.delete(ps_step, index_integrator_pole).reshape((N,))
+        P_impulse = np.delete(ps_step, index_integrator_pole).reshape((NP,))
         #index_large_zero = np.argmax(abs(zs_step))
         #Z_impulse = np.delete(zs_step, index_large_zero).reshape((N-1,))
         Z_impulse = zs_step

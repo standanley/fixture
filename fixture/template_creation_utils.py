@@ -48,7 +48,7 @@ def extract_pzs(nps, nzs, x, y):
     #tf = ma.fit_stepresponse(y - y[0], x)
 
     # step response fit will always start from exactly zero
-    tf = ma.fit_step_response_direct(x_trimmed, y_trimmed, nps)
+    tf = ma.fit_step_response_direct(x_trimmed, y_trimmed, nps, nzs)
     zs = np.roots(tf['num']) / (2*np.pi)
     ps = np.roots(tf['den']) / (2*np.pi)
     print('GOT PZs')
@@ -380,9 +380,9 @@ import numpy as np
 #
 #
 #t = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-#h_step = 5 * np.exp(-.7 * t) + -6 * np.exp(-.3 * t) + 1
+#h_step = 5 * np.exp(-.7 * t) + -4 * np.exp(-.3 * t) + -2 * np.exp(-.2 * t) + 1
 ##h_step = 2**t + 3**t - 1
 #
-#extract_pzs(2, 1, t, h_step)
+#extract_pzs(3, 2, t, h_step)
 #
 #########
