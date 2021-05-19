@@ -97,7 +97,7 @@ class DifferentialAmpTemplate(TemplateMaster):
         required_info = {
             'approx_settling_time': 'Approximate time it takes for amp to settle within 99% (s)'
         }
-        num_samples = 25
+        num_samples = 15
 
         def input_domain(self):
             in_cm = create_input_domain_signal('in_cm', self.extras['limits_cm'])
@@ -167,7 +167,10 @@ class DifferentialAmpTemplate(TemplateMaster):
             # FLIP
             #outdiff = outdiff[0], -1 * outdiff[1]
 
+
             ps, zs = extract_pzs(2, 1, outdiff[0][CUTOFF:], outdiff[1][CUTOFF:])
+            list(ps).sort(key=abs)
+            zs.sort()
 
 
             return {'p1': ps[0], 'p2': ps[1], 'z1': zs[0]}
@@ -287,5 +290,6 @@ class DifferentialAmpTemplate(TemplateMaster):
             return {'p1': ps[0], 'p2': ps[1], 'z1': zs[0]}
 
 
-    tests = [GainTest, DynamicTest]
+    #tests = [GainTest, DynamicTest]
+    tests = [DynamicTest]
 
