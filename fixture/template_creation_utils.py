@@ -36,13 +36,13 @@ def extract_pzs(nps, nzs, x, y):
     #print(x)
     #print(y)
     #plot(x, y)
-    first_good_index = np.where(x > 0)[0][0]
+    first_good_index = 0#np.where(x > 0)[0][0]
     x_trimmed = x[first_good_index:]
     y_trimmed = y[first_good_index:]
 
 
     # TODO delete this
-    y_trimmed += np.random.normal(0, .001, y_trimmed.shape)
+    #y_trimmed += np.random.normal(0, .001, y_trimmed.shape)
 
     ma = modal_analysis.ModalAnalysis(rho_threshold=1, N_degree=max(nps, nzs))
     #tf = ma.fit_stepresponse(y - y[0], x)
@@ -53,6 +53,10 @@ def extract_pzs(nps, nzs, x, y):
     ps = np.roots(tf['den']) / (2*np.pi)
     print('GOT PZs')
     print(ps, zs)
+
+    ma.optimize(x_trimmed, y_trimmed, ps, zs)
+
+
     ps, zs = np.abs(ps), np.abs(zs)
 
     #bode_plot(ps, zs)
@@ -383,6 +387,30 @@ import numpy as np
 #h_step = 5 * np.exp(-.7 * t) + -4 * np.exp(-.3 * t) + -2 * np.exp(-.2 * t) + 1
 ##h_step = 2**t + 3**t - 1
 #
-#extract_pzs(3, 2, t, h_step)
-#
-#########
+
+if __name__ == '__main__':
+    import numpy as np
+    import scipy
+    t = np.linspace(0, 1e-9, 100)
+    #ps = -np.array([3e9, 5e9, 9e9]) * 2*np.pi
+    #zs = -np.array([2e9, 7e9]) * 2*np.pi
+    ps = -np.array([4e9, 5e9]) * 2*np.pi
+    zs = -np.array([4.8e9]) * 2*np.pi
+    num = np.poly(zs) * 5e10  # 5e10 is approximate
+    den = np.poly(ps)
+    rs, ps, ks = scipy.signal.residue(num, den, tol=1e-3)
+
+    h_impulse = np.zeros(t.shape)
+    for r, p in zip(rs, ps):
+        h_impulse += r * np.exp(p * t)
+
+    h_step = np.cumsum(h_impulse) * (t[1] - t[0])
+    t += t[1]
+
+    h_step += np.random.normal(0, max(abs(h_step)) / 10000, h_step.shape)
+
+    #plot(t, h_step)
+
+    extract_pzs(2, 1, t, h_step)
+    #
+    #########

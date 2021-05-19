@@ -9,7 +9,7 @@ from fixture import template_creation_utils
 
 
 class ModalAnalysis(object):
-    debug = False
+    debug = True
     ''' Fit an step response measurement to a linear system model '''
     def __init__(self, rho_threshold = 0.999, N_degree = 50):
         ''' set constraints on calculation '''
@@ -291,7 +291,7 @@ class ModalAnalysis(object):
         h = h.reshape(no_sample,1)
         # TODO step response always starts at 0. But does this fix
         # mess with scaline and dc gain?
-        h -= h[0]
+        #h -= h[0]
         t = t.reshape(no_sample,1)
 
         # TODO stride
@@ -375,11 +375,14 @@ class ModalAnalysis(object):
         # NOTE Z is NOT the zeros. It's the coefficients for each 1/(s-p) term
         # in the Laplace transform
         # TODO fewer zeros
+
         Z_step = self.constrained_regression(Q_step.transpose(),
                                              h,
                                              np.ones((1, NP+1)),
                                              np.array([0]).reshape((1,1)))
 
+        print('Z_step', Z_step)
+        print('P_step', P_step)
 
 
         # STEP 3: use magnitudes of components to find the zeros
@@ -391,6 +394,9 @@ class ModalAnalysis(object):
 
         num,den = invres(Z_step.getA1(),P_step.getA1(),
                          zeros(size(P_step)),tol=1e-4,rtype='avg')
+
+
+        print('numerator', num)
 
         # for a step response, we should have N poles plus a pole at 0,
         # and N-1 zeros. This means our num polynomial should be a degree
@@ -423,7 +429,12 @@ class ModalAnalysis(object):
         #                 t.reshape((1, len(t)))))
         h_test = np.dot(res_test, np.exp(np.outer(p_test, t)))
         # TODO this will break when DC gain is zero
+        # TODO also the index should be the index of the pole at 0,
+        # which is not always index 0
         scaling_test = (Z_step[0] / res_test[0]).item()
+        print('poles for test', p_test)
+        print('residue for test', res_test)
+        print('gain for test', scaling_test)
         h_test = h_test * scaling_test
         h_test = h_test.real
 
@@ -443,6 +454,66 @@ class ModalAnalysis(object):
 
         num, den = np.poly(Z_impulse).real, np.poly(P_impulse).real
         return dict(h_impulse=h,h_estimated=h_estimated,num=num,den=den)
+
+    def optimize(self, t, h_step, ps, zs):
+        import numpy as np
+        import scipy
+        # Use a nonlinear optimizer
+        # USE HERTZ FOR ps AND zs
+        # a little weird that h is step response, ps and zs are impulse
+        # H(t) = gain*zs/ps
+        Nps = len(ps)
+        Nzs = len(zs)
+
+        ps = np.array(ps) * (2*np.pi)
+        zs = np.array(zs) * (2*np.pi)
+
+
+        def time(xs):
+            ps = xs[:Nps]
+
+            zs = xs[Nps:Nps + Nzs]
+            gain = xs[Nps + Nzs]
+            ps_impulse = np.concatenate(([0], ps))  # integrate
+            num = gain * np.poly(zs)
+            den = np.poly(ps_impulse)
+            rs, ps_impulse, ks = scipy.signal.residue(num, den, tol=1e-3)
+            h_step_time = np.zeros(h_step.shape)
+            for r, p in zip(rs, ps_impulse):
+                h_step_time += r * np.exp(p * t)
+            return h_step_time
+
+        def err(xs):
+            h_step_time = time(xs)
+            err_vec = h_step - h_step_time
+            # TODO weight err_vec by dt
+            error = sum(err_vec ** 2)
+            #print('got error', error, xs[:3] , xs[3])
+            return error
+
+        x0_nogain = np.concatenate((ps, zs, [1]))
+        h_step_nogain = time(x0_nogain)
+        gain = h_step[-1] / h_step_nogain[-1]
+
+        x0 = np.concatenate((ps, zs, [gain]))
+        result = scipy.optimize.minimize(err, x0, options={'disp': True, 'eps': 1e-7, 'gtol': 1e-20, 'xatol': 1e6, 'fatol': 1e-6})
+        x_fit = result.x
+        h_step_fit = time(x_fit)
+        h_step_0 = time(x0)
+        x_cheat = np.concatenate((2*np.pi*np.array([-4e9, -5e9, -4.8e9]), [gain]))
+        h_step_cheat = time(x_cheat)
+
+
+        import matplotlib.pyplot as plt
+        plt.plot(t, h_step, 'o')
+        plt.plot(t, h_step_0, '--+')
+        plt.plot(t, h_step_fit)
+        plt.plot(t, h_step_cheat, '*')
+        plt.grid()
+        plt.show()
+
+
+
 
     def fit_transferfunction(self,H,f):
         ''' Fit a frequency response measurement to a linear system model '''
