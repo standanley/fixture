@@ -1,6 +1,7 @@
 PDKS
 open_pdks
 skywater-pdk
+sky130_fd_pr.patch
 
 
 .magicrc
