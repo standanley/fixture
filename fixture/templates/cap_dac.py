@@ -1,6 +1,32 @@
 from fixture import TemplateMaster
 import itertools
-from fixture.template_creation_utils import debug
+from fixture.template_creation_utils import debug, post_regression_plots
+
+'''
+vtop = vlow
+vbottom = vin
+
+sample is taken
+vbottom = vlow
+
+bits are flipped
+vbottom[some] = vref
+
+
+let's say fraction of cap flipped is x
+x=0 -> out = vlow - (vin-vlow)
+x=1 -> out = vlow - (vin-vref)
+
+out = vlow - (vin - (vlow + x*(vref-vlow)))
+    = vlow - (vin - (x*vref + (1-x)*vlow))
+    = (vlow - vin) + (x*vref + (1-x)*vlow)
+    = A - vin + C * x
+So ideally we should see
+offset_in = -1
+offset = 2*vlow, I think
+gain_in[i] = 0
+gain[i] = cap weights
+'''
 
 class CapDACTemplate(TemplateMaster):
     required_ports = ['sample_in', 'ctrl_in', 'clk', 'out']
@@ -10,10 +36,14 @@ class CapDACTemplate(TemplateMaster):
         parameter_algebra = {
             'out': {'gain_in': 'sample_in*ctrl_in', 'gain': 'ctrl_in',
                     'offset_in': 'sample_in', 'offset': '1'},
+            'out_B': {'gain_B': 'ctrl_in',
+                    'offset_in_B': 'sample_in', 'offset_B': '1'}
         }
         required_info = {
             'approx_settling_time': 'Approximate time it takes for amp to settle within 99% (s)'
         }
+
+        num_samples = 100
 
         def input_domain(self):
             ctrl_in = self.signals.from_template_name('ctrl_in')
@@ -23,8 +53,10 @@ class CapDACTemplate(TemplateMaster):
         def testbench(self, tester, values):
             wait_time = self.extras['approx_settling_time'] * 2
 
-            self.debug(tester, self.ports.ctrl_in[0], 1)
-            self.debug(tester, self.ports.ctrl_in[1], 1)
+            #self.debug(tester, self.ports.ctrl_in[0], 1)
+            #self.debug(tester, self.ports.ctrl_in[1], 1)
+            for p in self.ports.ctrl_in:
+                self.debug(tester, p, 1)
             self.debug(tester, self.ports.clk, 1)
             self.debug(tester, self.ports.sample_in, 1)
             self.debug(tester, self.ports.out, 1)
@@ -39,6 +71,9 @@ class CapDACTemplate(TemplateMaster):
             tester.delay(wait_time)
             tester.poke(self.ports.clk, 0)
 
+            # wait for sampling to happen
+            tester.delay(wait_time)
+
             # flip appropriate bits
             for bit in self.signals.ctrl_in:
                 tester.poke(bit.spice_pin, values[bit])
@@ -50,8 +85,12 @@ class CapDACTemplate(TemplateMaster):
             return read
 
         def analysis(self, reads):
-            results = {'out': reads.value}
+            results = {'out': reads.value, 'out_B': reads.value}
             return results
+
+        def post_regression(self, regression_models):
+            post_regression_plots(regression_models)
+            return {}
 
     @debug
     class INLTest(TemplateMaster.Test):

@@ -5,7 +5,8 @@ pin:
     vin:
         direction: input
         datatype: real
-        value: (0.7, 1.2)
+        #value: (0.7, 1.2)
+        value: (0.7, 1.0)
     vlow:
         direction: input
         datatype: analog
@@ -51,7 +52,13 @@ pin:
         direction: input
         datatype: bit
 
-    vcom_buf:
+    # Used to clock comparator at output; not used for this
+    adc_clk:
+        direction: input
+        datatype: real
+        value: 0
+
+    vcom:
         direction: output
         datatype: real
 
@@ -75,10 +82,10 @@ template_pins:
     ctrl_in[6]: q6
     ctrl_in[7]: q7
     sample_in: vin
-    out: vcom_buf
+    out: vcom
     clk: sample
 
 extras:
     approx_settling_time: 5e-6
 
-test_config_file: ngspice_sky130.yaml
+test_config_file: ngspice_sky130_slow.yaml

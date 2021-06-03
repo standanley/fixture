@@ -268,3 +268,22 @@ def invert_function(xs, ys):
     endpoints = (new_xs[0], new_xs[-1])
     return interp1d(new_ys, new_xs, bounds_error=False, fill_value=endpoints, assume_sorted=True)
 
+
+def post_regression_plots(results):
+    for param in results.keys():
+        reg = results[param]
+
+        y_meas = reg.model.endog
+        y_pred = reg.model.predict(reg.params)
+
+        import matplotlib.pyplot as plt
+        plt.scatter(y_meas, y_pred)
+        plt.title(f'Plot for {param}')
+        plt.xlabel('Measured output values')
+        plt.ylabel('Predicted output values based on inputs & model')
+        # plt.plot([min(y_meas), max(y_meas)], [min(y_meas), max(y_meas)], '--')
+        plt.plot([0, max(y_meas)], [0, max(y_meas)], '--')
+        plt.grid()
+        plt.show()
+
+    return {}
