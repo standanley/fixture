@@ -9,7 +9,7 @@ from fixture import template_creation_utils
 
 
 class ModalAnalysis(object):
-    debug = True
+    debug = False
     ''' Fit an step response measurement to a linear system model '''
     def __init__(self, rho_threshold = 0.999, N_degree = 50):
         ''' set constraints on calculation '''
@@ -275,17 +275,19 @@ class ModalAnalysis(object):
         import numpy as np
         no_sample = len(t)
         # TODO float equality?
-        if np.diff(t).max() > np.diff(t).min():
+        if np.diff(t).max() > np.diff(t).min() or t[0] < 0:
             print('RESAMPLING')
             spline_fn = interpolate.interp1d(t,h)
             #t = linspace(t[0],t[-1],no_sample)
-            t = np.linspace(t[0],t[-1],no_sample)
+            # TODO adjust no_sample based on how much of t is before 0?
+            t = np.linspace(0,t[-1],no_sample)
             h = spline_fn(t)
 
 
         if self.debug:
             import matplotlib.pyplot as plt
             plt.plot(t, h, '-*')
+            plt.legend(('Step response after resampling',))
             plt.show()
 
         h = h.reshape(no_sample,1)
@@ -478,7 +480,7 @@ class ModalAnalysis(object):
             num = gain * np.poly(zs)
             den = np.poly(ps_impulse)
             rs, ps_impulse, ks = scipy.signal.residue(num, den, tol=1e-3)
-            h_step_time = np.zeros(h_step.shape)
+            h_step_time = np.zeros(h_step.shape, dtype=ps_impulse.dtype)
             for r, p in zip(rs, ps_impulse):
                 h_step_time += r * np.exp(p * t)
             return h_step_time
@@ -487,7 +489,7 @@ class ModalAnalysis(object):
             h_step_time = time(xs)
             err_vec = h_step - h_step_time
             # TODO weight err_vec by dt
-            error = sum(err_vec ** 2)
+            error = sum(abs(err_vec ** 2))
             #print('got error', error, xs[:3] , xs[3])
             return error
 
@@ -504,14 +506,19 @@ class ModalAnalysis(object):
         h_step_cheat = time(x_cheat)
 
 
-        import matplotlib.pyplot as plt
-        plt.plot(t, h_step, 'o')
-        plt.plot(t, h_step_0, '--+')
-        plt.plot(t, h_step_fit)
-        plt.plot(t, h_step_cheat, '*')
-        plt.grid()
-        plt.show()
+        if self.debug:
+            import matplotlib.pyplot as plt
+            plt.plot(t, h_step, 'o')
+            plt.plot(t, h_step_0, '--+')
+            plt.plot(t, h_step_fit)
+            plt.plot(t, h_step_cheat, '*')
+            plt.grid()
+            plt.legend(('h_step', 'h_step_0', 'h_step_fit', 'h_step_cheat'))
+            plt.show()
 
+        ps_fit = x_fit[:Nps]
+        zs_fit = x_fit[Nps:Nps+Nzs]
+        return ps_fit, zs_fit
 
 
 
