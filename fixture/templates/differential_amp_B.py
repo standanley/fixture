@@ -162,7 +162,8 @@ class DifferentialAmpTemplate(TemplateMaster):
             # we want to cut some off, but leave at least 60-15*2 ??
             CUTOFF = 0#min(max(0, len(outp[0]) - 60), 15)
 
-            outdiff = outp[0], outp[1] - outn[1]
+            step_start_output = outp[1][0] - outn[1][0]
+            outdiff = outp[0], outp[1] - outn[1] - step_start_output
 
             # FLIP
             #outdiff = outdiff[0], -1 * outdiff[1]
