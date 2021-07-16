@@ -3,4 +3,5 @@ simulator: hspice
 #ic: {vss: 0}
 vsup: 1.2
 bus_delim: "[]"
+t_step: 1e-11
 # TODO: could also have libraries to include, etc.

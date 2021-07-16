@@ -1,4 +1,5 @@
 from numpy import *
+import numpy as np
 from scipy import interpolate
 from scipy.linalg import toeplitz,pinv,inv
 from scipy.signal import invres,step,impulse, residue
@@ -9,7 +10,7 @@ from fixture import template_creation_utils
 
 
 class ModalAnalysis(object):
-    debug = False
+    debug = True
     ''' Fit an step response measurement to a linear system model '''
     def __init__(self, rho_threshold = 0.999, N_degree = 50):
         ''' set constraints on calculation '''
@@ -273,10 +274,22 @@ class ModalAnalysis(object):
 
     def fit_step_response_direct(self, t, h, NP, NZ):
         import numpy as np
+        t_orig = t
+        h_orig = h
+
+
+
+        # TODO remove this?
+        REMOVE = 0
+        t = t[REMOVE:]
+        h = h[REMOVE:]
+
         no_sample = len(t)
+
         # TODO float equality?
         if np.diff(t).max() > np.diff(t).min() or t[0] < 0:
             print('RESAMPLING')
+            no_sample *= 5
             spline_fn = interpolate.interp1d(t,h)
             #t = linspace(t[0],t[-1],no_sample)
             # TODO adjust no_sample based on how much of t is before 0?
@@ -286,8 +299,9 @@ class ModalAnalysis(object):
 
         if self.debug:
             import matplotlib.pyplot as plt
+            plt.plot(t_orig, h_orig, '+')
             plt.plot(t, h, '-*')
-            plt.legend(('Step response after resampling',))
+            plt.legend(('step response before sampling','Step response after resampling'))
             plt.show()
 
         h = h.reshape(no_sample,1)
@@ -297,6 +311,7 @@ class ModalAnalysis(object):
         t = t.reshape(no_sample,1)
 
         # TODO stride
+        # TODO what's a good value for that constant? It was 10 for a while
         desired_dT = (t[-1] - t[0]) / 10
         stride = max(1, int(np.round(desired_dT / (t[1] - t[0]))))
         dT = t[stride] - t[0]
@@ -336,12 +351,33 @@ class ModalAnalysis(object):
             return h[start:start+m].reshape((m,))
 
         # AX = B
+        # rows of A are sequences from data with stride, and offset i
+        # entries of B are just the next point in the corresponding A sequence
         A = np.stack(
             (-data((1+i)*stride) + data(0) for i in range(NP-1, -1, -1)),
             1
         )
         B = (-data((1+NP)*stride) + data(0)).reshape((m,1))
         X = np.linalg.pinv(A) @ B
+
+        if self.debug:
+            # plot something about the regression trying to fit
+            # the recurrence relation?
+            if False and A.shape[1] == 2:
+                # we are trying to form B as a linear combination of As
+                fig = plt.figure()
+                ax = fig.add_subplot(projection='3d')
+                ax.scatter(A[:, 0], A[:, 1], B[:, 0])
+                ax.set_xlabel('A[0]')
+                ax.set_ylabel('A[1]')
+                ax.set_zlabel('B[0]')
+                plt.show()
+
+            print(A@X, B)
+            plt.plot(B, '--')
+            plt.plot(A@X)
+            plt.grid()
+            plt.show()
         X_coeffs = np.concatenate(([1], -X.reshape((NP,)), [sum(X)-1]))
         roots = np.roots(X_coeffs)
 
@@ -361,6 +397,65 @@ class ModalAnalysis(object):
         import numpy as np
         log = np.lib.scimath.log
         P_step = np.matrix(log(roots) / dT).transpose()
+
+
+
+
+
+
+
+
+
+
+        # TODO Time for some debugging
+        import matplotlib
+        fig, ax = plt.subplots()
+        plt.plot(t, h, 'o')
+        plt.plot(t, self.debug_poles_to_response(t, h, P_step), '--')
+        line, = plt.plot(t, self.debug_poles_to_response(t, h, P_step))
+        #line, = plt.plot([1,2,3,4,5], [3, 5, 6, 4, 7])
+        plt.subplots_adjust(bottom=.25)
+
+
+        p1 = float(np.real(P_step[1]))
+        p2 = float(np.real(P_step[2]))
+        ax_p1 = plt.axes([0.2, 0.15, 0.5, 0.03])
+        slider_p1 = matplotlib.widgets.Slider(
+            ax=ax_p1,
+            label='avg',
+            valmin=p1*4,
+            valmax=p1*.2,
+            valinit=p1,
+        )
+        ax_p2 = plt.axes([0.2, 0.05, 0.5, 0.03])
+        slider_p2 = matplotlib.widgets.Slider(
+            ax=ax_p2,
+            label='pdiff',
+            valmin=0,
+            valmax=1,
+            valinit=0.01,
+        )
+
+        def update(val):
+            avg = slider_p1.val
+            diff = slider_p2.val
+            P_sliders = np.array([0, avg*(1-diff), avg*(1+diff)])
+            line.set_ydata(self.debug_poles_to_response(t, h, P_sliders))
+            #line.set_ydata([8, 7, 6, 5, 4])
+            fig.canvas.draw_idle()
+        slider_p1.on_changed(update)
+        slider_p2.on_changed(update)
+
+        plt.show()
+
+
+        test_h = self.debug_poles_to_response(t, h, P_step)
+
+
+
+
+
+
 
         # STEP 2: We have the poles (speeds of decay), now find magnitudes
         # Basic strategy is just linear regression on the magnitude of each
@@ -446,6 +541,7 @@ class ModalAnalysis(object):
             plt.plot(t, h, 'o')
             plt.plot(t, h_estimated, '--+')
             plt.plot(t, h_test, '-+')
+            plt.legend(['h', 'h_estimated', 'h_test'])
             plt.grid()
             plt.show()
 
@@ -456,6 +552,37 @@ class ModalAnalysis(object):
 
         num, den = np.poly(Z_impulse).real, np.poly(P_impulse).real
         return dict(h_impulse=h,h_estimated=h_estimated,num=num,den=den)
+
+    def debug_poles_to_response(self, t, h_step, P_step):
+        # given the poles, find the ideal response, ignoring step requirement
+        # but we do require that the constant term matches the last sample
+
+        REMOVE = 70
+        t = t[REMOVE:]
+        h_step = h_step[REMOVE:]
+
+        P_step = P_step.reshape((len(P_step), 1))
+        #assert abs(P_step[0][0]) <= 1e-3
+        #P_step = P_step[1:,:]
+        #assert abs(P_step[-1][0]) <= 1e-3
+        #P_step = P_step[:-1,:]
+
+        Q_step = np.exp(P_step * t.transpose())
+        # each row is a step response
+        # Find X that makes QstepT @ X look like h_step
+        h_step_shifted = h_step - h_step[-1]
+        X = np.linalg.pinv(Q_step.T) @ h_step_shifted
+        h_step_est_shifted = Q_step.T @ X
+        h_step_est = h_step_est_shifted + h_step[-1]
+        #plt.plot(t, h_step, 'o')
+        #plt.plot(t, h_step_est)
+        #plt.grid()
+        #plt.show()
+
+        h_step_est_untrim = np.concatenate((np.zeros((REMOVE, 1)), h_step_est))
+
+        return h_step_est_untrim
+
 
     def optimize(self, t, h_step, ps, zs):
         import numpy as np
