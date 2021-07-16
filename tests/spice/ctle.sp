@@ -2,6 +2,10 @@
 * From Byong's work
 * https://github.com/StanfordVLSI/DaVE/blob/master/mGenero/samples/template/amplifier/personality/ctle/ctle.sp
 
+* for spectre
+*simulator lang = spectre
+*ahdl_include "ctle_varactor.va"
+*simulator lang = spice
 
 * Not sure about these MOSFET models, especially capacitance
 .model NMOS NMOS (VTO=0.4 KP=432E-6 GAMMA=0.2 PHI=.88, CGSO=5e-10, CGDO=5e-10)
@@ -22,14 +26,17 @@ R_1 voutn vdd 1k
 * NOTE I removed GEO=1 from the original netlist for the next 5 MOS
 * GEO seems to be hspice-specific
 * I also removed M=5 or M=4 and moved it to the width
-*M_1 voutn vinp a vss nmos W={250*0.1u*5} L={4*0.1u}
+*M_1 voutn vinp a vss nmos W=(250*0.1u*5) L=(4*0.1u)
 M_1 voutn vinp a vss nmos W=125u L=.4u
-M_2 voutp vinn b vss nmos W={250*0.1u*5} L={4*0.1u}
-M_3 b ibiasn vss vss nmos W={250*0.1u*4} L={4*0.1u}
-M_4 a ibiasn vss vss nmos W={250*0.1u*4} L={4*0.1u}
-M_5 ibiasn ibiasn vss vss nmos W={250*0.1u*4} L={4*0.1u}
-Xnmos_var vdd b nmos_var M=8 lr={10u} wr={10u}
-Xnmos_var_1 vdd a nmos_var M=8 lr={10u} wr={10u}
+
+* here I replaced braces with parentheses
+M_2 voutp vinn b vss nmos W=(250*0.1u*5) L=(4*0.1u)
+M_3 b ibiasn vss vss nmos W=(250*0.1u*4) L=(4*0.1u)
+M_4 a ibiasn vss vss nmos W=(250*0.1u*4) L=(4*0.1u)
+M_5 ibiasn ibiasn vss vss nmos W=(250*0.1u*4) L=(4*0.1u)
+
+Xnmos_var vdd b nmos_var M=8 lr=(10u) wr=(10u)
+Xnmos_var_1 vdd a nmos_var M=8 lr=(10u) wr=(10u)
 
 * This is hspice syntax for a pwl voltage-controlled-resistor with 
 * a PWL-defined resistance
@@ -58,14 +65,30 @@ Cloadn voutn vss 0.01p
 ** nMOS varactor model
 .SUBCKT nmos_var ng nds lr=0.2 wr=0.4
 ** lr and wr in [meter]
-.param area={(lr*wr)*1e12}
-.param pj={(lr+wr)*2*1e6}
-.param Cgmin={(0.1822*pj+1.4809*area)*1e-15}
-.param dCg={(-1*0.02472*pj+1.6923*area)*1e-15}
+.param area=((lr*wr)*1e12)
+.param pj=((lr+wr)*2*1e6)
+.param Cgmin=((0.1822*pj+1.4809*area)*1e-15)
+.param dCg=((-1*0.02472*pj+1.6923*area)*1e-15)
 * $.param dVgs=-0.161
 .param dVgs=0.0
 .param Vgnorm=0.538
-cg ng nds {Cgmin+dCg*(1.0+tanh((v(ng,nds)-dVgs)/Vgnorm))}
+.param const_one=1.0
+
+* for hspice
+.param Cfinal=(Cgmin+dCg*(1.0+tanh((v(ng,nds)-dVgs)/Vgnorm)))
+cg ng nds Cfinal
+
+* for ngspice
+*cg ng nds {Cgmin+dCg*(1.0+tanh((v(ng,nds)-dVgs)/Vgnorm))}
+
+* for spectre
+**cg ng nds c=v(ng,nds)
+**xtest ng nds bsource c=(Cgmin+dCg*(tanh((v(ng,nds)-dVgs)/Vgnorm) + const_one))
+**xtest ng nds bsource c=(tanh(v(ng,nds)))
+**cg (ng nds) capacitor c=(v(ng, nds))
+** ALSO uncomment include thing at the top
+*cg (ng nds) varactor
+
 .ENDS 
 * $ nmos_var
 
