@@ -1,0 +1,40 @@
+name: phase_blender
+filepath: <TODO: path/to/phase_blender.spice>
+template: PhaseBlenderTemplate_C
+pin:
+    vdd:
+        direction: input
+        datatype: real
+        value: <TODO fill in the nominal vdd voltage>
+    
+    # <TODO: double check that the pinout here matches the one in the spice file>
+    # <TODO: I have gnd commented out, but you might need to put it back in or rename it>
+#     gnd:
+#         direction: input
+#         datatype: real
+#         value: 0
+    ph_in[0:1]:
+        direction: input
+        datatype: bit
+    ph_out:
+        direction: output
+        datatype: bit
+    thm_sel_bld[0:15]:
+        direction: input
+        datatype: binary_analog
+
+template_pins:
+    in_a: ph_in[0]
+    in_b: ph_in[1]
+    out: ph_out
+
+extras:
+    frequency: 4e9
+    # The next line means the expected phase difference in inputs is 20-30% the period
+    # We could change this to be tighter around 25% if it's causing problems
+    phase_offset_range: [0.2, 0.3]
+
+#mgenero: pb_mgenero.yaml
+
+#test_config_file: tests/configs/ngspice_sky130.yaml
+test_config_file: tests/configs/spectre.yaml

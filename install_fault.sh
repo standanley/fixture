@@ -2,7 +2,7 @@
 pushd ..
 git clone https://github.com/standanley/fault.git
 cd fault
-git checkout fixture_master
+git checkout qualcomm_demo
 pip install -e .
 popd
 
