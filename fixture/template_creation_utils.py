@@ -41,16 +41,18 @@ def extract_pzs(nps, nzs, x, y):
     y_trimmed = y[first_good_index:]
 
 
-    # TODO delete this
-    #y_trimmed += np.random.normal(0, .001, y_trimmed.shape)
+    ma = modal_analysis.ModalAnalysis()
 
-    ma = modal_analysis.ModalAnalysis(rho_threshold=1, N_degree=max(nps, nzs))
-    #tf = ma.fit_stepresponse(y - y[0], x)
+    #import matplotlib.pyplot as plt
+    #plt.plot(x_trimmed, y_trimmed, '-+')
+    #plt.show()
 
-    # step response fit will always start from exactly zero
-    tf = ma.fit_step_response_direct(x_trimmed, y_trimmed, nps, nzs)
-    zs = np.roots(tf['num']) / (2*np.pi)
-    ps = np.roots(tf['den']) / (2*np.pi)
+    # step response definitely has a pole at zero
+    ps_step, zs, scale = ma.extract_pzs(y_trimmed, x_trimmed, nps+1, nzs, [0])
+    assert ps_step[0] == 0
+    ps = ps_step[1:]
+    ps = ps / (2*np.pi)
+    zs = zs / (2*np.pi)
     print('GOT PZs')
     print(ps, zs)
 
@@ -169,6 +171,8 @@ def plot(xs, ys):
 
 def debug(test):
     class DebugTest(test):
+
+        IS_DEBUG_MODE = True
 
         def debug(self, tester, port, duration):
             r = tester.get_value(port, params={'style':'block', 'duration': duration})

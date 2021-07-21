@@ -20,7 +20,7 @@ class DifferentialAmpTemplate(TemplateMaster):
         num_samples = 100
     '''
 
-    @debug
+    #@debug
     class GainTest(TemplateMaster.Test):
         parameter_algebra = {
             'out_diff': {'gain':'in_diff', 'gain_from_cm':'in_cm', 'offset':'1'},
@@ -41,7 +41,7 @@ class DifferentialAmpTemplate(TemplateMaster):
             self.debug(tester, self.ports.inn, 1)
             self.debug(tester, self.ports.outp, 1)
             self.debug(tester, self.ports.outn, 1)
-            self.debug(tester, self.signals.from_spice_name('v_fz').spice_pin, 1)
+            #self.debug(tester, self.signals.from_spice_name('v_fz').spice_pin, 1)
 
             # settle from changes to optional inputs
             wait_time = float(self.extras['approx_settling_time'])*2
@@ -67,24 +67,25 @@ class DifferentialAmpTemplate(TemplateMaster):
                     'outp': outp, 'outn': outn, 'inp': reads[2], 'inn': reads[3]}
 
         def post_regression(self, results):
-            for param in results.keys():
-                reg = results[param]
+            if hasattr(self, 'IS_DEBUG_MODE'):
+                for param in results.keys():
+                    reg = results[param]
 
-                y_meas = reg.model.endog
-                y_pred = reg.model.predict(reg.params)
+                    y_meas = reg.model.endog
+                    y_pred = reg.model.predict(reg.params)
 
-                plt.scatter(y_meas, y_pred)
-                plt.title(f'Plot for {param}')
-                plt.xlabel('Measured output values')
-                plt.ylabel('Predicted output values based on inputs & model')
-                plt.plot([0, max(y_meas)], [0, max(y_meas)], '--')
-                plt.grid()
-                plt.show()
+                    plt.scatter(y_meas, y_pred)
+                    plt.title(f'Plot for {param}')
+                    plt.xlabel('Measured output values')
+                    plt.ylabel('Predicted output values based on inputs & model')
+                    plt.plot([0, max(y_meas)], [0, max(y_meas)], '--')
+                    plt.grid()
+                    plt.show()
 
             return {}
 
 
-    @debug
+    #@debug
     class DynamicTest(TemplateMaster.Test):
         parameter_algebra = {
             #'p1': {'cm_to_p1': 'in_cm', 'const_p1': '1'},
@@ -112,7 +113,7 @@ class DifferentialAmpTemplate(TemplateMaster):
             self.debug(tester, self.ports.inn, 1)
             self.debug(tester, self.ports.outp, 1)
             self.debug(tester, self.ports.outn, 1)
-            self.debug(tester, self.signals.from_spice_name('v_fz').spice_pin, 1)
+            #self.debug(tester, self.signals.from_spice_name('v_fz').spice_pin, 1)
 
             # settle from changes to optional inputs
             tester.delay(wait_time * 1.0)
@@ -178,20 +179,21 @@ class DifferentialAmpTemplate(TemplateMaster):
 
         def post_regression(self, results):
             #return {}
-            for param in results.keys():
-                reg = results[param]
+            if hasattr(self, 'IS_DEBUG_MODE'):
+                for param in results.keys():
+                    reg = results[param]
 
-                y_meas = reg.model.endog
-                y_pred = reg.model.predict(reg.params)
+                    y_meas = reg.model.endog
+                    y_pred = reg.model.predict(reg.params)
 
-                plt.scatter(y_meas, y_pred)
-                plt.title(f'Plot for {param}')
-                plt.xlabel('Measured output values')
-                plt.ylabel('Predicted output values based on inputs & model')
-                #plt.plot([min(y_meas), max(y_meas)], [min(y_meas), max(y_meas)], '--')
-                plt.plot([0, max(y_meas)], [0, max(y_meas)], '--')
-                plt.grid()
-                plt.show()
+                    plt.scatter(y_meas, y_pred)
+                    plt.title(f'Plot for {param}')
+                    plt.xlabel('Measured output values')
+                    plt.ylabel('Predicted output values based on inputs & model')
+                    #plt.plot([min(y_meas), max(y_meas)], [min(y_meas), max(y_meas)], '--')
+                    plt.plot([0, max(y_meas)], [0, max(y_meas)], '--')
+                    plt.grid()
+                    plt.show()
 
             return {}
 
@@ -283,14 +285,15 @@ class DifferentialAmpTemplate(TemplateMaster):
                 freqs.append(f)
                 amps.append(amp)
 
-            plt.loglog(freqs, amps, '-+')
-            plt.grid()
-            plt.show()
+            if hasattr(self, 'IS_DEBUG_MODE'):
+                plt.loglog(freqs, amps, '-+')
+                plt.grid()
+                plt.show()
 
 
             return {'p1': ps[0], 'p2': ps[1], 'z1': zs[0]}
 
 
-    #tests = [GainTest, DynamicTest]
-    tests = [DynamicTest]
+    tests = [GainTest, DynamicTest]
+    #tests = [DynamicTest]
 

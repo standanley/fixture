@@ -34,4 +34,5 @@ extras:
     limits_diff: (-0.03, 0.03)
     limits_cm: (1.15, 1.25)
 
-test_config_file: ngspice_small_tstep.yaml
+#test_config_file: ngspice_small_tstep.yaml
+test_config_file: ngspice.yaml
