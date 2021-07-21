@@ -1,8 +1,8 @@
-#import matplotlib.pyplot as plt
-#from mpl_toolkits import mplot3d
+import matplotlib.pyplot as plt
+from mpl_toolkits import mplot3d
 import numpy as np
 DEBUG = True
-#from scipy import interpolate
+from scipy import interpolate
 
 class ModalAnalysis:
     debug = False
