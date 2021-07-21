@@ -1,7 +1,7 @@
 from fixture import TemplateMaster
 from fixture.template_creation_utils import dynamic, debug, extract_pzs, remove_repeated_timesteps
 from fixture.signals import create_input_domain_signal
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from scipy import interpolate
 
 
