@@ -1,7 +1,8 @@
+numpy>=1.17.3
 coreir
 magma-lang
 fault
 statsmodels
 kratos
 vcdvcd
-
+matplotlib
