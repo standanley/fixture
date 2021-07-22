@@ -1,0 +1,31 @@
+name: dac
+filepath: ../spice/dac_therm.sp
+template: DACTemplate
+pin:
+    vdd:
+        direction: input
+        datatype: real
+        value: 1.2
+    vss:
+        direction: input
+        datatype: real
+        value: 0
+    input<15:0>:
+        direction: input
+        datatype: binary_analog
+    outputn:
+        direction: output
+        datatype: real
+    outputp:
+        direction: output
+        datatype: real
+
+template_pins:
+    in_[15:0]: input<15:0>
+    outn: outputn
+    outp: outputp
+
+extras:
+    approx_settling_time: 1e-6
+
+test_config_file: ngspice.yaml

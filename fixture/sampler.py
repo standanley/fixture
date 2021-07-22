@@ -20,18 +20,34 @@ class Sampler:
         points = []
 
         # untaken rows and columns for LHS
-        available = [set(range(N)) for d in range(Da+Dd)]
+        available = [set(range(N)) for d in range(Da)]
 
         # choose a point on [0,1) while respecting and updating available
-        def choose_without_regions(dim, digital = False):
+        def choose_without_regions(dim):
             choice = int(cls.rand() * len(available[dim]))
             row = list(available[dim])[choice]
             available[dim].remove(row)
             p = (row + cls.rand())/N
-            if digital:
-                return 0 if p < 0.5 else 1
+            return p
+
+        thermometer_ordering = list(range(N-2))
+        random.shuffle(thermometer_ordering)
+        def choose_thermometer(n):
+            # First we do all 0s and all 1s, then we choose uniformly in thermometer space
+            if n == 0:
+                # all zeros
+                dig = [0]*Dd
+            elif n == 1:
+                # all ones
+                dig = [1]*Dd
             else:
-                return p
+                # x is within [0,1)
+                x = (thermometer_ordering[n-2] + random.random()) / (N-2)
+                # 0 to Dd, inclusive
+                num_ones = int(x * (Dd + 1))
+                ones = random.sample(range(Dd), num_ones)
+                dig = [1 if i in ones else 0 for i in range(Dd)]
+            return dig
 
         # now break the true analog space in to regions
         # each analog dimension is broken into rpd spaces
@@ -81,17 +97,18 @@ class Sampler:
                     assert False, 'rand_in_avail not within avail! bug in sampler.py' # noqa
 
             # now we can do the digital analog intent stuff without worrying about regions
-            for dim in range(Da, Da+Dd):
-                p = choose_without_regions(dim, digital=True)
-                point.append(p)
+            # We do this a little strangely to cater to thermometer coded stuff
 
+            point += choose_thermometer(len(points))
             points.append(point)
 
         for _ in range(N - len(points)):
             point = []
-            for dim in range(Da+Dd):
-                p = choose_without_regions(dim, digital = (dim >= Da))
+            for dim in range(Da):
+                p = choose_without_regions(dim)
                 point.append(p)
+            point += choose_thermometer(len(points))
+
             points.append(point)
         return points
 
