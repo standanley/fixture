@@ -7,19 +7,19 @@ from scipy import interpolate
 class ModalAnalysis:
     debug = False
 
-    def get_test_h_step(self, ps):
+    def get_test_h_step(self):
         np.random.seed(5)
         N = 1000
-        dt = 1e-6
+        dt = 1e-12
         t = dt*np.array(range(N)) # N seconds
-        ps = np.array([0, -6e3, -8e3, -15e3])
-        #ps = np.array([0, -2e9+3e9j, -2e9-3e9j, -5e9])
+        ps = np.array([0, -4e9, -6e9, -10e9])
+        #ps = np.array([0, -2e9+5e9j, -2e9-5e9j, -3e9, 10e9])
         rs = np.exp(ps * dt)
         NP = len(ps)
 
 
         cs = np.random.normal(0, 2, rs.shape)
-        #cs = np.array([0, -1, -2, 1])
+        #cs = np.array([42, -1, -1, 2.5, 42])
 
         # remove second zero (must also include remove one zero line)
         cs[-1] = -sum(cs[1:-1] * ps[1:-1]) / ps[-1]
@@ -35,6 +35,7 @@ class ModalAnalysis:
             plt.plot(t, h_step, '+-')
             plt.grid()
             plt.show()
+        return h_step
 
 
     def get_slowest_pole(self, h_step, dt, NP, known_poles, stride):
@@ -131,6 +132,8 @@ class ModalAnalysis:
         # errors often cause small roots to go negative when they shouldn't.
         # This messes with the log, so we explicitly call those nan.
         def mylog(x):
+            if (np.real(x) == 0):
+                return float('nan')
             if not abs(np.imag(x)/np.real(x)) > 1e-6 and np.real(x) <= 0:
                 return float('nan')
             else:
@@ -271,12 +274,16 @@ class ModalAnalysis:
     def debug_plot(self, h_step, dt, ps, zs, scale):
         t = np.array(range(len(h_step))) * dt
 
+        zs = zs[np.isfinite(zs)]
+        ps = ps[np.isfinite(ps)]
+
         from scipy.signal import residue
         r, p, k = residue(np.poly(zs), np.poly(ps))
 
         h_step_est = np.zeros(h_step.shape)
         for coef, pole in zip(r, p):
             h_step_est = h_step_est + scale * coef * np.exp(pole*t)
+            print('Added coef', scale*coef, 'for pole', pole)
 
         plt.figure()
         plt.plot(t, h_step, '--+')
@@ -284,6 +291,7 @@ class ModalAnalysis:
         plt.legend(['Step response', 'Fit'])
         plt.grid()
         plt.show()
+        pass
 
 
     def resample(self, h, t):
@@ -389,8 +397,8 @@ class ModalAnalysis:
             else:
                 return xs[:n]
         ps_final, zs_final = trim(ps, NP), trim(zs, NZ)
-        num_power_0 = np.prod([-z for z in zs_final if z != 0])
-        den_power_0 = np.prod([-p for p in ps_final if p != 0])
+        num_power_0 = np.prod([-z for z in zs_final if z != 0 and np.isfinite(z)])
+        den_power_0 = np.prod([-p for p in ps_final if p != 0 and np.isfinite(p)])
         scale = dc / (num_power_0 / den_power_0)
         #print('dc was', dc, 'scale is', scale)
         return ps_final, zs_final, scale
@@ -406,3 +414,22 @@ class ModalAnalysis:
         if self.debug:
             self.debug_plot(h, dt, *res)
         return res
+
+if __name__ == '__main__':
+    ma = ModalAnalysis()
+    dt = 1e-12
+    h_step = ma.get_test_h_step()
+    ps, zs, scale = ma.extract_pzs_uniform(h_step, dt, 4, 3, [0, -2e9*dt])
+    print()
+    print('ps', ps)
+    print('zs', zs)
+    print('scale', scale)
+
+    ma.debug_plot(h_step, dt, ps, zs, scale)
+
+    #fft = np.fft.fft(h_step)
+    #freq = np.fft.fftfreq(len(h_step), dt)
+    #plt.semilogy(freq, abs(fft), 'o')
+    #plt.show()
+
+    print('Done')
