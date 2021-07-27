@@ -18,9 +18,12 @@ class Sampler:
             and also orthogonal smapling on the true analog subset '''
 
         points = []
+        points_digital = []
 
         # untaken rows and columns for LHS
-        available = [set(range(N)) for d in range(Da)]
+        D = Da + (1 if Dd>0 else 0)
+        available = [set(range(N)) for d in range(D)]
+        digital_dim = Da if Dd>0 else None
 
         # choose a point on [0,1) while respecting and updating available
         def choose_without_regions(dim):
@@ -30,35 +33,28 @@ class Sampler:
             p = (row + cls.rand())/N
             return p
 
-        thermometer_ordering = list(range(N-2))
-        random.shuffle(thermometer_ordering)
-        def choose_thermometer(n):
-            # First we do all 0s and all 1s, then we choose uniformly in thermometer space
-            if n == 0:
-                # all zeros
-                dig = [0]*Dd
-            elif n == 1:
-                # all ones
-                dig = [1]*Dd
-            else:
-                # x is within [0,1)
-                x = (thermometer_ordering[n-2] + random.random()) / (N-2)
-                # 0 to Dd, inclusive
-                num_ones = int(x * (Dd + 1))
-                ones = random.sample(range(Dd), num_ones)
-                dig = [1 if i in ones else 0 for i in range(Dd)]
+        def choose_thermometer(row):
+            eps = 1e-8
+            # because we want to round equally on either side
+            # of the center, we stretch by (1+eps) to avoid
+            # things coinciding exactly
+            # therm = int((row+.5)/N * (Dd+1))
+            num_ones = int((((row + .5) / N - .5) * (1 + eps) + 0.5) * (Dd + 1))
+            ones = random.sample(range(Dd), num_ones)
+            dig = [1 if i in ones else 0 for i in range(Dd)]
             return dig
 
-        # now break the true analog space in to regions
+        # now break the analog space in to regions
         # each analog dimension is broken into rpd spaces
         # stands for "regions per (true analog) dimension"
-        rpd = 0 if Da == 0 else int(math.pow(N, 1/Da))
+        # All digital dimensions together make up one analog dimension
+        rpd = 0 if D == 0 else int(math.pow(N, 1/D))
 
         # equivalent to Da nested for loops
-        for region_coords in itertools.product(range(rpd), repeat=Da): # rpd^Da <= N
+        for region_coords in itertools.product(range(rpd), repeat=D): # rpd^D <= N
             # choose a random point within the region
             point = []
-            for dim, rc in enumerate(region_coords): # Da
+            for dim, rc in enumerate(region_coords): # D
                 # what sections of this region are still available?
                 avail = []
                 length = 0
@@ -73,6 +69,8 @@ class Sampler:
                 # loop through every row overlapping this region
                 for row in range(math.floor(start*N), math.ceil(end*N)): # N/rpd <= N
                     if row in available[dim]:
+                        #assert max(start, row/N) == row/N
+                        #assert min(end, (row+1)/N) == (row+1)/N
                         segment = (max(start, row/N), min(end, (row+1)/N))
                         avail.append((row, segment))
                         length += segment[1] - segment[0]
@@ -81,15 +79,21 @@ class Sampler:
                     print('\n'.join(str(x) for x in points)) 
                     print('avail', avail, length)
                     print(available[dim], start, end)
+                    assert False, 'bug in sampler.py'
 
+                # true analog
                 rand_in_avail = cls.rand() * length
                 for row, segment in avail:
                     l = segment[1] - segment[0]
                     if rand_in_avail < l:
                         # rand_in_avail falls in this segment
-                        point.append(segment[0] + rand_in_avail)
+                        if dim == digital_dim:
+                            dig = choose_thermometer(row)
+                            points_digital.append(dig)
+                        else:
+                            point.append(segment[0] + rand_in_avail)
+                            assert (row/N) <= point[-1] < ((row+1)/N), 'point not in row!' # noqa
                         available[dim].remove(row)
-                        assert (row/N) <= point[-1] < ((row+1)/N), 'point not in row!' # noqa
                         break
                     rand_in_avail -= l
                 else:
@@ -99,20 +103,80 @@ class Sampler:
             # now we can do the digital analog intent stuff without worrying about regions
             # We do this a little strangely to cater to thermometer coded stuff
 
-            point += choose_thermometer(len(points))
             points.append(point)
 
         for _ in range(N - len(points)):
             point = []
-            for dim in range(Da):
+            for dim in range(D):
                 p = choose_without_regions(dim)
-                point.append(p)
-            point += choose_thermometer(len(points))
+                if dim == digital_dim:
+                    # go from point back to row
+                    row = int(p*N)
+                    dig = choose_thermometer(row)
+                    points_digital.append(dig)
+                else:
+                    point.append(p)
 
             points.append(point)
-        return points
+
+
+        # now we do some special adjustment to the digital bits so that each
+        # bit always has the same number of 0s and 1s
+        errors = [sum(p[i] for p in points_digital)-N/2 for i in range(Dd)]
+
+        # the general strategy is to swap elements within one point, so the bit
+        # count of a point never changes but errors decrease
+        def bit_perm():
+            xs = list(range(Dd))
+            random.shuffle(xs)
+            return xs
+
+        def get_swappable(i, over):
+            # in point i, find a zero that could be a one or vice versa
+            # return the j or None, and False iff this isn't necessary
+            # the "necessary" thing is important when N is odd
+            value_search = 1 if over else 0
+            for j in bit_perm():
+                if (((errors[j] > 0.75) if over else (errors[j] < -0.75))
+                    and points_digital[i][j] == value_search):
+                    return j, True
+            for j in bit_perm():
+                if (((errors[j] > 0.25) if over else (errors[j] < -0.25))
+                    and points_digital[i][j] == value_search):
+                    return j, False
+            return None, False
+
+        options = list(range(N))
+        while len(options) > 0:
+            opt_choice = random.randint(0, len(options)-1)
+            i = options[opt_choice]
+
+            over, over_necessary = get_swappable(i, True)
+            under, under_necessary = get_swappable(i, False)
+
+            if (over is None or under is None
+                or (not (over_necessary or under_necessary))):
+                # nothing useful at this i
+                options.pop(opt_choice)
+                continue
+
+            # swap over and under
+            points_digital[i][over] = 0
+            points_digital[i][under] = 1
+            errors[over] -= 1
+            errors[under] += 1
+
+
+        # pack analog and digital bits together
+        if Dd != 0:
+            points_combined = [a+d for a,d in zip(points, points_digital)]
+        else:
+            points_combined = points
+
+        return points_combined
 
     def assert_lhs(samples):
+        #visualize([s[0:2] for s in samples])
         # print('samples', samples)
         N = len(samples)
         for dim in range(len(samples[0])):
