@@ -4,25 +4,31 @@ import magma
 from pathlib import Path
 import pytest
 import os
+import shutil
 
 def file_relative_to_test(fname):
     return os.path.join(os.path.dirname(__file__), fname)
 
 
-names = [
-    'configs/differential_amp.yaml',
-    'configs/differential_amp_B.yaml',
-    'configs/differential_amp2_B.yaml'
+tests = [
+    ('configs/differential_amp.yaml', None),
+    ('configs/differential_amp_B.yaml', None),
+    ('configs/differential_amp2_B.yaml', None),
+    ('configs/ctle.yaml', 'hspice'),
+    ('configs/ctle_model.yaml', 'irun')
 ]
 
-@pytest.mark.parametrize('config', names)
-def test_by_config(config):
-    print('GOT CONFIG', config)
+@pytest.mark.parametrize('test', tests)
+def test_by_config(test):
+    config, req = test
+    if req is not None and not shutil.which(req):
+        pytest.skip('Requirement "{req}" not installed here')
+        return
     circuit_fname = file_relative_to_test(config)
     print('GOT FNAME', circuit_fname)
     fixture.run(circuit_fname)
 
 if __name__ == '__main__':
-    test_by_config(names[0])
+    test_by_config(names[4])
     pass
 

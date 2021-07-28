@@ -1,157 +1,435 @@
-from numpy import *
+import matplotlib.pyplot as plt
+from mpl_toolkits import mplot3d
+import numpy as np
+DEBUG = True
 from scipy import interpolate
-from scipy.linalg import toeplitz,pinv,inv
-from scipy.signal import invres,step,impulse
-import pickle
 
-from fixture import template_creation_utils
+class ModalAnalysis:
+    debug = False
+
+    def get_test_h_step(self):
+        np.random.seed(5)
+        N = 1000
+        dt = 1e-12
+        t = dt*np.array(range(N)) # N seconds
+        ps = np.array([0, -4e9, -6e9, -10e9])
+        #ps = np.array([0, -2e9+5e9j, -2e9-5e9j, -3e9, 10e9])
+        rs = np.exp(ps * dt)
+        NP = len(ps)
 
 
-class ModalAnalysis(object):
-    ''' Fit an step response measurement to a linear system model '''
-    def __init__(self, rho_threshold = 0.999, N_degree = 50):
-        ''' set constraints on calculation '''
-        self.rho_threshold = rho_threshold # correlation threshold
-        self.N_degree = N_degree # Maximum degree of freedom
+        cs = np.random.normal(0, 2, rs.shape)
+        #cs = np.array([42, -1, -1, 2.5, 42])
 
-    def fit_stepresponse(self,h,t):
-        ''' fit an step response measurement to a linear system model '''
-        h_impulse = diff(h)/diff(t) # get impulse response from step response
-        t_impulse = t[:-1]+diff(t)/2.0 # time adjustment, take the mid-point
+        # remove second zero (must also include remove one zero line)
+        cs[-1] = -sum(cs[1:-1] * ps[1:-1]) / ps[-1]
+        # remove one zero
+        cs[0] = -sum(cs[1:])
 
-        template_creation_utils.plot(t_impulse, h_impulse)
-        f = open('temp_impulse_response.pickle', 'wb')
-        pickle.dump((t_impulse, h_impulse), f)
-        f.close()
+        print(cs)
+        h_step_noiseless = np.real(np.array([sum(cs*rs**(n/dt)) for n in t]))
+        h_step = h_step_noiseless + np.random.normal(0, 0.00001, h_step_noiseless.shape)
 
-        return self.fit_impulseresponse(h_impulse,t_impulse)
-    
-    def fit_impulseresponse(self,h,t):
-        #for N in range(2,self.N_degree):
-        for N in range(1,self.N_degree):
-            print('Trying degree', N)
-            ls_result = self.leastsquare_complexexponential(h,t,N)
-            if ls_result['failed'] and N >=3:
-                print('Giving up because degree', N, 'failed')
+        if self.debug:
+            plt.figure()
+            plt.plot(t, h_step, '+-')
+            plt.grid()
+            plt.show()
+        return h_step
+
+
+    def get_slowest_pole(self, h_step, dt, NP, known_poles, stride):
+        #print('\nget_slowest called with', NP, known_poles, stride)
+
+        def d(n, stride):
+            return np.array([h_step[n+stride*i] for i in range(NP+1)])
+
+        def get_data_for_stride(stride):
+            num_samples = len(h_step) - NP*stride
+            samples = [d(n, stride) for n in range(num_samples)]
+
+            # make samples rows in a (tall) matrix
+            sample_matrix = np.stack(samples, 0)
+            return sample_matrix
+
+        data = get_data_for_stride(stride)
+
+        # We split the collected data into the initial points, and the final point
+        A = data[:,:-1]
+        B = data[:,-1:]
+
+        # Consider 5 poles, 2 already known
+        # We can do some linear algebra to find column vector X such that
+        # x0*a[n] + x1*a[n+1] + x2*a[n+2] + x3*a[n+3] + x4*a[n+4] + a[n+5] = 0
+        # a[n](x0 + x1*r + x2*r^2 + x3*r^3 + x4*r^4 + r^5) = 0
+        # r^5 + x4*r^4 + x3*r^3 + x2*r^2 + x1*r + x0 = 0
+        # and then solve this polynomial to find the roots
+
+        # BUT
+        # With 2 known poles, we know this should factor out to
+        # (r-p1)(r-p2)(r^3 + y0*r^2 + y1*r + y2) = 0
+        # So we really want to use our linear algebra to find the Y vector instead
+        # First we need a matrix Z, which depends on the known ps, s.t. X = ZY, (5x1) = (5x3)(3x1)
+        # Then our linear algebra that was AX+B=0 becomes AZY+B=0, which is easily solvable for Y
+
+        # Step 1: find Z
+        # A a reminder, X = ZY where X and Y are defined as:
+        # r^5 + x4*r^4 + x3*r^3 + x2*r^2 + x1*r + x0 = 0
+        # (r-p1)(r-p2)(r^3 + y2*r^2 + y1*r + y0) = 0
+        # Define C, which is coefficients of poly from known roots
+        # r^2 + (-p1-p2)*r + p1*p2 -> c0=p1*p2, c1=(-p1-p2)
+        # We see that each term in X[i] is a product of Y[j] and C[k] terms s.t. i=j+k
+        # SO we can directly write Z[i,j] = C[i-j], or 0 if that's outside the C bounds
+
+        # BE CAREFUL about the leading 1s in these polynomials.
+        # In our example, the full Z would be 6x4, including leading 1s. It's okay to drop the
+        # bottom row because it only contributes to the leading 1 of x, which we want to drop.
+        # But we can't drop the right column, which corresponds to the leading 1 of Y, because
+        # it contributes to other rows in X.
+        # Z: 5x3 version of Z, with bottom row and right column dropped
+        # Z~: 5x4 version of Z, with only bottom row dropped
+        # Y~: 4x1 version of Y, with a constant one in the fourth spot
+        # A Z~ Y~ == -B
+        # We can't use least-squares to find Y right now because of that required constant 1
+        # E: 4x3 almost-identity
+        # F: 4x1 column, [0,0,0,1]
+        # A Z~ (E Y + F) == -B
+        # A Z~ E Y  +  A Z~ F == -B
+        # A Z Y == -B - A Z~_last_column
+        # So we need to do a modified regression: we can drop that extra column on Z~, but we have
+        # to first use it to modify the B vector
+        # Similarly, X = Z~ Y~ becomes X = Z Y + Z~_last_column
+
+        known_rs = np.exp(np.array(known_poles)*stride)
+        if np.isinf(known_rs).any():
+            # probably got a bad pole in known_poles, should just give up
+            return []
+
+        poly = np.polynomial.polynomial
+        C = poly.polyfromroots(known_rs)
+
+        Z_tilde = np.zeros((NP, NP-len(known_rs)+1), dtype=C.dtype)
+        for i in range(Z_tilde.shape[0]):
+            for j in range(Z_tilde.shape[1]):
+                k = i-j
+                if k >= 0 and k < len(C):
+                    Z_tilde[i,j] = C[k]
+        Z = Z_tilde[:,:-1]
+        Z_column = Z_tilde[:,-1:]
+
+        Y = np.linalg.pinv(A@Z) @ (-B - (A@Z_column))
+        X = Z@Y + Z_column
+
+        # x0 * d0 + x1 * d2 + d2 = 0
+        # a[n](x0 + x1*r + r^2) = 0
+
+        poly = np.concatenate([[1], X[::-1,0]])
+
+        #print('poly', poly)
+        roots = np.roots(poly)
+        #print('roots', roots)
+
+        # errors often cause small roots to go negative when they shouldn't.
+        # This messes with the log, so we explicitly call those nan.
+        def mylog(x):
+            if (np.real(x) == 0):
+                return float('nan')
+            if not abs(np.imag(x)/np.real(x)) > 1e-6 and np.real(x) <= 0:
+                return float('nan')
+            else:
+                return np.log(x)
+        ps_with_stride = np.vectorize(mylog)(roots)
+        ps = ps_with_stride / (stride * dt)
+
+        # remove known poles
+        key=lambda x: float('inf') if np.isnan(x) else abs(x)
+        new_ps = sorted(ps, key=key)
+        #print('Before processing, found ps', new_ps)
+        for known_p in known_poles:
+            for i in range(len(new_ps)):
+                # TODO is this epsilon reasonable when ps are likely ~1e10?
+                if new_ps[i] is not None and abs((new_ps[i] - known_p) < 1e-6):
+                    new_ps.pop(i)
+                    break
+            else:
+                if np.isnan(new_ps).any():
+                    # the nans are probably causing the error
+                    return []
+                print(known_poles)
+                print(new_ps)
+                assert False, f'Known pole {known_p} not found!'
+
+        # finally, return 0 (if nan), 1, or 2 (if complex conjugate) slowest new poles
+        #print('After processing, new ps', new_ps)
+        assert len(new_ps) > 0, 'Found no new poles ... check NP and len(known_poles)'
+        if abs(np.imag(new_ps[0])) > 1e-6:
+            # complex conjugate pair
+            #print(ps, new_ps)
+            assert len(new_ps) >= 2, 'Only found one of complex conjugate pair?'
+            if abs(np.conj(new_ps[0]) - new_ps[1]) > 1e-6 and np.isnan(new_ps).any():
+                return []
+            assert abs(np.conj(new_ps[0]) - new_ps[1]) < 1e-6, 'Issue with conjugate pair, check sorting?'
+            return new_ps[:2]
+        elif not np.isnan(new_ps[0]):
+            return new_ps[:1]
+        else:
+            # empty list
+            return new_ps[:0]
+
+
+    def get_all_poles(self, h_step, dt, NP, known_poles):
+        known_poles = known_poles.copy()
+        # get_largest_pole works well when the stride is correctly chosen for the
+        # largest non-given pole
+        period_ratio = 2
+        target_period = len(h_step)*dt * 0.5
+        while len(known_poles) < NP:
+            stride = max(1, int((target_period/dt)/NP))
+            new_ps = self.get_slowest_pole(h_step, dt, NP, known_poles, stride)
+
+            # for complex conjugate, we want to look at the faster of the envelope and ring
+            period = (float('inf') if len(new_ps) == 0
+                      else abs(1/new_ps[0]) if len(new_ps) == 1
+                      else min(abs(1/np.real(new_ps[0])), abs(1/np.imag(new_ps[0]))))
+            period *= 3
+
+            # the exponent in period_ratio**2 is kind of empirical
+            if period < target_period / period_ratio**2 and stride != 1:
+                #print('rejecting pole(s)', new_ps, 'because stride', stride, ' was too large')
+                target_period /= period_ratio
+            elif len(new_ps) == 0 and stride != 1:
+                target_period /= period_ratio
+            elif len(new_ps) == 0:
+                print('Did not find all the requested poles!')
                 break
-            rho = self.compare_impulseresponse(ls_result['h_impulse'],ls_result['h_estimated'])
-            print('rho=',rho)
-            if rho > self.rho_threshold:
-                print('Happy with this rho, moving on now')
-                break
-            if N == self.N_degree:
-                print('[WARNING]: Maximum degree of freedom is reached when fitting response to transfer function')
-        return ls_result
+            else:
+                known_poles += list(new_ps)
+                #print('added pole(s)', new_ps, 'target period now', target_period)
+        return np.array(known_poles)
 
-    def compare_impulseresponse(self,h1,h2):
+    def get_zeros(self, h_step, dt, poles, NZ):
+        #print('get_zeros with ', poles, dt, NZ)
+        assert len(set(poles)) == len(poles), 'get_zeros cannot handle repeated roots'
+        NP = len(poles)
+        print(NP, poles)
+        # If you leave the timescale as 1, you probably get precision issues
+        #timescale_dt = 1/(max(abs(poles)) * len(h_step))
+        timescale_dt = dt
+        poles_column = np.array(poles).reshape((len(poles), 1))
+        poles_scaled = poles_column * timescale_dt
+        h_step_column = h_step.reshape((len(h_step), 1))
+        t = np.array(range(len(h_step))) * timescale_dt
+        exps = np.exp(poles_column * t)
 
-        import matplotlib.pyplot as plt
-        plt.plot(h1, '-*')
-        plt.plot(h2, '-*')
-        plt.show()
+        # Normally, we can find optimal coefficients for each row of exps with linear regression
+        # But when we are restricted to fewer zeros, we have a problem.
+        # We have to ensure that after doing inverse PFD with our coefficients, the leading term(s) in the numerator go to zero
+        # c0/(s-r0) + c1/(s-r1) + c2/(s-r2) -> c0(s-r1)(s-r2) + c1(s-r0)(s-r2) + c2(s-r0)(s-r1) = n2*s^2 + n1*s + n0
+        # we can find a square matrix Z~ s.t. N~ = Z~ C, where the ~ means we're doing the large version including required zero entries
+        # C = (Z~)^-1 N~
+        # Because the bottom entries of N~ are required to be zero, we can drop them and the corresponding right columns from (Z~)^-1
+        # C = Zinv N    (3x1) = (3x2) (2x1)
+        # Now we drop that in our regressino to find the coefficients
+        # A C = B           (100x3)(3x1) = (100x1)
+        # A (Zinv N) = B    (100x3)(3x2)(2x1) = (100x1)
+        # N = (A Zinv)^-1 B
+        # And now N is fewer entries, and we can pad the bottom with zeros if we like
+        Z_tilde = np.zeros((NP, NP), dtype=poles.dtype)
+        poly = np.polynomial.polynomial
+        for i in range(NP):
+            print('TODO fix scaling 1')
+            temp = poly.polyfromroots([poles_scaled[j][0] for j in range(NP) if j != i])
+            for k, c in enumerate(temp):
+                Z_tilde[k, i] = c
+
+        # I think this should be invertible as long as there are no repeated roots (which is not allowed)
+        Z_tilde_inv = np.linalg.inv(Z_tilde)
+        Z_inv = Z_tilde_inv[:, :NZ+1]
+
+        #print(exps.shape, Z_inv.shape, h_step.shape)
+        N = np.linalg.pinv((exps.T @ Z_inv)) @ h_step_column
+
+        print('TODO fix scaling 2')
+        zeros = np.roots(N.reshape(NZ+1)[::-1]) / dt
+        print('zeros', zeros)
 
 
-        h1 = h1.flatten()
-        h2 = h2.flatten()
-        return corrcoef([h1,h2])[0,1]
-
-    def leastsquare_complexexponential(self,h,t,N):
-        ''' Model parameter estimation from impulse response
-                using least-squares complex exponential method 
-                h: impulse response measurement
-                t: time range vector (in sec); must be uniformly-spaced
-                N: degree of freedom
-        '''
-        h_temp, t_temp = h, t
-        no_sample = h.size
-        if diff(t).max() > diff(t).min(): # check for uniform time steps
-            print('RESAMPLING')
-            spline_fn = interpolate.InterpolatedUnivariateSpline(t,h)
-            #t = linspace(t[0],t[-1],no_sample)
-            # TODO i intentionally cut off the first point below to see if it would fix problems but it did not
-            # if the problems go away, we should try putting that point back
-            t = linspace(1e-12,t[-1],no_sample+1)
-            t = t[1:]
-            h = spline_fn(t)
-            h = h / abs(max(h))
-
-        #import matplotlib.pyplot as plt
-        #plt.plot(h, '-*')
+        #h_step_est = exps.T @ X
+        #h_step_est_2 = exps.T @ coefs
+        #plt.figure()
+        #plt.plot(t, h_step, 'o')
+        #plt.plot(t, np.real(h_step_est))
+        #plt.plot(t, np.real(h_step_est_2), '--')
+        #plt.legend(['Orig', 'est', 'est_2'])
+        #plt.grid()
+        #plt.title('I forget')
         #plt.show()
 
 
+        dc = N[0] / np.prod([-p*dt for p in poles if p != 0])
+        #scale = N[-1]
+        zeros_sorted = zeros[np.lexsort((abs(zeros),))]
+        return zeros_sorted, dc
+
+    def debug_plot(self, h_step, dt, ps, zs, scale):
+        t = np.array(range(len(h_step))) * dt
+
+        zs = zs[np.isfinite(zs)]
+        ps = ps[np.isfinite(ps)]
+
+        from scipy.signal import residue
+        r, p, k = residue(np.poly(zs), np.poly(ps))
+
+        h_step_est = np.zeros(h_step.shape)
+        for coef, pole in zip(r, p):
+            h_step_est = h_step_est + scale * coef * np.exp(pole*t)
+            print('Added coef', scale*coef, 'for pole', pole)
+
+        plt.figure()
+        plt.plot(t, h_step, '--+')
+        plt.plot(t, h_step_est, '-+')
+        plt.legend(['Step response', 'Fit'])
+        plt.grid()
+        plt.show()
+        pass
 
 
+    def resample(self, h, t):
+        # the 5 here is kind of empirical. We want to oversample a bit
+        no_sample = len(h)*5
+        spline_fn = interpolate.interp1d(t,h)
+        t_new = np.linspace(0,t[-1], no_sample)
+        dt = (t_new[-1] - t_new[0]) / (len(t_new) - 1)
+        h_new = spline_fn(t_new)
 
-        h = h.reshape(no_sample,1)
-        t = t.reshape(no_sample,1)
-        M = no_sample - N # no of equations
-        dT = t[1]-t[0]
-        # least-squares estimation of eigenvalues (modes)
-        R = matrix(toeplitz(h[N-1::-1],h[N-1:no_sample-1]))
-        A = -1*matrix(pinv(R.transpose()))*matrix(h[N+arange(0,M,dtype=int)])
-        A0 = vstack((ones(A.shape[1]),A)).getA1()
-
-        A0_roots = roots(A0)
-        #A0_roots = [(0 if r < 0 and r > -1e-9 else r) for r in A0_roots]
-
-        P = matrix(log(A0_roots) / dT).transpose()
-        # least-squares estimation of eigenvectors (modal coef)
-        Q = exp(P * t.transpose())
-
-        error = False
-        try:
-            Z = pinv(matrix(Q.transpose()))*matrix(h)
-            print(type(Z))
-        except ValueError:
-            error = True
-            print('Error calculating poles/zeros')
-
-            import matplotlib.pyplot as plt
-            plt.plot(t, h, '-*')
+        if self.debug:
+            plt.figure()
+            plt.plot(t, h, 'o')
+            plt.plot(t_new, h_new, '-+')
+            plt.legend(['Original', 'Resampled'])
+            plt.grid()
             plt.show()
 
-            Z = matrix(zeros((Q.shape[0],h.shape[1])))
-        # return values
-        num,den = invres(Z.getA1(),P.getA1(),zeros(size(P)),tol=1e-4,rtype='avg')
-        if not error:
-            print(num, den)
-        num = num.real
-        den = den.real
-        h_estimated = Q.transpose()*Z
-        h_estimated = h_estimated.real.getA1()
-        return dict(h_impulse=h,h_estimated=h_estimated,num=num,den=den,failed=error)
+        return h_new, dt
 
-    def fit_transferfunction(self,H,f):
-        ''' Fit a frequency response measurement to a linear system model '''
-        pass
+    def debug_fit_with_poles(self, t, h_step, poles):
+        poles_column = np.array(poles).reshape((len(poles), 1))
+        # poles_scaled = poles_column * timescale_dt
+        exps = np.exp(poles_column * t)
 
-    def compare_transferfunction(self,H1,H2):
-        ''' calculates the correlation coef. in frequency domain between two transfer function '''
-        pass
+        coefs = np.linalg.pinv(exps.T) @ h_step
+        h_step_est = exps.T @ coefs
+        return h_step_est
 
-    def selftest(self):
-        pass
+    def extract_pzs_uniform(self, h_step, dt, NP, NZ, known_poles):
+        # first, extract poles with no regard to how many were asked for
 
-def main():
-    import matplotlib.pyplot as plt
-    X = ModalAnalysis(0.999,100)
-    system = ([2.0],[1.0,2.0,1.0])
-    #system = ([2.0,1.0],[1.0,2.0,1.0])
-    ## impulse response test
-    #t,h = impulse(system)
-    #ls_result=X.fit_impulseresponse(h,t)
-    #system_est = (ls_result['num'],ls_result['den'])
-    #t1,h1 = impulse(system_est)
-    #plt.plot(t,h,'rs',t1,h1,'bx')
+        def error_poles(poles):
+            poles_column = np.array(poles).reshape((len(poles), 1))
+            #poles_scaled = poles_column * timescale_dt
+            t = np.array(range(len(h_step))) * dt
+            exps = np.exp(poles_column * t)
+
+            h_step_column = h_step.reshape((len(h_step), 1))
+            coefs = np.linalg.pinv(exps.T) @ h_step
+            h_step_est = exps.T @ coefs
+            err = sum((h_step - h_step_est)**2) / len(h_step)
+            return err
+
+        all_results = [[]]
+        best_num = 0
+        best_err = float('inf')
+        num_ps = 1
+        while num_ps < NP+3:
+            # TODO dt
+            poles = self.get_all_poles(h_step, 1, num_ps, known_poles)
+            poles = poles * 1/dt
+
+            if self.debug:
+                t = np.array(range(len(h_step))) * dt
+                plt.plot(t, self.debug_fit_with_poles(t, h_step, poles))
+
+            err = error_poles(poles)
+            all_results.append(poles)
+            print(num_ps, -np.log(abs(err)), poles)
+            if len(poles) > len(all_results[best_num]) and err < best_err * .5:
+                #print('NEW BEST', num_ps, len(poles))
+                best_num = num_ps
+                best_err = err
+            num_ps += 1
+
+        if self.debug:
+            t = np.array(range(len(h_step))) * dt
+            plt.plot(t, h_step, 'o')
+            legend = [f'{i} poles' for i in range(1, NP+3)]+['h']
+            plt.legend(legend)
+            plt.grid()
+            plt.show()
+
+
+        print('Poles are:')
+        print(all_results[best_num])
+
+        # If we found more poles than the user requested, we should discard fastest ones
+        # BUT we can't discard half of a conjugate pair. If that happens we should look at
+        # versions that had higher error
+        ps = all_results[best_num]
+        num = best_num
+        def is_conj_pair(x, y):
+            return abs(np.conj(x) - y) < 1e-6
+        while len(ps) > NP:
+            if is_conj_pair(ps[NP-1], ps[NP]):
+                # uh oh, better use a different result
+                print('NOT SPLITTING')
+                num -= 1
+                ps = all_results[num]
+            else:
+                ps = ps[:NP]
+
+        zs, dc = self.get_zeros(h_step, dt, all_results[best_num], len(all_results[best_num])-1)
+        # we want to convert dc into a scaling factor, but can't until after trimming
+
+
+
+        def trim(xs, n):
+            if len(xs) < n:
+                return np.concatenate((xs, [-float('inf')]*(n-len(xs))))
+            else:
+                return xs[:n]
+        ps_final, zs_final = trim(ps, NP), trim(zs, NZ)
+        num_power_0 = np.prod([-z for z in zs_final if z != 0 and np.isfinite(z)])
+        den_power_0 = np.prod([-p for p in ps_final if p != 0 and np.isfinite(p)])
+        scale = dc / (num_power_0 / den_power_0)
+        #print('dc was', dc, 'scale is', scale)
+        return ps_final, zs_final, scale
+
+    def extract_pzs(self, h, t, NP, NZ, known_poles=[]):
+        dts = np.diff(t)
+        if (max(dts) - min(dts)) / max(dts) > 1e-6:
+            h, dt = self.resample(h, t)
+        else:
+            dt = (t[-1] - t[0]) / (len(t) - 1)
+
+        res = self.extract_pzs_uniform(h, dt, NP, NZ, known_poles)
+        if self.debug:
+            self.debug_plot(h, dt, *res)
+        return res
+
+if __name__ == '__main__':
+    ma = ModalAnalysis()
+    dt = 1e-12
+    h_step = ma.get_test_h_step()
+    ps, zs, scale = ma.extract_pzs_uniform(h_step, dt, 4, 3, [0, -2e9*dt])
+    print()
+    print('ps', ps)
+    print('zs', zs)
+    print('scale', scale)
+
+    ma.debug_plot(h_step, dt, ps, zs, scale)
+
+    #fft = np.fft.fft(h_step)
+    #freq = np.fft.fftfreq(len(h_step), dt)
+    #plt.semilogy(freq, abs(fft), 'o')
     #plt.show()
-    ## step response test
-    t,h = step(system)
-    ls_result=X.fit_stepresponse(h,t)
-    system_est = (ls_result['num'],ls_result['den'])
-    t1,h1 = step(system_est)
-    plt.plot(t,h,'rs',t1,h1,'bx')
-    plt.show()
 
-if __name__ == "__main__":
-    main()
+    print('Done')

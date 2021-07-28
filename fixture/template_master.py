@@ -118,6 +118,7 @@ class TemplateMaster():
             See model.model.data for the data used in the regression
             See model.predict() for the model's estimates for teh regression data
             See model.predict(new_data) to see the model's predictions on a new input
+            Return a dict with additional parameters, same format as regression_models.results
             '''
             return {}
 

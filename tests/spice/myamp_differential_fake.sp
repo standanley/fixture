@@ -8,8 +8,10 @@
 
 R0 vdd outn 5000
 MN0 outn inp vss vss EENMOS w=0.4u l=0.1u
+C0 outn 0 100f
 
 R1 vdd outp 5000
 MN1 outp inn vss vss EENMOS w=0.4u l=0.1u
+C1 outp 0 100f
 
 .ends
