@@ -135,8 +135,10 @@ def create_interface(template, collateral_dict):
     cfg['pin'] = pins
     cfg['module_name'] = circuit.name
 
-    interface.update(collateral_dict['interface_extras'])
-    cfg.update(collateral_dict['circuit_extras'])
+    if 'interface_extras' in collateral_dict:
+        interface.update(collateral_dict['interface_extras'])
+    if 'circuit_extras' in collateral_dict:
+        cfg.update(collateral_dict['circuit_extras'])
 
     interface_text = yaml.dump(interface)
     cfg_text = yaml.dump(cfg)
