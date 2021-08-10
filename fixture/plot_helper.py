@@ -41,7 +41,8 @@ class PlotHelper:
             # TODO ols is not the right thing here since we really only need the
             # exog evaluation. Internally in statsmodels there's something like
             # _eval_factor, but I don't think its' user-facing
-            x = smf.ols('1 ~ ' + factor, data)
+            factor_wrapped = '1' if factor == '1' else f'I({factor})'
+            x = smf.ols(f'1 ~ {factor_wrapped}', data)
             return x.exog[:, -1]
 
         def eval_parameter(data, parameter):
@@ -115,6 +116,11 @@ class PlotHelper:
                 multiplicand_measured = eval_factor(results_pandas, pa[1][parameter])
                 parameter_measured = (lhs_measured - other_terms) / multiplicand_measured
                 # TODO remove influence of other optional pins
+
+                check_this_param = eval_parameter(results_pandas, parameter)
+                check_this_term = check_this_param * multiplicand_measured
+                check_all_terms = check_this_term + other_terms
+                check_err = lhs_measured - check_all_terms
 
                 plt.plot(xs, result, '--')
                 plt.plot(opt_measured, parameter_measured, 'o')
