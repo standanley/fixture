@@ -1,7 +1,9 @@
 target: spice
 simulator: spectre
 #ic: {vss: 0}
-vsup: 1.2
+vsup: 0.9
 bus_delim: "[]"
 # TODO: could also have libraries to include, etc.
-conn_order: alpha
+t_step: 1e-11
+t_tr: 0.000000000025
+

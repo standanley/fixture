@@ -172,20 +172,21 @@ class Regression():
             :param rhs: dictionary of expressions which may contain consts
             :return: nothing; it modifies rhs and self.df in place
             '''
+            swaps = []
             for expr in rhs:
                 expr_literal = expr[2:-1]
                 try:
                     const = literal_eval(expr_literal)
                     column_name = f'const_{expr_literal}'
                     self.df[column_name] = const
-                    param = rhs[expr]
-                    del rhs[expr]
-                    rhs[column_name] = param
-                    #print(const)
+                    swaps.append((expr, column_name))
                     self.consts[column_name] = expr_literal
                 except ValueError:
                     # not a constant
                     pass
+            for old, new in swaps:
+                rhs[new] = rhs[old]
+                del rhs[old]
 
         results = {}
         results_models = {}
