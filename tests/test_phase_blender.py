@@ -49,6 +49,6 @@ def test_C_sky130_therm16():
 if __name__ == '__main__':
     #test_generated()
     #test_ngspice()
-    #test_spectre()
-    test_C_sky130()
+    test_spectre()
+    #test_C_sky130()
     #test_C_sky130_therm16()

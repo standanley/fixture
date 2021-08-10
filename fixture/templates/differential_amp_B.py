@@ -98,7 +98,7 @@ class DifferentialAmpTemplate(TemplateMaster):
         required_info = {
             'approx_settling_time': 'Approximate time it takes for amp to settle within 99% (s)'
         }
-        num_samples = 15
+        num_samples = 50
 
         def input_domain(self):
             in_cm = create_input_domain_signal('in_cm', self.extras['limits_cm'])
