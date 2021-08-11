@@ -54,76 +54,79 @@ class PlotHelper:
                 result += term * coef
             return result
 
-
-        #TODO a create_fake_data method
+        def modify_data(orig, overrides):
+            # copy original dataframe and replace overrides
+            new_dict = {}
+            for name in orig.columns:
+                new_name = Regression.clean_string(name)
+                value = overrides.get(name, orig[name])
+                new_dict[new_name] = value
+            return pandas.DataFrame(new_dict)
 
         def regression_name(s):
             return Regression.clean_string(Regression.regression_name(s))
 
-        #test_item = list(regression_results['dcgain'])[2]
-        #test_data = {'ibias': [1, 2, 3, 4, 5]}
-        #test_data_pandas = pandas.DataFrame(test_data)
-        #x = eval_factor(test_data_pandas, test_item)
+        N = 101
+        nominal_data_dict = {}
+        for ta in test.signals.true_analog():
+            assert isinstance(ta.value, tuple) and len(ta.value) == 2
+            nominal = sum(ta.value) / 2
+            nominal_data_dict[regression_name(ta)] = [nominal] * N
+        ba_dict = test.signals.binary_analog()
+        ba_bits = [bit for ba_bus in ba_dict.values() for bit in ba_bus]
+        for ba in ba_bits:
+            nominal_data_dict[regression_name(ba)] = [0.5] * N
+        nominal_data = pandas.DataFrame(nominal_data_dict)
 
-        # analog
+        results_renamed = {regression_name(k): v
+                           for k, v in results.items()}
+        data = pandas.DataFrame(results_renamed)
+
         for opt in test.signals.true_analog():
             assert isinstance(opt.value, tuple) and len(opt.value) == 2
-            N = 101
             xs = np.linspace(opt.value[0], opt.value[1], N)
+            model_data = modify_data(nominal_data, {regression_name(opt): xs})
 
-            fake_data = {}
-            for ta in test.signals.true_analog():
-                if ta == opt:
-                    fake_data[ta.spice_name] = xs
-                else:
-                    assert isinstance(ta.value, tuple) and len(ta.value) == 2
-                    nominal = sum(ta.value) / 2
-                    fake_data[ta.spice_name] = [nominal]*N
-
-            ba_dict = test.signals.binary_analog()
-            ba_bits = [bit for ba_bus in ba_dict.values() for bit in ba_bus]
-            for ba in ba_bits:
-                fake_data[ba.spice_name] = [0.5]*N
-
-            fake_data_renamed = {Regression.clean_string(k): v
-                                 for k, v in fake_data.items()}
-            fake_data_pandas = pandas.DataFrame(fake_data_renamed)
-
-            results_renamed = {regression_name(k): v
-                                 for k, v in results.items()}
-            results_pandas = pandas.DataFrame(results_renamed)
             for parameter, fit in regression_results.items():
                 # prediction just based on (Ax + By + C)
-                result = eval_parameter(fake_data_pandas, parameter)
+                model_prediction = eval_parameter(model_data, parameter)
 
                 # prediction based on measured data
                 # OUT = (Ax + By + C) * IN + (Dx + Ey + F)
-                # (Ax + Bynom + C) = (OUT - (Dx + Ey + F)) / IN - (By - Bynom)
+                # lhs_measured = (goal) * multiplicand_measured + other_terms
                 M = len(list(results.values())[0])
                 other_terms = np.zeros(M)
                 pas = [(k, v) for k, v in test.parameter_algebra.items()
                        if parameter in v]
-                assert len(pas) == 1
+                assert len(pas) == 1, f'multiple parameter algebras for {parameter}?'
                 pa = pas[0]
                 for p, coef in pa[1].items():
                     if p != parameter:
-                        p_measured = eval_parameter(results_pandas, p)
-                        coef_measured = eval_factor(results_pandas, coef)
+                        p_measured = eval_parameter(data, p)
+                        coef_measured = eval_factor(data, coef)
                         other_terms += p_measured * coef_measured
 
-                opt_measured = eval_factor(results_pandas, regression_name(opt))
-                lhs_measured = eval_factor(results_pandas, pa[0])
-                multiplicand_measured = eval_factor(results_pandas, pa[1][parameter])
+                opt_measured = eval_factor(data, regression_name(opt))
+                lhs_measured = eval_factor(data, pa[0])
+                multiplicand_measured = eval_factor(data, pa[1][parameter])
                 parameter_measured = (lhs_measured - other_terms) / multiplicand_measured
+
                 # TODO remove influence of other optional pins
+                # (Ax + Bynom + C) = (Ax + By + C) - B(y - ynom)
+                adjustment = np.zeros(M)
 
-                check_this_param = eval_parameter(results_pandas, parameter)
-                check_this_term = check_this_param * multiplicand_measured
-                check_all_terms = check_this_term + other_terms
-                check_err = lhs_measured - check_all_terms
+                for s in test.signals.true_analog() + ba_bits:
+                    if s != opt:
+                        y = eval_factor(data, regression_name(s))
+                        # TODO I think there's a better way to get ynom
+                        ynom = eval_factor(model_data, regression_name(s))[0]
+                        B = regression_results[parameter][regression_name(s)]
+                        adjustment += B * (y - ynom)
+                parameter_measured_adjusted = parameter_measured - adjustment
 
-                plt.plot(xs, result, '--')
-                plt.plot(opt_measured, parameter_measured, 'o')
+
+                plt.plot(xs, model_prediction, '--')
+                plt.plot(opt_measured, parameter_measured_adjusted, 'o')
                 plt.xlabel(opt.spice_name)
                 plt.ylabel(parameter)
                 #cls.save_current_plot(f'{parameter}_vs_{opt.spice_name}')

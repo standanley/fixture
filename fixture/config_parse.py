@@ -99,6 +99,8 @@ def parse_config(circuit_config_dict):
         io_signal_info[name] = (bus_name, signal_info)
 
         dt_bus = descend(name_expanded, [])
+        # TODO unclear what the name should be if the bus is entered one bit
+        # at a time. I think we should do the signals first and then build io...
         io += [bus_name, dt_bus]
 
     class UserCircuit(magma.Circuit):

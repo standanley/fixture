@@ -13,7 +13,7 @@ pin:
     in_:
         direction: input
         datatype: real
-        value: (0.40, 0.70)
+        value: (0.50, 0.80)
     out:
         direction: output
         datatype: real
@@ -25,10 +25,10 @@ pin:
     vbias:
         direction: input
         datatype: analog
-        value: (0.10, 0.11)
-    #cm_adj<3:0>:
-    #    direction: input
-    #    datatype: binary_analog
+        value: (0.10, 0.3)
+    cm_adj<3:0>:
+        direction: input
+        datatype: binary_analog
 
 template_pins:
     in_single: in_

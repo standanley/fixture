@@ -59,7 +59,10 @@ class SimpleAmpTemplate(TemplateMaster):
     @debug
     class CubicCompression(TemplateMaster.Test):
         parameter_algebra = {
-            'amp_output': {'dcgaincomp': 'in_single**3', 'dcgain': 'in_single', 'offset': '1'}
+            'amp_output': {'dcgainc': 'in_single**3',
+                           'dcgainq': 'in_single**2',
+                           'dcgain': 'in_single',
+                           'offset': '1'}
         }
         num_samples = 300
 
@@ -105,6 +108,7 @@ class SimpleAmpTemplate(TemplateMaster):
             return {}
 
     tests = [CubicCompression]
+    #tests = [Test1]
 
     
 
