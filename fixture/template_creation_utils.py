@@ -1,4 +1,3 @@
-import random
 from scipy.interpolate import interp1d
 from fixture import template_master
 import fixture.modal_analysis as modal_analysis
@@ -17,29 +16,52 @@ def plot(x, y, legend = None):
     plt.show()
 
 def extract_pzs(nps, nzs, x, y):
+    def pad(xs, n):
+        if len(xs) == n:
+            return xs
+        elif len(xs) > n:
+            return sorted(xs)[:n]
+        else:
+            return xs + [float('inf')]*(n - len(xs))
     # TODO
     if type(x) == list:
         x = np.array(x)
     if type(y) == list:
         y = np.array(y)
 
+    if len(x) <= 1:
+        # happens when y is constant - only one datapoint
+        return (pad([], nps), pad([], nzs))
+
     #print(x)
     #print(y)
     #plot(x, y)
+    first_good_index = 0#np.where(x > 0)[0][0]
+    x_trimmed = x[first_good_index:]
+    y_trimmed = y[first_good_index:]
 
-    ma = modal_analysis.ModalAnalysis(rho_threshold=1, N_degree=max(nps, nzs))
-    tf = ma.fit_stepresponse(y - y[0], x)
-    zs = np.roots(tf['num'])
-    ps = np.roots(tf['den'])
-    print(zs, ps)
 
-    def pad(xs, n):
-        if len(xs) == n:
-            return xs
-        elif len(xs > n):
-            return sorted(xs)[:n]
-        else:
-            return xs + [float('inf')*(n - len(x))]
+    ma = modal_analysis.ModalAnalysis()
+
+    #import matplotlib.pyplot as plt
+    #plt.plot(x_trimmed, y_trimmed, '-+')
+    #plt.show()
+
+    # step response definitely has a pole at zero
+    ps_step, zs, scale = ma.extract_pzs(y_trimmed, x_trimmed, nps+1, nzs, [0])
+    assert ps_step[0] == 0
+    ps = ps_step[1:]
+    ps = ps / (2*np.pi)
+    zs = zs / (2*np.pi)
+    print('GOT PZs')
+    print(ps, zs)
+
+    #ps, zs = ma.optimize(x_trimmed, y_trimmed, ps, zs)
+
+
+    ps, zs = np.abs(ps), np.abs(zs)
+
+    #bode_plot(ps, zs)
 
     return (pad(ps, nps), pad(zs, nzs))
 
@@ -105,7 +127,39 @@ def dynamic(template):
 
     return Dynamic
 
+def bode_plot(ps, zs):
+    import matplotlib.pyplot as plt
+    import numpy as np
+    N = 100
+    fmin = min(abs(np.real(ps + zs)))
+    fmax = max(abs(np.real(ps + zs)))
+    fs = np.logspace(np.floor(np.log10(fmin))-1, np.ceil(np.log10(fmax))+1, N)
+    ys = np.ones(N, dtype=np.complex128)
+    for z in zs:
+        if z == 0:
+            ys *= fs * 1j
+        else:
+            ys *= (1 + fs * 1j / z)
+    for p in ps:
+        if p == 0:
+            ys /= fs * 1j
+        else:
+            ys /= (1 + fs * 1j / p)
 
+    top = plt.subplot(2, 1, 1)
+    top.grid()
+    top.loglog(fs, np.absolute(ys), '-+')
+    top.set_ylabel('Magnitude (normalized)')
+
+    bottom = plt.subplot(2, 1, 2)
+    bottom.semilogx(fs, np.degrees(np.angle(ys)))
+    bottom.grid()
+    bottom.set_ylabel('Phase (degrees)')
+    bottom.set_xlabel('Frequency (Hz)')
+
+    plt.show()
+
+#bode_plot([10e6 + 100e6*1j, 10e6 - 100e6*1j], [])
 
 '''
 def plot(xs, ys):
@@ -117,6 +171,8 @@ def plot(xs, ys):
 
 def debug(test):
     class DebugTest(test):
+
+        IS_DEBUG_MODE = True
 
         def debug(self, tester, port, duration):
             r = tester.get_value(port, params={'style':'block', 'duration': duration})
@@ -136,7 +192,7 @@ def debug(test):
                 leg = []
                 bump = 0
                 for p, r in debug_dict:
-                    leg.append(self.template.signals.from_spice_pin(p))
+                    leg.append(str(self.template.signals.from_spice_pin(p)))
                     plt.plot(r.value[0], r.value[1] + bump, '-+')
                     bump += 0.0 # useful for separating clock signals
                 plt.grid()
@@ -267,3 +323,98 @@ def invert_function(xs, ys):
     endpoints = (new_xs[0], new_xs[-1])
     return interp1d(new_ys, new_xs, bounds_error=False, fill_value=endpoints, assume_sorted=True)
 
+def remove_repeated_timesteps(t, h):
+    # issues with multiple repeated ts
+    t_norepeat, h_norepeat = [], []
+    tt_prev = float('nan')
+    for tt, hh in zip(t, h):
+        if tt != tt_prev:
+            t_norepeat.append(tt)
+            h_norepeat.append(hh)
+            tt_prev = tt
+        else:
+            # take last version
+            h_norepeat[-1] = hh
+    return t_norepeat, h_norepeat
+
+#import numpy as np
+#from scipy import signal
+#x = np.array([0, 1, 2, 3, 4, 5])
+##y = 0.5 * np.exp(-1 * x) + 2.0 * np.exp(-1.5 * x)
+#num = np.polynomial.polynomial.polyfromroots([30])[::-1]
+#den = np.polynomial.polynomial.polyfromroots([50, 55])[::-1]
+#y = signal.step(signal.lti(num, den), T=x)[1]
+
+import numpy as np
+
+# h = np.array([.63-.167, .167-.0471, .0471-.0141, .0141-.00447, .00447-.00149])
+#t = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+
+# this works beautifully
+#h_step = 5 * np.exp(-.7 * t) + -5 * np.exp(-.3 * t)
+
+# this crashes, I mistyped - not anymore?
+# coefficients from "partial fraction decomposition (x-1)/((x-1.5)(x-1.6))"
+#h_step = 6 * np.exp(-1.6 * t) + 5 * np.exp(-1.5 * t)
+
+# This is fine
+#h_step = 6 * np.exp(-1.6 * t) - 5 * np.exp(-1.5 * t)
+
+#t = np.array(range(100)) * 0.08 * 1e-9
+## should be a zero at 8.9G, and you can see the poles
+#h_impulse = 90e9 * np.exp(-3.5e9 * t) - 115e9 * np.exp(-2e9 * t)
+#
+##h_impulse = np.concatenate(([0], np.cumsum(h_impulse)))
+#h = np.cumsum(h_impulse) #/ (-4e11)
+##print('h', h)
+#h += np.random.normal(0, 10e9, h.shape)
+#
+#import scipy
+#import matplotlib.pyplot as plt
+#
+###h_smooth = scipy.ndimage.gaussian_filter1d(h, 2, mode='nearest')
+##t2 = np.array(range(1000)) * 0.002 * 1e-9
+##spline = scipy.interpolate.UnivariateSpline(t*1e9, h*1e-9, s=3)
+##spline.set_smoothing_factor(1e16)
+##h_smooth = spline(t2*1e9)
+###plt.plot(t*1e9, h*1e-9, 'ro')
+###plt.plot(t2*1e9, h_smooth, 'g+')
+###plt.grid()
+###plt.show()
+#
+#
+#h[1] += 0.2
+#no_sample = len(h)
+#
+#
+#t = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+#h_step = 5 * np.exp(-.7 * t) + -4 * np.exp(-.3 * t) + -2 * np.exp(-.2 * t) + 1
+##h_step = 2**t + 3**t - 1
+#
+
+if __name__ == '__main__':
+    import numpy as np
+    import scipy
+    t = np.linspace(0, 1e-9, 100)
+    #ps = -np.array([3e9, 5e9, 9e9]) * 2*np.pi
+    #zs = -np.array([2e9, 7e9]) * 2*np.pi
+    ps = -np.array([4e9, 5e9]) * 2*np.pi
+    zs = -np.array([4.8e9]) * 2*np.pi
+    num = np.poly(zs) * 5e10  # 5e10 is approximate
+    den = np.poly(ps)
+    rs, ps, ks = scipy.signal.residue(num, den, tol=1e-3)
+
+    h_impulse = np.zeros(t.shape)
+    for r, p in zip(rs, ps):
+        h_impulse += r * np.exp(p * t)
+
+    h_step = np.cumsum(h_impulse) * (t[1] - t[0])
+    t += t[1]
+
+    h_step += np.random.normal(0, max(abs(h_step)) / 10000, h_step.shape)
+
+    #plot(t, h_step)
+
+    extract_pzs(2, 1, t, h_step)
+    #
+    #########

@@ -53,17 +53,21 @@ def parse_config(circuit_config_dict):
     io = []
     io_signal_info = {}
     pins = circuit_config_dict['pin']
-    pin_params = ['datatype', 'direction', 'value']
+    pin_params = ['datatype', 'direction', 'value', 'electricaltype']
     digital_types = ['bit', 'binary_analog', 'true_digital']
     analog_types = ['real', 'analog']
     for name, p in pins.items():
         for pin_param in p.keys():
             assert pin_param in pin_params, f'Unknown pin descriptor {pin_param} for pin {name}'
         type_string = p['datatype']
+        electrical_string = p.get('electricaltype', 'voltage')
         if type_string in digital_types:
             dt = magma.Bit
         elif type_string in analog_types:
-            dt = fault.ms_types.RealType
+            if electrical_string == 'current':
+                dt = fault.ms_types.CurrentType
+            else:
+                dt = fault.ms_types.RealType
         else:
             assert False, f'datatype for {name} must be in {digital_types+analog_types}, not "{type_string}"'
 
@@ -95,6 +99,8 @@ def parse_config(circuit_config_dict):
         io_signal_info[name] = (bus_name, signal_info)
 
         dt_bus = descend(name_expanded, [])
+        # TODO unclear what the name should be if the bus is entered one bit
+        # at a time. I think we should do the signals first and then build io...
         io += [bus_name, dt_bus]
 
     class UserCircuit(magma.Circuit):

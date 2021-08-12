@@ -1,7 +1,7 @@
 target: spice
-simulator: hspice
+simulator: ngspice
 #ic: {vss: 0}
 vsup: 1.2
-bus_delim: "[]"
-t_step: 1e-11
+t_step: 1e-12
+t_tr: .0000000000005
 # TODO: could also have libraries to include, etc.

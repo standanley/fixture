@@ -1,0 +1,55 @@
+name: ctle
+filepath: ../spice/ctle.sp
+template: DifferentialAmpTemplateB
+pin:
+    vdd:
+        direction: input
+        datatype: analog
+        value: 1.8
+    vss:
+        direction: input
+        datatype: real
+        value: 0
+    vinp:
+        direction: input
+        datatype: real
+    voutp:
+        direction: output
+        datatype: real
+    vinn:
+        direction: input
+        datatype: real
+    voutn:
+        direction: output
+        datatype: real
+
+    v_fz:
+        direction: input
+        datatype: analog
+        value: (0.4, 1.4)
+
+
+template_pins:
+    inp: vinp
+    outp: voutp
+    inn: vinn
+    outn: voutn
+
+extras:
+    approx_settling_time: 1000e-12
+    limits_diff: (-0.05, 0.05)
+    limits_cm: (.9, .95)
+    analog_order: 2
+
+# I found that using small_t_step was bad for bode test becasue of the slow waves
+#test_config_file: ngspice.yaml
+#test_config_file: ngspice_small_tstep.yaml
+#test_config_file: hspice_spf.yaml
+
+# I couldn't get coreir installed on the spectre machine, so I have to run once and have it crash, 
+# (optionally add strobeperiod=1e-11 to the .tran statement), then run the spectre command
+# "spectre /home/dstanley/research/fixture/build/ctle_tb.sp -format psfascii -raw /home/dstanley/research/fixture/build/psf"
+# then run fixture again (and make sure no_run is set to True)
+test_config_file: spectre.yaml
+
+mgenero: ctle_mgenero.yaml

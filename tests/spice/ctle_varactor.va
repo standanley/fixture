@@ -1,0 +1,35 @@
+`include "disciplines.vams"
+
+module varactor(p, n);
+inout p, n;
+electrical p;
+electrical n;
+
+
+parameter real lr = 10e-6;
+parameter real wr = 10e-6;
+
+//parameter real c0 = 1p from (0:inf);  // nominal capacitance (F)
+//parameter real c1 = 0.5p from [0:c0); // maximum capacitance change from nominal (F)
+//parameter real v0 = 0;                // voltage for nominal capacitance (V)
+//parameter real v1 = 1 from (0:inf);   // voltage change for maximum capacitance (V)
+
+parameter real area = ((lr*wr)*1e12);
+parameter real pj = ((lr+wr)*2*1e6);
+parameter real Cgmin = ((0.1822*pj+1.4809*area)*1e-15);
+parameter real dCg = ((-1*0.02472*pj+1.6923*area)*1e-15);
+// parameter real dVgs = -0.161;
+parameter real dVgs = 0.0;
+parameter real Vgnorm = 0.538;
+parameter real const_one = 1.0;
+
+
+real q, v;
+
+analog begin
+    v = V(p,n);
+    //q = c0*v + c1*v1*ln(cosh((v  v0)/v1));
+    q = (Cgmin+dCg*(1.0+tanh((v-dVgs)/Vgnorm)))*v;
+    I(p, n) <+ ddt(q);
+end
+endmodule

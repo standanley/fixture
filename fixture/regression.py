@@ -30,20 +30,20 @@ class Regression():
             res[clean(v)] = k.replace(' ', '_')
         return (clean(lhs), res)
 
-    @staticmethod
-    def get_spice_name(port):
-        # TODO: this has to match the way fault does it in spice_target
-        # I think that this conversion should be broken out into a method in fault
-        if isinstance(port.name, magma.ref.ArrayRef):
-            bus_name_full = str(port.name.array.name)
-            bus_name = bus_name_full.split('.')[-1]
-            bus_index = port.name.index
-            return '%s<%d>' % (bus_name, bus_index)
-        else:
-            if type(port) == magma.DigitalMeta:
-                return port.name
-            print('returning', str(port))
-            return str(port)
+    #@staticmethod
+    #def get_spice_name(port):
+    #    # TODO: this has to match the way fault does it in spice_target
+    #    # I think that this conversion should be broken out into a method in fault
+    #    if isinstance(port.name, magma.ref.ArrayRef):
+    #        bus_name_full = str(port.name.array.name)
+    #        bus_name = bus_name_full.split('.')[-1]
+    #        bus_index = port.name.index
+    #        return '%s<%d>' % (bus_name, bus_index)
+    #    else:
+    #        if type(port) == magma.DigitalMeta:
+    #            return port.name
+    #        print('returning', str(port))
+    #        return str(port)
 
     @classmethod
     def get_optional_pin_expression(cls, template):
@@ -53,7 +53,7 @@ class Regression():
         '''
 
         # TODO pull these out of some dict
-        analog_order = 1
+        analog_order = template.extras.get('analog_order', 1)
         interaction_a_a = False
         interaction_a_ba = False
         interaction_ba_ba = True

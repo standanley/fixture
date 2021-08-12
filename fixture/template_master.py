@@ -2,6 +2,7 @@ import fault
 from abc import ABC, abstractmethod
 import fixture
 from fixture.signals import SignalManager
+from fixture.plot_helper import PlotHelper
 
 class TemplateMaster():
 
@@ -118,6 +119,7 @@ class TemplateMaster():
             See model.model.data for the data used in the regression
             See model.predict() for the model's estimates for teh regression data
             See model.predict(new_data) to see the model's predictions on a new input
+            Return a dict with additional parameters, same format as regression_models.results
             '''
             return {}
 
@@ -147,6 +149,9 @@ class TemplateMaster():
             params_by_mode = {}
             for mode, results in enumerate(results_each_mode):
                 regression = fixture.Regression(self, test, results)
+
+                PlotHelper.plot_regression(regression)
+                PlotHelper.plot_optional_effects(test, results, regression.results)
 
                 # TODO this should really be handled in create_testbench
                 temp = test.post_regression(regression.results_models)

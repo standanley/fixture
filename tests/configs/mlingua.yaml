@@ -1,5 +1,6 @@
 target: system-verilog
 simulator: ncsim
+timescale: "1fs/1fs"
 
 #ext_libs:
     # DaVE libraries

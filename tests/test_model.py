@@ -20,8 +20,10 @@ def test_diff_param():
 
     fixture.run(circuit_fname, test_fname)
 
+# TODO we are xfailing this because fault reports a 2-bit ngspice bus as an
+# integer from 0 to 3, and we don't have a way to separate that
 @pytest.mark.xfail
-@pytest.mark.skipif(not shutil.which('ncsim'), reason='ncsim not installed')
+#@pytest.mark.skipif(not shutil.which('ncsim'), reason='ncsim not installed')
 def test_pb():
     circuit_fname = file_relative_to_test('configs/pb_model.yaml')
     fixture.run(circuit_fname)

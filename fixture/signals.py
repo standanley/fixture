@@ -101,6 +101,7 @@ def create_input_domain_signal(name, value, spice_pin=None):
         name
     )
 
+
 # TODO is it good practice to have all these variables in the signal namespace?
 braces_open = '[<{'
 braces_close = ']>}'
@@ -221,6 +222,27 @@ class SignalManager:
     def copy(self):
         return SignalManager(self.signals)
 
+    def true_analog(self):
+        # true analog optional pins
+        return [s for s in self.signals_in
+                if s.template_name is None
+                and s.spice_name is not None
+                and s.type_ in ('analog', 'real')
+                and isinstance(s.value, tuple)]
+
+    def binary_analog(self):
+        # binary analog optional pins
+        # return as a dictionary like {busname: [pin1, pin0]}
+        bas = {}
+        for s in self.signals_in:
+            if (s.template_name is None
+                and s.spice_name is not None
+                and s.type_ in ('binary_analog',)):
+                bus_name, _ = expanded(s.spice_name)
+                if bus_name not in bas:
+                    bas[bus_name] = self.from_spice_name(bus_name)
+        return bas
+
     def __add__(self, o):
         assert isinstance(o, SignalManager)
         return SignalManager(self.signals + o.signals)
@@ -229,6 +251,10 @@ class SignalManager:
         return iter(self.signals)
 
     def __getattr__(self, item):
+        if item == 'signals_in':
+            return (s for s in self.signals if isinstance(s, SignalIn))
+        if item == 'signals_out':
+            return (s for s in self.signals if isinstance(s, SignalOut))
         try:
             return self.from_template_name(item)
         except KeyError:
