@@ -10,7 +10,7 @@ class OscillatorTemplate(TemplateMaster):
     #@template_creation_utils.debug
     class Test1(TemplateMaster.Test):
         parameter_algebra = {
-            'frequency': 'const'
+            'frequency_meas': {'frequency': '1'}
         }
 
         def input_domain(self):
@@ -27,7 +27,7 @@ class OscillatorTemplate(TemplateMaster):
 
         @classmethod
         def analysis(self, read):
-            results = {'frequency': read.value}
+            results = {'frequency_meas': read.value}
             return results
 
     tests = [Test1]

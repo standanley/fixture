@@ -9,7 +9,7 @@ class SimpleAmpTemplate(TemplateMaster):
         'approx_settling_time': 'Approximate time it takes for amp to settle within 99% (s)'
     }
 
-    @debug
+    #@debug
     class Test1(TemplateMaster.Test):
         parameter_algebra = {
             'amp_output': {'dcgain': 'in_single', 'offset': '1'}
@@ -27,7 +27,7 @@ class SimpleAmpTemplate(TemplateMaster):
             #self.debug(tester, self.signals.from_spice_name('cm_adj<1>').spice_pin, 1)
             #self.debug(tester, self.signals.from_spice_name('cm_adj<2>').spice_pin, 1)
             #self.debug(tester, self.signals.from_spice_name('cm_adj<3>').spice_pin, 1)
-            self.debug(tester, self.signals.from_spice_name('vbias').spice_pin, 1)
+            #self.debug(tester, self.signals.from_spice_name('vbias').spice_pin, 1)
             in_single = self.ports.in_single
             tester.poke(in_single, values[in_single])
             wait_time = float(self.extras['approx_settling_time'])*2
@@ -56,7 +56,7 @@ class SimpleAmpTemplate(TemplateMaster):
             tas = self.signals.true_analog()
 
             return {}
-    @debug
+    #@debug
     class CubicCompression(TemplateMaster.Test):
         parameter_algebra = {
             'amp_output': {'dcgainc': 'in_single**3',
@@ -77,7 +77,7 @@ class SimpleAmpTemplate(TemplateMaster):
             #self.debug(tester, self.signals.from_spice_name('cm_adj<1>').spice_pin, 1)
             #self.debug(tester, self.signals.from_spice_name('cm_adj<2>').spice_pin, 1)
             #self.debug(tester, self.signals.from_spice_name('cm_adj<3>').spice_pin, 1)
-            self.debug(tester, self.signals.from_spice_name('vbias').spice_pin, 1)
+            #self.debug(tester, self.signals.from_spice_name('vbias').spice_pin, 1)
             in_single = self.ports.in_single
             tester.poke(in_single, values[in_single])
             wait_time = float(self.extras['approx_settling_time'])*2

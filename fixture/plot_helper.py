@@ -9,9 +9,14 @@ class PlotHelper:
     dpi = 600
 
     @classmethod
+    def clean_filename(cls, orig):
+        clean = orig.replace('/', '_over_')
+        return clean
+
+    @classmethod
     def save_current_plot(cls, name):
         plt.grid()
-        plt.savefig(name, dpi=cls.dpi)
+        plt.savefig(cls.clean_filename(name), dpi=cls.dpi)
 
     @classmethod
     def plot_regression(cls, regression):
@@ -32,7 +37,7 @@ class PlotHelper:
             plt.xlabel('Measured value')
             plt.ylabel('Predicted by model')
             plt.grid()
-            plt.show()
+            #plt.show()
             cls.save_current_plot(f'{name}_fit')
 
     @classmethod
@@ -42,7 +47,10 @@ class PlotHelper:
             # exog evaluation. Internally in statsmodels there's something like
             # _eval_factor, but I don't think its' user-facing
             factor_wrapped = '1' if factor == '1' else f'I({factor})'
-            x = smf.ols(f'1 ~ {factor_wrapped}', data)
+            # also, it doesn't like infinities, which I don't really understand
+            data_finite = data.copy()
+            data_finite[np.logical_not(np.isfinite(data))] = 0
+            x = smf.ols(f'1 ~ {factor_wrapped}', data_finite)
             return x.exog[:, -1]
 
         def eval_parameter(data, parameter):
@@ -131,7 +139,7 @@ class PlotHelper:
                 plt.ylabel(parameter)
                 #cls.save_current_plot(f'{parameter}_vs_{opt.spice_name}')
                 plt.grid()
-                plt.show()
+                #plt.show()
 
 
 
