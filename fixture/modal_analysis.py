@@ -155,8 +155,8 @@ class ModalAnalysis:
                 if np.isnan(new_ps).any():
                     # the nans are probably causing the error
                     return []
-                print(known_poles)
-                print(new_ps)
+                #print(known_poles)
+                #print(new_ps)
                 assert False, f'Known pole {known_p} not found!'
 
         # finally, return 0 (if nan), 1, or 2 (if complex conjugate) slowest new poles
@@ -200,7 +200,7 @@ class ModalAnalysis:
             elif len(new_ps) == 0 and stride != 1:
                 target_period /= period_ratio
             elif len(new_ps) == 0:
-                print('Did not find all the requested poles!')
+                #print('Did not find all the requested poles!')
                 break
             else:
                 known_poles += list(new_ps)
@@ -211,7 +211,7 @@ class ModalAnalysis:
         #print('get_zeros with ', poles, dt, NZ)
         assert len(set(poles)) == len(poles), 'get_zeros cannot handle repeated roots'
         NP = len(poles)
-        print(NP, poles)
+        #print(NP, poles)
         # If you leave the timescale as 1, you probably get precision issues
         #timescale_dt = 1/(max(abs(poles)) * len(h_step))
         timescale_dt = dt
@@ -237,7 +237,6 @@ class ModalAnalysis:
         Z_tilde = np.zeros((NP, NP), dtype=poles.dtype)
         poly = np.polynomial.polynomial
         for i in range(NP):
-            print('TODO fix scaling 1')
             temp = poly.polyfromroots([poles_scaled[j][0] for j in range(NP) if j != i])
             for k, c in enumerate(temp):
                 Z_tilde[k, i] = c
@@ -249,9 +248,8 @@ class ModalAnalysis:
         #print(exps.shape, Z_inv.shape, h_step.shape)
         N = np.linalg.pinv((exps.T @ Z_inv)) @ h_step_column
 
-        print('TODO fix scaling 2')
         zeros = np.roots(N.reshape(NZ+1)[::-1]) / dt
-        print('zeros', zeros)
+        #print('zeros', zeros)
 
 
         #h_step_est = exps.T @ X
@@ -351,7 +349,7 @@ class ModalAnalysis:
 
             err = error_poles(poles)
             all_results.append(poles)
-            print(num_ps, -np.log(abs(err)), poles)
+            #print(num_ps, -np.log(abs(err)), poles)
             if len(poles) > len(all_results[best_num]) and err < best_err * .5:
                 #print('NEW BEST', num_ps, len(poles))
                 best_num = num_ps
@@ -367,8 +365,8 @@ class ModalAnalysis:
             plt.show()
 
 
-        print('Poles are:')
-        print(all_results[best_num])
+        #print('Poles are:')
+        #print(all_results[best_num])
 
         # If we found more poles than the user requested, we should discard fastest ones
         # BUT we can't discard half of a conjugate pair. If that happens we should look at
@@ -380,7 +378,7 @@ class ModalAnalysis:
         while len(ps) > NP:
             if is_conj_pair(ps[NP-1], ps[NP]):
                 # uh oh, better use a different result
-                print('NOT SPLITTING')
+                #print('NOT SPLITTING')
                 num -= 1
                 ps = all_results[num]
             else:
