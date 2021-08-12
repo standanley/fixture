@@ -197,7 +197,7 @@ class SignalManager:
 
     def from_spice_pin(self, spice_pin):
         for s in self.signals:
-            if s.spice_pin == spice_pin:
+            if s.spice_pin is spice_pin:
                 return s
         assert False, f'No signal with spice pin {spice_pin}'
 
