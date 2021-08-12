@@ -56,7 +56,7 @@ class Regression():
         analog_order = 1
         interaction_a_a = False
         interaction_a_ba = False
-        interaction_ba_ba = False
+        interaction_ba_ba = True
 
         # TODO is s.get_random and s.auto_set the right condition?
         optional_signals = [s for s in template.signals if hasattr(s, 'get_random') and s.get_random and s.auto_set]

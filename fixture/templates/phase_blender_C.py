@@ -1,5 +1,6 @@
 from fixture import TemplateMaster
 from fixture.signals import create_input_domain_signal
+from fixture.template_creation_utils import debug
 
 
 class PhaseBlenderTemplate_C(TemplateMaster):
@@ -9,14 +10,14 @@ class PhaseBlenderTemplate_C(TemplateMaster):
         'frequency': 'Input clock frequency (Hz)'
     }
 
-    #@debug
+    @debug
     class Test1(TemplateMaster.Test):
         parameter_algebra = {
             'out_delay': {'gain':'in_phase_delay', 'offset':'1'}
             #'out_delay': {'offset': '1'}
             #'out_delay': {'offset_a': 'sel_therm', 'offset_b': '1'}
         }
-        num_samples = 50
+        num_samples = 100
 
 
         def input_domain(self):
@@ -44,7 +45,7 @@ class PhaseBlenderTemplate_C(TemplateMaster):
 
             self.debug(tester, self.ports.in_a, 1/freq*100)
             self.debug(tester, self.ports.in_b, 1/freq*100)
-            self.debug(tester, self.ports.out, 1/freq*100)
+            #self.debug(tester, self.ports.out, 1/freq*100)
             #self.debug(tester, self.template.dut.thm_sel_bld[0], 1/freq*100)
             #self.debug(tester, self.template.dut.sel[0], 1/freq*100)
 
@@ -181,7 +182,7 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             def opt_fun(abcdef_scaled):
                 abcdef = abcdef_scaled * 1e-10
                 new_preds = [new_pred_fun(x, y, abcdef) for x, y in zip(xs, ys)]
-                errors = [(new_pred - pred)*1e10 for new_pred, pred in zip(new_preds, predictions)]
+                errors = [(new_pred - pred)*1e10 for new_pred, pred in zip(new_preds, zs)]
                 error = sum(x**2 for x in errors)
 
                 x = 2
@@ -233,6 +234,13 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             e_lin = sum(((zs - preds_lin)*1e10)**2)
             ax2.set_title(f'Predictions with linear model, {e_lin:.3e}')
 
+
+            fig2 = plt.figure(3)
+            ax2 = fig2.add_subplot(111, projection='3d')
+            ax2.scatter(xs, ys, zs, color='b')
+            ax2.scatter(xs, ys, predictions, color='c')
+            e_fix = sum(((zs - predictions)*1e10)**2)
+            ax2.set_title(f'Predictions from_fixture (no therm constraint), {e_fix:.3e}')
             plt.show()
 
             plt.scatter(xs, zs)
