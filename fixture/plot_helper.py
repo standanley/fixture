@@ -29,6 +29,7 @@ class PlotHelper:
             predicted = model.predict(value.params)
             #predicted = model.predict(inputs)
 
+            plt.figure(plt.gcf().number + 1)
             plt.plot(measured, predicted, 'x')
             start = min(0, min(measured))
             end = max(0, max(measured))
@@ -36,9 +37,8 @@ class PlotHelper:
             plt.title(name)
             plt.xlabel('Measured value')
             plt.ylabel('Predicted by model')
-            plt.grid()
-            #plt.show()
             cls.save_current_plot(f'{name}_fit')
+            #plt.show()
 
     @classmethod
     def plot_optional_effects(cls, test, results, regression_results):
@@ -46,7 +46,7 @@ class PlotHelper:
             # TODO ols is not the right thing here since we really only need the
             # exog evaluation. Internally in statsmodels there's something like
             # _eval_factor, but I don't think its' user-facing
-            factor_wrapped = '1' if factor == '1' else f'I({factor})'
+            factor_wrapped = '1' if factor == '1' else f'I({factor.replace(":", "*")})'
             # also, it doesn't like infinities, which I don't really understand
             data_finite = data.copy()
             data_finite[np.logical_not(np.isfinite(data))] = 0
@@ -132,13 +132,12 @@ class PlotHelper:
                         adjustment += B * (y - ynom)
                 parameter_measured_adjusted = parameter_measured - adjustment
 
-
+                plt.figure(plt.gcf().number + 1)
                 plt.plot(xs, model_prediction, '--')
                 plt.plot(opt_measured, parameter_measured_adjusted, 'o')
                 plt.xlabel(opt.spice_name)
                 plt.ylabel(parameter)
-                #cls.save_current_plot(f'{parameter}_vs_{opt.spice_name}')
-                plt.grid()
+                cls.save_current_plot(f'{parameter}_vs_{opt.spice_name}')
                 #plt.show()
 
 
