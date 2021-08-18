@@ -9,9 +9,8 @@ class SignalIn():
                  auto_set,
                  spice_name,
                  spice_pin,
-                 template_name#,
-                 #bus_name,
-                 #bus_i
+                 template_name,
+
             ):
         # TODO: do we need bus info?
         self.value = value
@@ -35,9 +34,7 @@ class SignalOut():
                  #auto_set,
                  spice_name,
                  spice_pin,
-                 template_name#,
-                 #bus_name,
-                 #bus_i
+                 template_name
                  ):
         # TODO: do we need bus info?
         self.type_ = type_
@@ -114,12 +111,36 @@ re_index = re_braces_open + re_num + re_braces_close
 re_index_range = re_braces_open + re_num + ':' + re_num + re_braces_close
 re_index_range_groups = f'({re_braces_open})({re_num}):({re_num})({re_braces_close})'
 
+def parse_bus(name):
+    '''
+    'myname'  ->  ('myname', [], [])
+    'myname{1:3}<1:0>[4]'  ->  ('myname', [3,1,4], ['{}a', '<>d', '[]a'])
+    '''
+
+    indices = re.findall(re_index + '|' + re_index_range, name)
+    bus_name = re.sub(re_index + '|' + re_index_range, '', name)
+    indices_parsed = []
+    info_parsed = []
+    for index in indices:
+        m = re.match(re_index, index)
+        if m is not None:
+            indices_parsed.append(int(index[1:-1]))
+            info_parsed.append(index[0] + index[-1] + 'a')
+        else:
+            m = re.match(re_index_range_groups, index)
+            s, e = int(m.group(2)), int(m.group(3))
+            indices_parsed.append(max(s, e))
+            direction = 'a' if e >= s else 'd'
+            info_parsed.append(m.group(1) + m.group(4) + direction)
+    return bus_name, indices_parsed, info_parsed
+
+
 def expanded(name):
     '''
     'myname'  ->  'myname'
     'myname{0:2}<1:0>[4]'  ->  [['myname{0}<1>[4]', 'myname{0}<0>[4]'], ['myname{1}<1>[4]', ...], ...]
     :param name: name which may or may not be a bus
-    :return:
+    :return: appropriately nested list of pins in bus
     '''
     indices = re.findall(re_index + '|' + re_index_range, name)
     bus_name = re.sub(re_index + '|' + re_index_range, '', name)
@@ -147,6 +168,7 @@ def expanded(name):
             return [make_names(f'{prefix}{index[0]}{i}{index[3]}', indices[1:]) for i in i_s]
 
     return bus_name, make_names(bus_name, indices_parsed)
+
 
 
 class SignalManager:
@@ -259,4 +281,44 @@ class SignalManager:
             return self.from_template_name(item)
         except KeyError:
             raise AttributeError
+
+
+class SignalGroup:
+    def __init__(self, signals, style='unknown', order=None):
+        if isinstance(signals, dict):
+            self.map = signals
+        elif isinstance(signals, [list, tuple]):
+            self.map = {k: s for k, s in enumerate(signals)}
+
+        if order is None:
+            self.order = signals.keys()
+        else:
+            self.order = order
+
+        assert style in ['unknown', 'thermometer', 'binary', 'unary']
+        self.style = style
+        if self.style in ['thermometer', 'binary', 'unary']:
+            assert all(isinstance(s, [SignalIn, SignalOut])
+                       for s in map.values()), \
+                       f'Signal type {self.style} cannot be nested'
+
+        #item = self.map[order[0]]
+        #self.token_item = item.token_item if isinstance(item, SignalGroup) else item
+
+    def flat(self):
+        ss = []
+        for key in self.order:
+            x = self.map[key]
+            if isinstance(x, [SignalIn, SignalOut]):
+                ss.append(x)
+            else:
+                ss += x.flat()
+        return ss
+
+    def __getitem__(self, key):
+        return self.map[key]
+
+    #def __getattr__(self, name):
+    #    return getattr(self.token_item, name)
+
 
