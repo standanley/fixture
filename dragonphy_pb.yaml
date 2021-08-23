@@ -34,7 +34,7 @@ extras:
     # We could change this to be tighter around 25% if it's causing problems
     phase_offset_range: [0.2, 0.3]
 
-#mgenero: pb_mgenero.yaml
+mgenero: ./pb_mgenero.yaml
 
 #test_config_file: tests/configs/ngspice_sky130.yaml
 test_config_file: tests/configs/spectre.yaml
