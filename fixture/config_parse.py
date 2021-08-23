@@ -66,8 +66,7 @@ def parse_config(circuit_config_dict):
     # create_signal has some checks involving that
     # temporarily use magma type (disregard bus?) in place of spice pin
     io = []
-    #io_signal_info = {}
-    signals_by_name = {}
+    signal_info_by_cname = {}
     pins = circuit_config_dict['pin']
     pin_params = ['datatype', 'direction', 'value', 'electricaltype']
     digital_types = ['bit', 'binary_analog', 'true_digital']
@@ -98,24 +97,28 @@ def parse_config(circuit_config_dict):
         bus_name, indices_parsed, info_parsed, bits = parse_bus(name)
         if len(indices_parsed) == 0:
             # dict, cname, tname
-            signals_by_name[name] = [p, name, None]
+            signal_info_by_cname[name] = [p, name, None]
         else:
             # array of (dict, cname, tname)
             indices_limits = [max(i_range)+1 for i_range in indices_parsed]
-            if bus_name in signals_by_name:
+            if bus_name in signal_info_by_cname:
                 assert False, 'TODO'
             else:
                 a = np.zeros(indices_limits, dtype=object)
                 for bit_name, location in bits:
                     a[location] = [p, bit_name, None]
-                signals_by_name[bus_name] = a
+                signal_info_by_cname[bus_name] = a
 
-        # At this point, there are 2 problems with the signals:
-        # 1) the spice_pin entry is just a magma datatype, not the object
-        # 2) the template_name entry is always None
+    # At this point, there are 2 problems with the signals:
+    # 1) the spice_pin entry is just a magma datatype, not the object
+    # 2) the template_name entry is always None
 
-    # parse template to pin mapping - replace None with template name in
-    t2s_mapping = {}
+    # Now create the spice stuff
+    
+    class UserCircuit(magma.Circuit):
+        name = circuit_config_dict['name']
+        IO = io
+
 
     '''
     issue right now: 
@@ -134,26 +137,36 @@ def parse_config(circuit_config_dict):
     for t, c in template_pins.items():
         t_bus_name, t_indices, _, _ = parse_bus(t)
         c_bus_name, c_indices, _, _ = parse_bus(c)
-        c_array = signals_by_name[c_bus_name]
+        c_array = signal_info_by_cname[c_bus_name]
 
         c_shape = getattr(c_array, 'shape', [])
         assert len(c_shape) >= len(c_indices), f'Too many indices in {c}'
         # extend c_indices so it goes all the way to the end of c
         c_indices += [(0, x-1) for x in c_shape[len(c_indices):]]
 
-        # if the template array is 1 entry, that entry encompases the whole circuit array
-        # if the template array is multiple entries, they must match with the circuit
-        #    entries 1 to 1 until the template entries run out of dimensions
-        #    if circuit runs out of dimensions first, that's an error
-        # Dimensions that aren't a range are kinda skipped in this mapping
+        def get_t_name(t_indices_used):
+            return 'temp' + str(t_indices_used)
+
+        # match does 2 things:
+        # edit c_array to insert template names
+        # build up t_array_entries with template array entries
+        t_array_entries = []
         def match(t_indices_used, t_indices, c_a, c_indices):
+            # if the template array is 1 entry, that entry encompases the whole circuit array
+            # if the template array is multiple entries, they must match with the circuit
+            #    entries 1 to 1 until the template entries run out of dimensions
+            #    if circuit runs out of dimensions first, that's an error
+            # Dimensions that aren't a range are kinda skipped in this mapping
             #print('match called with', t_indices_used, t_indices, getattr(c_a, 'shape', []), c_indices)
             if len(c_indices) == 0:
-                # c is out of indices but t is not - that's an error
+                # if c is out of indices but t is not, that's an error
                 assert len(t_indices) == 0, f'error mapping {t} to {c}, too many dims in {c}'
                 # we should be at the end of the array
                 assert not isinstance(c_a, np.ndarray), 'internal error in config_parse?'
                 print('mapping', t_indices_used, c_a)
+                t_name = get_t_name(t_indices_used)
+                c_a[2] = t_name
+                t_array_entries.append((t_indices_used, t_name))
             elif len(c_indices[0]) == 1:
                 # not a range for c, so descend on c but don't move on t
                 match(t_indices_used,
@@ -186,15 +199,29 @@ def parse_config(circuit_config_dict):
                           c_indices[1:])
         match([], t_indices, c_array, c_indices)
 
+        print(t_array_entries)
+        t_array_indices = list(zip(*t_array_entries))[0]
+        t_array_limits = [max(indices)+1 for indices in zip(*t_array_indices)]
+        t_array = np.zeros(t_array_limits, dtype=object)
+        for t_indices, t_name in t_array_entries:
+            t_array[tuple(t_indices)] = t_name
+        print()
+
+    # now actually create the signals
+    for cn, c_info in signal_info_by_cname:
+        if isinstance(c_info, np.ndarray):
+            abc
+        else:
+            s = create_signal(c_info)
+
+
+    # now put the signals into the template arrays
 
         # first, get the spice bits that this actually corresponds to
         #s_indices = [si for _, si in s_bits]
-        #assert s_bus_name in signals_by_name, f'Unknown circuit pin {s_bus_name} in template pin mapping'
+        #assert s_bus_name in signal_info_by_cname, f'Unknown circuit pin {s_bus_name} in template pin mapping'
 
 
-    class UserCircuit(magma.Circuit):
-        name = circuit_config_dict['name']
-        IO = io
 
     # create spice name to template name mapping
     s2t_mapping = {}

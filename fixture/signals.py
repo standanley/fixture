@@ -47,13 +47,12 @@ class SignalOut():
         #self.bus_name = bus_name
         #self.bus_i = bus_i
 
-def create_signal(pin_dict):
+def create_signal(pin_dict, c_name=None, c_pin=None, t_name=None):
     type_ = pin_dict.get('datatype', 'analog')
-    spice_pin = pin_dict.get('spice_pin', None)
-    spice_name = None if spice_pin is None else (
-        pin_dict['spice_name'] if 'spice_name' in pin_dict else str(spice_pin)
-    )
-    template_name = pin_dict.get('template_pin', None)
+    assert (c_name is None) == (c_pin is None)
+    spice_pin = c_pin
+    spice_name = c_name
+    template_name = t_name
 
     if pin_dict['direction'] == 'input':
         if template_name is None:
