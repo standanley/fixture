@@ -1,5 +1,6 @@
 import re
 import numbers
+import numpy as np
 
 class SignalIn():
     def __init__(self,
@@ -113,26 +114,48 @@ re_index_range_groups = f'({re_braces_open})({re_num}):({re_num})({re_braces_clo
 
 def parse_bus(name):
     '''
-    'myname'  ->  ('myname', [], [])
-    'myname{1:3}<1:0>[4]'  ->  ('myname', [3,1,4], ['{}a', '<>d', '[]a'])
+    'myname'  ->  ('myname', [], [], ['myname'])
+    'myname{1:3}<1:0>[4]'  ->  ('myname', [3,1,4], ['{}a', '<>d', '[]a'], [...])
+    The final list is a flat list of all the bits and their locaitons
+    e.g. [('myname{1}<1>[4]', (1,1,4)), ('myname{1}<0>[4]', (1,0,4)), ...]
     '''
 
     indices = re.findall(re_index + '|' + re_index_range, name)
     bus_name = re.sub(re_index + '|' + re_index_range, '', name)
     indices_parsed = []
+    #indices_limits_parsed = []
     info_parsed = []
     for index in indices:
         m = re.match(re_index, index)
         if m is not None:
-            indices_parsed.append(int(index[1:-1]))
+            x = int(index[1:-1])
+            indices_parsed.append(x)
+            #indices_limits_parsed.append(x+1)
             info_parsed.append(index[0] + index[-1] + 'a')
         else:
             m = re.match(re_index_range_groups, index)
             s, e = int(m.group(2)), int(m.group(3))
-            indices_parsed.append(max(s, e))
+            indices_parsed.append((s, e))
+            #indices_limits_parsed.append(max(s, e)+1)
             direction = 'a' if e >= s else 'd'
             info_parsed.append(m.group(1) + m.group(4) + direction)
-    return bus_name, indices_parsed, info_parsed
+
+    def names_flat(indices_details):
+        if len(indices_details) == 0:
+            return [(bus_name, ())]
+        else:
+            (s, e), index_info = indices_details[-1]
+            base = names_flat(indices_details[:-1])
+            nums = range(s, e+1) if e>=s else range(s, e-1, -1)
+            postfixes = [(index_info[0] + str(n) + index_info[1], n) for n in nums]
+            ans = []
+            for basename, baseindices in base:
+                ans += [(basename + pn, baseindices + (pi,))
+                        for pn, pi in postfixes]
+            return ans
+    names = names_flat(list(zip(indices_parsed, info_parsed)))
+
+    return bus_name, indices_parsed, info_parsed, names
 
 
 def expanded(name):
@@ -283,27 +306,16 @@ class SignalManager:
             raise AttributeError
 
 
-class SignalGroup:
-    def __init__(self, signals, style='unknown', order=None):
-        if isinstance(signals, dict):
-            self.map = signals
-        elif isinstance(signals, [list, tuple]):
-            self.map = {k: s for k, s in enumerate(signals)}
+class SignalArray:
 
-        if order is None:
-            self.order = signals.keys()
-        else:
-            self.order = order
-
-        assert style in ['unknown', 'thermometer', 'binary', 'unary']
-        self.style = style
-        if self.style in ['thermometer', 'binary', 'unary']:
-            assert all(isinstance(s, [SignalIn, SignalOut])
-                       for s in map.values()), \
-                       f'Signal type {self.style} cannot be nested'
-
-        #item = self.map[order[0]]
-        #self.token_item = item.token_item if isinstance(item, SignalGroup) else item
+    def __init__(self, indices_limits, info, names, pin_dict):
+        self.array = np.zeros(indices_limits, dtype=object)
+        self.info = info
+        for name, indices in names:
+            pin_dict_copy = pin_dict.copy()
+            pin_dict_copy['spice_name'] = name
+            s = create_signal(pin_dict_copy)
+            self.array[indices] = s
 
     def flat(self):
         ss = []
