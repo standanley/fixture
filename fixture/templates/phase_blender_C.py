@@ -131,8 +131,9 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             return results
 
         def post_regression(self, regression_models):
-            return {}
+            #return {}
             import numpy as np
+            import matplotlib.pyplot as plt
 
             def new_pred_fun(x, dt, abcdef):
                 a, b, c, d, e, f = abcdef
@@ -179,81 +180,95 @@ class PhaseBlenderTemplate_C(TemplateMaster):
 
 
 
-            def opt_fun(abcdef_scaled):
-                abcdef = abcdef_scaled * 1e-10
-                new_preds = [new_pred_fun(x, y, abcdef) for x, y in zip(xs, ys)]
-                errors = [(new_pred - pred)*1e10 for new_pred, pred in zip(new_preds, zs)]
-                error = sum(x**2 for x in errors)
+            #def opt_fun(abcdef_scaled):
+            #    abcdef = abcdef_scaled * 1e-10
+            #    new_preds = [new_pred_fun(x, y, abcdef) for x, y in zip(xs, ys)]
+            #    errors = [(new_pred - pred)*1e10 for new_pred, pred in zip(new_preds, zs)]
+            #    error = sum(x**2 for x in errors)
 
-                x = 2
-                alpha = abcdef[0] * x + abcdef[1]
-                beta = abcdef[2] * x + abcdef[3]
+            #    x = 2
+            #    alpha = abcdef[0] * x + abcdef[1]
+            #    beta = abcdef[2] * x + abcdef[3]
 
-                alpha_min = abcdef[0]* 0 + abcdef[1]
-                alpha_max = abcdef[0]* 3 + abcdef[1]
-                r = lambda x: f'{x:.3e}'
-                print('abcdef', [r(x) for x in abcdef_scaled],
-                      '\tamin,amax', r(alpha_min), r(alpha_max), alpha_min < ys[0] < alpha_max,
-                      'error', r(error))
+            #    alpha_min = abcdef[0]* 0 + abcdef[1]
+            #    alpha_max = abcdef[0]* 3 + abcdef[1]
+            #    r = lambda x: f'{x:.3e}'
+            #    print('abcdef', [r(x) for x in abcdef_scaled],
+            #          '\tamin,amax', r(alpha_min), r(alpha_max), alpha_min < ys[0] < alpha_max,
+            #          'error', r(error))
 
-                return error
-
-
-            linear_slope = 2.1e-2 / 500e6
-            linear_const = 1.465e-1 / 500e6 - 1.5e-10
-            abcdef0 = [linear_slope, linear_const, linear_slope, linear_const*1.5, 0, 0]
-            abcdef0_scaled = [x * 1e10 for x in abcdef0]
-
-            import scipy
-            opt_result = scipy.optimize.minimize(opt_fun, abcdef0_scaled)
-            abcdef_opt_scaled = opt_result.x
-            abcdef_opt = [x*1e-10 for x in abcdef_opt_scaled]
-
-            preds_opt = [new_pred_fun(x, y, abcdef_opt) for x, y in zip(xs, ys)]
-            preds_0 = [new_pred_fun(x, y, abcdef0) for x, y in zip(xs, ys)]
+            #    return error
 
 
-            # PLOTS
+            #linear_slope = 2.1e-2 / 500e6
+            #linear_const = 1.465e-1 / 500e6 - 1.5e-10
+            #abcdef0 = [linear_slope, linear_const, linear_slope, linear_const*1.5, 0, 0]
+            #abcdef0_scaled = [x * 1e10 for x in abcdef0]
 
-            import matplotlib.pyplot as plt
+            #import scipy
+            #opt_result = scipy.optimize.minimize(opt_fun, abcdef0_scaled)
+            #abcdef_opt_scaled = opt_result.x
+            #abcdef_opt = [x*1e-10 for x in abcdef_opt_scaled]
 
-            fig = plt.figure(1)
-            ax = fig.add_subplot(111, projection='3d')
-
-            ax.scatter(xs, ys, zs, color='b')
-            #surf = ax.plot_trisurf(xs, ys, preds_opt, linewidth=0, alpha=0.5, color='r')
-            ax.scatter(xs, ys, preds_opt, color='r')
-            e_opt = sum(((zs-preds_opt)*1e10)**2)
-            ax.set_title(f'Predictions with new model, {e_opt:.3e}')
+            #preds_opt = [new_pred_fun(x, y, abcdef_opt) for x, y in zip(xs, ys)]
+            #preds_0 = [new_pred_fun(x, y, abcdef0) for x, y in zip(xs, ys)]
 
 
-            fig2 = plt.figure(2)
+            ## PLOTS
+
+
+            #fig = plt.figure(1)
+            #ax = fig.add_subplot(111, projection='3d')
+
+            #ax.scatter(xs, ys, zs, color='b')
+            ##surf = ax.plot_trisurf(xs, ys, preds_opt, linewidth=0, alpha=0.5, color='r')
+            #ax.scatter(xs, ys, preds_opt, color='r')
+            #e_opt = sum(((zs-preds_opt)*1e10)**2)
+            #ax.set_title(f'Predictions with new model, {e_opt:.3e}')
+
+
+            plt.figure(3)
+            plt.scatter(xs, zs)
+            plt.title('collected data, therm on x axis')
+
+            plt.figure(4)
+            plt.plot(xs, zs, 'o')
+            plt.plot(xs, preds_lin, 'x')
+            plt.title('Linear model with therm constraint')
+
+            plt.figure(5)
+            plt.plot(xs, zs, 'o')
+            plt.plot(xs, predictions, 'x')
+            plt.title('Linear model without therm constraint')
+
+            fig2 = plt.figure(6)
             ax2 = fig2.add_subplot(111, projection='3d')
-            ax2.scatter(xs, ys, zs, color='b')
-            ax2.scatter(xs, ys, preds_lin, color='g')
+            ax2.plot(xs, ys, zs, color='b')
+            ax2.plot(xs, ys, preds_lin, color='g')
             e_lin = sum(((zs - preds_lin)*1e10)**2)
-            ax2.set_title(f'Predictions with linear model, {e_lin:.3e}')
+            ax2.set_title(f'Predictions with linear model from therm, {e_lin:.3e}')
 
 
-            fig2 = plt.figure(3)
+            fig2 = plt.figure(7)
             ax2 = fig2.add_subplot(111, projection='3d')
             ax2.scatter(xs, ys, zs, color='b')
             ax2.scatter(xs, ys, predictions, color='c')
             e_fix = sum(((zs - predictions)*1e10)**2)
-            ax2.set_title(f'Predictions from_fixture (no therm constraint), {e_fix:.3e}')
+            ax2.set_title(f'Predictions from fixture (no therm constraint), {e_fix:.3e}')
             plt.show()
 
-            plt.scatter(xs, zs)
-            tempxs = list(range(17))
-            #tempys = [abcd_opt[0]*tempx + abcd_opt[1] for tempx in tempxs]
-            #tempys2 = [new_pred_fun(tempx, ys[0], abcd_opt) for tempx in tempxs]
-            tempys = [new_pred_fun(tempx, ys[0], abcdef_opt) for tempx in tempxs]
-            plt.plot(tempxs, tempys)
-            #plt.plot(tempxs, tempys2)
-            plt.show()
+            #plt.scatter(xs, zs)
+            #tempxs = list(range(17))
+            ##tempys = [abcd_opt[0]*tempx + abcd_opt[1] for tempx in tempxs]
+            ##tempys2 = [new_pred_fun(tempx, ys[0], abcd_opt) for tempx in tempxs]
+            #tempys = [new_pred_fun(tempx, ys[0], abcdef_opt) for tempx in tempxs]
+            #plt.plot(tempxs, tempys)
+            ##plt.plot(tempxs, tempys2)
+            #plt.show()
 
 
 
+            plt.figure()
             c = np.array(c)
             plt.scatter(my_predictions, measured, c=c)
             plt.grid()
