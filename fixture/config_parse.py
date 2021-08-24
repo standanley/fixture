@@ -64,7 +64,7 @@ def parse_config(circuit_config_dict):
     # [pin_info, circuit_name, template_name]
     # We don't create signals yet because we don't have template names and
     # create_signal has some checks involving that
-    # temporarily use magma type (disregard bus?) in place of spice pin
+    # Also put magma datatype into pin dict
     io = []
     signal_info_by_cname = {}
     pins = circuit_config_dict['pin']
@@ -93,6 +93,7 @@ def parse_config(circuit_config_dict):
             dt = magma.Out(dt)
         else:
             assert False, f'Direction for {name} must be "input" or "output", not "{direction}"'
+        p['magma_datatype'] = dt
 
         bus_name, indices_parsed, info_parsed, bits = parse_bus(name)
         if len(indices_parsed) == 0:
@@ -108,18 +109,32 @@ def parse_config(circuit_config_dict):
                 for bit_name, location in bits:
                     a[location] = [p, bit_name, None]
                 signal_info_by_cname[bus_name] = a
+    # still missing 2 things to create signals:
+    # magma objects and template names
 
-    # At this point, there are 2 problems with the signals:
-    # 1) the spice_pin entry is just a magma datatype, not the object
-    # 2) the template_name entry is always None
+    # Now create the magma stuff
+    for c_name, signal_info in signal_info_by_cname.items():
+        if isinstance(signal_info, np.ndarray):
+            dtypes = [info[0]['magma_datatype'] for info in signal_info.flatten()
+                      if info is not None and 'magma_datatype' in info[0]]
+            assert len(dtypes) > 0, f'Missing datatype for {c_name}'
+            assert all(dtypes[0] == dt for dt in dtypes[1:]), f'Mismatched datatypes for {c_name}'
+            np_shape = signal_info.shape
+            magma_shape = np_shape[0] if len(np_shape) == 1 else np_shape
+            dt_array = magma.Array[magma_shape, dtypes[0]]
+            io += [c_name, dt_array]
+        else:
+            p, c_name2, _ = signal_info
+            assert c_name == c_name2, 'internal error in config_parse'
+            io += [c_name, p['magma_datatype']]
 
-    # Now create the spice stuff
-    
     class UserCircuit(magma.Circuit):
         name = circuit_config_dict['name']
         IO = io
 
 
+
+    # Now go through the template mapping and
     '''
     issue right now: 
     t: c
@@ -208,13 +223,19 @@ def parse_config(circuit_config_dict):
         print()
 
     # now actually create the signals
-    for cn, c_info in signal_info_by_cname:
+    def my_create_signal(c_info):
+        pin_dict, c_name, t_name = c_info
+        # TODO this needs to split the cname into parts
+        c_pin = getattr(UserCircuit, c_name)
+        return create_signal(pin_dict, c_name, c_pin, t_name)
+    my_create_signal_vec = np.vectorize(my_create_signal)
+
+    for cn, c_info in signal_info_by_cname.items():
         if isinstance(c_info, np.ndarray):
-            abc
+            s_array = my_create_signal_vec(c_info)
+            print(s_array)
         else:
-            s = create_signal(c_info)
-
-
+            s = my_create_signal(c_info)
     # now put the signals into the template arrays
 
         # first, get the spice bits that this actually corresponds to

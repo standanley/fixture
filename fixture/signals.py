@@ -156,6 +156,26 @@ def parse_bus(name):
 
     return bus_name, indices_parsed, info_parsed, names
 
+def parse_name(name):
+    indices = re.findall(re_index + '|' + re_index_range, name)
+    bus_name = re.sub(re_index + '|' + re_index_range, '', name)
+    indices_parsed = []
+    #indices_limits_parsed = []
+    info_parsed = []
+    for index in indices:
+        m = re.match(re_index, index)
+        if m is not None:
+            x = int(index[1:-1])
+            indices_parsed.append(x)
+            #indices_limits_parsed.append(x+1)
+            info_parsed.append(index[0] + index[-1] + 'a')
+        else:
+            m = re.match(re_index_range_groups, index)
+            s, e = int(m.group(2)), int(m.group(3))
+            indices_parsed.append((s, e))
+            #indices_limits_parsed.append(max(s, e)+1)
+            direction = 'a' if e >= s else 'd'
+            info_parsed.append(m.group(1) + m.group(4) + direction)
 
 def expanded(name):
     '''
