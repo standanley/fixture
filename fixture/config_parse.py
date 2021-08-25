@@ -1,7 +1,7 @@
 import os
 import yaml
 import fixture.cfg_cleaner as cfg_cleaner
-from fixture.signals import create_signal, expanded, parse_bus, SignalArray
+from fixture.signals import create_signal, expanded, parse_bus, parse_name, SignalArray
 import magma
 import fault
 import ast
@@ -120,7 +120,7 @@ def parse_config(circuit_config_dict):
             assert len(dtypes) > 0, f'Missing datatype for {c_name}'
             assert all(dtypes[0] == dt for dt in dtypes[1:]), f'Mismatched datatypes for {c_name}'
             np_shape = signal_info.shape
-            magma_shape = np_shape[0] if len(np_shape) == 1 else np_shape
+            magma_shape = np_shape[0] if len(np_shape) == 1 else np_shape[::-1]
             dt_array = magma.Array[magma_shape, dtypes[0]]
             io += [c_name, dt_array]
         else:
@@ -147,11 +147,11 @@ def parse_config(circuit_config_dict):
     I think all cases except the last one
     '''
 
-
+    t_array_entries_by_name = {}
     template_pins = circuit_config_dict['template_pins']
     for t, c in template_pins.items():
-        t_bus_name, t_indices, _, _ = parse_bus(t)
-        c_bus_name, c_indices, _, _ = parse_bus(c)
+        t_bus_name, t_indices, t_info, _ = parse_bus(t)
+        c_bus_name, c_indices, c_info, _ = parse_bus(c)
         c_array = signal_info_by_cname[c_bus_name]
 
         c_shape = getattr(c_array, 'shape', [])
@@ -160,12 +160,16 @@ def parse_config(circuit_config_dict):
         c_indices += [(0, x-1) for x in c_shape[len(c_indices):]]
 
         def get_t_name(t_indices_used):
-            return 'temp' + str(t_indices_used)
+            indices_text = [bs[0] + str(i) + bs[1] for i, bs in
+                       zip(t_indices_used, t_info)]
+            return t_bus_name + ''.join(indices_text)
 
         # match does 2 things:
         # edit c_array to insert template names
         # build up t_array_entries with template array entries
-        t_array_entries = []
+        if c_bus_name not in t_array_entries_by_name:
+            t_array_entries_by_name[c_bus_name] = []
+        t_array_entries = t_array_entries_by_name[c_bus_name]
         def match(t_indices_used, t_indices, c_a, c_indices):
             # if the template array is 1 entry, that entry encompases the whole circuit array
             # if the template array is multiple entries, they must match with the circuit
@@ -214,34 +218,65 @@ def parse_config(circuit_config_dict):
                           c_indices[1:])
         match([], t_indices, c_array, c_indices)
 
-        print(t_array_entries)
-        t_array_indices = list(zip(*t_array_entries))[0]
-        t_array_limits = [max(indices)+1 for indices in zip(*t_array_indices)]
-        t_array = np.zeros(t_array_limits, dtype=object)
-        for t_indices, t_name in t_array_entries:
-            t_array[tuple(t_indices)] = t_name
-        print()
 
     # now actually create the signals
     def my_create_signal(c_info):
         pin_dict, c_name, t_name = c_info
         # TODO this needs to split the cname into parts
-        c_pin = getattr(UserCircuit, c_name)
+        bus_name, indices = parse_name(c_name)
+        c_pin = getattr(UserCircuit, bus_name)
+        for i in indices:
+            assert isinstance(i, int), 'internal error in config_parse'
+            c_pin = c_pin[i]
         return create_signal(pin_dict, c_name, c_pin, t_name)
     my_create_signal_vec = np.vectorize(my_create_signal)
 
+    signals = []
     for cn, c_info in signal_info_by_cname.items():
         if isinstance(c_info, np.ndarray):
             s_array = my_create_signal_vec(c_info)
-            print(s_array)
+            signals.append(s_array)
         else:
             s = my_create_signal(c_info)
+            signals.append(s)
+
+
     # now put the signals into the template arrays
+    # first create ndarrays of the correct size (this is kinda hard)
+    signals_by_template_name = {}
+    for t_bus_name, t_array_entries in t_array_entries_by_name.items():
+        t_array_indices = list(zip(*t_array_entries))[0]
+        t_array_limits = [max(indices)+1 for indices in zip(*t_array_indices)]
+        signals_by_template_name[t_bus_name] = np.zeros(t_array_limits, dtype=object)
 
-        # first, get the spice bits that this actually corresponds to
-        #s_indices = [si for _, si in s_bits]
-        #assert s_bus_name in signal_info_by_cname, f'Unknown circuit pin {s_bus_name} in template pin mapping'
+    # go through signals and place them in the right spots
+    signals_flat = [s for s_or_a in signals for s in
+                    (s_or_a.flatten() if isinstance(s_or_a, np.ndarray)
+                     else [s_or_a])]
+    for s in signals_flat:
+        if s.template_name is not None:
+            t_bus_name, t_indices = parse_name(s.template_name)
+            if len(t_indices) == 0:
+                signals_by_template_name[s.template_name] = s
+            else:
+                a = signals_by_template_name[t_bus_name]
+                a[t_indices] = s
 
+
+    # now we just pack all our info into the signal manager
+
+    print('done')
+
+
+
+
+
+
+
+    '''
+
+    OLD
+    '''
 
 
     # create spice name to template name mapping
