@@ -104,7 +104,7 @@ class Regression():
         '''
 
         template_bus_names = [n for n in test.template.required_ports if
-                       type(test.signals.from_template_name(n)) == list]
+                       type(test.signals.template(n)) == list]
 
         to_be_deleted = set()
         to_be_added = {}

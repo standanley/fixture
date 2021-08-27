@@ -208,140 +208,166 @@ def expanded(name):
 
 
 class SignalManager:
-    def __init__(self, signals=None):
+    def __init__(self, signals, signals_by_template_name):
         if signals is None:
-            signals = []
+            self.signals = []
+        else:
+            self.signals = signals
 
-        self.signals = []
-        for s in signals:
-            self.add_signal(s)
-
-    def search(self, attr, name):
-        # look through signals for buses containing name
-        # return a signal or python list of signals, or list of lists...
-        # attr should be either spice_name or template_name
-
-        result = None
-
-        def updated(result_old, s, indices):
-            if indices == []:
-                assert result_old is None
-                return s
+        # TODO this is broken if there are non-circuit signals here
+        self.signals_by_circuit_name = {}
+        for s_or_a in self.signals:
+            if isinstance(s_or_a, SignalArray):
+                token_signal = s_or_a.flatten()[0]
+                self.signals_by_circuit_name[token_signal.spice_name] = s_or_a
             else:
-                assert result_old is None or type(result_old) == list
-                if result_old is None:
-                    result_old = []
-                result_new = result_old + [None] * max(0, indices[0] - len(result_old) + 1)
-                result_new[indices[0]] = updated(result_new[indices[0]], s, indices[1:])
-                return result_new
+                self.signals_by_circuit_name[s_or_a.spice_name] = s_or_a
 
-        def parse_name(sig_name, goal_name):
-            if sig_name is None:
-                return None
-            test = f'^{re.escape(goal_name)}(({re_index})*)$'
-            m = re.match(test, sig_name)
-            if not m:
-                return None
-            indices_str = m.group(1)
-            indices_split = [g[1:-1] for g in re.findall(re_index, indices_str)]
-            indices = [int(i) for i in indices_split]
-            return indices
+        if signals_by_template_name is None:
+            self.signals_by_template_name = {}
+        else:
+            self.signals_by_template_name = signals_by_template_name
 
-        for s in self.signals:
-            indices = parse_name(getattr(s, attr), name)
-            if indices is not None:
-                result = updated(result, s, indices)
+    def add(self, signal):
+        # TODO should we allow SignalArray here?
+        assert isinstance(signal, (SignalIn, SignalOut))
+        assert signal.spice_name is None
+        assert signal.template_name is not None
 
-        return result
-
-    def from_spice_pin(self, spice_pin):
-        for s in self.signals:
-            if s.spice_pin is spice_pin:
-                return s
-        assert False, f'No signal with spice pin {spice_pin}'
-
-    def from_spice_name(self, spice_name):
-        ans = self.search('spice_name', spice_name)
-        if ans is None:
-            raise KeyError(f'No signal with spice name {spice_name}')
-        return ans
-
-    def from_template_name(self, template_name):
-        ans = self.search('template_name', template_name)
-        if ans is None:
-            raise KeyError(f'No signal with template name {template_name}')
-        return ans
-
-    def add_signal(self, s):
-        # add signal to self.signals
-        # used to update bus info but now that is done every query instead
-        return self.signals.append(s)
+        self.signals.append(signal)
+        self.signals_by_template_name[signal.template_name] = signal
 
     def copy(self):
-        return SignalManager(self.signals)
+        # the intention is for the template writer to add signals to the copy
+        # without changing the original
+        signals_copy = self.signals.copy()
+        #by_circuit_copy = self.signals_by_circuit_name.copy()
+        by_teplate_copy = self.signals_by_template_name.copy()
+        return SignalManager(signals_copy, by_teplate_copy)
 
-    def true_analog(self):
-        # true analog optional pins
-        return [s for s in self.signals_in
-                if s.template_name is None
-                and s.spice_name is not None
-                and s.type_ in ('analog', 'real')
-                and isinstance(s.value, tuple)]
+    def template(self, name):
+        # return a Signal or SignalArray of signals according to template name
+        bus_name, indices = parse_name(name)
+        if len(indices) == 0:
+            return self.signals_by_template_name[name]
+        else:
+            a = self.signals_by_template_name[bus_name]
+            s_or_ss = a[tuple(indices)]
+            return s_or_ss
+
+
+        pass
+
+    def circuit(self, name):
+        # return a Signal or SignalArray of signals according to circuit name
+        pass
+
+    def random(self):
+        # return a list of Signals (always analog) and SignalArrays (always qa)
+        assert False, 'Do we need this?'
+
+    def random_analog(self):
+        def check_s(s):
+            return s.get_random and s.type_ in ['analog', 'real']
+
+        for s_or_a in self.signals:
+            if isinstance(s_or_a, SignalArray):
+                # TODO whole bus at once
+                for s in s_or_a.flatten():
+                    if check_s(s):
+                        yield s
+            elif isinstance(s_or_a, SignalIn):
+                if check_s(s_or_a):
+                    yield s_or_a
+
+    def random_qa(self):
+        def check_s(s):
+            return s.get_random and s.type_ in ['binary_analog', 'bit']
+
+        for s_or_a in self.signals:
+            if isinstance(s_or_a, SignalArray):
+                # TODO whole bus at once
+                for s in s_or_a.flatten():
+                    if check_s(s):
+                        yield s
+            elif isinstance(s_or_a, SignalIn):
+                if check_s(s_or_a):
+                    yield s_or_a
+
+    def auto_set(self):
+        # return a list of signals
+        pass
+
+    def true_digital(self):
+        # return a list of signals
+        pass
+
+    def linear_input(self):
+        # list of optional inputs, signals (a) or SignalArrays (ba)
+        pass
 
     def binary_analog(self):
-        # binary analog optional pins
-        # return as a dictionary like {busname: [pin1, pin0]}
-        bas = {}
-        for s in self.signals_in:
-            if (s.template_name is None
-                and s.spice_name is not None
-                and s.type_ in ('binary_analog',)):
-                bus_name, _ = expanded(s.spice_name)
-                if bus_name not in bas:
-                    bas[bus_name] = self.from_spice_name(bus_name)
-        return bas
+        # TODO get rid of this
+        return {}
+    def true_analog(self):
+        # TODO get rid of this
+        return []
 
-    def __add__(self, o):
-        assert isinstance(o, SignalManager)
-        return SignalManager(self.signals + o.signals)
+
+    def flat(self):
+        signals = []
+        for s_or_a in self.signals:
+            if isinstance(s_or_a, SignalArray):
+                signals += list(s_or_a.flatten())
+            else:
+                signals.append(s_or_a)
+        return signals
 
     def __iter__(self):
         return iter(self.signals)
 
-    def __getattr__(self, item):
-        if item == 'signals_in':
-            return (s for s in self.signals if isinstance(s, SignalIn))
-        if item == 'signals_out':
-            return (s for s in self.signals if isinstance(s, SignalOut))
-        try:
-            return self.from_template_name(item)
-        except KeyError:
-            raise AttributeError
+    #def __getattr__(self, item):
+    #    if item == 'signals_in':
+    #        return (s for s in self.signals if isinstance(s, SignalIn))
+    #    if item == 'signals_out':
+    #        return (s for s in self.signals if isinstance(s, SignalOut))
+    #    try:
+    #        return self.from_template_name(item)
+    #    except KeyError:
+    #        raise AttributeError
 
 
 class SignalArray:
 
-    def __init__(self, indices_limits, info, names, pin_dict):
-        self.array = np.zeros(indices_limits, dtype=object)
+    def __init__(self, signal_array, info):
+        self.array = signal_array
         self.info = info
-        for name, indices in names:
-            pin_dict_copy = pin_dict.copy()
-            pin_dict_copy['spice_name'] = name
-            s = create_signal(pin_dict_copy)
-            self.array[indices] = s
 
-    def flat(self):
-        ss = []
-        for key in self.order:
-            x = self.map[key]
-            if isinstance(x, [SignalIn, SignalOut]):
-                ss.append(x)
-            else:
-                ss += x.flat()
-        return ss
+    #def flat(self):
+    #    ss = []
+    #    for key in self.order:
+    #        x = self.map[key]
+    #        if isinstance(x, [SignalIn, SignalOut]):
+    #            ss.append(x)
+    #        else:
+    #            ss += x.flat()
+    #    return ss
+
+    def map(self, fun):
+        return np.vectorize(fun)(self.array)
+        #return np.array(map(fun, self.array))
 
     def __getitem__(self, key):
-        return self.map[key]
+        slice = self.array[key]
+        if isinstance(slice, np.ndarray):
+            # TODO should slice inherit the info? For the info we currently use, no
+            return SignalArray(slice, {})
+        else:
+            return slice
+
+    def __getattr__(self, item):
+        # if you're stuck in a loop here, self probably has no .array
+        return getattr(self.array, item)
 
     #def __getattr__(self, name):
     #    return getattr(self.token_item, name)

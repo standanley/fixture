@@ -1,7 +1,8 @@
 import os
 import yaml
 import fixture.cfg_cleaner as cfg_cleaner
-from fixture.signals import create_signal, expanded, parse_bus, parse_name, SignalArray
+from fixture.signals import create_signal, expanded, parse_bus, parse_name, \
+    SignalArray, SignalManager
 import magma
 import fault
 import ast
@@ -222,6 +223,9 @@ def parse_config(circuit_config_dict):
     # now actually create the signals
     def my_create_signal(c_info):
         pin_dict, c_name, t_name = c_info
+        # yes, this isn't the best place to edit the pin_dict, but it's okay
+        value = ast.literal_eval(str(pin_dict.get('value', None)))
+        pin_dict['value'] = value
         # TODO this needs to split the cname into parts
         bus_name, indices = parse_name(c_name)
         c_pin = getattr(UserCircuit, bus_name)
@@ -231,10 +235,26 @@ def parse_config(circuit_config_dict):
         return create_signal(pin_dict, c_name, c_pin, t_name)
     my_create_signal_vec = np.vectorize(my_create_signal)
 
+    def extract_bus_info(c_info):
+        info = {}
+        keys = ['bus_info', 'first_one', 'low_order']
+        for pin_dict, c_name, _ in c_info.flatten():
+            for k, v in pin_dict.items():
+                if k in keys:
+                    # we have some bus info
+                    if k in info:
+                        # must match
+                        assert info[k] != v, f'Mismatched bus info in {c_name}'
+                    else:
+                        info[k] = v
+        return info
+
     signals = []
     for cn, c_info in signal_info_by_cname.items():
         if isinstance(c_info, np.ndarray):
-            s_array = my_create_signal_vec(c_info)
+            s_ndarray = my_create_signal_vec(c_info)
+            bus_info = extract_bus_info(c_info)
+            s_array = SignalArray(s_ndarray, bus_info)
             signals.append(s_array)
         else:
             s = my_create_signal(c_info)
@@ -251,7 +271,7 @@ def parse_config(circuit_config_dict):
 
     # go through signals and place them in the right spots
     signals_flat = [s for s_or_a in signals for s in
-                    (s_or_a.flatten() if isinstance(s_or_a, np.ndarray)
+                    (s_or_a.flatten() if isinstance(s_or_a, SignalArray)
                      else [s_or_a])]
     for s in signals_flat:
         if s.template_name is not None:
@@ -262,60 +282,21 @@ def parse_config(circuit_config_dict):
                 a = signals_by_template_name[t_bus_name]
                 a[t_indices] = s
 
+    # and turn the ndarrays into SignalArrays
+    for t_name in list(signals_by_template_name):
+        s_or_a = signals_by_template_name[t_name]
+        if isinstance(s_or_a, np.ndarray):
+            # TODO is there a way that this would need associated info?
+            sa = SignalArray(s_or_a, {})
+            signals_by_template_name[t_name] = sa
+
 
     # now we just pack all our info into the signal manager
-
-    print('done')
-
-
-
-
-
-
-
-    '''
-
-    OLD
-    '''
-
-
-    # create spice name to template name mapping
-    s2t_mapping = {}
-    for template_name, spice_name in template_pins.items():
-        _, template_name_expanded = expanded(template_name)
-        _, spice_name_expanded = expanded(spice_name)
-        def equate(t, s):
-            err_msg = f'Mismatched bus dimensions for {template_name}, {spice_name}'
-            assert type(t) == type(s), err_msg
-            if type(t) == str:
-                s2t_mapping[s] = t
-            else:
-                assert len(t) == len(s), err_msg
-                for t2, s2 in zip(t, s):
-                    equate(t2, s2)
-        equate(template_name_expanded, spice_name_expanded)
-
-    signals = []
-    for pin_name, pin_value in pins.items():
-        magma_name, components = io_signal_info[pin_name]
-        value = ast.literal_eval(str(pin_value.get('value', None)))
-        pin_value['value'] = value
-
-        for component, indices in components:
-            pin_value_component = pin_value.copy()
-            magma_obj = getattr(UserCircuit, magma_name)
-            for i in indices:
-                magma_obj = magma_obj[i]
-
-            pin_value_component['spice_pin'] = magma_obj
-            pin_value_component['spice_name'] = component
-            if component in s2t_mapping:
-                pin_value_component['template_pin'] = s2t_mapping.pop(component)
-
-            signal = create_signal(pin_value_component)
-            signals.append(signal)
-    assert len(s2t_mapping) == 0, f'Unrecognized spice pin "{list(s2t_mapping)[0]}" in template_pin mapping'
+    sm = SignalManager(signals, signals_by_template_name)
 
     template_class_name = circuit_config_dict['template']
     extras = parse_extras(circuit_config_dict['extras'])
-    return UserCircuit, template_class_name, signals, test_config_dict, extras
+    return UserCircuit, template_class_name, sm, test_config_dict, extras
+
+
+

@@ -17,7 +17,7 @@ class SamplerTemplate(TemplateMaster):
 
         # we have to do this before getting input domains, which happens
         # in the call to super
-        extras = args[3]
+        extras = args[2]
         if 'clks' in extras:
             settle = float(extras['clks']['unit']) * float(extras['clks']['period'])
             extras['approx_settling_time'] = settle

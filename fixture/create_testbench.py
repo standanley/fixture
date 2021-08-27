@@ -44,11 +44,14 @@ class Testbench():
         '''
         # TODO don't have a default; force test to set num_samples
         self.num_sample_points = getattr(self.test, 'num_samples', 10)
-        all_signals = self.test.signals
-        random_signals = [s for s in all_signals
-            if isinstance(s, fixture.signals.SignalIn) and s.get_random]
-        random_analog = [s for s in random_signals if s.type_ in ['analog', 'real']]
-        random_ba = [s for s in random_signals if s.type_ in ['binary_analog', 'bit']]
+        #all_signals = self.test.signals
+        #random_signals = [s for s in all_signals
+        #    if isinstance(s, fixture.signals.SignalIn) and s.get_random]
+        #random_analog = [s for s in random_signals if s.type_ in ['analog', 'real']]
+        #random_ba = [s for s in random_signals if s.type_ in ['binary_analog', 'bit']]
+
+        random_analog = list(self.test.signals.random_analog())
+        random_ba = list(self.test.signals.random_qa())
 
         sample_points = fixture.Sampler.get_orthogonal_samples(
             len(random_analog),

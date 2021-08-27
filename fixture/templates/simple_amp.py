@@ -68,7 +68,7 @@ class SimpleAmpTemplate(TemplateMaster):
 
         def input_domain(self):
             # could also use fixture.RealIn(self.in_single.limits, 'my_name')
-            return [self.signals.from_template_name('in_single')]
+            return [self.signals.template('in_single')]
 
         def testbench(self, tester, values):
             self.debug(tester, self.ports.in_single, 1)
