@@ -7,6 +7,9 @@ import magma
 import re
 from ast import literal_eval
 
+from fixture.signals import SignalArray
+
+
 class Regression():
     # statsmodels gets confused if you try to use '1' to mean a column of 
     # ones, so we manually add a column of ones with the following name
@@ -104,7 +107,7 @@ class Regression():
         '''
 
         template_bus_names = [n for n in test.template.required_ports if
-                       type(test.signals.template(n)) == list]
+            isinstance(test.signals.from_template_name(n), SignalArray)]
 
         to_be_deleted = set()
         to_be_added = {}

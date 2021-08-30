@@ -4,6 +4,9 @@ import fault
 from magma import *
 import pytest
 
+from fixture.signals import SignalManager
+
+
 def get_test_signal(template_name, spice_name):
     return signals.SignalIn(
         None,
@@ -48,26 +51,28 @@ class SimpleBufCirc(Circuit):
     io = IO(myin = BitIn,
             myout = BitOut)
 
-mapping = {'in_single': 'myin', 'out_single': 'myout'}
-
 def test_require_required_ports():
     with pytest.raises(AssertionError):
         class BadAmpTemplate(TemplateMaster):
             name = 'forgot to add required_ports'
 
-        t = BadAmpTemplate(SimpleBufCirc, None, None, signals=[])
+        t = BadAmpTemplate(SimpleBufCirc, None, [])
 
 def test_require_good_mapping():
     with pytest.raises(AssertionError):
         signals = [get_test_signal('in_single', 'myin')]
-        t = SimpleBufTemplate(SimpleBufCirc, None, None, signals=signals)
+        mapping = {'in_single': signals[0]}
+        sm = SignalManager(signals, mapping)
+        t = SimpleBufTemplate(SimpleBufCirc, None, sm)
 
 def test_required_port_info():
     signals = [
         get_test_signal('in_single', 'myin'),
         get_test_signal('out_single', 'myout')
     ]
-    t = SimpleBufTemplate(SimpleBufCirc, mapping, None, signals=signals)
+    mapping = {'in_single': signals[0], 'out_single': signals[1]}
+    sm = SignalManager(signals, mapping)
+    t = SimpleBufTemplate(SimpleBufCirc, None, sm)
     text = t.required_port_info()
     # text should at least mention each port
     for port_name in SimpleBufTemplate.required_ports:

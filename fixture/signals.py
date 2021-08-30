@@ -128,7 +128,7 @@ def parse_bus(name):
         m = re.match(re_index, index)
         if m is not None:
             x = int(index[1:-1])
-            indices_parsed.append(x)
+            indices_parsed.append((x,))
             #indices_limits_parsed.append(x+1)
             info_parsed.append(index[0] + index[-1] + 'a')
         else:
@@ -142,6 +142,14 @@ def parse_bus(name):
     def names_flat(indices_details):
         if len(indices_details) == 0:
             return [(bus_name, ())]
+        elif len(indices_details[-1][0]) == 1:
+            (num,), index_info = indices_details[-1]
+            base = names_flat(indices_details[:-1])
+            postfix = (index_info[0] + str(num) + index_info[1], num)
+            ans = []
+            for basename, baseindices in base:
+                ans.append((basename + postfix[0], baseindices + (postfix[1],)))
+            return ans
         else:
             (s, e), index_info = indices_details[-1]
             base = names_flat(indices_details[:-1])
@@ -245,7 +253,7 @@ class SignalManager:
         by_teplate_copy = self.signals_by_template_name.copy()
         return SignalManager(signals_copy, by_teplate_copy)
 
-    def template(self, name):
+    def from_template_name(self, name):
         # return a Signal or SignalArray of signals according to template name
         bus_name, indices = parse_name(name)
         if len(indices) == 0:
@@ -332,7 +340,7 @@ class SignalManager:
         #if item == 'signals_out':
         #    return (s for s in self.signals if isinstance(s, SignalOut))
         try:
-            return self.template(item)
+            return self.from_template_name(item)
         except KeyError:
             raise AttributeError
 

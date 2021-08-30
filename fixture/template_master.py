@@ -16,7 +16,7 @@ class TemplateMaster():
         def __getattr__(self, name):
             if name == '__len__':
                 assert False, 'unexpected, who is asking?'
-            signals = self.sm.template(name)
+            signals = self.sm.from_template_name(name)
 
             def get_spice(s):
                 return s.spice_pin if hasattr(s, 'spice_pin') else None
@@ -72,7 +72,7 @@ class TemplateMaster():
         '''
         for port_name in self.required_ports:
             try:
-                self.signals.template(port_name)
+                self.signals.from_template_name(port_name)
             except KeyError:
                 assert False, 'Did not associate required port %s'%port_name
 

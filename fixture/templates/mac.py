@@ -42,9 +42,9 @@ class MACTemplate(TemplateMaster):
             return f'_d{word}_{data_bit}_w{word}_{weight_bit}'
 
         def input_domain(self):
-            d = [p for int4 in self.signals.template('d') for p in int4]
+            d = [p for int4 in self.signals.from_template_name('d') for p in int4]
             W = [p for int4
-                 in self.signals.template('W') for p in int4]
+                 in self.signals.from_template_name('W') for p in int4]
             return d + W
 
         def testbench(self, tester, values):
