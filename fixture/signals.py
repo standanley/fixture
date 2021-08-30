@@ -326,15 +326,15 @@ class SignalManager:
     def __iter__(self):
         return iter(self.signals)
 
-    #def __getattr__(self, item):
-    #    if item == 'signals_in':
-    #        return (s for s in self.signals if isinstance(s, SignalIn))
-    #    if item == 'signals_out':
-    #        return (s for s in self.signals if isinstance(s, SignalOut))
-    #    try:
-    #        return self.from_template_name(item)
-    #    except KeyError:
-    #        raise AttributeError
+    def __getattr__(self, item):
+        #if item == 'signals_in':
+        #    return (s for s in self.signals if isinstance(s, SignalIn))
+        #if item == 'signals_out':
+        #    return (s for s in self.signals if isinstance(s, SignalOut))
+        try:
+            return self.template(item)
+        except KeyError:
+            raise AttributeError
 
 
 class SignalArray:

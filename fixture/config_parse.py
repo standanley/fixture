@@ -168,9 +168,9 @@ def parse_config(circuit_config_dict):
         # match does 2 things:
         # edit c_array to insert template names
         # build up t_array_entries with template array entries
-        if c_bus_name not in t_array_entries_by_name:
-            t_array_entries_by_name[c_bus_name] = []
-        t_array_entries = t_array_entries_by_name[c_bus_name]
+        if t_bus_name not in t_array_entries_by_name:
+            t_array_entries_by_name[t_bus_name] = []
+        t_array_entries = t_array_entries_by_name[t_bus_name]
         def match(t_indices_used, t_indices, c_a, c_indices):
             # if the template array is 1 entry, that entry encompases the whole circuit array
             # if the template array is multiple entries, they must match with the circuit
