@@ -22,7 +22,7 @@ class PhaseBlenderTemplate_C(TemplateMaster):
 
         def input_domain(self):
             # offset range is in units of "periods", so 0.5 means in_a and in_b are in quadrature
-            offset_range = self.extras.get('phase_offset_range', (0, .5))
+            offset_range = self.extras.get('phase_offset_range', (0, .4))
             freq = float(self.extras['frequency'])
             offset_delay_range = tuple((offset / freq for offset in offset_range))
             '''
@@ -45,7 +45,7 @@ class PhaseBlenderTemplate_C(TemplateMaster):
 
             self.debug(tester, self.ports.in_a, 1/freq*100)
             self.debug(tester, self.ports.in_b, 1/freq*100)
-            #self.debug(tester, self.ports.out, 1/freq*100)
+            self.debug(tester, self.ports.out, 1/freq*100)
             #self.debug(tester, self.template.dut.thm_sel_bld[0], 1/freq*100)
             #self.debug(tester, self.template.dut.sel[0], 1/freq*100)
 
@@ -65,34 +65,13 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             #for i in range(len(self.ports.sel)):
             #    tester.poke(self.ports.sel[i], values[self.ports.sel[i]])
 
-            # wait 5 cycles for things to settle
-            tester.delay(5 / freq)
+            # wait 3 cycles for things to settle
+            # we wait slightly more to avoid cutting off a slow edge
+            tester.delay(3.05 / freq)
 
-            # TODO: what was this next line for?
-            #tester.expect(self.ports.out, 0, save_for_later=True)
-
-            # these are just to force a wave dump on these nodes
-            # tester.read(self.ports.in_a)
-            # tester.read(self.ports.in_b)
-            # tester.read(self.ports.sel[0])
-            # tester.read(self.ports.sel[1])
-            # tester.read(self.ports.sel[2])
-            #tester.expect(self.ports.in_a, 0, save_for_later=True)
-            #tester.expect(self.ports.in_b, 0, save_for_later=True)
-            #tester.expect(self.ports.sel[0], 0, save_for_later=True)
-            #tester.expect(self.ports.sel[1], 0, save_for_later=True)
-            #tester.expect(self.ports.sel[2], 0, save_for_later=True)
-
-
-            #out_phase = tester.get_value(self.ports.out, params={
-            #    'style': 'phase',
-            #    'ref': self.ports.in_b
-            #    })
-            #out_phase = None
-            tester.delay(2/freq)
             tester.poke(self.ports.in_a, 0)
             tester.poke(self.ports.in_b, 0)
-            tester.delay(2/freq)
+            tester.delay(1.5 / freq)
             in_b_last = tester.get_value(self.ports.in_b, params={
                 'style': 'edge',
                 'forward': False,
@@ -153,7 +132,7 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             vectors = data.exog
             measured = data.endog
             predictions = model.predict()
-            my_predictions = [sum(vector) for vector in vectors]
+            #my_predictions = [sum(vector) for vector in vectors]
 
             def get_color(vector):
                 def temp(x):
@@ -161,14 +140,18 @@ class PhaseBlenderTemplate_C(TemplateMaster):
                 return [temp(x) for x in vector[1:5]]
             c = [get_color(vector) for vector in vectors]
 
-            xs = [sum(v[len(v)//2+1:]) for v in vectors]
+
+            therm_columns = [i for i, name in enumerate(data.param_names)
+                             if 'const_1:' in name and 'in_phase_delay' not in name]
+            #xs_old = [sum(v[len(v)//2+1:]) for v in vectors]
+            xs = [sum(v[therm_columns]) for v in vectors]
             ys = [v[0] for v in vectors]
             zs = measured
             xs = np.array(xs)
             ys = np.array(ys)
             zs = np.array(zs)
 
-            # linear regression
+            # linear regression with thermometer
             # lin_pred = a*(x*y) + b*x + c*y + d
             dat = np.zeros((len(xs), 4))
             dat[:, 0] = (xs * ys)
@@ -177,6 +160,18 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             dat[:, 3] = np.ones((len(xs)))
             lin = np.linalg.inv(dat.T @ dat) @ dat.T @ zs
             preds_lin = dat @ lin
+
+            # thermometer only
+            dat = np.zeros((len(xs), 2))
+            dat[:, 0] = xs
+            dat[:, 1] = np.ones((len(xs)))
+            therm_only = np.linalg.inv(dat.T @ dat) @ dat.T @ zs
+            preds_therm_only = dat @ therm_only
+
+
+            print('x values')
+            print(data)
+
 
 
 
@@ -226,35 +221,57 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             #e_opt = sum(((zs-preds_opt)*1e10)**2)
             #ax.set_title(f'Predictions with new model, {e_opt:.3e}')
 
+            def error(zs_pred):
+                return (sum((z-zp)**2 for z,zp in zip(zs, zs_pred)) / len(zs)) ** 0.5
 
             plt.figure(3)
             plt.scatter(xs, zs)
             plt.title('collected data, therm on x axis')
+            plt.grid()
 
             plt.figure(4)
             plt.plot(xs, zs, 'o')
             plt.plot(xs, preds_lin, 'x')
-            plt.title('Linear model with therm constraint')
+            err = f'\nError: {error(preds_lin):.3e}'
+            plt.title('Thermometer: out = A*therm*indiff + B*therm + C*indiff + D' + err)
+            plt.grid()
 
             plt.figure(5)
             plt.plot(xs, zs, 'o')
+            plt.plot(xs, preds_therm_only, 'x')
+            err = f'\nError: {error(preds_therm_only):.3e}'
+            plt.title('Thermometer only: out = A*therm + B' + err)
+            plt.grid()
+
+            plt.figure(6)
+            plt.plot(xs, zs, 'o')
             plt.plot(xs, predictions, 'x')
-            plt.title('Linear model without therm constraint')
+            err = f'\nError: {error(predictions):.3e}'
+            #plt.title('General: out = (A*sel[0] + B*sel[1] + ...)*indiff + (C*sel[0] + D*sel[1] + ...)' + err)
+            plt.title(f'fixture model (per-bit weights, {vectors.shape[1]} dimensions)'+err)
+            plt.grid()
 
-            fig2 = plt.figure(6)
+            fig1 = plt.figure(7)
+            ax1 = fig1.add_subplot(111, projection='3d')
+            ax1.scatter3D(xs, ys, zs, color='b')
+            ax1.scatter3D(xs, ys, preds_lin, color='g')
+            ax1.set_title('Thermometer: out = A*therm*indiff + B*therm + C*indiff + D' + err)
+
+
+
+            fig2 = plt.figure(8)
             ax2 = fig2.add_subplot(111, projection='3d')
-            ax2.plot(xs, ys, zs, color='b')
-            ax2.plot(xs, ys, preds_lin, color='g')
-            e_lin = sum(((zs - preds_lin)*1e10)**2)
-            ax2.set_title(f'Predictions with linear model from therm, {e_lin:.3e}')
+            ax2.scatter3D(xs, ys, zs, color='b')
+            ax2.scatter3D(xs, ys, preds_therm_only, color='c')
+            #e_fix = sum(((zs - predictions)*1e10)**2)
+            ax2.set_title('Thermometer only: out = A*therm + B')
 
-
-            fig2 = plt.figure(7)
-            ax2 = fig2.add_subplot(111, projection='3d')
-            ax2.scatter(xs, ys, zs, color='b')
-            ax2.scatter(xs, ys, predictions, color='c')
-            e_fix = sum(((zs - predictions)*1e10)**2)
-            ax2.set_title(f'Predictions from fixture (no therm constraint), {e_fix:.3e}')
+            fig3 = plt.figure(9)
+            ax3 = fig3.add_subplot(111, projection='3d')
+            ax3.scatter3D(xs, ys, zs, color='b')
+            ax3.scatter3D(xs, ys, predictions, color='r')
+            #e_fix = sum(((zs - predictions)*1e10)**2)
+            ax3.set_title(f'fixture model (per-bit weights, {vectors.shape[1]} dimensions)')
             plt.show()
 
             #plt.scatter(xs, zs)
@@ -268,19 +285,20 @@ class PhaseBlenderTemplate_C(TemplateMaster):
 
 
 
-            plt.figure()
-            c = np.array(c)
-            plt.scatter(my_predictions, measured, c=c)
-            plt.grid()
-            plt.xlabel('Prediction based on input and fits')
-            plt.ylabel('Measured output')
-            plt.show()
-            c = np.array(c)
-            plt.scatter(predictions, measured, c=c)
-            plt.grid()
-            plt.xlabel('Prediction based on input and fits')
-            plt.ylabel('Measured output')
-            plt.show()
+            #plt.figure()
+            #c = np.array(c)
+            #plt.scatter(my_predictions, measured, c=c)
+            #plt.grid()
+            #plt.xlabel('Prediction based on input and fits')
+            #plt.ylabel('Measured output')
+            #plt.show()
+            #c = np.array(c)
+            #plt.scatter(predictions, measured, c=c)
+            #plt.grid()
+            #plt.xlabel('Prediction based on input and fits')
+            #plt.ylabel('Measured output')
+            #plt.show()
+
             return {}
 
     tests = [Test1]

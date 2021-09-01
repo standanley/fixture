@@ -189,6 +189,7 @@ def debug(test):
 
             if not self.debug_plot_shown:
                 import matplotlib.pyplot as plt
+                plt.figure(1)
                 leg = []
                 bump = 0
                 for p, r in debug_dict:
@@ -197,7 +198,7 @@ def debug(test):
                     bump += 0.0 # useful for separating clock signals
                 plt.grid()
                 plt.legend(leg)
-                plt.show()
+                #plt.show()
                 self.debug_plot_shown = True
 
             return super().analysis(reads_orig)
