@@ -266,13 +266,63 @@ class SignalManager:
 
         pass
 
+    def from_circuit_pin(self, pin):
+        # pin is a magma object
+        for x in self.signals:
+            if isinstance(x, SignalArray):
+                for s in x.flatten():
+                    if s.spice_pin is pin:
+                        return s
+            else:
+                if x.spice_pin is pin:
+                    return x
+
     def circuit(self, name):
         # return a Signal or SignalArray of signals according to circuit name
         pass
 
+    def inputs(self):
+        for s in self.signals:
+            if isinstance(s, SignalIn):
+                yield s
+            elif isinstance(s, SignalArray):
+                all_in = all(isinstance(x, SignalIn) for x in s.flatten())
+                all_out = all(isinstance(x, SignalOut) for x in s.flatten())
+                if all_in:
+                    yield s
+                else:
+                    assert all_out, f'Mixed input and output in {s}'
+
     def random(self):
         # return a list of Signals (always analog) and SignalArrays (always qa)
-        assert False, 'Do we need this?'
+        # basically we want to organize these the way they will be randomly
+        # sampled; so each object in the list is one dimension
+        ans = []
+        for s in self.inputs():
+            if isinstance(s, SignalArray):
+                all_qa = all(x.type_ == 'binary_analog' for x in s.flatten())
+                #all_a = all(x.type_ in ['analog', 'real'] for x in s.flatten())
+                all_random = all(x.get_random for x in s.flatten())
+                no_random = all(not x.get_random for x in s.flatten())
+                if all_qa:
+                    if all_random:
+                        ans.append(s)
+                    else:
+                        assert no_random, f'Mixed random and not in {s}'
+                else:
+                    # TODO doesn't catch if there are still some a in s
+                    ans += list([x for x in s.flatten() if x.get_random])
+            else:
+                if not s.get_random:
+                    continue
+                if s.type_ == 'binary_analog':
+                    # strange to have a single qa, but not an error
+                    temp = SignalArray(np.array([s]), {})
+                    ans.append(temp)
+                else:
+                    ans.append(s)
+        return ans
+
 
     def random_analog(self):
         def check_s(s):

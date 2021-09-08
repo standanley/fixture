@@ -69,7 +69,7 @@ def parse_config(circuit_config_dict):
     io = []
     signal_info_by_cname = {}
     pins = circuit_config_dict['pin']
-    pin_params = ['datatype', 'direction', 'value', 'electricaltype']
+    pin_params = ['datatype', 'direction', 'value', 'electricaltype', 'bus_type', 'first_one']
     digital_types = ['bit', 'binary_analog', 'true_digital']
     analog_types = ['real', 'analog']
     for name, p in pins.items():
@@ -237,16 +237,19 @@ def parse_config(circuit_config_dict):
 
     def extract_bus_info(c_info):
         info = {}
-        keys = ['bus_info', 'first_one', 'low_order']
+        acceptable = {'bus_type': ['any', 'thermometer', 'binary', 'one_hot'],
+                      'first_one': ['low', 'high']}
         for pin_dict, c_name, _ in c_info.flatten():
             for k, v in pin_dict.items():
-                if k in keys:
-                    # we have some bus info
-                    if k in info:
-                        # must match
-                        assert info[k] != v, f'Mismatched bus info in {c_name}'
-                    else:
-                        info[k] = v
+                # TODO these assertions are not what we actually want
+                #assert k in acceptable, f'Unrecognized bus_info {k}, must be one of {list(acceptable.keys())}'
+                #assert v in acceptable[k], f'Unrecognized option for bus_info {k}: {v}, must be one of {acceptable[k]}'
+                # we have some bus info
+                if k in info:
+                    # must match
+                    assert info[k] == v, f'Mismatched bus info in {c_name}'
+                else:
+                    info[k] = v
         return info
 
     signals = []

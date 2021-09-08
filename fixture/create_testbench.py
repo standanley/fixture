@@ -50,6 +50,11 @@ class Testbench():
         #random_analog = [s for s in random_signals if s.type_ in ['analog', 'real']]
         #random_ba = [s for s in random_signals if s.type_ in ['binary_analog', 'bit']]
 
+
+        random = self.test.signals.random()
+        self.test_vectors = fixture.Sampler.get_samples(random, self.num_sample_points)
+        return
+        # TODO delete old stuff below this
         random_analog = list(self.test.signals.random_analog())
         random_ba = list(self.test.signals.random_qa())
 
