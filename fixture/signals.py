@@ -397,9 +397,10 @@ class SignalManager:
 
 class SignalArray:
 
-    def __init__(self, signal_array, info):
+    def __init__(self, signal_array, info, bus_name=None):
         self.array = signal_array
         self.info = info
+        self.bus_name = bus_name
 
     #def flat(self):
     #    ss = []

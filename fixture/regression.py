@@ -98,7 +98,22 @@ class Regression():
         # discrepency between the way spice and magma do braces
         # also Patsy won't use < in a variable name
         temp = s.replace('<', '_').replace('>', '_')
-        return temp.replace('[', '_').replace(']', '_')
+        final = temp.replace('[', '_').replace(']', '_')
+        return final
+
+    def _clean_string(self, s):
+        cleaned = Regression.clean_string(s)
+        self.name_mapping[cleaned] = s
+        return cleaned
+
+    def revert_names(self, text):
+        # look for cleaned names in text and replace them with originals
+        # sometimes the text is an expression incuding the names, so it's not
+        # good enough to look for the text in the name_mapping keys
+        # This is very brute-force
+        for new, old in self.name_mapping.items():
+            text = text.replace(new, old)
+        return text
 
     def convert_required_ba(self, test, rhs):
         '''
@@ -120,7 +135,7 @@ class Regression():
                     # the required bus is in this term
                     to_be_deleted.add(key_term)
                     for bit in test.signals.from_template_name(n):
-                        bit_name = self.clean_string(bit.template_name)
+                        bit_name = self._clean_string(bit.template_name)
                         new_key_term = re.sub(search_str, bit_name, key_term)
                         new_param = rhs[key_term] + self.component_tag + bit_name
                         to_be_added[new_key_term] = new_param
@@ -162,10 +177,11 @@ class Regression():
         '''
 
         self.component_tag = '_component_'
+        self.name_mapping = {}
         # translate from circuit names to template names
         data = {self.regression_name(k): v for k, v in data.items()}
         data[self.one_literal] = [1 for _ in list(data.values())[0]]
-        data = {self.clean_string(k):v for k,v in data.items()}
+        data = {self._clean_string(k):v for k,v in data.items()}
         self.df = pandas.DataFrame(data)
 
         self.consts ={}
@@ -218,6 +234,13 @@ class Regression():
 
         self.condense_required_ba(results)
 
+        # change regression names back to spice names
+        for param in list(results.keys()):
+            terms = results[param]
+            terms_new = {self.revert_names(term): coef
+                         for term, coef in terms.items()}
+            results[param] = terms_new
+
         # TODO dump res to a yaml file
         self.results = results
         self.results_models = results_models
@@ -231,7 +254,7 @@ class Regression():
 
         # the constant term should already be included as constant_ones somewhere
         formula = '%s ~ %s -1' % (lhs, ' + '.join(terms))
-        return self.clean_string(formula)
+        return self._clean_string(formula)
         
     # @classmethod
     def parse_coefs(self, results, rhs):

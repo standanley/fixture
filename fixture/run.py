@@ -73,7 +73,7 @@ def _run(circuit_config_dict):
         if no_run:
             print('SKIPPING SIMULATION, using results from last time')
             # I pass it in this dict because no_run=False doesn't work for all simulators
-            no_run_dict['no_run'] = False
+            no_run_dict['no_run'] = True
 
         tester.compile_and_run(test_config_dict['target'],
             simulator=test_config_dict['simulator'],
