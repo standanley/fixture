@@ -1,0 +1,8 @@
+target: system-verilog
+simulator: ncsim
+timescale: "1fs/1fs"
+
+
+# I think this is required for all systemverilog that uses read_domain
+dump_waveforms: True
+    

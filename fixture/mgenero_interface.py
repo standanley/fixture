@@ -151,13 +151,35 @@ def create_interface(template, collateral_dict):
         if isinstance(s, SignalArray):
             circuit_names = [x.spice_name is not None for x in s.flatten()]
             if any(circuit_names):
-                pins[s.bus_name] = create_pin_array(s)
+                # TODO I think there's a bug here with required qa. Something
+                # about using the circuit bus name as the key in the next line
+                # when it should be the template name - not sure exactly how it
+                # should work though since I don't have any required qa models
+                template_names = [x.template_name is not None for x in s.flatten()]
+                if any(template_names):
+                    # We want the circuit names in the verilog
+                    # but the only way to communicate the template names to
+                    # mgenero is one bit at a time
+                    # TODO what to do for a template-required bus in the model?
+                    def clean_name(name):
+                        # make this name friendly for verilog
+                        bad_chars = '[]<>'
+                        for c in bad_chars:
+                            name = name.replace(c, '_')
+                        return name
+                    for bit in s.flatten():
+                        # TODO doesn't work for mixed template and not in bus
+                        pins[bit.template_name] = create_pin(bit)
+                        pins[bit.template_name]['name'] = clean_name(bit.spice_name)
+                else:
+                    pins[s.bus_name] = create_pin_array(s)
         else:
             if s.spice_name is not None:
-                # TODO the old version of this code prefered the template name
-                #  for the dictionary key, but I'm not sure why
-                #name = s.template_name if s.template_name is not None else s.spice_name
-                pins[s.spice_name] = create_pin(s)
+                # use the template name as the dictionary key here, and the
+                # circuit name as the 'name' entry in the dict. Then mgenero
+                # will do the correct translation in the verilog
+                name = s.template_name if s.template_name is not None else s.spice_name
+                pins[name] = create_pin(s)
         '''
         if (isinstance(s, SignalIn) or isinstance(s, SignalOut)) and s.spice_name is not None:
             # TODO I forget why we prefer template name here...

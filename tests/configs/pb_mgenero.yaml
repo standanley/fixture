@@ -1,5 +1,5 @@
 build_folder: ./mgenero_build
-template_name: ../phase_blender.sv
+template_name: ../phase_blender2.sv
 
 modelparam:
   max_delay:

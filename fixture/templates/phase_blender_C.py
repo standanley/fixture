@@ -17,7 +17,7 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             #'out_delay': {'offset': '1'}
             #'out_delay': {'offset_a': 'sel_therm', 'offset_b': '1'}
         }
-        num_samples = 50
+        num_samples = 300
 
 
         def input_domain(self):
@@ -52,6 +52,7 @@ class PhaseBlenderTemplate_C(TemplateMaster):
 
             in_phase_delay = values['in_phase_delay']
 
+            # the clock starts just after its falling edge
             tester.poke(self.ports.in_a, 0, delay={
                 'freq': freq,
                 })
@@ -59,40 +60,25 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             tester.poke(self.ports.in_b, 0, delay={
                 'freq': freq,
                 })
+            tester.delay(1/freq - in_phase_delay)
 
-            # TODO get this next line to work
-            #tester.poke(self.ports.sel, values['sel'])
-            #for i in range(len(self.ports.sel)):
-            #    tester.poke(self.ports.sel[i], values[self.ports.sel[i]])
+            # 2 run cycles should be enough but... for safety
+            run_cycles = 3
+            settle_cycles = 3
 
-            # wait 5 cycles for things to settle
-            tester.delay(5 / freq)
+            # we want to turn off just a touch before the next rising edge
+            # to avoid ambiguity if 2 edges fall on top of each other
+            turn_off_shift = 0.01
+            tester.delay((run_cycles - 1 - turn_off_shift) / freq + in_phase_delay)
 
-            # TODO: what was this next line for?
-            #tester.expect(self.ports.out, 0, save_for_later=True)
-
-            # these are just to force a wave dump on these nodes
-            # tester.read(self.ports.in_a)
-            # tester.read(self.ports.in_b)
-            # tester.read(self.ports.sel[0])
-            # tester.read(self.ports.sel[1])
-            # tester.read(self.ports.sel[2])
-            #tester.expect(self.ports.in_a, 0, save_for_later=True)
-            #tester.expect(self.ports.in_b, 0, save_for_later=True)
-            #tester.expect(self.ports.sel[0], 0, save_for_later=True)
-            #tester.expect(self.ports.sel[1], 0, save_for_later=True)
-            #tester.expect(self.ports.sel[2], 0, save_for_later=True)
-
-
-            #out_phase = tester.get_value(self.ports.out, params={
-            #    'style': 'phase',
-            #    'ref': self.ports.in_b
-            #    })
-            #out_phase = None
-            tester.delay(2/freq)
             tester.poke(self.ports.in_a, 0)
             tester.poke(self.ports.in_b, 0)
-            tester.delay(2/freq)
+
+
+            # now we wait for the output edge to settle
+            tester.delay((settle_cycles + turn_off_shift)/freq - in_phase_delay)
+
+
             in_b_last = tester.get_value(self.ports.in_b, params={
                 'style': 'edge',
                 'forward': False,
@@ -106,7 +92,9 @@ class PhaseBlenderTemplate_C(TemplateMaster):
                 'rising': True
             })
 
-            # wait a touch longer because I had issues when the simulation ended exactly as the measurement was taken
+            # wait a touch longer so our read doesn't happen on the next one's
+            # initial rising edge
+            tester.delay(0.1 / freq)
             return [in_b_last, out_last]
 
         def analysis(self, reads):
@@ -131,7 +119,7 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             return results
 
         def post_regression(self, regression_models):
-            return {}
+            #  return {}
             import numpy as np
 
             def new_pred_fun(x, dt, abcdef):
@@ -161,6 +149,7 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             c = [get_color(vector) for vector in vectors]
 
             xs = [sum(v[len(v)//2+1:]) for v in vectors]
+            bits = [v[len(v)//2+1:] for v in vectors]
             ys = [v[0] for v in vectors]
             zs = measured
             xs = np.array(xs)
@@ -175,6 +164,7 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             dat[:, 2] = (ys)
             dat[:, 3] = np.ones((len(xs)))
             lin = np.linalg.inv(dat.T @ dat) @ dat.T @ zs
+            #lin = np.zeros((4, len(xs)))
             preds_lin = dat @ lin
 
 
@@ -213,11 +203,14 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             preds_0 = [new_pred_fun(x, y, abcdef0) for x, y in zip(xs, ys)]
 
 
+
+
+
             # PLOTS
 
             import matplotlib.pyplot as plt
 
-            fig = plt.figure(1)
+            fig = plt.figure(2)
             ax = fig.add_subplot(111, projection='3d')
 
             ax.scatter(xs, ys, zs, color='b')
@@ -227,38 +220,45 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             ax.set_title(f'Predictions with new model, {e_opt:.3e}')
 
 
-            fig2 = plt.figure(2)
+            fig2 = plt.figure(3)
             ax2 = fig2.add_subplot(111, projection='3d')
             ax2.scatter(xs, ys, zs, color='b')
             ax2.scatter(xs, ys, preds_lin, color='g')
             e_lin = sum(((zs - preds_lin)*1e10)**2)
             ax2.set_title(f'Predictions with linear model, {e_lin:.3e}')
 
+            fig2 = plt.figure(4)
+            ax2 = fig2.add_subplot(111, projection='3d')
+            ax2.scatter(xs, ys, zs, color='b')
+            ax2.scatter(xs, ys, predictions, color='c')
+            e_fix = sum(((zs - predictions)*1e10)**2)
+            ax2.set_title(f'Predictions from fixture, {e_fix:.3e}')
+
             plt.show()
 
-            plt.scatter(xs, zs)
-            tempxs = list(range(17))
-            #tempys = [abcd_opt[0]*tempx + abcd_opt[1] for tempx in tempxs]
-            #tempys2 = [new_pred_fun(tempx, ys[0], abcd_opt) for tempx in tempxs]
-            tempys = [new_pred_fun(tempx, ys[0], abcdef_opt) for tempx in tempxs]
-            plt.plot(tempxs, tempys)
-            #plt.plot(tempxs, tempys2)
-            plt.show()
+            #plt.scatter(xs, zs)
+            #tempxs = list(range(17))
+            ##tempys = [abcd_opt[0]*tempx + abcd_opt[1] for tempx in tempxs]
+            ##tempys2 = [new_pred_fun(tempx, ys[0], abcd_opt) for tempx in tempxs]
+            #tempys = [new_pred_fun(tempx, ys[0], abcdef_opt) for tempx in tempxs]
+            #plt.plot(tempxs, tempys)
+            ##plt.plot(tempxs, tempys2)
+            #plt.show()
 
 
 
-            c = np.array(c)
-            plt.scatter(my_predictions, measured, c=c)
-            plt.grid()
-            plt.xlabel('Prediction based on input and fits')
-            plt.ylabel('Measured output')
-            plt.show()
-            c = np.array(c)
-            plt.scatter(predictions, measured, c=c)
-            plt.grid()
-            plt.xlabel('Prediction based on input and fits')
-            plt.ylabel('Measured output')
-            plt.show()
+            #c = np.array(c)
+            #plt.scatter(my_predictions, measured, c=c)
+            #plt.grid()
+            #plt.xlabel('Prediction based on input and fits')
+            #plt.ylabel('Measured output')
+            #plt.show()
+            #c = np.array(c)
+            #plt.scatter(predictions, measured, c=c)
+            #plt.grid()
+            #plt.xlabel('Prediction based on input and fits')
+            #plt.ylabel('Measured output')
+            #plt.show()
             return {}
 
     tests = [Test1]

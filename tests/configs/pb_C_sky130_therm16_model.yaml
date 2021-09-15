@@ -1,47 +1,51 @@
 name: phase_blender
-filepath: ../spice/pb_sky130_therm16.sp
+filepath: ./mgenero_build/final.sv
 template: PhaseBlenderTemplate_C
 pin:
     vdd:
         direction: input
         datatype: real
-        value: 1.8
+        value: 1.2
 #     gnd:
 #         direction: input
 #         datatype: real
 #         value: 0
 
-    ph_in[0:1]:
-        direction: input
-        datatype: bit
+    # TODO test this when I've written int
     #ph_in[1]:
     #    direction: input
     #    datatype: bit
     #ph_in[0]:
     #    direction: input
     #    datatype: bit
+    ph_in_0_:
+        direction: input
+        datatype: bit
+    ph_in_1_:
+        direction: input
+        datatype: bit
+
 
     ph_out:
         direction: output
         datatype: bit
-    thm_sel_bld[0:15]:
+    thm_sel_bld[15:0]:
         direction: input
         datatype: binary_analog
         bus_type: thermometer
-        #bus_type: binary
 
 template_pins:
-    in_a: ph_in[0]
-    in_b: ph_in[1]
-    out: ph_out
+   in_a: ph_in_0_
+   in_b: ph_in_1_
+   out: ph_out
 
 extras:
     frequency: 500e6
     #phase_offset_range: [.2, 0.2]
-    #phase_offset_range: [.2, 0.3]
-    phase_offset_range: [.08, 0.12]
+    phase_offset_range: [0.08, 0.12]
+    #phase_offset_range: [.10, 0.100001]
 
 mgenero: pb_mgenero.yaml
 
-#test_config_file: ngspice.yaml
-test_config_file: ngspice_sky130.yaml
+test_config_file: ncsim.yaml
+#test_config_file: vcs.yaml
