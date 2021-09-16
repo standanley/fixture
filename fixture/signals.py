@@ -222,13 +222,19 @@ class SignalManager:
         else:
             self.signals = signals
 
-        # TODO this is broken if there are non-circuit signals here
         self.signals_by_circuit_name = {}
         for s_or_a in self.signals:
             if isinstance(s_or_a, SignalArray):
                 token_signal = s_or_a.flatten()[0]
-                self.signals_by_circuit_name[token_signal.spice_name] = s_or_a
+                if token_signal.spice_name is None:
+                    continue
+                # TODO I'm making some assumptions here, so this assert might
+                # fail in some weird cases
+                assert s_or_a.bus_name in token_signal.spice_name
+                self.signals_by_circuit_name[s_or_a.bus_name] = s_or_a
             else:
+                if s_or_a.spice_name == None:
+                    continue
                 self.signals_by_circuit_name[s_or_a.spice_name] = s_or_a
 
         if signals_by_template_name is None:
@@ -278,13 +284,12 @@ class SignalManager:
                     return x
 
     def from_circuit_name(self, name):
-        assert False, 'todo'
         # return a Signal or SignalArray of signals according to template name
         bus_name, indices = parse_name(name)
         if len(indices) == 0:
-            return self.signals_by_template_name[name]
+            return self.signals_by_circuit_name[name]
         else:
-            a = self.signals_by_template_name[bus_name]
+            a = self.signals_by_circuit_name[bus_name]
             s_or_ss = a[tuple(indices)]
             return s_or_ss
 
