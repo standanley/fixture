@@ -119,7 +119,7 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             return results
 
         def post_regression(self, regression_models):
-            #  return {}
+            return {}
             import numpy as np
 
             def new_pred_fun(x, dt, abcdef):

@@ -172,42 +172,52 @@ def parse_config(circuit_config_dict):
             t_array_entries_by_name[t_bus_name] = []
         t_array_entries = t_array_entries_by_name[t_bus_name]
         def match(t_indices_used, t_indices, c_a, c_indices):
-            # if the template array is 1 entry, that entry encompases the whole circuit array
+            # if the template array is 1 entry, that entry encompasses the whole circuit array
             # if the template array is multiple entries, they must match with the circuit
             #    entries 1 to 1 until the template entries run out of dimensions
             #    if circuit runs out of dimensions first, that's an error
             # Dimensions that aren't a range are kinda skipped in this mapping
             #print('match called with', t_indices_used, t_indices, getattr(c_a, 'shape', []), c_indices)
-            if len(c_indices) == 0:
-                # if c is out of indices but t is not, that's an error
-                assert len(t_indices) == 0, f'error mapping {t} to {c}, too many dims in {c}'
-                # we should be at the end of the array
-                assert not isinstance(c_a, np.ndarray), 'internal error in config_parse?'
-                print('mapping', t_indices_used, c_a)
-                t_name = get_t_name(t_indices_used)
-                c_a[2] = t_name
-                t_array_entries.append((t_indices_used, t_name))
-            elif len(c_indices[0]) == 1:
+
+            state_t = 0 if len(t_indices) == 0 else len(t_indices[0])
+            state_c = 0 if len(c_indices) == 0 else len(c_indices[0])
+
+            if state_t == 1:
+                # descend on template single
+                # keep t index in the "used" list but don't move on c
+                match(t_indices_used + [t_indices[0][0]],
+                      t_indices[1:],
+                      c_a,
+                      c_indices)
+            elif state_c == 1:
+                # descend on circuit single
                 # not a range for c, so descend on c but don't move on t
                 match(t_indices_used,
                       t_indices,
                       c_a[c_indices[0][0]],
                       c_indices[1:])
-            elif len(t_indices) == 0:
-                # t_indices_used gets mapped to c_array[c_indices]
-                assert len(c_indices[0]) == 2, 'internal error in config_parse?'
+
+            elif state_t == 0 and state_c == 0:
+                # we should be at the end of the array
+                assert not isinstance(c_a, np.ndarray), 'internal error in config_parse?, should have extended c indices to match array'
+                print('mapping', t_indices_used, c_a)
+                t_name = get_t_name(t_indices_used)
+                c_a[2] = t_name
+                t_array_entries.append((t_indices_used, t_name))
+
+            elif state_t == 0 and state_c == 2:
                 # Add a dimension to t so it matches c
+                # This doesn't descend yet, but will recurse to the 2,2 state
                 match(t_indices_used,
                       t_indices + [c_indices[0]],
                       c_a,
                       c_indices)
-            elif len(t_indices[0]) == 1:
-                # not a range for t, so keep it in the list but don't move on c
-                match(t_indices_used + [t_indices[0][0]],
-                      t_indices[1:, ],
-                      c_a,
-                      c_indices)
-            else:
+
+            elif state_t == 2 and state_c == 0:
+                assert False, 'Error matching {t}, {c}: {t} has too many dimensions'
+
+            elif state_t == 2 and state_c == 2:
+                # match indices
                 # they both have ranges; they must match
                 tr = range_inclusive(*t_indices[0])
                 cr = range_inclusive(*c_indices[0])
@@ -217,6 +227,9 @@ def parse_config(circuit_config_dict):
                           t_indices[1:],
                           c_a[ci],
                           c_indices[1:])
+            else:
+                assert False, 'Internal error in config parse, unknown state'
+
         match([], t_indices, c_array, c_indices)
 
 

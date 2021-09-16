@@ -65,8 +65,9 @@ class Regression():
         #optional_signals = [s for s in template.signals if hasattr(s, 'get_random') and s.get_random and s.auto_set]
         random_signals = [s for s in template.signals.random()]
         random_signals_flat = [s for x in random_signals for s in (x if isinstance(x, SignalArray) else [x])]
-        opt_a = [s.spice_name for s in random_signals_flat if s.type_ == 'analog']
-        opt_ba = [s.spice_name for s in random_signals_flat if s.type_ == 'binary_analog']
+        opt_signals = [s for s in random_signals_flat if s.template_name is None]
+        opt_a = [s.spice_name for s in opt_signals if s.type_ == 'analog']
+        opt_ba = [s.spice_name for s in opt_signals if s.type_ == 'binary_analog']
 
         terms = [cls.one_literal]
         for a in opt_a:

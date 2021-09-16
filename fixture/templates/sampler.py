@@ -96,7 +96,7 @@ class SamplerTemplate(TemplateMaster):
             desired_sampler = 0
         unit = float(clks['unit'])
         period = clks['period']
-        clks = {self.signals.from_spice_name(k): v for k,v in clks.items()
+        clks = {self.signals.from_circuit_name(k): v for k,v in clks.items()
                 if (k!='unit' and k!='period')}
 
 

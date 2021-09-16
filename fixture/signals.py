@@ -277,6 +277,17 @@ class SignalManager:
                 if x.spice_pin is pin:
                     return x
 
+    def from_circuit_name(self, name):
+        assert False, 'todo'
+        # return a Signal or SignalArray of signals according to template name
+        bus_name, indices = parse_name(name)
+        if len(indices) == 0:
+            return self.signals_by_template_name[name]
+        else:
+            a = self.signals_by_template_name[bus_name]
+            s_or_ss = a[tuple(indices)]
+            return s_or_ss
+
     def circuit(self, name):
         # return a Signal or SignalArray of signals according to circuit name
         pass
@@ -358,7 +369,11 @@ class SignalManager:
 
     def true_digital(self):
         # return a list of signals
-        pass
+        td = []
+        for s in self.flat():
+            if s.type_ == 'true_digital':
+                td.append(s)
+        return td
 
     def linear_input(self):
         # list of optional inputs, signals (a) or SignalArrays (ba)

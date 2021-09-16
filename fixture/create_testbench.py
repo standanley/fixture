@@ -34,7 +34,7 @@ class Testbench():
                     self.tester.poke(s.spice_pin, s.value)
 
     def set_digital_mode(self, mode):
-        true_digital = [s for s in self.test.signals if isinstance(s, SignalIn) and s.type_ == 'true_digital']
+        true_digital = self.test.signals.true_digital()
         for s, val in zip(true_digital, mode):
             self.tester.poke(s.spice_pin, val)
 
@@ -136,7 +136,8 @@ class Testbench():
         self.result_processing_list = []
         self.set_pinned_inputs()
 
-        true_digital = [s for s in self.test.signals if isinstance(s, SignalIn) and s.type_ == 'true_digital']
+        #true_digital = [s for s in self.test.signals if isinstance(s, SignalIn) and s.type_ == 'true_digital']
+        true_digital = self.test.signals.true_digital()
         num_digital = len(true_digital)
         self.true_digital_modes = list(product(range(2), repeat=num_digital))
         for digital_mode in self.true_digital_modes:
