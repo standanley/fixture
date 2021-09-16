@@ -34,7 +34,7 @@ class SamplerTemplate(TemplateMaster):
             for clk, v in clks.items():
                 if 'max_jitter' in v:
                     x = v['max_jitter']
-                    self.signals.add_signal(signals.SignalIn(
+                    self.signals.add(signals.SignalIn(
                         (-x, x),
                         'bit',
                         True,

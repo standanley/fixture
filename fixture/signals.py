@@ -249,7 +249,11 @@ class SignalManager:
         assert signal.template_name is not None
 
         self.signals.append(signal)
-        self.signals_by_template_name[signal.template_name] = signal
+        if signal.template_name is not None:
+            self.signals_by_template_name[signal.template_name] = signal
+        if signal.spice_name is not None:
+            self.signals_by_circuit_name[signal.spice_name] = signal
+
 
     def copy(self):
         # the intention is for the template writer to add signals to the copy
