@@ -206,11 +206,12 @@ class Sampler:
             return dig
 
         data = [choose_thermometer(x) for x in samples]
+        data_T = list(zip(*data))
 
         # now we do some special adjustment to the digital bits so that each
         # bit always has the same number of 0s and 1s
-        errors = [sum(column) - N/2 for column in data]
-        assert sum(errors) < 0.01
+        errors = [sum(column) - N/2 for column in data_T]
+        assert abs(sum(errors)) < 0.501
 
         # the general strategy is to swap elements within one point, so the bit
         # count of a point never changes but errors decrease
@@ -283,6 +284,7 @@ class Sampler:
                 else:
                     assert False, f'No sample in interval {interval} in dim {dim}'
 
+    @staticmethod
     def assert_fifty_fifty(samples):
         for dim, bits in enumerate(zip(*samples)):
             zeros = len([bit for bit in bits if bit == 0])
