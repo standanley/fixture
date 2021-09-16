@@ -46,21 +46,25 @@ template_pins:
    in_: in_
    out<0:1>: out<0:1>
    clk<0:1>: clk_v2t<0:1>
+
+   # With the new SignalArray I can't leae ignore[0:1] blank
+   # so I moved clk_v2tb_gated into the [0:1] spot
    #ignore[0:1]: clk_v2t<0:1>
+   ignore[0:1]: clk_v2tb_gated<0:1>
    ignore[2:3]: clk_v2tb<0:1>
    ignore[4:5]: clk_v2t_e<0:1>
    ignore[6:7]: clk_v2t_eb<0:1>
    ignore[8:9]: clk_v2t_l<0:1>
    ignore[10:11]: clk_v2t_lb<0:1>
    ignore[12:13]: clk_v2t_gated<0:1>
-   ignore[14:15]: clk_v2tb_gated<0:1>
+   #ignore[14:15]: clk_v2tb_gated<0:1>
 
 
 
 test_config_file: ngspice_sampler.yaml
 
 extras:
-    #approx_settling_time: 50e-6
+    approx_settling_time: 50e-6
     clks:
         unit: 4e-7
         period: 250

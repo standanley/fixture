@@ -2,7 +2,8 @@ from collections import defaultdict
 
 import yaml
 import os
-from fixture.signals import SignalIn, SignalOut
+from fixture.signals import SignalIn, SignalOut, SignalArray
+from fixture.regression import Regression
 import re
 
 '''
@@ -50,6 +51,16 @@ def dump_yaml(template, params_by_mode, mapping):
         # TODO for required BA mgenero needs us to treat them as a bus
         # maybe we can loop through required pins and check whether each is a bus?
 
+        def get_circuit_name(r_name):
+            for s_or_a in template.signals:
+                ss = s_or_a.flatten() if isinstance(s_or_a, SignalArray) else [s_or_a]
+                for s in ss:
+                    if Regression.regression_name(s) == r_name:
+                        if s.spice_name is not None:
+                            return s.spice_name
+                        else:
+                            return s.template_name
+
         def convert_term_to_verilog(term):
             # square
             term = re.sub('I\\((.*)\\*\\*2\\)', '\\1*\\1', term)
@@ -73,6 +84,7 @@ def dump_yaml(template, params_by_mode, mapping):
             }
             coefs_by_mode.append(coefs_this_mode)
 
+            # TODO should these be unindented?
             param_mapped = mapping.get(param, param)
             d[param_mapped] = coefs_by_mode
 
@@ -91,6 +103,25 @@ def create_interface(template, collateral_dict):
             if p is p2:
                 return True
         return False
+
+    def create_pin_array(a):
+        circuit_names = [x.spice_name is not None for x in s.flatten()]
+        assert all(circuit_names), f'Mixed circuit/not in {s}'
+        assert len(s.shape) == 1, f'mGenero buses must be 1D, {s} is {len(s.shape)}D'
+        assert s.bus_name is not None, f'Expected mGenero bus to have bus_name, {s} does not'
+        # TODO should we assert something about values?
+
+        token_s = list(a.flatten())[0]
+        d = create_pin(token_s)
+        d['name'] = a.bus_name
+        d['description'] = f'Template: <unknown>, Circuit: "{a.bus_name}"'
+        d['vectorsize'] = a.shape[0]
+
+        # TODO I don't know whether mgenero handles values here ... it probably
+        # does but you'd have to conver the bits to an integer (low order?)
+        #if hasattr(s, 'value') and s.value is not None:
+        #    d['value'] = str(s.value)
+        return d
 
     def create_pin(s):
         d = {}
@@ -117,12 +148,46 @@ def create_interface(template, collateral_dict):
 
     pins = {}
     for s in template.signals:
+        if isinstance(s, SignalArray):
+            circuit_names = [x.spice_name is not None for x in s.flatten()]
+            if any(circuit_names):
+                # TODO I think there's a bug here with required qa. Something
+                # about using the circuit bus name as the key in the next line
+                # when it should be the template name - not sure exactly how it
+                # should work though since I don't have any required qa models
+                template_names = [x.template_name is not None for x in s.flatten()]
+                if any(template_names):
+                    # We want the circuit names in the verilog
+                    # but the only way to communicate the template names to
+                    # mgenero is one bit at a time
+                    # TODO what to do for a template-required bus in the model?
+                    def clean_name(name):
+                        # make this name friendly for verilog
+                        bad_chars = '[]<>'
+                        for c in bad_chars:
+                            name = name.replace(c, '_')
+                        return name
+                    for bit in s.flatten():
+                        # TODO doesn't work for mixed template and not in bus
+                        pins[bit.template_name] = create_pin(bit)
+                        pins[bit.template_name]['name'] = clean_name(bit.spice_name)
+                else:
+                    pins[s.bus_name] = create_pin_array(s)
+        else:
+            if s.spice_name is not None:
+                # use the template name as the dictionary key here, and the
+                # circuit name as the 'name' entry in the dict. Then mgenero
+                # will do the correct translation in the verilog
+                name = s.template_name if s.template_name is not None else s.spice_name
+                pins[name] = create_pin(s)
+        '''
         if (isinstance(s, SignalIn) or isinstance(s, SignalOut)) and s.spice_name is not None:
             # TODO I forget why we prefer template name here...
             # TODO for required BA mgenero needs us to treat them as a bus
             # maybe we can loop through required pins and check whether each is a bus?
             name = s.template_name if s.template_name is not None else s.spice_name
             pins[name] = create_pin(s)
+        '''
 
     interface = {}
     interface['pin'] = pins

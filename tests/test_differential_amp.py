@@ -22,7 +22,7 @@ tests = [
 def test_by_config(test):
     config, req = test
     if req is not None and not shutil.which(req):
-        pytest.skip('Requirement "{req}" not installed here')
+        pytest.skip(f'Requirement "{req}" not installed here')
         return
     circuit_fname = file_relative_to_test(config)
     print('GOT FNAME', circuit_fname)

@@ -17,7 +17,7 @@ class SamplerTemplate(TemplateMaster):
 
         # we have to do this before getting input domains, which happens
         # in the call to super
-        extras = args[3]
+        extras = args[2]
         if 'clks' in extras:
             settle = float(extras['clks']['unit']) * float(extras['clks']['period'])
             extras['approx_settling_time'] = settle
@@ -34,7 +34,7 @@ class SamplerTemplate(TemplateMaster):
             for clk, v in clks.items():
                 if 'max_jitter' in v:
                     x = v['max_jitter']
-                    self.signals.add_signal(signals.SignalIn(
+                    self.signals.add(signals.SignalIn(
                         (-x, x),
                         'bit',
                         True,
@@ -96,7 +96,7 @@ class SamplerTemplate(TemplateMaster):
             desired_sampler = 0
         unit = float(clks['unit'])
         period = clks['period']
-        clks = {self.signals.from_spice_name(k): v for k,v in clks.items()
+        clks = {self.signals.from_circuit_name(k): v for k,v in clks.items()
                 if (k!='unit' and k!='period')}
 
 
