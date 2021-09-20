@@ -34,7 +34,7 @@ class Testbench():
                     self.tester.poke(s.spice_pin, s.value)
 
     def set_digital_mode(self, mode):
-        true_digital = [s for s in self.test.signals if isinstance(s, SignalIn) and s.type_ == 'true_digital']
+        true_digital = self.test.signals.true_digital()
         for s, val in zip(true_digital, mode):
             self.tester.poke(s.spice_pin, val)
 
@@ -44,11 +44,19 @@ class Testbench():
         '''
         # TODO don't have a default; force test to set num_samples
         self.num_sample_points = getattr(self.test, 'num_samples', 10)
-        all_signals = self.test.signals
-        random_signals = [s for s in all_signals
-            if isinstance(s, fixture.signals.SignalIn) and s.get_random]
-        random_analog = [s for s in random_signals if s.type_ in ['analog', 'real']]
-        random_ba = [s for s in random_signals if s.type_ in ['binary_analog', 'bit']]
+        #all_signals = self.test.signals
+        #random_signals = [s for s in all_signals
+        #    if isinstance(s, fixture.signals.SignalIn) and s.get_random]
+        #random_analog = [s for s in random_signals if s.type_ in ['analog', 'real']]
+        #random_ba = [s for s in random_signals if s.type_ in ['binary_analog', 'bit']]
+
+
+        random = self.test.signals.random()
+        self.test_vectors = fixture.Sampler.get_samples(random, self.num_sample_points)
+        return
+        # TODO delete old stuff below this
+        random_analog = list(self.test.signals.random_analog())
+        random_ba = list(self.test.signals.random_qa())
 
         sample_points = fixture.Sampler.get_orthogonal_samples(
             len(random_analog),
@@ -128,7 +136,8 @@ class Testbench():
         self.result_processing_list = []
         self.set_pinned_inputs()
 
-        true_digital = [s for s in self.test.signals if isinstance(s, SignalIn) and s.type_ == 'true_digital']
+        #true_digital = [s for s in self.test.signals if isinstance(s, SignalIn) and s.type_ == 'true_digital']
+        true_digital = self.test.signals.true_digital()
         num_digital = len(true_digital)
         self.true_digital_modes = list(product(range(2), repeat=num_digital))
         for digital_mode in self.true_digital_modes:

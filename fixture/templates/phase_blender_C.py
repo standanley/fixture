@@ -17,7 +17,7 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             #'out_delay': {'offset': '1'}
             #'out_delay': {'offset_a': 'sel_therm', 'offset_b': '1'}
         }
-        num_samples = 100
+        num_samples = 300
 
 
         def input_domain(self):
@@ -52,6 +52,7 @@ class PhaseBlenderTemplate_C(TemplateMaster):
 
             in_phase_delay = values['in_phase_delay']
 
+            # the clock starts just after its falling edge
             tester.poke(self.ports.in_a, 0, delay={
                 'freq': freq,
                 })
@@ -59,19 +60,25 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             tester.poke(self.ports.in_b, 0, delay={
                 'freq': freq,
                 })
+            tester.delay(1/freq - in_phase_delay)
 
-            # TODO get this next line to work
-            #tester.poke(self.ports.sel, values['sel'])
-            #for i in range(len(self.ports.sel)):
-            #    tester.poke(self.ports.sel[i], values[self.ports.sel[i]])
+            # 2 run cycles should be enough but... for safety
+            run_cycles = 3
+            settle_cycles = 3
 
-            # wait 3 cycles for things to settle
-            # we wait slightly more to avoid cutting off a slow edge
-            tester.delay(3.05 / freq)
+            # we want to turn off just a touch before the next rising edge
+            # to avoid ambiguity if 2 edges fall on top of each other
+            turn_off_shift = 0.01
+            tester.delay((run_cycles - 1 - turn_off_shift) / freq + in_phase_delay)
 
             tester.poke(self.ports.in_a, 0)
             tester.poke(self.ports.in_b, 0)
-            tester.delay(1.5 / freq)
+
+
+            # now we wait for the output edge to settle
+            tester.delay((settle_cycles + turn_off_shift)/freq - in_phase_delay)
+
+
             in_b_last = tester.get_value(self.ports.in_b, params={
                 'style': 'edge',
                 'forward': False,
@@ -85,7 +92,9 @@ class PhaseBlenderTemplate_C(TemplateMaster):
                 'rising': True
             })
 
-            # wait a touch longer because I had issues when the simulation ended exactly as the measurement was taken
+            # wait a touch longer so our read doesn't happen on the next one's
+            # initial rising edge
+            tester.delay(0.1 / freq)
             return [in_b_last, out_last]
 
         def analysis(self, reads):
@@ -140,11 +149,11 @@ class PhaseBlenderTemplate_C(TemplateMaster):
                 return [temp(x) for x in vector[1:5]]
             c = [get_color(vector) for vector in vectors]
 
-
             therm_columns = [i for i, name in enumerate(data.param_names)
                              if 'const_1:' in name and 'in_phase_delay' not in name]
             #xs_old = [sum(v[len(v)//2+1:]) for v in vectors]
             xs = [sum(v[therm_columns]) for v in vectors]
+            bits = [v[therm_columns] for v in vectors]
             ys = [v[0] for v in vectors]
             zs = measured
             xs = np.array(xs)
@@ -159,6 +168,7 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             dat[:, 2] = (ys)
             dat[:, 3] = np.ones((len(xs)))
             lin = np.linalg.inv(dat.T @ dat) @ dat.T @ zs
+            #lin = np.zeros((4, len(xs)))
             preds_lin = dat @ lin
 
             # thermometer only
@@ -195,18 +205,16 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             #    return error
 
 
-            #linear_slope = 2.1e-2 / 500e6
-            #linear_const = 1.465e-1 / 500e6 - 1.5e-10
-            #abcdef0 = [linear_slope, linear_const, linear_slope, linear_const*1.5, 0, 0]
-            #abcdef0_scaled = [x * 1e10 for x in abcdef0]
+
+            # PLOTS
 
             #import scipy
             #opt_result = scipy.optimize.minimize(opt_fun, abcdef0_scaled)
             #abcdef_opt_scaled = opt_result.x
             #abcdef_opt = [x*1e-10 for x in abcdef_opt_scaled]
 
-            #preds_opt = [new_pred_fun(x, y, abcdef_opt) for x, y in zip(xs, ys)]
-            #preds_0 = [new_pred_fun(x, y, abcdef0) for x, y in zip(xs, ys)]
+            fig = plt.figure(2)
+            ax = fig.add_subplot(111, projection='3d')
 
 
             ## PLOTS
@@ -284,20 +292,6 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             #plt.show()
 
 
-
-            #plt.figure()
-            #c = np.array(c)
-            #plt.scatter(my_predictions, measured, c=c)
-            #plt.grid()
-            #plt.xlabel('Prediction based on input and fits')
-            #plt.ylabel('Measured output')
-            #plt.show()
-            #c = np.array(c)
-            #plt.scatter(predictions, measured, c=c)
-            #plt.grid()
-            #plt.xlabel('Prediction based on input and fits')
-            #plt.ylabel('Measured output')
-            #plt.show()
 
             return {}
 

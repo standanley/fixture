@@ -1,7 +1,7 @@
 import fault
 from abc import ABC, abstractmethod
 import fixture
-from fixture.signals import SignalManager
+from fixture.signals import SignalManager, SignalArray
 from fixture.plot_helper import PlotHelper
 
 class TemplateMaster():
@@ -19,21 +19,19 @@ class TemplateMaster():
             signals = self.sm.from_template_name(name)
 
             def get_spice(s):
-                if isinstance(s, list):
-                    return [get_spice(x) for x in s]
-                else:
-                    return s.spice_pin if hasattr(s, 'spice_pin') else None
+                return s.spice_pin if hasattr(s, 'spice_pin') else None
+            ss = signals.map(get_spice) if isinstance(signals, SignalArray) else get_spice(signals)
 
-            return get_spice(signals)
+            return ss
 
-    def __init__(self, circuit, port_mapping, run_callback, extras={}, signals=[]):
+    def __init__(self, circuit, run_callback, signal_manager, extras={}):
         '''
         circuit: The magma circuit
         port_mapping: a dictionary of {template_name: circuit_name} for required pins
         params: a dictionary of template-specific parameters
         '''
 
-        self.signals = SignalManager(signals)
+        self.signals = signal_manager
         self.ports = self.Ports(self.signals)
         self.dut = circuit
         self.extras = extras
@@ -51,10 +49,17 @@ class TemplateMaster():
             test.signals = self.signals.copy()
             test_dimensions = test.input_domain()
             for s in test_dimensions:
-                assert isinstance(s, fixture.signals.SignalIn), 'input_domain must return SignalIn objects'
-                s.get_random = True
-                if s not in test.signals:
-                    test.signals.add_signal(s)
+                if isinstance(s, fixture.signals.SignalIn):
+                    s.get_random = True
+                    if s not in test.signals and s not in test.signals.flat():
+                        test.signals.add(s)
+                elif isinstance(s, fixture.signals.SignalArray):
+                    for sig in s.flatten():
+                        sig.get_random = True
+                    if s not in test.signals:
+                        test.signals.add(s)
+                else:
+                    assert False, 'input_domain must return SignalIn objects'
 
     def required_port_info(self):
         # TODO: this should give more info than just the names of the ports

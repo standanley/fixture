@@ -36,7 +36,7 @@ def run(circuit_config_filename):
 
 def _run(circuit_config_dict):
 
-    UserCircuit, template_name, signals, test_config_dict, extras = config_parse.parse_config(circuit_config_dict)
+    UserCircuit, template_name, signal_manager, test_config_dict, extras = config_parse.parse_config(circuit_config_dict)
     tester = fault.Tester(UserCircuit)
     TemplateClass = getattr(templates, template_name)
 
@@ -83,8 +83,7 @@ def _run(circuit_config_dict):
             **simulator_dict
         )
 
-    mapping = None
-    t = TemplateClass(UserCircuit, mapping, run_callback, extras, signals)
+    t = TemplateClass(UserCircuit, run_callback, signal_manager, extras)
     params_by_mode = t.go()
 
     for mode, results in params_by_mode.items():

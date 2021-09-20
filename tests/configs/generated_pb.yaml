@@ -10,18 +10,26 @@ pin:
 #         direction: input
 #         datatype: real
 #         value: 0
-    ph_in[1:0]:
+
+    # TODO test this when I've written int
+    #ph_in[1]:
+    #    direction: input
+    #    datatype: bit
+    #ph_in[0]:
+    #    direction: input
+    #    datatype: bit
+    ph_in[0:1]:
         direction: input
         datatype: bit
-#    ph_in[0]:
-#        direction: input
-#        datatype: bit
+
+
     ph_out:
         direction: output
         datatype: bit
-    thm_sel_bld<3:0>:
+    thm_sel_bld[3:0]:
         direction: input
         datatype: binary_analog
+        bus_type: thermometer
 
 template_pins:
    in_a: ph_in[0]
@@ -33,7 +41,7 @@ extras:
     #phase_offset_range: [0.25, 0.25]
     phase_offset_range: [0.23, 0.27]
 
-#mgenero: pb_mgenero.yaml
+mgenero: pb_mgenero.yaml
 
 #test_config_file: ngspice.yaml
 test_config_file: generated_pb_sim.yaml

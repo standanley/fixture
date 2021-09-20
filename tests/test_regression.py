@@ -3,6 +3,9 @@ from fixture import Regression
 from fixture import signals
 import fault, magma
 import random
+
+from fixture.signals import SignalManager
+
 rand = random.random
 
 def get_simple_amp():
@@ -65,7 +68,8 @@ def test_simple_amp():
         None,
         'out_single'
     )
-    t = fixture.templates.SimpleAmpTemplate(dut, None, None, signals=[s_in, s_out])
+    sm = SignalManager([s_in, s_out], {'in_single': s_in, 'out_single': s_out})
+    t = fixture.templates.SimpleAmpTemplate(dut, None, sm)
     reg = Regression(t, t.tests[0], data)
     # TODO actually check the results in reg
 
@@ -136,7 +140,7 @@ def test_differential_amp():
 
 
 if __name__ == '__main__':
-   #test_simple_amp()
-   test_parameterized_amp()
+   test_simple_amp()
+   #test_parameterized_amp()
    #test_differential_amp()
 

@@ -1,6 +1,7 @@
 import math
 import itertools
 import random
+from fixture.signals import SignalIn, SignalArray
 random.seed(4)
 
 class Sampler:
@@ -9,21 +10,71 @@ class Sampler:
         return random.random()
 
     @classmethod
-    def get_orthogonal_samples(cls, Da, Dd, N):
-        ''' Da is dimension of true analog space
-            Dd is dimension of digital with analog intent
-            N is the requensted number of samples
+    def get_samples(cls, dims, N):
+        # return a dictionary where keys are SignalIn (each SignalArray in dims
+        # will be broken out) and values are length N lists of scaled samples
 
-            Performs Latin Hypercube Sampling on all ports, 
-            and also orthogonal smapling on the true analog subset '''
+        samples = cls.get_orthogonal_samples(len(dims), N)
+        samples_dict = {}
+        for i, dim in enumerate(dims):
+            if isinstance(dim, SignalArray):
+                bus_type = dim.info.get('bus_type', 'any')
+
+                if bus_type == 'any':
+                    # We actually choose numbers of bits to turn on according
+                    # to evenly distributed thermometer codes, BUT don't turn
+                    # them on in order like we do for thermometer
+                    assert len(dim.shape) == 1
+                    samples_this_dim = [samples[j][i] for j in range(N)]
+                    data = cls.convert_qa_therm_random(samples_this_dim, dim.shape[0])
+                    for j, s in enumerate(dim):
+                        samples_this_bit = [data[k][j] for k in range(N)]
+                        samples_dict[s] = samples_this_bit
+
+                elif bus_type == 'thermometer':
+                    assert len(dim.shape) == 1
+                    samples_this_dim = [samples[j][i] for j in range(N)]
+                    data = cls.convert_qa_therm(samples_this_dim, dim.shape[0])
+                    for j, s in enumerate(dim):
+                        samples_this_bit = [data[k][j] for k in range(N)]
+                        samples_dict[s] = samples_this_bit
+
+                elif bus_type == 'binary':
+                    # TODO could probably make this a little better
+                    # For now, do nothing special, although we could try to
+                    # balance the number of 1s and 0s on a particular bit, etc.
+                    samples_this_dim = [samples[j][i] for j in range(N)]
+                    data = cls.convert_qa_binary(samples_this_dim, dim.shape[0])
+                    for j, s in enumerate(dim):
+                        samples_this_bit = [data[k][j] for k in range(N)]
+                        samples_dict[s] = samples_this_bit
+
+                else:
+                    assert False, f'Unknown bus type {bus_type}'
+            else:
+                assert isinstance(dim, SignalIn)
+                assert dim.type_ in ['analog', 'real']
+                assert isinstance(dim.value, tuple) and len(dim.value) == 2
+                lims = dim.value
+                xs = []
+                for j in range(N):
+                    xs.append(lims[0] + samples[j][i]*(lims[1]-lims[0]))
+                samples_dict[dim] = xs
+
+        return samples_dict
+
+    @classmethod
+    def get_orthogonal_samples(cls, D, N):
+        '''
+        :param D: Number of true analog dimensions
+        :param N: Number of samples
+        :return: NxD array of samples, every entry between 0 and 1
+        Does Latin Hypercube Sampling and Orthogonal sampling
+        '''
 
         points = []
-        points_digital = []
-
         # untaken rows and columns for LHS
-        D = Da + (1 if Dd>0 else 0)
-        available = [set(range(N)) for d in range(D)]
-        digital_dim = Da if Dd>0 else None
+        available = [set(range(N)) for _ in range(D)]
 
         # choose a point on [0,1) while respecting and updating available
         def choose_without_regions(dim):
@@ -33,25 +84,15 @@ class Sampler:
             p = (row + cls.rand())/N
             return p
 
-        def choose_thermometer(row):
-            eps = 1e-8
-            # because we want to round equally on either side
-            # of the center, we stretch by (1+eps) to avoid
-            # things coinciding exactly
-            # therm = int((row+.5)/N * (Dd+1))
-            num_ones = int((((row + .5) / N - .5) * (1 + eps) + 0.5) * (Dd + 1))
-            ones = random.sample(range(Dd), num_ones)
-            dig = [1 if i in ones else 0 for i in range(Dd)]
-            return dig
 
-        # now break the analog space in to regions
+        # now break the analog space into regions
         # each analog dimension is broken into rpd spaces
         # stands for "regions per (true analog) dimension"
-        # All digital dimensions together make up one analog dimension
         rpd = 0 if D == 0 else int(math.pow(N, 1/D))
 
-        # equivalent to Da nested for loops
-        for region_coords in itertools.product(range(rpd), repeat=D): # rpd^D <= N
+        # equivalent to D nested for loops
+        # Total number of iterations is rpd^D <= N
+        for region_coords in itertools.product(range(rpd), repeat=D):
             # choose a random point within the region
             point = []
             for dim, rc in enumerate(region_coords): # D
@@ -81,18 +122,15 @@ class Sampler:
                     print(available[dim], start, end)
                     assert False, 'bug in sampler.py'
 
-                # true analog
+                # we want to randomly choose a point in theis region in the
+                # space still in "available", which keeps track of LHS
                 rand_in_avail = cls.rand() * length
                 for row, segment in avail:
                     l = segment[1] - segment[0]
                     if rand_in_avail < l:
                         # rand_in_avail falls in this segment
-                        if dim == digital_dim:
-                            dig = choose_thermometer(row)
-                            points_digital.append(dig)
-                        else:
-                            point.append(segment[0] + rand_in_avail)
-                            assert (row/N) <= point[-1] < ((row+1)/N), 'point not in row!' # noqa
+                        point.append(segment[0] + rand_in_avail)
+                        assert (row/N) <= point[-1] < ((row+1)/N), 'point not in row!' # noqa
                         available[dim].remove(row)
                         break
                     rand_in_avail -= l
@@ -100,34 +138,85 @@ class Sampler:
                     # else after a for loop runs iff no break happened
                     assert False, 'rand_in_avail not within avail! bug in sampler.py' # noqa
 
-            # now we can do the digital analog intent stuff without worrying about regions
-            # We do this a little strangely to cater to thermometer coded stuff
-
             points.append(point)
 
+        # now we have one point in each region, but we need to fill out the rest
         for _ in range(N - len(points)):
             point = []
             for dim in range(D):
                 p = choose_without_regions(dim)
-                if dim == digital_dim:
-                    # go from point back to row
-                    row = int(p*N)
-                    dig = choose_thermometer(row)
-                    points_digital.append(dig)
-                else:
-                    point.append(p)
+                point.append(p)
 
             points.append(point)
 
+        return points
+
+    @classmethod
+    def convert_qa_therm(self, samples, num_bits):
+        '''
+        :param samples:
+        :param num_bits:
+        :return:
+        We want to turn 0.23432 in to a thermometer code like 11000000,
+        so all the 1s are always at the beginning.
+        We are actually picky about the total number of 0s and 1s being the
+        same, so we choose the number of ones based on the "row" of LHS the
+        random number is in, rather than basing it on the random number itself.
+        '''
+        N = len(samples)
+
+        def choose_thermometer(x):
+            row = int(x * N)
+            eps = 1e-8
+            # because we want to round equally on either side
+            # of the center, we stretch by (1+eps) to avoid
+            # things coinciding exactly
+            # therm = int((row+.5)/N * (nb+1))
+            num_ones = int((((row + .5) / N - .5) * (1 + eps) + 0.5) * (num_bits + 1))
+            dig = [1 if i < num_ones else 0 for i in range(num_bits)]
+            return dig
+
+        data = [choose_thermometer(x) for x in samples]
+        return data
+
+    @classmethod
+    def convert_qa_therm_random(self, samples, num_bits):
+        '''
+        :param samples:
+        :param num_bits:
+        :return:
+        We want to turn 0.23432 in to a thermometer code like 00101000, where
+        the 1s are randomly distributed throughout the code.
+        We are actually picky about the total number of 0s and 1s being the
+        same, so we choose the number of ones based on the "row" of LHS the
+        random number is in, rather than basing it on the random number itself.
+        '''
+        N = len(samples)
+
+        def choose_thermometer(x):
+            row = int(x * N)
+            eps = 1e-8
+            # because we want to round equally on either side
+            # of the center, we stretch by (1+eps) to avoid
+            # things coinciding exactly
+            # therm = int((row+.5)/N * (nb+1))
+            num_ones = int((((row + .5) / N - .5) * (1 + eps) + 0.5) * (num_bits + 1))
+            ones = random.sample(range(num_bits), num_ones)
+            dig = [1 if i in ones else 0 for i in range(num_bits)]
+            return dig
+
+        data = [choose_thermometer(x) for x in samples]
+        data_T = list(zip(*data))
 
         # now we do some special adjustment to the digital bits so that each
         # bit always has the same number of 0s and 1s
-        errors = [sum(p[i] for p in points_digital)-N/2 for i in range(Dd)]
+        errors = [sum(column) - N/2 for column in data_T]
+        assert abs(sum(errors)) < 0.501
 
         # the general strategy is to swap elements within one point, so the bit
         # count of a point never changes but errors decrease
         def bit_perm():
-            xs = list(range(Dd))
+            xs = list(range(num_bits))
             random.shuffle(xs)
             return xs
 
@@ -138,11 +227,11 @@ class Sampler:
             value_search = 1 if over else 0
             for j in bit_perm():
                 if (((errors[j] > 0.75) if over else (errors[j] < -0.75))
-                    and points_digital[i][j] == value_search):
+                        and data[i][j] == value_search):
                     return j, True
             for j in bit_perm():
                 if (((errors[j] > 0.25) if over else (errors[j] < -0.25))
-                    and points_digital[i][j] == value_search):
+                        and data[i][j] == value_search):
                     return j, False
             return None, False
 
@@ -155,25 +244,31 @@ class Sampler:
             under, under_necessary = get_swappable(i, False)
 
             if (over is None or under is None
-                or (not (over_necessary or under_necessary))):
+                    or (not (over_necessary or under_necessary))):
                 # nothing useful at this i
                 options.pop(opt_choice)
                 continue
 
             # swap over and under
-            points_digital[i][over] = 0
-            points_digital[i][under] = 1
+            data[i][over] = 0
+            data[i][under] = 1
             errors[over] -= 1
             errors[under] += 1
 
+        return data
 
-        # pack analog and digital bits together
-        if Dd != 0:
-            points_combined = [a+d for a,d in zip(points, points_digital)]
-        else:
-            points_combined = points
-
-        return points_combined
+    @classmethod
+    def convert_qa_binary(cls, samples, num_bits):
+        data = []
+        N = 2**num_bits
+        for x in samples:
+            v = int(x * N)
+            # kinda ugly to get a variable value into a format specifier
+            b = f'{{:0{num_bits}b}}'.format(v)
+            #b = bin(v)[2:]
+            bits = [0 if c == '0' else 1 for c in b]
+            data.append(bits)
+        return data
 
     def assert_lhs(samples):
         #visualize([s[0:2] for s in samples])
@@ -189,6 +284,7 @@ class Sampler:
                 else:
                     assert False, f'No sample in interval {interval} in dim {dim}'
 
+    @staticmethod
     def assert_fifty_fifty(samples):
         for dim, bits in enumerate(zip(*samples)):
             zeros = len([bit for bit in bits if bit == 0])

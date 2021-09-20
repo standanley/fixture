@@ -49,7 +49,10 @@ $$#from api_mgenero import *
 $$#
 $$#}$$
 
-`include "mLingua_pwl.vh"
+// From mlingua_pwl we only use get_timeunit
+//`include "mLingua_pwl.vh"
+`define get_timeunit real TU; initial TU=1/1s;
+`define get_time $realtime/1s
 
 module $$(Module.name()) #(
   $$(Module.parameters())
@@ -63,7 +66,7 @@ module $$(Module.name()) #(
 //pragma protect begin
 
 `get_timeunit
-PWLMethod pm=new;
+//PWLMethod pm=new;
 
 // about to map
 $$Pin.print_map() $$# map between user pin names and generic ones
@@ -72,8 +75,8 @@ $$Pin.print_map() $$# map between user pin names and generic ones
 //----- BODY STARTS HERE -----
 
 //----- SIGNAL DECLARATION -----
-pwl ONE = `PWL1;
-pwl ZERO = `PWL0;
+//pwl ONE = `PWL1;
+//pwl ZERO = `PWL0;
 
 // pwl v_id_lim;   // limited v_id 
 // pwl v_oc; // output common-mode voltage
@@ -117,7 +120,7 @@ $$#PWL.instantiate_pwl2real_optional_analog_pins(['vss'] if Pin.is_exist('vss') 
 $${
 # sensitivity list of always @ statement
 # sensitivity = ['v_icm_r', 'vdd_r', 'wakeup'] + get_sensitivity_list() 
-sensitivity = ['wakeup', 'sel'] + get_sensitivity_list() 
+sensitivity = ['wakeup'] + get_sensitivity_list() 
 
 # model parameter mapping for back-annotation
 # { testname : { test output : Verilog variable being mapped to } }
