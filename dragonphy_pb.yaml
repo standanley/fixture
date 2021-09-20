@@ -22,6 +22,7 @@ pin:
     thm_sel_bld[0:15]:
         direction: input
         datatype: binary_analog
+        bus_type: thermometer
 
 template_pins:
     in_a: ph_in[0]
