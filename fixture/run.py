@@ -36,7 +36,7 @@ def run(circuit_config_filename):
 
 def _run(circuit_config_dict):
 
-    UserCircuit, template_name, signal_manager, test_config_dict, extras = config_parse.parse_config(circuit_config_dict)
+    UserCircuit, template_name, signal_manager, test_config_dict, extras, checkpoint = config_parse.parse_config(circuit_config_dict)
     tester = fault.Tester(UserCircuit)
     TemplateClass = getattr(templates, template_name)
 
@@ -84,6 +84,10 @@ def _run(circuit_config_dict):
         )
 
     t = TemplateClass(UserCircuit, run_callback, signal_manager, extras)
+
+    checkpoint.save(t, 'pickletest4.json')
+    t = checkpoint.load('pickletest4.json')
+
     params_by_mode = t.go()
 
     for mode, results in params_by_mode.items():

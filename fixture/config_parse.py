@@ -3,6 +3,7 @@ import yaml
 import fixture.cfg_cleaner as cfg_cleaner
 from fixture.signals import create_signal, expanded, parse_bus, parse_name, \
     SignalArray, SignalManager
+from fixture.checkpoints import Checkpoint
 import magma
 import fault
 import ast
@@ -45,6 +46,8 @@ def parse_extras(extras):
 def range_inclusive(s, e):
     d = 1 if e >= s else -1
     return list(range(s, e+d, d))
+
+
 
 
 def parse_config(circuit_config_dict):
@@ -129,11 +132,8 @@ def parse_config(circuit_config_dict):
             assert c_name == c_name2, 'internal error in config_parse'
             io += [c_name, p['magma_datatype']]
 
-    class UserCircuit(magma.Circuit):
-        name = circuit_config_dict['name']
-        IO = io
-
-
+    checkpoint = Checkpoint()
+    UserCircuit = checkpoint.create_circuit(circuit_config_dict['name'], io)
 
     # Now go through the template mapping and
     '''
@@ -312,7 +312,7 @@ def parse_config(circuit_config_dict):
 
     template_class_name = circuit_config_dict['template']
     extras = parse_extras(circuit_config_dict['extras'])
-    return UserCircuit, template_class_name, sm, test_config_dict, extras
+    return UserCircuit, template_class_name, sm, test_config_dict, extras, checkpoint
 
 
 

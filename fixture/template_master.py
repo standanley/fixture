@@ -14,15 +14,18 @@ class TemplateMaster():
             return len(self.sm.signals)
 
         def __getattr__(self, name):
-            if name == '__len__':
-                assert False, 'unexpected, who is asking?'
-            signals = self.sm.from_template_name(name)
+            try:
+                if name == '__len__':
+                    assert False, 'unexpected, who is asking?'
+                signals = self.sm.from_template_name(name)
 
-            def get_spice(s):
-                return s.spice_pin if hasattr(s, 'spice_pin') else None
-            ss = signals.map(get_spice) if isinstance(signals, SignalArray) else get_spice(signals)
+                def get_spice(s):
+                    return s.spice_pin if hasattr(s, 'spice_pin') else None
+                ss = signals.map(get_spice) if isinstance(signals, SignalArray) else get_spice(signals)
 
-            return ss
+                return ss
+            except KeyError as err:
+                raise AttributeError(err)
 
     def __init__(self, circuit, run_callback, signal_manager, extras={}):
         '''

@@ -192,7 +192,7 @@ if __name__ == '__main__':
     #test_simple()
     #test_simple_parameterized()
     #test_skywater()
-    #test_simple_config()
+    test_simple_config()
     #test_parameterized_config()
-    test_adj_config()
+    #test_adj_config()
 

@@ -455,4 +455,23 @@ class SignalArray:
     #def __getattr__(self, name):
     #    return getattr(self.token_item, name)
 
+    def __getstate__(self):
+        d = self.__dict__.copy()
+        ndarray = d['array']
+
+        def listify(x):
+            if isinstance(x, np.ndarray):
+                return [listify(y) for y in x]
+            else:
+                return x
+        array = listify(ndarray)
+
+        d['array'] = array
+        return d
+
+    def __setstate__(self, state):
+        self.array = None
+        state['array'] = np.array(state['array'], dtype=object)
+        self.__dict__ = state
+
 
