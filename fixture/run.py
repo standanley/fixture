@@ -1,9 +1,9 @@
 import sys, yaml, os
 import fixture.config_parse as config_parse
-from pathlib import Path
 import fault
 import fixture.templates as templates
 import fixture.mgenero_interface as mgenero_interface
+from fixture.simulator import Simulator
 
 
 def path_relative(path_to_config, path_from_config):
@@ -40,53 +40,23 @@ def _run(circuit_config_dict):
     tester = fault.Tester(UserCircuit)
     TemplateClass = getattr(templates, template_name)
 
+    circuit_filepath = circuit_config_dict['filepath']
+    simulator = Simulator(test_config_dict, circuit_filepath)
 
-    # TODO fill in all args from SpiceTarget or remove this check
-    approved_simulator_args = ['ic', 'vsup', 'bus_delim', 'ext_libs', 'inc_dirs',
-                               'defines', 'flags', 't_step', 'num_cycles',
-                               'conn_order', 'no_run', 'directory', 't_tr',
-                               'dump_waveforms', 'timescale']
-    simulator_dict = {k:v for k,v in test_config_dict.items() if k in approved_simulator_args}
 
-    # make sure to put the circuit file location in the right arg
-    if test_config_dict['target'] == 'spice':
-        model_path_key = 'model_paths'
-    else:
-        model_path_key = 'ext_libs'
-        simulator_dict['ext_model_file'] = True
-    mps = simulator_dict.get(model_path_key, [])
-    mps.append(Path(circuit_config_dict['filepath']).resolve())
-    simulator_dict[model_path_key] = mps
-
-    # flgs will later get shell escaped, but I think the user should have escaped them already
-    # ran into problems when a flag was like '-define NCVLOG'
-    #if 'flags' in simulator_dict:
-    #    flags = [x for f in simulator_dict['flags'] for x in f.split()]
-    #    simulator_dict['flags'] = flags
-
-    def run_callback(tester):
-        print('calling with sim dict', simulator_dict)
-        #simulator_dict['directory'] = f'build_{name}'
-
-        no_run = False
-        no_run_dict = {}
-        if no_run:
-            print('SKIPPING SIMULATION, using results from last time')
-            # I pass it in this dict because no_run=False doesn't work for all simulators
-            no_run_dict['no_run'] = True
-
-        tester.compile_and_run(test_config_dict['target'],
-            simulator=test_config_dict['simulator'],
-            clock_step_delay=0,
-            tmp_dir=False,
-            **no_run_dict,
-            **simulator_dict
-        )
-
-    t = TemplateClass(UserCircuit, run_callback, signal_manager, extras)
+    t = TemplateClass(UserCircuit, simulator, signal_manager, extras)
 
     checkpoint.save(t, 'pickletest4.json')
     t = checkpoint.load('pickletest4.json')
+
+    #params = {} # extras?
+    #for Test in t.tests:
+    #    test = Test(params)
+    #    tb, reads = test.create_testbench()
+    #    raw_data = test.run_sim(tb, reads)
+    #    data = test.analyze(raw_data)
+
+
 
     params_by_mode = t.go()
 

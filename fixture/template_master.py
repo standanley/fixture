@@ -27,7 +27,7 @@ class TemplateMaster():
             except KeyError as err:
                 raise AttributeError(err)
 
-    def __init__(self, circuit, run_callback, signal_manager, extras={}):
+    def __init__(self, circuit, simulator, signal_manager, extras={}):
         '''
         circuit: The magma circuit
         port_mapping: a dictionary of {template_name: circuit_name} for required pins
@@ -38,7 +38,7 @@ class TemplateMaster():
         self.ports = self.Ports(self.signals)
         self.dut = circuit
         self.extras = extras
-        self.run = run_callback
+        self.simulator = simulator
 
         # by the time the template is instantiated, a child should have added this
         assert hasattr(self, 'required_ports')
@@ -150,7 +150,7 @@ class TemplateMaster():
             tb = fixture.Testbench(self, tester, test)
             tb.create_test_bench()
 
-            self.run(tester)
+            self.simulator.run(tester, no_run=False)
 
             results_each_mode = tb.get_results()
 

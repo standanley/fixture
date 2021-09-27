@@ -1,9 +1,7 @@
-import json
-
-import jsonpickle
 import magma
 import fault
 import jsonpickle
+import re
 
 import fixture
 
@@ -36,6 +34,22 @@ class Checkpoint:
         circuits_dict = p1.flatten(self.circuits_data)
         p2 = jsonpickle.Pickler(keys=True, warn=True)
         thing_dict = p2.flatten(thing)
+
+        debug_pickling = False
+        if debug_pickling:
+            # if the unpickler doesn't have the right classes in scope it will
+            # fail to unpickle some things, and then there's a mismatch between
+            # the pickling and unpickling object lists, and this is a
+            # way to take a look at the pickling object list
+            obj_ids = p2._objs
+            import gc
+            all_objs = gc.get_objects()
+            all_objs_map = {id(obj): obj for obj in all_objs}
+            # I think UNKNOWN ones were garbage collected during pickling?
+            objs = [all_objs_map[id_] if id_ in all_objs_map else 'UNKNOWN'
+                    for id_ in obj_ids]
+            print('\n'.join(f'{type(obj)}: {obj}' for obj in objs))
+
         print(circuits_dict)
         combined = [circuits_dict, thing_dict]
         s = jsonpickle.json.encode(combined, indent=2)
@@ -43,6 +57,58 @@ class Checkpoint:
         with open(filename, 'w') as f:
             f.write(s)
         print('done')
+
+    @staticmethod
+    def get_type(type_string):
+        # I used to build the result using the module path at the beginning of
+        # type_string, but it turns out we will need to hard-code those paths
+        # here anyway because they will be missing when a type is wrapped in
+        # a magma.array
+        # e.g. 'magma.array.Array[(2, Out(RealType))]' hides the fact that
+        # RealType comes from fault.ms_types, so there's no point in trying
+        # to parse out fault.ms_types from 'fault.ms_types.RealType[In]'
+
+        def aux(s):
+            # explicit types
+            if s == 'RealType':
+                return fault.ms_types.RealType
+            if s == 'Bit':
+                return magma.Bit
+
+            # magma In
+            m = re.match('(.*?)\\[In\\]$', s)
+            if m:
+                return magma.In(aux(m.group(1)))
+            m = re.match('In\\((.*?)\\)$', s)
+            if m:
+                return magma.In(aux(m.group(1)))
+
+            # magma Out
+            m = re.match('(.*?)\\[Out\\]$', s)
+            if m:
+                return magma.Out(aux(m.group(1)))
+            m = re.match('Out\\((.*?)\\)$', s)
+            if m:
+                return magma.Out(aux(m.group(1)))
+
+            # magma Array
+            m = re.match('Array\\[\\(?(\\d+), (.*?)\\)?\\]$', s)
+            if m:
+                return magma.Array[int(m.group(1)), aux(m.group(2))]
+
+            assert False, f'Could not recognize type string: {s}'
+
+        s = type_string.split('.')[-1]
+        t = aux(s)
+        return t
+
+    @staticmethod
+    def related_types(pin):
+        yield magma.In(pin)
+        yield magma.Out(pin)
+        if isinstance(pin, magma.ArrayMeta):
+            for x in Checkpoint.related_types(pin.T):
+                yield x
 
     def load(self, filename):
         with open(filename) as f:
@@ -56,26 +122,22 @@ class Checkpoint:
             type_strings = [x['py/type']
                             for io in ios for x in io if isinstance(x, dict)]
 
-            def get_type(s):
-                tokens = s.split('.')
-                x = globals()
-                x = x[tokens[0]]
-                for token in tokens[1:-1]:
-                    x = getattr(x, token)
-
-                token, direction = tokens[-1][:-1].split('[')
-                x = getattr(x, token)
-                x = getattr(magma, direction)(x)
-                return x
-            io_types = [get_type(s) for s in type_strings]
+            io_types = [self.get_type(s) for s in type_strings]
+            # because fixture Signals have references to individual bits in a
+            # magma bus, we need to provide those to the Unpickler too
+            # also for some reason In and Out get flipped sometimes, so we
+            # just provide both versions of everything
+            io_types_all = {x for t in io_types
+                            for x in self.related_types(t)}
+            io_types_all = list(io_types_all)
 
             # now that we have the io types, re-create the user circuit
             p1 = jsonpickle.Unpickler(keys=True)
-            circuits_data = p1.restore(circuits_dict, classes=io_types)
+            circuits_data = p1.restore(circuits_dict, classes=io_types_all)
             circuits = [self.create_circuit(*cd) for cd in circuits_data]
 
             # now use the io types and user circuit to do the rest
-            classes = circuits + io_types
+            classes = circuits + io_types_all
             p2 = jsonpickle.Unpickler(keys=True)
             thing = p2.restore(thing_dict, classes=classes)
 
