@@ -35,7 +35,7 @@ class Checkpoint:
         p2 = jsonpickle.Pickler(keys=True, warn=True)
         thing_dict = p2.flatten(thing)
 
-        debug_pickling = False
+        debug_pickling = True
         if debug_pickling:
             # if the unpickler doesn't have the right classes in scope it will
             # fail to unpickle some things, and then there's a mismatch between
@@ -48,15 +48,13 @@ class Checkpoint:
             # I think UNKNOWN ones were garbage collected during pickling?
             objs = [all_objs_map[id_] if id_ in all_objs_map else 'UNKNOWN'
                     for id_ in obj_ids]
-            print('\n'.join(f'{type(obj)}: {obj}' for obj in objs))
+            for i, obj in enumerate(objs):
+                print(f'{i} : {type(obj)} : {obj}')
 
-        print(circuits_dict)
         combined = [circuits_dict, thing_dict]
         s = jsonpickle.json.encode(combined, indent=2)
-        print(s)
         with open(filename, 'w') as f:
             f.write(s)
-        print('done')
 
     @staticmethod
     def get_type(type_string):

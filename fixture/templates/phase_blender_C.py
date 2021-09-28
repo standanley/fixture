@@ -10,7 +10,7 @@ class PhaseBlenderTemplate_C(TemplateMaster):
         'frequency': 'Input clock frequency (Hz)'
     }
 
-    @debug
+    #@debug
     class Test1(TemplateMaster.Test):
         parameter_algebra = {
             'out_delay': {'gain':'in_phase_delay', 'offset':'1'}
