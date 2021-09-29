@@ -90,6 +90,7 @@ class TemplateMaster():
             #self.dut = template.dut
             self.ports = template.ports
             self.extras = template.extras
+            self.debug_dict = {}
             # TODO this assert was removed at one point, but seems necessary?
             # I think it was to allow the algebra to be added later programatically?
             assert hasattr(self, 'parameter_algebra'), f'{self} should specify parameter_algebra!'
@@ -137,8 +138,23 @@ class TemplateMaster():
             template_creation_utils is added. Unfortunately this means this
             input signature has to match
             '''
-            pass
-    
+            if port not in self.debug_dict:
+                r = tester.get_value(port, params={'style': 'block',
+                                                   'duration': duration})
+                self.debug_dict[port] = r
+
+        def debug_plot(self):
+            import matplotlib.pyplot as plt
+            leg = []
+            bump = 0
+            for p, r in self.debug_dict.items():
+                leg.append(str(self.template.signals.from_circuit_pin(p)))
+                plt.plot(r.value[0], r.value[1] + bump, '-+')
+                bump += 0.0 # useful for separating clock signals
+            plt.grid()
+            plt.legend(leg)
+            plt.show()
+
 
     def go(self):
         '''
@@ -153,6 +169,8 @@ class TemplateMaster():
             self.simulator.run(tester, no_run=False)
 
             results_each_mode = tb.get_results()
+
+            test.debug_plot()
 
             params_by_mode = {}
             for mode, results in enumerate(results_each_mode):

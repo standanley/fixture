@@ -1,5 +1,4 @@
 from fixture import TemplateMaster
-from fixture.template_creation_utils import debug
 
 class DACTemplate(TemplateMaster):
     required_ports = ['in_', 'outp', 'outn']
