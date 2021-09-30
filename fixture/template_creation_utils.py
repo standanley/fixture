@@ -169,40 +169,6 @@ def plot(xs, ys):
     plt.show()
 '''
 
-def debug(test):
-    class DebugTest(test):
-
-        IS_DEBUG_MODE = True
-
-        def debug(self, tester, port, duration):
-            r = tester.get_value(port, params={'style':'block', 'duration': duration})
-            self.debug_dict.append((port, r))
-
-        def testbench(self, *args, **kwargs):
-            self.debug_dict = []
-            self.debug_plot_shown = False
-            retval = super().testbench(*args, **kwargs)
-            return (self.debug_dict, retval)
-
-        def analysis(self, reads):
-            debug_dict, reads_orig = reads
-
-            if not self.debug_plot_shown:
-                import matplotlib.pyplot as plt
-                leg = []
-                bump = 0
-                for p, r in debug_dict:
-                    leg.append(str(self.template.signals.from_circuit_pin(p)))
-                    plt.plot(r.value[0], r.value[1] + bump, '-+')
-                    bump += 0.0 # useful for separating clock signals
-                plt.grid()
-                plt.legend(leg)
-                plt.show()
-                self.debug_plot_shown = True
-
-            return super().analysis(reads_orig)
-
-    return DebugTest
 
 def make_nondecreasing(ys):
     '''

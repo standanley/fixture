@@ -14,17 +14,20 @@ class TemplateMaster():
             return len(self.sm.signals)
 
         def __getattr__(self, name):
-            if name == '__len__':
-                assert False, 'unexpected, who is asking?'
-            signals = self.sm.from_template_name(name)
+            try:
+                if name == '__len__':
+                    assert False, 'unexpected, who is asking?'
+                signals = self.sm.from_template_name(name)
 
-            def get_spice(s):
-                return s.spice_pin if hasattr(s, 'spice_pin') else None
-            ss = signals.map(get_spice) if isinstance(signals, SignalArray) else get_spice(signals)
+                def get_spice(s):
+                    return s.spice_pin if hasattr(s, 'spice_pin') else None
+                ss = signals.map(get_spice) if isinstance(signals, SignalArray) else get_spice(signals)
 
-            return ss
+                return ss
+            except KeyError as err:
+                raise AttributeError(err)
 
-    def __init__(self, circuit, run_callback, signal_manager, extras={}):
+    def __init__(self, circuit, simulator, signal_manager, extras={}):
         '''
         circuit: The magma circuit
         port_mapping: a dictionary of {template_name: circuit_name} for required pins
@@ -35,7 +38,7 @@ class TemplateMaster():
         self.ports = self.Ports(self.signals)
         self.dut = circuit
         self.extras = extras
-        self.run = run_callback
+        self.simulator = simulator
 
         # by the time the template is instantiated, a child should have added this
         assert hasattr(self, 'required_ports')
@@ -87,6 +90,7 @@ class TemplateMaster():
             #self.dut = template.dut
             self.ports = template.ports
             self.extras = template.extras
+            self.debug_dict = {}
             # TODO this assert was removed at one point, but seems necessary?
             # I think it was to allow the algebra to be added later programatically?
             assert hasattr(self, 'parameter_algebra'), f'{self} should specify parameter_algebra!'
@@ -134,22 +138,46 @@ class TemplateMaster():
             template_creation_utils is added. Unfortunately this means this
             input signature has to match
             '''
-            pass
-    
+            port_name = str(self.template.signals.from_circuit_pin(port))
+            if port_name not in self.debug_dict:
+                r = tester.get_value(port, params={'style': 'block',
+                                                   'duration': duration})
+                self.debug_dict[port_name] = r
 
-    def go(self):
+        def debug_plot(self):
+            import matplotlib.pyplot as plt
+            leg = []
+            bump = 0
+            for p, r in self.debug_dict.items():
+                leg.append(p)
+                plt.plot(r.value[0], r.value[1] + bump, '-+')
+                bump += 0.0 # useful for separating clock signals
+            plt.grid()
+            plt.legend(leg)
+            plt.show()
+
+
+    def go(self, checkpoint, checkpoint_start=0):
         '''
         Actually do the entire analysis of the circuit
         '''
+        checkpoint_num = 0
         params_by_mode_all = {}
         for test in self.tests:
             tester = fault.Tester(self.dut)
             tb = fixture.Testbench(self, tester, test)
             tb.create_test_bench()
 
-            self.run(tester)
+            # TODO figure out how to save a fault testbench
+            #checkpoint.save((test, tb), 'pickletest_tb.json')
+            #test, tb = checkpoint.load('pickletest_tb.json')
+            #tester = tb.tester
+
+            self.simulator.run(tester, no_run=False)
 
             results_each_mode = tb.get_results()
+
+            test.debug_plot()
 
             params_by_mode = {}
             for mode, results in enumerate(results_each_mode):

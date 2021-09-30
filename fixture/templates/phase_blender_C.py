@@ -1,6 +1,5 @@
 from fixture import TemplateMaster
 from fixture.signals import create_input_domain_signal
-from fixture.template_creation_utils import debug
 
 
 class PhaseBlenderTemplate_C(TemplateMaster):
@@ -10,7 +9,7 @@ class PhaseBlenderTemplate_C(TemplateMaster):
         'frequency': 'Input clock frequency (Hz)'
     }
 
-    @debug
+    #@debug
     class Test1(TemplateMaster.Test):
         parameter_algebra = {
             'out_delay': {'gain':'in_phase_delay', 'offset':'1'}

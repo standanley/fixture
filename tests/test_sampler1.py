@@ -30,4 +30,4 @@ def test_sampler4():
     fixture.run(circuit_fname)
 
 if __name__ == '__main__':
-    test_sampler4()
+    test_sampler1()

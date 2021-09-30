@@ -1,5 +1,5 @@
 from fixture import TemplateMaster
-from fixture.template_creation_utils import dynamic, debug, extract_pzs, remove_repeated_timesteps
+from fixture.template_creation_utils import dynamic, extract_pzs, remove_repeated_timesteps
 from fixture.signals import create_input_domain_signal
 import matplotlib.pyplot as plt
 from scipy import interpolate
@@ -197,7 +197,6 @@ class DifferentialAmpTemplate(TemplateMaster):
 
             return {}
 
-    @debug
     class BodeTest(TemplateMaster.Test):
         parameter_algebra = {
             'p1': {'cm_to_p1': 'in_cm', 'const_p1': '1'},

@@ -47,6 +47,9 @@ class SignalOut():
         #self.bus_name = bus_name
         #self.bus_i = bus_i
 
+    def __str__(self):
+        return f'<{str(self.template_name)} / {self.spice_name}>'
+
 def create_signal(pin_dict, c_name=None, c_pin=None, t_name=None):
     type_ = pin_dict.get('datatype', 'analog')
     assert (c_name is None) == (c_pin is None)
@@ -454,5 +457,24 @@ class SignalArray:
 
     #def __getattr__(self, name):
     #    return getattr(self.token_item, name)
+
+    def __getstate__(self):
+        d = self.__dict__.copy()
+        ndarray = d['array']
+
+        def listify(x):
+            if isinstance(x, np.ndarray):
+                return [listify(y) for y in x]
+            else:
+                return x
+        array = listify(ndarray)
+
+        d['array'] = array
+        return d
+
+    def __setstate__(self, state):
+        self.array = None
+        state['array'] = np.array(state['array'], dtype=object)
+        self.__dict__ = state
 
 

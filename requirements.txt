@@ -6,3 +6,4 @@ statsmodels
 kratos
 vcdvcd
 matplotlib
+jsonpickle
