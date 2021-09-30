@@ -13,7 +13,7 @@ class SamplerTemplate(TemplateMaster):
     def __init__(self, *args, **kwargs):
         # Some magic constants, maybe pull these from config?
         # NOTE this is before super() because it is used for Test instantiation
-        self.nonlinearity_points = 3 # 31
+        self.nonlinearity_points = 11 # 31
 
         # we have to do this before getting input domains, which happens
         # in the call to super
@@ -106,6 +106,7 @@ class SamplerTemplate(TemplateMaster):
         played_periods = 2
         measured_period = 1
 
+        assert main in clks, f'"clks" spec missing {main}'
         main_period_start_time = [t for t,v in clks[main].items() if v==1][0]
 
         # shift the user-given period such that the main clock's
@@ -195,7 +196,8 @@ class SamplerTemplate(TemplateMaster):
             np = self.template.nonlinearity_points
             debug_time = np * wait * 22
             self.debug(tester, clk.spice_pin, debug_time)
-            self.debug(tester, self.ports.out, debug_time)
+            for p in self.ports.out:
+                self.debug(tester, p, debug_time)
             self.debug(tester, self.ports.in_, debug_time)
 
             #self.debug(tester, self.template.dut.z_debug, debug_time)
@@ -280,7 +282,7 @@ class SamplerTemplate(TemplateMaster):
                            'beta_times_scale2': 'slope_over_scale**2',
                            'gamma_times_scale': 'slope_over_scale'}
         }
-        num_samples = 2
+        num_samples = 20
 
         def input_domain(self):
             limits = self.signals.from_template_name('in_').value
@@ -306,7 +308,8 @@ class SamplerTemplate(TemplateMaster):
             np = self.template.nonlinearity_points
             debug_length = np * wait * 30
             self.debug(tester, clk.spice_pin, debug_length)
-            self.debug(tester, self.ports.out, debug_length)
+            for p in self.ports.out:
+                self.debug(tester, p, debug_length)
             self.debug(tester, self.ports.in_, debug_length)
             #self.debug(tester, self.template.dut.clk_v2t_l[0], debug_length)
 

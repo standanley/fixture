@@ -46,9 +46,11 @@ def _run(circuit_config_dict):
 
     t = TemplateClass(UserCircuit, simulator, signal_manager, extras)
 
-    checkpoint.save(t, 'pickletest4.json')
-    t = checkpoint.load('pickletest4.json')
+    # TODO figure out UI for saving and loading
+    #checkpoint.save(t, 'pickletest4.json')
+    #t = checkpoint.load('pickletest4.json')
 
+    # TODO maybe reorganize heirarchy for better checkpoints?
     #params = {} # extras?
     #for Test in t.tests:
     #    test = Test(params)
@@ -58,7 +60,7 @@ def _run(circuit_config_dict):
 
 
 
-    params_by_mode = t.go()
+    params_by_mode = t.go(checkpoint)
 
     for mode, results in params_by_mode.items():
         print('For mode', mode)
