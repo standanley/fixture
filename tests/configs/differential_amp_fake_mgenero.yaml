@@ -1,6 +1,6 @@
 name: myamp
 filepath: ../spice/myamp_differential_fake.sp
-template: DifferentialAmpTemplate
+template: DifferentialAmpTemplateB
 pin:
     vdd:
         direction: input
@@ -33,6 +33,8 @@ template_pins:
 
 extras:
     approx_settling_time: 1e-3
+    limits_diff: (-0.2, 0.2)
+    limits_cm: (0.55, 0.65)
 
 mgenero: ./../../mgenero_4/differential_amp_mgenero_config.yaml
 

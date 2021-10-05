@@ -47,7 +47,8 @@ class PlotHelper:
         if factor == '1':
             return np.ones(data.shape[0])
         else:
-            return data[factor]
+            clean_factor = Regression.clean_string(factor)
+            return data[clean_factor]
 
     @staticmethod
     def eval_parameter(data, regression_results, parameter):
@@ -129,7 +130,8 @@ class PlotHelper:
                         y = PlotHelper.eval_factor(data, regression_name(s))
                         # TODO I think there's a better way to get ynom
                         ynom = PlotHelper.eval_factor(model_data, regression_name(s))[0]
-                        B = regression_results[parameter][regression_name(s)]
+                        #B = regression_results[parameter][regression_name(s)]
+                        B = regression_results[parameter][s.spice_name]
                         adjustment += B * (y - ynom)
                 parameter_measured_adjusted = parameter_measured - adjustment
 

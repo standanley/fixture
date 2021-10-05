@@ -1,6 +1,6 @@
 name: myamp
 filepath: ../models/myamp_differential_fake_param.sv
-template: DifferentialAmpTemplate
+template: DifferentialAmpTemplateB
 pin:
     vdd:
         direction: input
@@ -32,7 +32,7 @@ pin:
 #         width: 1
     adj:
         direction: input
-        datatype: real
+        datatype: analog
         value: (0, 1.2)
 
 template_pins:
@@ -43,6 +43,8 @@ template_pins:
 
 extras:
     approx_settling_time: 1e-3
+    limits_diff: (-.2, .2)
+    limits_cm: (0.55, 0.65)
 
 #mgenero: ./../../mgenero_4/differential_amp_mgenero_config.yaml
 

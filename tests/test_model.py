@@ -13,12 +13,13 @@ def file_relative_to_test(fname):
 # 
 #     fixture.run(circuit_fname, test_fname)
 
+# TODO we seem to have lost this model completely ... I can't find it in git
 @pytest.mark.xfail
 def test_diff_param():
     circuit_fname = file_relative_to_test('configs/differential_model.yaml')
-    test_fname = file_relative_to_test('./configs/mlingua.yaml')
+    #test_fname = file_relative_to_test('./configs/mlingua.yaml')
 
-    fixture.run(circuit_fname, test_fname)
+    fixture.run(circuit_fname)
 
 # TODO we are xfailing this because fault reports a 2-bit ngspice bus as an
 # integer from 0 to 3, and we don't have a way to separate that
@@ -29,4 +30,4 @@ def test_pb():
     fixture.run(circuit_fname)
 
 if __name__ == '__main__':
-    test_pb()
+    test_diff_param()

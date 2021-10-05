@@ -75,7 +75,7 @@ class Regression:
                 if i == 1:
                     terms.append(a)
                 else:
-                    terms.append('I(%s**%d)' % (a, i))
+                    terms.append('I(%s ** %d)' % (a, i))
 
         for ba in opt_ba:
             terms.append(ba)
@@ -263,6 +263,17 @@ class Regression:
                     assert all(data[term] == values)
                 else:
                     data[term] = values
+
+        # for cases where we have a term like (A*adj+B)*in**2
+        # we should make sure that regression_data contains in**2
+        # I think right now it will always be in the columns as in**2*const_1
+        # because of that B with no other coef, but even if that changes in
+        # the future we should still include in**2 in our columns
+        for column in list(data.keys()):
+            if column[-1*len(self.one_literal)-1:] == '*'+self.one_literal:
+                data[column[:-1*len(self.one_literal)-1]] = data[column]
+
+
 
 
         # TODO dump res to a yaml file
