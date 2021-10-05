@@ -10,7 +10,7 @@ from ast import literal_eval
 from fixture.signals import SignalArray
 
 
-class Regression():
+class Regression:
     # statsmodels gets confused if you try to use '1' to mean a column of 
     # ones, so we manually add a column of ones with the following name
     one_literal = 'const_1'
@@ -116,6 +116,15 @@ class Regression():
             text = text.replace(new, old)
         return text
 
+    def clean_exog_name(self, name):
+        def strip_I(s):
+            if s[:2] == 'I(' and s[-1] == ')':
+                return s[2:-1]
+            else:
+                return s
+        tokens = [self.revert_names(strip_I(t)) for t in name.split(':')]
+        return '*'.join(tokens)
+
     def convert_required_ba(self, test, rhs):
         '''
         when the parameter algebra contains an Array (most likely ba required input),
@@ -185,7 +194,7 @@ class Regression():
         data = {self._clean_string(k):v for k,v in data.items()}
         self.df = pandas.DataFrame(data)
 
-        self.consts ={}
+        self.consts = {}
 
         def create_const(rhs):
             '''
@@ -212,6 +221,7 @@ class Regression():
 
         results = {}
         results_models = {}
+        regression_dicts = []
         for lhs, rhs in test.parameter_algebra.items():
             lhs, rhs = self.parse_parameter_algebra(lhs, rhs)
 
@@ -227,11 +237,16 @@ class Regression():
             stats_model = smf.ols(formula, self.df)
             stat_results = stats_model.fit()
             result = self.parse_coefs(stat_results, rhs)
-            for k,v in result.items():
+            for k, v in result.items():
                 assert not k in results, 'Parameter %s found in multiple parameter algebra formulas'
                 results[k] = v
 
             results_models[lhs] = stat_results
+            regression_dict = {self.clean_exog_name(name): values for
+                                    name, values in zip(stats_model.exog_names,
+                                                        stats_model.exog.T)
+                               }
+            regression_dicts.append(regression_dict)
 
         self.condense_required_ba(results)
 
@@ -242,7 +257,16 @@ class Regression():
                          for term, coef in terms.items()}
             results[param] = terms_new
 
+        for regression_dict in regression_dicts:
+            for term, values in regression_dict.items():
+                if term in data:
+                    assert all(data[term] == values)
+                else:
+                    data[term] = values
+
+
         # TODO dump res to a yaml file
+        self.regression_dataframe = pandas.DataFrame(data)
         self.results = results
         self.results_models = results_models
 

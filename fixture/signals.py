@@ -228,13 +228,15 @@ class SignalManager:
         self.signals_by_circuit_name = {}
         for s_or_a in self.signals:
             if isinstance(s_or_a, SignalArray):
-                token_signal = s_or_a.flatten()[0]
-                if token_signal.spice_name is None:
-                    continue
-                # TODO I'm making some assumptions here, so this assert might
-                # fail in some weird cases
-                assert s_or_a.bus_name in token_signal.spice_name
-                self.signals_by_circuit_name[s_or_a.bus_name] = s_or_a
+                #token_signal = s_or_a.flatten()[0]
+                #if token_signal.spice_name is None:
+                #    continue
+                ## TODO I'm making some assumptions here, so this assert might
+                ## fail in some weird cases
+                #assert s_or_a.bus_name in token_signal.spice_name
+                #self.signals_by_circuit_name[s_or_a.bus_name] = s_or_a
+                if s_or_a.spice_name is not None:
+                    self.signals_by_circuit_name[s_or_a.spice_name] = s_or_a
             else:
                 if s_or_a.spice_name == None:
                     continue
@@ -349,7 +351,9 @@ class SignalManager:
 
     def random_analog(self):
         def check_s(s):
-            return s.get_random and s.type_ in ['analog', 'real']
+            return (isinstance(s, SignalIn)
+                    and s.get_random
+                    and s.type_ in ['analog', 'real'])
 
         for s_or_a in self.signals:
             if isinstance(s_or_a, SignalArray):
@@ -362,15 +366,21 @@ class SignalManager:
                     yield s_or_a
 
     def random_qa(self):
+        # TODO right now it returns the whole SignalArray if it's full of qa,
+        # but will return individual bits if they're not in a SA or mixed in
         def check_s(s):
-            return s.get_random and s.type_ in ['binary_analog', 'bit']
+            return (isinstance(s, SignalIn)
+                    and s.get_random
+                    and s.type_ in ['binary_analog', 'bit'])
 
         for s_or_a in self.signals:
             if isinstance(s_or_a, SignalArray):
-                # TODO whole bus at once
-                for s in s_or_a.flatten():
-                    if check_s(s):
-                        yield s
+                if all(check_s(s) for s in s_or_a.flatten()):
+                    yield s_or_a
+                else:
+                    for s in s_or_a.flatten():
+                        if check_s(s):
+                            yield s
             elif isinstance(s_or_a, SignalIn):
                 if check_s(s_or_a):
                     yield s_or_a
@@ -392,11 +402,10 @@ class SignalManager:
         pass
 
     def binary_analog(self):
-        # TODO get rid of this
-        return {}
+        return [x for x in self.random_qa() if x.template_name is None]
+
     def true_analog(self):
-        # TODO get rid of this
-        return []
+        return [x for x in self.random_analog() if x.template_name is None]
 
 
     def flat(self):
@@ -424,10 +433,11 @@ class SignalManager:
 
 class SignalArray:
 
-    def __init__(self, signal_array, info, bus_name=None):
+    def __init__(self, signal_array, info, template_name=None, spice_name=None):
         self.array = signal_array
         self.info = info
-        self.bus_name = bus_name
+        self.template_name = template_name
+        self.spice_name = spice_name
 
     #def flat(self):
     #    ss = []

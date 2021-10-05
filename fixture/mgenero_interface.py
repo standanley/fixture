@@ -108,13 +108,13 @@ def create_interface(template, collateral_dict):
         circuit_names = [x.spice_name is not None for x in s.flatten()]
         assert all(circuit_names), f'Mixed circuit/not in {s}'
         assert len(s.shape) == 1, f'mGenero buses must be 1D, {s} is {len(s.shape)}D'
-        assert s.bus_name is not None, f'Expected mGenero bus to have bus_name, {s} does not'
+        assert s.spice_name is not None, f'Expected mGenero bus to have spice bus name, {s} does not'
         # TODO should we assert something about values?
 
         token_s = list(a.flatten())[0]
         d = create_pin(token_s)
-        d['name'] = a.bus_name
-        d['description'] = f'Template: <unknown>, Circuit: "{a.bus_name}"'
+        d['name'] = a.spice_name
+        d['description'] = f'Template: <unknown>, Circuit: "{a.spice_name}"'
         d['vectorsize'] = a.shape[0]
 
         # TODO I don't know whether mgenero handles values here ... it probably
@@ -160,6 +160,8 @@ def create_interface(template, collateral_dict):
                     # We want the circuit names in the verilog
                     # but the only way to communicate the template names to
                     # mgenero is one bit at a time
+                    # Our (hacky) solution is to change the bus to a bunch
+                    # of individual bits like in[1:0] -> in_1_, in_0_
                     # TODO what to do for a template-required bus in the model?
                     def clean_name(name):
                         # make this name friendly for verilog
@@ -172,7 +174,7 @@ def create_interface(template, collateral_dict):
                         pins[bit.template_name] = create_pin(bit)
                         pins[bit.template_name]['name'] = clean_name(bit.spice_name)
                 else:
-                    pins[s.bus_name] = create_pin_array(s)
+                    pins[s.spice_name] = create_pin_array(s)
         else:
             if s.spice_name is not None:
                 # use the template name as the dictionary key here, and the
