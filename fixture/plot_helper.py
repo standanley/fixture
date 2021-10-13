@@ -86,6 +86,7 @@ class PlotHelper:
         ba_bits = [bit for ba_bus in ba_buses for bit in ba_bus]
         for ba in ba_bits:
             nominal_data_dict[regression_name(ba)] = [0.5] * N
+        nominal_data_dict[Regression.one_literal] = [1]*N
         nominal_data = pandas.DataFrame(nominal_data_dict)
 
 
@@ -130,8 +131,11 @@ class PlotHelper:
                         y = PlotHelper.eval_factor(data, regression_name(s))
                         # TODO I think there's a better way to get ynom
                         ynom = PlotHelper.eval_factor(model_data, regression_name(s))[0]
-                        #B = regression_results[parameter][regression_name(s)]
-                        B = regression_results[parameter][s.spice_name]
+                        # TODO this originally ysed spice name, then regression name, and now
+                        # back to spice... the move to spice was for the sampler jitter signal,
+                        # which has no spice name but is still an optional input
+                        B = regression_results[parameter][regression_name(s)]
+                        #B = regression_results[parameter][s.spice_name]
                         adjustment += B * (y - ynom)
                 parameter_measured_adjusted = parameter_measured - adjustment
 

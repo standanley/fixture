@@ -405,7 +405,8 @@ class SignalManager:
         return [x for x in self.random_qa() if x.template_name is None]
 
     def true_analog(self):
-        return [x for x in self.random_analog() if x.template_name is None]
+        #return [x for x in self.random_analog() if x.template_name is None]
+        return [x for x in self.random_analog() if x.type_ == 'analog']
 
 
     def flat(self):

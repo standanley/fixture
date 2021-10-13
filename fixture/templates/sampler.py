@@ -7,7 +7,8 @@ import math
 class SamplerTemplate(TemplateMaster):
     required_ports = ['in_', 'clk', 'out']
     required_info = {
-        'approx_settling_time': 'Approximate time it takes for amp to settle within 99% (s)'
+        'approx_settling_time': 'Approximate time it takes for amp to settle within 99% (s)',
+        'max_slope': 'Approximate maximum slope of the input signal to be sampled (V/s)'
     }
 
     def __init__(self, *args, **kwargs):
@@ -17,32 +18,39 @@ class SamplerTemplate(TemplateMaster):
 
         # we have to do this before getting input domains, which happens
         # in the call to super
-        extras = args[2]
+        extras = args[3]
+        signal_manager = args[2]
         if 'clks' in extras:
             settle = float(extras['clks']['unit']) * float(extras['clks']['period'])
             extras['approx_settling_time'] = settle
 
-        super().__init__(*args, **kwargs)
 
-        if 'clks' in self.extras:
-            settle = float(self.extras['clks']['unit']) * float(self.extras['clks']['period'])
-            self.extras['approx_settling_time'] = settle
+        # NOTE I think this block has to be before super() because that's when
+        # the individual tests get copies of these signals ??
+        # but must come after for self.signals to be defined?
+        if 'clks' in extras:
+            settle = float(extras['clks']['unit']) * float(extras['clks']['period'])
+            extras['approx_settling_time'] = settle
 
-            clks = self.extras['clks']
+            clks = extras['clks']
             clks = {k: v for k, v in clks.items() if (k != 'unit' and k != 'period')}
             domain = []
             for clk, v in clks.items():
                 if 'max_jitter' in v:
                     x = v['max_jitter']
-                    self.signals.add(signals.SignalIn(
+                    signal_manager.add(signals.SignalIn(
                         (-x, x),
-                        'bit',
+                        'analog',
                         True,
                         False,
                         None,
                         None,
                         clk+'_jitter'
                     ))
+
+
+        super().__init__(*args, **kwargs)
+
 
         # NOTE this must be after super() because it needs ports to be defined
 
@@ -287,7 +295,7 @@ class SamplerTemplate(TemplateMaster):
         def input_domain(self):
             limits = self.signals.from_template_name('in_').value
             settle = 0.5 * float(self.extras['approx_settling_time'])
-            max_slope = 50 * (limits[1]-limits[0]) / settle
+            max_slope = 2*self.extras['max_slope'] # 50 * (limits[1]-limits[0]) / settle
 
             v = signals.create_input_domain_signal('value', limits)
             s = signals.create_input_domain_signal('slope', (-max_slope, max_slope))
@@ -412,6 +420,10 @@ class SamplerTemplate(TemplateMaster):
         def post_process(self, results):
             # comment out next line for debug plots
             return results
+
+
+
+
             vs, ss, jitter, samples, ss_scaled = list(results.values())[:5]
             ss_vpns = [s/1e9 for s in ss]
 
@@ -460,6 +472,11 @@ class SamplerTemplate(TemplateMaster):
             plt.show()
 
             return results
+
+
+        def post_regression(self, regression_models, regression_dataframe):
+            print('hi')
+            pass
 
     #@template_creation_utils.debug
     class SineTest(TemplateMaster.Test):

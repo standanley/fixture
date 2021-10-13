@@ -65,9 +65,10 @@ class Regression:
         #optional_signals = [s for s in template.signals if hasattr(s, 'get_random') and s.get_random and s.auto_set]
         random_signals = [s for s in template.signals.random()]
         random_signals_flat = [s for x in random_signals for s in (x if isinstance(x, SignalArray) else [x])]
-        opt_signals = [s for s in random_signals_flat if s.template_name is None]
-        opt_a = [s.spice_name for s in opt_signals if s.type_ == 'analog']
-        opt_ba = [s.spice_name for s in opt_signals if s.type_ == 'binary_analog']
+        #opt_signals = [s for s in random_signals_flat if s.template_name is None]
+        opt_signals = random_signals_flat
+        opt_a = [cls.regression_name(s) for s in opt_signals if s.type_ == 'analog']
+        opt_ba = [cls.regression_name(s) for s in opt_signals if s.type_ == 'binary_analog']
 
         terms = [cls.one_literal]
         for a in opt_a:
@@ -273,6 +274,8 @@ class Regression:
             if column[-1*len(self.one_literal)-1:] == '*'+self.one_literal:
                 data[column[:-1*len(self.one_literal)-1]] = data[column]
 
+        # remove spaces from column names
+        data = {k.replace(' ', ''): v for k, v in data.items()}
 
 
 
