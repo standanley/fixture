@@ -189,7 +189,7 @@ class TemplateMaster():
                 PlotHelper.plot_optional_effects(test, regression.regression_dataframe, regression.results)
 
                 # TODO this should really be handled in create_testbench
-                temp = test.post_regression(regression.results_models, regression.regression_dataframe)
+                temp = test.post_regression(regression.results, regression.regression_dataframe)
 
                 rr = dict(regression.results)
                 rr.update(temp)

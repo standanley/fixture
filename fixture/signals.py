@@ -1,6 +1,7 @@
 import re
 import numbers
 import numpy as np
+from functools import reduce
 
 class SignalIn():
     def __init__(self,
@@ -11,7 +12,7 @@ class SignalIn():
                  spice_name,
                  spice_pin,
                  template_name,
-
+                 optional_expr
             ):
         # TODO: do we need bus info?
         self.value = value
@@ -21,6 +22,7 @@ class SignalIn():
         self.spice_name = spice_name
         self.spice_pin = spice_pin
         self.template_name = template_name
+        self.optional_expr = optional_expr
         #self.bus_name = bus_name
         #self.bus_i = bus_i
 
@@ -69,6 +71,7 @@ def create_signal(pin_dict, c_name=None, c_pin=None, t_name=None):
                                   (type(value) == tuple) or (type_ == 'binary_analog' and value == None)))
         auto_set = pin_dict.get('auto_set',
                                 get_random or type(value) == int or type(value) == float)
+        optional_expr = get_random
 
         s = SignalIn(
             value,
@@ -78,6 +81,7 @@ def create_signal(pin_dict, c_name=None, c_pin=None, t_name=None):
             spice_name,
             spice_pin,
             template_name,
+            optional_expr
         )
         return s
 
@@ -90,7 +94,8 @@ def create_signal(pin_dict, c_name=None, c_pin=None, t_name=None):
     else:
         assert False, 'Unrecognized pin direction' + pin_dict['direction']
 
-def create_input_domain_signal(name, value, spice_pin=None):
+def create_input_domain_signal(name, value, spice_pin=None,
+                               optional_expr=False):
     return SignalIn(
         value,
         'analog',
@@ -98,7 +103,8 @@ def create_input_domain_signal(name, value, spice_pin=None):
         spice_pin is not None,
         spice_pin,
         None if spice_pin is None else str(spice_pin),
-        name
+        name,
+        optional_expr
     )
 
 
@@ -322,30 +328,11 @@ class SignalManager:
         # return a list of Signals (always analog) and SignalArrays (always qa)
         # basically we want to organize these the way they will be randomly
         # sampled; so each object in the list is one dimension
-        ans = []
-        for s in self.inputs():
-            if isinstance(s, SignalArray):
-                all_qa = all(x.type_ == 'binary_analog' for x in s.flatten())
-                #all_a = all(x.type_ in ['analog', 'real'] for x in s.flatten())
-                all_random = all(x.get_random for x in s.flatten())
-                no_random = all(not x.get_random for x in s.flatten())
-                if all_qa:
-                    if all_random:
-                        ans.append(s)
-                    else:
-                        assert no_random, f'Mixed random and not in {s}'
-                else:
-                    # TODO doesn't catch if there are still some a in s
-                    ans += list([x for x in s.flatten() if x.get_random])
-            else:
-                if not s.get_random:
-                    continue
-                if s.type_ == 'binary_analog':
-                    # strange to have a single qa, but not an error
-                    temp = SignalArray(np.array([s]), {})
-                    ans.append(temp)
-                else:
-                    ans.append(s)
+        ans = [s_or_a for s_or_a in self.signals
+               if getattr(s_or_a, 'get_random', None)]
+        for s_or_a in ans:
+            if isinstance(s_or_a, SignalArray):
+                assert s_or_a.type_ == ''
         return ans
 
 
@@ -397,16 +384,21 @@ class SignalManager:
                 td.append(s)
         return td
 
-    def linear_input(self):
-        # list of optional inputs, signals (a) or SignalArrays (ba)
-        pass
+    #def linear_input(self):
+    #    # list of optional inputs, signals (a) or SignalArrays (ba)
+    #    pass
 
     def binary_analog(self):
         return [x for x in self.random_qa() if x.template_name is None]
 
     def true_analog(self):
-        #return [x for x in self.random_analog() if x.template_name is None]
-        return [x for x in self.random_analog() if x.type_ == 'analog']
+        return [x for x in self.optional_expr() if x.type_ == 'analog']
+
+    def optional_expr(self):
+        ans = [x for x in self.signals if getattr(x, 'optional_expr', None)]
+        for x in ans:
+            assert x.type_ in ['analog', 'binary_analog']
+        return ans
 
 
     def flat(self):
@@ -464,6 +456,20 @@ class SignalArray:
 
     def __getattr__(self, item):
         # if you're stuck in a loop here, self probably has no .array
+        if item in ['value',
+                    'type_',
+                    'get_random',
+                    'auto_set',
+                    'spice_name',
+                    'spice_pin',
+                    'template_name',
+                    'optional_expr'
+                    ]:
+            # If every signal in this array agrees, return that. Otherwise None
+            entries = map(lambda s: getattr(s, item, None), self.array.flatten())
+            ans = reduce(lambda a, b: a if a == b else None, entries)
+            return ans
+
         return getattr(self.array, item)
 
     #def __getattr__(self, name):

@@ -1,6 +1,8 @@
-from fixture import TemplateMaster
+from fixture import TemplateMaster, PlotHelper
 from fixture import template_creation_utils
 from fixture import signals
+import fixture
+Regression = fixture.regression.Regression
 import math
 
 
@@ -45,7 +47,8 @@ class SamplerTemplate(TemplateMaster):
                         False,
                         None,
                         None,
-                        clk+'_jitter'
+                        clk+'_jitter',
+                        True
                     ))
 
 
@@ -176,9 +179,8 @@ class SamplerTemplate(TemplateMaster):
                 })
 
 
-    #@template_creation_utils.debug
     class StaticNonlinearityTest(TemplateMaster.Test):
-        num_samples = 10#3
+        num_samples = 3 #10
 
         def __init__(self, *args, **kwargs):
             print("STATIC INIT")
@@ -207,6 +209,7 @@ class SamplerTemplate(TemplateMaster):
             for p in self.ports.out:
                 self.debug(tester, p, debug_time)
             self.debug(tester, self.ports.in_, debug_time)
+            self.debug(tester, self.ports.fixture_debug, debug_time)
 
             #self.debug(tester, self.template.dut.z_debug, debug_time)
 
@@ -278,7 +281,6 @@ class SamplerTemplate(TemplateMaster):
 
             return ret
 
-    #@template_creation_utils.debug
     class ApertureTest(TemplateMaster.Test):
 
         # sample_out = should_be_1*value + slope * effective_delay
@@ -294,7 +296,7 @@ class SamplerTemplate(TemplateMaster):
 
         def input_domain(self):
             limits = self.signals.from_template_name('in_').value
-            settle = 0.5 * float(self.extras['approx_settling_time'])
+            settle = float(self.extras['approx_settling_time'])
             max_slope = 2*self.extras['max_slope'] # 50 * (limits[1]-limits[0]) / settle
 
             v = signals.create_input_domain_signal('value', limits)
@@ -320,6 +322,7 @@ class SamplerTemplate(TemplateMaster):
                 self.debug(tester, p, debug_length)
             self.debug(tester, self.ports.in_, debug_length)
             #self.debug(tester, self.template.dut.clk_v2t_l[0], debug_length)
+            self.debug(tester, self.ports.fixture_debug, debug_length)
 
             tester.delay(wait*0.1)
 
@@ -474,9 +477,42 @@ class SamplerTemplate(TemplateMaster):
             return results
 
 
-        def post_regression(self, regression_models, regression_dataframe):
+        def post_regression(self, regression_results, regression_dataframe):
             print('hi')
-            pass
+            value = regression_dataframe['value']
+            slope = regression_dataframe['slope']
+            out = regression_dataframe['sample_out']
+
+            settle = float(self.extras['approx_settling_time'])
+            scale = 10 ** (int(math.log10(1 / settle)))
+
+            # here we explicity ignore dependence on jitter because it's nominally 0
+            results = {k: v[Regression.one_literal] for k, v in regression_results.items()}
+            should_be_1 = results['should_be_1']
+            alpha = results['alpha_times_scale'] / scale
+            beta = results['beta_times_scale2'] / (scale**2)
+            gamma = results['gamma_times_scale'] / scale
+
+            pred = (should_be_1 * value
+                    + alpha * value * slope
+                    + beta * slope ** 2
+                    + gamma * slope)
+
+            import matplotlib.pyplot as plt
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            ax.scatter(value, slope, out, 'g')
+            ax.scatter(value, slope, pred, 'b')
+            #ax.plot_surface(X, J, Z, alpha=0.5)
+
+            ax.set_title('Green is measured, blue is predicted')
+            ax.set_xlabel('Input Value (V)')
+            ax.set_ylabel('Input Slope (V / ns)')
+            #ax.set_ylabel('clk_v2t_l jitter (units)')
+            ax.set_zlabel('Measured (V)')
+            plt.show()
+            print('done')
+            return {}
 
     #@template_creation_utils.debug
     class SineTest(TemplateMaster.Test):
