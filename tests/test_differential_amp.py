@@ -11,9 +11,8 @@ def file_relative_to_test(fname):
 
 
 tests = [
+    ('configs/differential_amp_fake.yaml', None),
     ('configs/differential_amp.yaml', None),
-    ('configs/differential_amp_B.yaml', None),
-    ('configs/differential_amp2_B.yaml', None),
     ('configs/ctle.yaml', 'hspice'),
     ('configs/ctle_model.yaml', 'irun')
 ]
@@ -29,6 +28,6 @@ def test_by_config(test):
     fixture.run(circuit_fname)
 
 if __name__ == '__main__':
-    test_by_config(tests[3])
+    test_by_config(tests[1])
     pass
 

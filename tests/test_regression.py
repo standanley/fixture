@@ -60,7 +60,8 @@ def test_simple_amp():
         None,
         'spice_in',
         None,
-        'in_single'
+        'in_single',
+        False
     )
     s_out = signals.SignalOut(
         'real',

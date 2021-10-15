@@ -1,6 +1,6 @@
 name: ctle
 filepath: ../spice/ctle.sp
-template: DifferentialAmpTemplateB
+template: DifferentialAmpTemplate
 pin:
     vdd:
         direction: input

@@ -1,26 +1,24 @@
 name: myamp
-filepath: ../spice/myamp_differential_fake.sp
+filepath: ../spice/myamp_differential.sp
 template: DifferentialAmpTemplate
 pin:
     vdd:
         direction: input
-        datatype: real
-        value: 1.2
-    vss:
-        direction: input
-        datatype: real
-        value: 0
+        datatype: analog
+        value: (2.7, 3.3)
+    #vss:
+    #    direction: input
+    #    datatype: real
+    #    value: 0
     inp:
         direction: input
         datatype: real
-        value: (.4, .8)
     outp:
         direction: output
         datatype: real
     inn:
         direction: input
         datatype: real
-        value: (.4, .8)
     outn:
         direction: output
         datatype: real
@@ -32,6 +30,9 @@ template_pins:
     outn: outn
 
 extras:
-    approx_settling_time: 1e-3
+    approx_settling_time: 10e-9
+    limits_diff: (-0.03, 0.03)
+    limits_cm: (1.15, 1.25)
 
+#test_config_file: ngspice_small_tstep.yaml
 test_config_file: ngspice.yaml

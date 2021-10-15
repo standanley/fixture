@@ -270,7 +270,7 @@ def parse_config(circuit_config_dict):
         if isinstance(c_info, np.ndarray):
             s_ndarray = my_create_signal_vec(c_info)
             bus_info = extract_bus_info(c_info)
-            s_array = SignalArray(s_ndarray, bus_info, bus_name=cn)
+            s_array = SignalArray(s_ndarray, bus_info, spice_name=cn)
             signals.append(s_array)
         else:
             s = my_create_signal(c_info)
@@ -303,7 +303,7 @@ def parse_config(circuit_config_dict):
         s_or_a = signals_by_template_name[t_name]
         if isinstance(s_or_a, np.ndarray):
             # TODO is there a way that this would need associated info?
-            sa = SignalArray(s_or_a, {})
+            sa = SignalArray(s_or_a, {}, template_name=t_name)
             signals_by_template_name[t_name] = sa
 
 

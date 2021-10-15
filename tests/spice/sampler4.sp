@@ -10,9 +10,9 @@ Msamp1 discharge_1 clk_v2t<1> in_ 0 EENMOS w=1u l=0.1u
 
 * discharge RC
 Rdischarge0 discharge_0 0 10000000
-Cdischarge0 discharge_0 0 10p
+Cdischarge0 discharge_0 0 1p
 Rdischarge1 discharge_1 0 10000000
-Cdischarge1 discharge_1 0 10p
+Cdischarge1 discharge_1 0 1p
 
 * trigger inverter
 Minvn0 0   discharge_0 trigger_0 0   EENMOS w=1u   l=0.1u

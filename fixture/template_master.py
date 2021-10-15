@@ -121,7 +121,7 @@ class TemplateMaster():
             '''
             pass
 
-        def post_regression(self, regression_models):
+        def post_regression(self, regression_models, regression_dataframe):
             '''
             After regression is run, this is called for additional post-processing.
             It it passed a dictionary with regression models {lhs: model}
@@ -177,17 +177,19 @@ class TemplateMaster():
 
             results_each_mode = tb.get_results()
 
-            test.debug_plot()
+            debug = False
+            if debug:
+                test.debug_plot()
 
             params_by_mode = {}
             for mode, results in enumerate(results_each_mode):
                 regression = fixture.Regression(self, test, results)
 
                 PlotHelper.plot_regression(regression)
-                PlotHelper.plot_optional_effects(test, results, regression.results)
+                PlotHelper.plot_optional_effects(test, regression.regression_dataframe, regression.results)
 
                 # TODO this should really be handled in create_testbench
-                temp = test.post_regression(regression.results_models)
+                temp = test.post_regression(regression.results, regression.regression_dataframe)
 
                 rr = dict(regression.results)
                 rr.update(temp)

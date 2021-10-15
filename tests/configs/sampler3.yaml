@@ -21,5 +21,6 @@ template_pins:
 
 extras:
     approx_settling_time: 10e-6
+    max_slope: 1e5
 
 test_config_file: mlingua.yaml

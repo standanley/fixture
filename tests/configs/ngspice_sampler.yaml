@@ -3,5 +3,6 @@ simulator: ngspice
 #simulator: spectre
 #ic: {vss: 0}
 vsup: 1.2
-t_step: 1.0e-7
+t_step: 0.5e-7
+t_tr: 1.0e-7
 #no_run: True

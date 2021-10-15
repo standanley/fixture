@@ -10,7 +10,7 @@ from ast import literal_eval
 from fixture.signals import SignalArray
 
 
-class Regression():
+class Regression:
     # statsmodels gets confused if you try to use '1' to mean a column of 
     # ones, so we manually add a column of ones with the following name
     one_literal = 'const_1'
@@ -61,13 +61,11 @@ class Regression():
         interaction_a_ba = False
         interaction_ba_ba = False
 
-        # TODO is s.get_random and s.auto_set the right condition?
-        #optional_signals = [s for s in template.signals if hasattr(s, 'get_random') and s.get_random and s.auto_set]
-        random_signals = [s for s in template.signals.random()]
-        random_signals_flat = [s for x in random_signals for s in (x if isinstance(x, SignalArray) else [x])]
-        opt_signals = [s for s in random_signals_flat if s.template_name is None]
-        opt_a = [s.spice_name for s in opt_signals if s.type_ == 'analog']
-        opt_ba = [s.spice_name for s in opt_signals if s.type_ == 'binary_analog']
+        opt_signals = template.signals.optional_expr()
+        opt_signals_flat = [s for x in opt_signals for s in (x if isinstance(x, SignalArray) else [x])]
+        # TODO accept real in addition to analog?
+        opt_a = [cls.regression_name(s) for s in opt_signals_flat if s.type_ == 'analog']
+        opt_ba = [cls.regression_name(s) for s in opt_signals_flat if s.type_ == 'binary_analog']
 
         terms = [cls.one_literal]
         for a in opt_a:
@@ -75,7 +73,7 @@ class Regression():
                 if i == 1:
                     terms.append(a)
                 else:
-                    terms.append('I(%s**%d)' % (a, i))
+                    terms.append('I(%s ** %d)' % (a, i))
 
         for ba in opt_ba:
             terms.append(ba)
@@ -115,6 +113,15 @@ class Regression():
         for new, old in self.name_mapping.items():
             text = text.replace(new, old)
         return text
+
+    def clean_exog_name(self, name):
+        def strip_I(s):
+            if s[:2] == 'I(' and s[-1] == ')':
+                return s[2:-1]
+            else:
+                return s
+        tokens = [self.revert_names(strip_I(t)) for t in name.split(':')]
+        return '*'.join(tokens)
 
     def convert_required_ba(self, test, rhs):
         '''
@@ -185,7 +192,7 @@ class Regression():
         data = {self._clean_string(k):v for k,v in data.items()}
         self.df = pandas.DataFrame(data)
 
-        self.consts ={}
+        self.consts = {}
 
         def create_const(rhs):
             '''
@@ -212,6 +219,7 @@ class Regression():
 
         results = {}
         results_models = {}
+        regression_dicts = []
         for lhs, rhs in test.parameter_algebra.items():
             lhs, rhs = self.parse_parameter_algebra(lhs, rhs)
 
@@ -227,11 +235,16 @@ class Regression():
             stats_model = smf.ols(formula, self.df)
             stat_results = stats_model.fit()
             result = self.parse_coefs(stat_results, rhs)
-            for k,v in result.items():
+            for k, v in result.items():
                 assert not k in results, 'Parameter %s found in multiple parameter algebra formulas'
                 results[k] = v
 
             results_models[lhs] = stat_results
+            regression_dict = {self.clean_exog_name(name): values for
+                                    name, values in zip(stats_model.exog_names,
+                                                        stats_model.exog.T)
+                               }
+            regression_dicts.append(regression_dict)
 
         self.condense_required_ba(results)
 
@@ -242,7 +255,29 @@ class Regression():
                          for term, coef in terms.items()}
             results[param] = terms_new
 
+        for regression_dict in regression_dicts:
+            for term, values in regression_dict.items():
+                if term in data:
+                    assert all(data[term] == values)
+                else:
+                    data[term] = values
+
+        # for cases where we have a term like (A*adj+B)*in**2
+        # we should make sure that regression_data contains in**2
+        # I think right now it will always be in the columns as in**2*const_1
+        # because of that B with no other coef, but even if that changes in
+        # the future we should still include in**2 in our columns
+        for column in list(data.keys()):
+            if column[-1*len(self.one_literal)-1:] == '*'+self.one_literal:
+                data[column[:-1*len(self.one_literal)-1]] = data[column]
+
+        # remove spaces from column names
+        data = {k.replace(' ', ''): v for k, v in data.items()}
+
+
+
         # TODO dump res to a yaml file
+        self.regression_dataframe = pandas.DataFrame(data)
         self.results = results
         self.results_models = results_models
 

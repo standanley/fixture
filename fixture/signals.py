@@ -1,6 +1,7 @@
 import re
 import numbers
 import numpy as np
+from functools import reduce
 
 class SignalIn():
     def __init__(self,
@@ -11,7 +12,7 @@ class SignalIn():
                  spice_name,
                  spice_pin,
                  template_name,
-
+                 optional_expr
             ):
         # TODO: do we need bus info?
         self.value = value
@@ -21,31 +22,22 @@ class SignalIn():
         self.spice_name = spice_name
         self.spice_pin = spice_pin
         self.template_name = template_name
-        #self.bus_name = bus_name
-        #self.bus_i = bus_i
+        self.optional_expr = optional_expr
 
     def __str__(self):
         return f'<{str(self.template_name)} / {self.spice_name}>'
 
 class SignalOut():
     def __init__(self,
-                 #value,
                  type_,
-                 #get_random,
-                 #auto_set,
                  spice_name,
                  spice_pin,
                  template_name
                  ):
-        # TODO: do we need bus info?
         self.type_ = type_
-        # TODO auto read?
-        #self.auto_set = auto_set
         self.spice_name = spice_name
         self.spice_pin = spice_pin
         self.template_name = template_name
-        #self.bus_name = bus_name
-        #self.bus_i = bus_i
 
     def __str__(self):
         return f'<{str(self.template_name)} / {self.spice_name}>'
@@ -69,6 +61,7 @@ def create_signal(pin_dict, c_name=None, c_pin=None, t_name=None):
                                   (type(value) == tuple) or (type_ == 'binary_analog' and value == None)))
         auto_set = pin_dict.get('auto_set',
                                 get_random or type(value) == int or type(value) == float)
+        optional_expr = get_random
 
         s = SignalIn(
             value,
@@ -78,6 +71,7 @@ def create_signal(pin_dict, c_name=None, c_pin=None, t_name=None):
             spice_name,
             spice_pin,
             template_name,
+            optional_expr
         )
         return s
 
@@ -90,7 +84,8 @@ def create_signal(pin_dict, c_name=None, c_pin=None, t_name=None):
     else:
         assert False, 'Unrecognized pin direction' + pin_dict['direction']
 
-def create_input_domain_signal(name, value, spice_pin=None):
+def create_input_domain_signal(name, value, spice_pin=None,
+                               optional_expr=False):
     return SignalIn(
         value,
         'analog',
@@ -98,7 +93,8 @@ def create_input_domain_signal(name, value, spice_pin=None):
         spice_pin is not None,
         spice_pin,
         None if spice_pin is None else str(spice_pin),
-        name
+        name,
+        optional_expr
     )
 
 
@@ -132,13 +128,11 @@ def parse_bus(name):
         if m is not None:
             x = int(index[1:-1])
             indices_parsed.append((x,))
-            #indices_limits_parsed.append(x+1)
             info_parsed.append(index[0] + index[-1] + 'a')
         else:
             m = re.match(re_index_range_groups, index)
             s, e = int(m.group(2)), int(m.group(3))
             indices_parsed.append((s, e))
-            #indices_limits_parsed.append(max(s, e)+1)
             direction = 'a' if e >= s else 'd'
             info_parsed.append(m.group(1) + m.group(4) + direction)
 
@@ -228,17 +222,15 @@ class SignalManager:
         self.signals_by_circuit_name = {}
         for s_or_a in self.signals:
             if isinstance(s_or_a, SignalArray):
-                token_signal = s_or_a.flatten()[0]
-                if token_signal.spice_name is None:
-                    continue
-                # TODO I'm making some assumptions here, so this assert might
-                # fail in some weird cases
-                assert s_or_a.bus_name in token_signal.spice_name
-                self.signals_by_circuit_name[s_or_a.bus_name] = s_or_a
+                for s in s_or_a.flatten():
+                    if s.spice_name is not None:
+                        self.signals_by_circuit_name[s.spice_pin] = s
+
+                if s_or_a.spice_name is not None:
+                    self.signals_by_circuit_name[s_or_a.spice_name] = s_or_a
             else:
-                if s_or_a.spice_name == None:
-                    continue
-                self.signals_by_circuit_name[s_or_a.spice_name] = s_or_a
+                if s_or_a.spice_name is not None:
+                    self.signals_by_circuit_name[s_or_a.spice_name] = s_or_a
 
         if signals_by_template_name is None:
             self.signals_by_template_name = {}
@@ -262,9 +254,9 @@ class SignalManager:
         # the intention is for the template writer to add signals to the copy
         # without changing the original
         signals_copy = self.signals.copy()
-        #by_circuit_copy = self.signals_by_circuit_name.copy()
-        by_teplate_copy = self.signals_by_template_name.copy()
-        return SignalManager(signals_copy, by_teplate_copy)
+        by_template_copy = self.signals_by_template_name.copy()
+        # by_circuit_name will be rebuilt automatically
+        return SignalManager(signals_copy, by_template_copy)
 
     def from_template_name(self, name):
         # return a Signal or SignalArray of signals according to template name
@@ -275,9 +267,6 @@ class SignalManager:
             a = self.signals_by_template_name[bus_name]
             s_or_ss = a[tuple(indices)]
             return s_or_ss
-
-
-        pass
 
     def from_circuit_pin(self, pin):
         # pin is a magma object
@@ -300,10 +289,6 @@ class SignalManager:
             s_or_ss = a[tuple(indices)]
             return s_or_ss
 
-    def circuit(self, name):
-        # return a Signal or SignalArray of signals according to circuit name
-        pass
-
     def inputs(self):
         for s in self.signals:
             if isinstance(s, SignalIn):
@@ -321,83 +306,67 @@ class SignalManager:
         # basically we want to organize these the way they will be randomly
         # sampled; so each object in the list is one dimension
         ans = []
-        for s in self.inputs():
-            if isinstance(s, SignalArray):
-                all_qa = all(x.type_ == 'binary_analog' for x in s.flatten())
-                #all_a = all(x.type_ in ['analog', 'real'] for x in s.flatten())
-                all_random = all(x.get_random for x in s.flatten())
-                no_random = all(not x.get_random for x in s.flatten())
-                if all_qa:
-                    if all_random:
-                        ans.append(s)
-                    else:
-                        assert no_random, f'Mixed random and not in {s}'
+        for x in self.signals:
+            if isinstance(x, SignalIn):
+                if x.get_random:
+                    ans.append(x)
+            elif isinstance(x, SignalArray):
+                if x.type_ == 'binary_analog':
+                    assert x.get_random == True, 'qa that is not random?'
+                    ans.append(x)
                 else:
-                    # TODO doesn't catch if there are still some a in s
-                    ans += list([x for x in s.flatten() if x.get_random])
-            else:
-                if not s.get_random:
-                    continue
-                if s.type_ == 'binary_analog':
-                    # strange to have a single qa, but not an error
-                    temp = SignalArray(np.array([s]), {})
-                    ans.append(temp)
-                else:
-                    ans.append(s)
+                    # we can't include it as one SA, but we should check bits
+                    for bit in x.flatten():
+                        assert bit.type_ != 'binary analog', f'mixed qa/not in {x}'
+                        if getattr(bit, 'get_random', None):
+                            ans.append(bit)
         return ans
 
 
-    def random_analog(self):
-        def check_s(s):
-            return s.get_random and s.type_ in ['analog', 'real']
-
-        for s_or_a in self.signals:
-            if isinstance(s_or_a, SignalArray):
-                # TODO whole bus at once
-                for s in s_or_a.flatten():
-                    if check_s(s):
-                        yield s
-            elif isinstance(s_or_a, SignalIn):
-                if check_s(s_or_a):
-                    yield s_or_a
-
     def random_qa(self):
+        # TODO right now it returns the whole SignalArray if it's full of qa,
+        # but will return individual bits if they're not in a SA or mixed in
         def check_s(s):
-            return s.get_random and s.type_ in ['binary_analog', 'bit']
+            return (isinstance(s, SignalIn)
+                    and s.get_random
+                    and s.type_ in ['binary_analog', 'bit'])
 
         for s_or_a in self.signals:
             if isinstance(s_or_a, SignalArray):
-                # TODO whole bus at once
-                for s in s_or_a.flatten():
-                    if check_s(s):
-                        yield s
+                if all(check_s(s) for s in s_or_a.flatten()):
+                    yield s_or_a
+                else:
+                    for s in s_or_a.flatten():
+                        if check_s(s):
+                            yield s
             elif isinstance(s_or_a, SignalIn):
                 if check_s(s_or_a):
                     yield s_or_a
-
-    def auto_set(self):
-        # return a list of signals
-        pass
 
     def true_digital(self):
-        # return a list of signals
-        td = []
-        for s in self.flat():
-            if s.type_ == 'true_digital':
-                td.append(s)
-        return td
+        # return a list of signals - no SignalArrays
+        ans = [s for s in self.flat() if s.type_ == 'true_digital']
+        return ans
 
-    def linear_input(self):
-        # list of optional inputs, signals (a) or SignalArrays (ba)
-        pass
+    def optional_expr(self):
+        ans = [x for x in self.signals if getattr(x, 'optional_expr', None)]
+        for x in ans:
+            assert x.type_ in ['analog', 'binary_analog']
+        return ans
 
-    def binary_analog(self):
-        # TODO get rid of this
-        return {}
-    def true_analog(self):
-        # TODO get rid of this
-        return []
+    def optional_quantized_analog(self):
+        for x in self.optional_expr():
+            assert x.type_ in ['analog', 'binary_analog']
+        for x in self.signals:
+            if isinstance(x, SignalArray):
+                assert x.type_ is not None
+        return [x for x in self.optional_expr() if x.type_ == 'binary_analog']
 
+    def optional_true_analog(self):
+        for x in self.optional_expr():
+            assert x.type_ in ['analog', 'binary_analog']
+        ans = [x for x in self.optional_expr() if x.type_ == 'analog']
+        return ans
 
     def flat(self):
         signals = []
@@ -412,10 +381,6 @@ class SignalManager:
         return iter(self.signals)
 
     def __getattr__(self, item):
-        #if item == 'signals_in':
-        #    return (s for s in self.signals if isinstance(s, SignalIn))
-        #if item == 'signals_out':
-        #    return (s for s in self.signals if isinstance(s, SignalOut))
         try:
             return self.from_template_name(item)
         except KeyError:
@@ -424,24 +389,14 @@ class SignalManager:
 
 class SignalArray:
 
-    def __init__(self, signal_array, info, bus_name=None):
+    def __init__(self, signal_array, info, template_name=None, spice_name=None):
         self.array = signal_array
         self.info = info
-        self.bus_name = bus_name
-
-    #def flat(self):
-    #    ss = []
-    #    for key in self.order:
-    #        x = self.map[key]
-    #        if isinstance(x, [SignalIn, SignalOut]):
-    #            ss.append(x)
-    #        else:
-    #            ss += x.flat()
-    #    return ss
+        self.template_name = template_name
+        self.spice_name = spice_name
 
     def map(self, fun):
         return np.vectorize(fun)(self.array)
-        #return np.array(map(fun, self.array))
 
     def __getitem__(self, key):
         slice = self.array[key]
@@ -453,10 +408,21 @@ class SignalArray:
 
     def __getattr__(self, item):
         # if you're stuck in a loop here, self probably has no .array
-        return getattr(self.array, item)
+        if item in ['value',
+                    'type_',
+                    'get_random',
+                    'auto_set',
+                    'spice_name',
+                    'spice_pin',
+                    'template_name',
+                    'optional_expr'
+                    ]:
+            # If every signal in this array agrees, return that. Otherwise None
+            entries = map(lambda s: getattr(s, item, None), self.array.flatten())
+            ans = reduce(lambda a, b: a if a == b else None, entries)
+            return ans
 
-    #def __getattr__(self, name):
-    #    return getattr(self.token_item, name)
+        return getattr(self.array, item)
 
     def __getstate__(self):
         d = self.__dict__.copy()

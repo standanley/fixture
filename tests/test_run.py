@@ -30,12 +30,12 @@ def test_differential_amp():
     res = subprocess.run(command.split(), check=True)
 
 def test_differential_amp_B():
-    circuit_fname = file_relative_to_test('./configs/differential_amp_B.yaml')
+    circuit_fname = file_relative_to_test('./configs/differential_amp_fake.yaml')
     command = 'python -m fixture.run %s' % (circuit_fname)
     res = subprocess.run(command.split(), check=True)
 
 def test_differential_amp2_B():
-    circuit_fname = file_relative_to_test('./configs/differential_amp2_B.yaml')
+    circuit_fname = file_relative_to_test('./configs/differential_amp.yaml')
     command = 'python -m fixture.run %s' % (circuit_fname)
     res = subprocess.run(command.split(), check=True)
 

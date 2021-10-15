@@ -1,4 +1,7 @@
 from fixture import TemplateMaster
+import fixture
+Regression = fixture.regression.Regression
+
 
 class DACTemplate(TemplateMaster):
     required_ports = ['in_', 'outp', 'outn']
@@ -40,23 +43,25 @@ class DACTemplate(TemplateMaster):
             results = {k:float(v.value) for k,v in reads.items()}
             return results
 
-        def post_regression(self, regression_models):
-            model = list(regression_models.values())[0]
-            data = model.model.data
-            vectors = data.exog
-            measured = data.endog
-            predictions = model.predict()
+        def post_regression(self, results, data):
+            # TODO fix this
+            def regression_name(s):
+                return Regression.clean_string(Regression.regression_name(s))
+            names = self.signals.from_template_name('in_').map(regression_name)
 
-            def get_therm(vector):
-                # last entry is constant_one
-                return sum(vector[:-1])
-            therm_prediction = [get_therm(v) for v in vectors]
+            vectors = data[names]
+            therm = vectors.sum(1)
+            measured_pos = data['outp']
+            #predictions = model.predict()
 
-            #import matplotlib.pyplot as plt
-            #plt.plot(therm_prediction, measured, 'o')
-            #plt.plot(therm_prediction, predictions, 'x')
-            #plt.grid()
-            #plt.show()
+            if False:
+                import matplotlib.pyplot as plt
+                plt.plot(therm, measured_pos, 'o')
+                plt.xlabel('Thermometer code')
+                plt.ylabel('Output voltage (measured)')
+                #plt.plot(therm_prediction, predictions, 'x')
+                plt.grid()
+                plt.show()
             return {}
 
     tests = [Test1]

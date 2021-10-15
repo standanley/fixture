@@ -117,8 +117,9 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             # We don't need to do any post-process phase unwrapping! yay
             return results
 
-        def post_regression(self, regression_models):
+        def post_regression(self, results, data):
             return {}
+            # This has not been updated to new post_regression signature
             import numpy as np
 
             def new_pred_fun(x, dt, abcdef):

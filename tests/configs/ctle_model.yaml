@@ -1,6 +1,6 @@
 name: ctle
 filepath: ctle_mgenero_build/final.sv
-template: DifferentialAmpTemplateB
+template: DifferentialAmpTemplate
 pin:
     vdd:
         direction: input

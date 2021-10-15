@@ -17,6 +17,11 @@ class PlotHelper:
     def save_current_plot(cls, name):
         plt.grid()
         plt.savefig(cls.clean_filename(name), dpi=cls.dpi)
+        # I've had lots of problems with seeing the results of earlier plots
+        # on new plots, and this might be the solution?
+        # I think the issue is when a plot is created outside plot_helper,
+        # then future plot_helper things are done on top of it
+        plt.clf()
 
     @classmethod
     def plot_regression(cls, regression):
@@ -40,69 +45,72 @@ class PlotHelper:
             #plt.show()
             cls.save_current_plot(f'{name}_fit')
 
+
+    @staticmethod
+    def eval_factor(data, factor):
+
+        if factor == '1':
+            return np.ones(data.shape[0])
+        else:
+            clean_factor = Regression.clean_string(factor)
+            return data[clean_factor]
+
+    @staticmethod
+    def eval_parameter(data, regression_results, parameter):
+        fit = regression_results[parameter]
+        M = data.shape[0]
+        result = np.zeros(M)
+        for expr, coef in fit.items():
+            term = PlotHelper.eval_factor(data, expr)
+            result += term * coef
+        return result
+
+    @staticmethod
+    def modify_data(orig, overrides):
+        # copy original dataframe and replace overrides
+        new_dict = {}
+        for name in orig.columns:
+            new_name = Regression.clean_string(name)
+            value = overrides.get(name, orig[name])
+            new_dict[new_name] = value
+        return pandas.DataFrame(new_dict)
+
     @classmethod
-    def plot_optional_effects(cls, test, results, regression_results):
-        def eval_factor(data, factor):
-            # TODO ols is not the right thing here since we really only need the
-            # exog evaluation. Internally in statsmodels there's something like
-            # _eval_factor, but I don't think its' user-facing
-            factor_wrapped = '1' if factor == '1' else f'I({factor})'
-            # also, it doesn't like infinities, which I don't really understand
-            data_finite = data.copy()
-            data_finite[np.logical_not(np.isfinite(data))] = 0
-            x = smf.ols(f'1 ~ {factor_wrapped}', data_finite)
-            return x.exog[:, -1]
-
-        def eval_parameter(data, parameter):
-            fit = regression_results[parameter]
-            M = data.shape[0]
-            result = np.zeros(M)
-            for expr, coef in fit.items():
-                term = eval_factor(data, expr)
-                result += term * coef
-            return result
-
-        def modify_data(orig, overrides):
-            # copy original dataframe and replace overrides
-            new_dict = {}
-            for name in orig.columns:
-                new_name = Regression.clean_string(name)
-                value = overrides.get(name, orig[name])
-                new_dict[new_name] = value
-            return pandas.DataFrame(new_dict)
+    def plot_optional_effects(cls, test, data, regression_results):
 
         def regression_name(s):
             return Regression.clean_string(Regression.regression_name(s))
 
         N = 101
         nominal_data_dict = {}
-        for ta in test.signals.true_analog():
+        for ta in test.signals.optional_true_analog():
             assert isinstance(ta.value, tuple) and len(ta.value) == 2
             nominal = sum(ta.value) / 2
             nominal_data_dict[regression_name(ta)] = [nominal] * N
-        ba_dict = test.signals.binary_analog()
-        ba_bits = [bit for ba_bus in ba_dict.values() for bit in ba_bus]
+        ba_buses = test.signals.optional_quantized_analog()
+        ba_bits = [bit for ba_bus in ba_buses for bit in ba_bus]
         for ba in ba_bits:
             nominal_data_dict[regression_name(ba)] = [0.5] * N
+        nominal_data_dict[Regression.one_literal] = [1]*N
         nominal_data = pandas.DataFrame(nominal_data_dict)
 
-        results_renamed = {regression_name(k): v
-                           for k, v in results.items()}
-        data = pandas.DataFrame(results_renamed)
 
-        for opt in test.signals.true_analog():
+        for opt in test.signals.optional_true_analog():
             assert isinstance(opt.value, tuple) and len(opt.value) == 2
             xs = np.linspace(opt.value[0], opt.value[1], N)
-            model_data = modify_data(nominal_data, {regression_name(opt): xs})
+            model_data = PlotHelper.modify_data(nominal_data,
+                                                {regression_name(opt): xs})
 
             for parameter, fit in regression_results.items():
-                # prediction just based on (Ax + By + C)
-                model_prediction = eval_parameter(model_data, parameter)
+                # prediction just based on  parameter = (Ax + By + C)
+                model_prediction = PlotHelper.eval_parameter(
+                    model_data, regression_results, parameter)
 
                 # prediction based on measured data
                 # OUT = (Ax + By + C) * IN + (Dx + Ey + F)
                 # lhs_measured = (goal) * multiplicand_measured + other_terms
-                M = len(list(results.values())[0])
+                # goal = (lhs_measured - other_terms) / multiplicand_measured
+                M = data.shape[0]
                 other_terms = np.zeros(M)
                 pas = [(k, v) for k, v in test.parameter_algebra.items()
                        if parameter in v]
@@ -110,36 +118,52 @@ class PlotHelper:
                 pa = pas[0]
                 for p, coef in pa[1].items():
                     if p != parameter:
-                        p_measured = eval_parameter(data, p)
-                        coef_measured = eval_factor(data, coef)
+                        p_measured = PlotHelper.eval_parameter(data, regression_results, p)
+                        coef_measured = PlotHelper.eval_factor(data, coef)
                         other_terms += p_measured * coef_measured
 
-                opt_measured = eval_factor(data, regression_name(opt))
-                lhs_measured = eval_factor(data, pa[0])
-                multiplicand_measured = eval_factor(data, pa[1][parameter])
+                opt_measured = PlotHelper.eval_factor(data, regression_name(opt))
+                lhs_measured = PlotHelper.eval_factor(data, pa[0])
+                multiplicand_measured = PlotHelper.eval_factor(data, pa[1][parameter])
                 parameter_measured = (lhs_measured - other_terms) / multiplicand_measured
 
                 # TODO remove influence of other optional pins
                 # (Ax + Bynom + C) = (Ax + By + C) - B(y - ynom)
                 adjustment = np.zeros(M)
 
-                for s in test.signals.true_analog() + ba_bits:
+                for s in test.signals.optional_true_analog() + ba_bits:
                     if s != opt:
-                        y = eval_factor(data, regression_name(s))
+                        y = PlotHelper.eval_factor(data, regression_name(s))
                         # TODO I think there's a better way to get ynom
-                        ynom = eval_factor(model_data, regression_name(s))[0]
-                        B = regression_results[parameter][regression_name(s)]
+                        ynom = PlotHelper.eval_factor(model_data, regression_name(s))[0]
+                        # We can't use spice name here because optional signals
+                        # don't necessarily correspond to pins (sampler jitter)
+                        # BUT we can't use regression_name() because it replaces
+                        # <> with __, which is bad here
+                        name_spice_preferred = (s.spice_name
+                            if s.spice_name is not None else s.template_name)
+                        B = regression_results[parameter][name_spice_preferred]
                         adjustment += B * (y - ynom)
                 parameter_measured_adjusted = parameter_measured - adjustment
 
 
+                plt.figure(plt.gcf().number+1)
                 plt.plot(xs, model_prediction, '--')
                 plt.plot(opt_measured, parameter_measured_adjusted, 'o')
                 plt.xlabel(opt.spice_name)
                 plt.ylabel(parameter)
-                #cls.save_current_plot(f'{parameter}_vs_{opt.spice_name}')
+                cls.save_current_plot(f'{parameter}_vs_{opt.spice_name}')
                 plt.grid()
                 #plt.show()
+
+    @classmethod
+    def plot_optional(cls, x_name, y_name):
+        # goal is to plot y vs x
+        # e.g. diff_out vs diff_in
+        # BUT we need to control for optional inputs, e.g. vdd
+        # out_diff = (A+B*vdd)*in_diff + (C+D*vdd)
+        # out_diff_nom = out_diff + (vdd_nom-vdd)*B*in_diff + (vdd-vdd_nom)*D
+        pass
 
 
 

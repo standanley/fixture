@@ -1,13 +1,16 @@
-from fixture import TemplateMaster
+from fixture import TemplateMaster, PlotHelper
 from fixture import template_creation_utils
 from fixture import signals
+import fixture
+Regression = fixture.regression.Regression
 import math
 
 
 class SamplerTemplate(TemplateMaster):
     required_ports = ['in_', 'clk', 'out']
     required_info = {
-        'approx_settling_time': 'Approximate time it takes for amp to settle within 99% (s)'
+        'approx_settling_time': 'Approximate time it takes for amp to settle within 99% (s)',
+        'max_slope': 'Approximate maximum slope of the input signal to be sampled (V/s)'
     }
 
     def __init__(self, *args, **kwargs):
@@ -17,32 +20,40 @@ class SamplerTemplate(TemplateMaster):
 
         # we have to do this before getting input domains, which happens
         # in the call to super
-        extras = args[2]
+        extras = args[3]
+        signal_manager = args[2]
         if 'clks' in extras:
             settle = float(extras['clks']['unit']) * float(extras['clks']['period'])
             extras['approx_settling_time'] = settle
 
-        super().__init__(*args, **kwargs)
 
-        if 'clks' in self.extras:
-            settle = float(self.extras['clks']['unit']) * float(self.extras['clks']['period'])
-            self.extras['approx_settling_time'] = settle
+        # NOTE I think this block has to be before super() because that's when
+        # the individual tests get copies of these signals ??
+        # but must come after for self.signals to be defined?
+        if 'clks' in extras:
+            settle = float(extras['clks']['unit']) * float(extras['clks']['period'])
+            extras['approx_settling_time'] = settle
 
-            clks = self.extras['clks']
+            clks = extras['clks']
             clks = {k: v for k, v in clks.items() if (k != 'unit' and k != 'period')}
             domain = []
             for clk, v in clks.items():
                 if 'max_jitter' in v:
                     x = v['max_jitter']
-                    self.signals.add(signals.SignalIn(
+                    signal_manager.add(signals.SignalIn(
                         (-x, x),
-                        'bit',
+                        'analog',
                         True,
                         False,
                         None,
                         None,
-                        clk+'_jitter'
+                        clk+'_jitter',
+                        True
                     ))
+
+
+        super().__init__(*args, **kwargs)
+
 
         # NOTE this must be after super() because it needs ports to be defined
 
@@ -168,9 +179,8 @@ class SamplerTemplate(TemplateMaster):
                 })
 
 
-    #@template_creation_utils.debug
     class StaticNonlinearityTest(TemplateMaster.Test):
-        num_samples = 10#3
+        num_samples = 3 #10
 
         def __init__(self, *args, **kwargs):
             print("STATIC INIT")
@@ -199,6 +209,7 @@ class SamplerTemplate(TemplateMaster):
             for p in self.ports.out:
                 self.debug(tester, p, debug_time)
             self.debug(tester, self.ports.in_, debug_time)
+            #self.debug(tester, self.ports.fixture_debug, debug_time)
 
             #self.debug(tester, self.template.dut.z_debug, debug_time)
 
@@ -270,7 +281,6 @@ class SamplerTemplate(TemplateMaster):
 
             return ret
 
-    #@template_creation_utils.debug
     class ApertureTest(TemplateMaster.Test):
 
         # sample_out = should_be_1*value + slope * effective_delay
@@ -286,8 +296,8 @@ class SamplerTemplate(TemplateMaster):
 
         def input_domain(self):
             limits = self.signals.from_template_name('in_').value
-            settle = 0.5 * float(self.extras['approx_settling_time'])
-            max_slope = 50 * (limits[1]-limits[0]) / settle
+            settle = float(self.extras['approx_settling_time'])
+            max_slope = 2*self.extras['max_slope'] # 50 * (limits[1]-limits[0]) / settle
 
             v = signals.create_input_domain_signal('value', limits)
             s = signals.create_input_domain_signal('slope', (-max_slope, max_slope))
@@ -312,6 +322,7 @@ class SamplerTemplate(TemplateMaster):
                 self.debug(tester, p, debug_length)
             self.debug(tester, self.ports.in_, debug_length)
             #self.debug(tester, self.template.dut.clk_v2t_l[0], debug_length)
+            #self.debug(tester, self.ports.fixture_debug, debug_length)
 
             tester.delay(wait*0.1)
 
@@ -412,6 +423,10 @@ class SamplerTemplate(TemplateMaster):
         def post_process(self, results):
             # comment out next line for debug plots
             return results
+
+
+
+
             vs, ss, jitter, samples, ss_scaled = list(results.values())[:5]
             ss_vpns = [s/1e9 for s in ss]
 
@@ -460,6 +475,44 @@ class SamplerTemplate(TemplateMaster):
             plt.show()
 
             return results
+
+
+        def post_regression(self, regression_results, regression_dataframe):
+            return {}
+            value = regression_dataframe['value']
+            slope = regression_dataframe['slope']
+            out = regression_dataframe['sample_out']
+
+            settle = float(self.extras['approx_settling_time'])
+            scale = 10 ** (int(math.log10(1 / settle)))
+
+            # here we explicity ignore dependence on jitter because it's nominally 0
+            results = {k: v[Regression.one_literal] for k, v in regression_results.items()}
+            should_be_1 = results['should_be_1']
+            alpha = results['alpha_times_scale'] / scale
+            beta = results['beta_times_scale2'] / (scale**2)
+            gamma = results['gamma_times_scale'] / scale
+
+            pred = (should_be_1 * value
+                    + alpha * value * slope
+                    + beta * slope ** 2
+                    + gamma * slope)
+
+            import matplotlib.pyplot as plt
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            ax.scatter(value, slope, out, 'g')
+            ax.scatter(value, slope, pred, 'b')
+            #ax.plot_surface(X, J, Z, alpha=0.5)
+
+            ax.set_title('Green is measured, blue is predicted')
+            ax.set_xlabel('Input Value (V)')
+            ax.set_ylabel('Input Slope (V / ns)')
+            #ax.set_ylabel('clk_v2t_l jitter (units)')
+            ax.set_zlabel('Measured (V)')
+            plt.show()
+            print('done')
+            return {}
 
     #@template_creation_utils.debug
     class SineTest(TemplateMaster.Test):

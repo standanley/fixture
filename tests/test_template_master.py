@@ -15,7 +15,8 @@ def get_test_signal(template_name, spice_name):
         False,
         spice_name,
         None,
-        template_name
+        template_name,
+        False
     )
 
 
@@ -81,4 +82,5 @@ def test_required_port_info():
 # TODO maybe do a full test on a circuit defined here
 
 if __name__ == '__main__':
-    test_required_port_info()
+    #test_required_port_info()
+    test_require_good_mapping()
