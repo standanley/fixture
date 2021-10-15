@@ -23,31 +23,21 @@ class SignalIn():
         self.spice_pin = spice_pin
         self.template_name = template_name
         self.optional_expr = optional_expr
-        #self.bus_name = bus_name
-        #self.bus_i = bus_i
 
     def __str__(self):
         return f'<{str(self.template_name)} / {self.spice_name}>'
 
 class SignalOut():
     def __init__(self,
-                 #value,
                  type_,
-                 #get_random,
-                 #auto_set,
                  spice_name,
                  spice_pin,
                  template_name
                  ):
-        # TODO: do we need bus info?
         self.type_ = type_
-        # TODO auto read?
-        #self.auto_set = auto_set
         self.spice_name = spice_name
         self.spice_pin = spice_pin
         self.template_name = template_name
-        #self.bus_name = bus_name
-        #self.bus_i = bus_i
 
     def __str__(self):
         return f'<{str(self.template_name)} / {self.spice_name}>'
@@ -138,13 +128,11 @@ def parse_bus(name):
         if m is not None:
             x = int(index[1:-1])
             indices_parsed.append((x,))
-            #indices_limits_parsed.append(x+1)
             info_parsed.append(index[0] + index[-1] + 'a')
         else:
             m = re.match(re_index_range_groups, index)
             s, e = int(m.group(2)), int(m.group(3))
             indices_parsed.append((s, e))
-            #indices_limits_parsed.append(max(s, e)+1)
             direction = 'a' if e >= s else 'd'
             info_parsed.append(m.group(1) + m.group(4) + direction)
 
@@ -234,19 +222,15 @@ class SignalManager:
         self.signals_by_circuit_name = {}
         for s_or_a in self.signals:
             if isinstance(s_or_a, SignalArray):
-                #token_signal = s_or_a.flatten()[0]
-                #if token_signal.spice_name is None:
-                #    continue
-                ## TODO I'm making some assumptions here, so this assert might
-                ## fail in some weird cases
-                #assert s_or_a.bus_name in token_signal.spice_name
-                #self.signals_by_circuit_name[s_or_a.bus_name] = s_or_a
+                for s in s_or_a.flatten():
+                    if s.spice_name is not None:
+                        self.signals_by_circuit_name[s.spice_pin] = s
+
                 if s_or_a.spice_name is not None:
                     self.signals_by_circuit_name[s_or_a.spice_name] = s_or_a
             else:
-                if s_or_a.spice_name == None:
-                    continue
-                self.signals_by_circuit_name[s_or_a.spice_name] = s_or_a
+                if s_or_a.spice_name is not None:
+                    self.signals_by_circuit_name[s_or_a.spice_name] = s_or_a
 
         if signals_by_template_name is None:
             self.signals_by_template_name = {}
@@ -270,9 +254,9 @@ class SignalManager:
         # the intention is for the template writer to add signals to the copy
         # without changing the original
         signals_copy = self.signals.copy()
-        #by_circuit_copy = self.signals_by_circuit_name.copy()
-        by_teplate_copy = self.signals_by_template_name.copy()
-        return SignalManager(signals_copy, by_teplate_copy)
+        by_template_copy = self.signals_by_template_name.copy()
+        # by_circuit_name will be rebuilt automatically
+        return SignalManager(signals_copy, by_template_copy)
 
     def from_template_name(self, name):
         # return a Signal or SignalArray of signals according to template name
@@ -283,9 +267,6 @@ class SignalManager:
             a = self.signals_by_template_name[bus_name]
             s_or_ss = a[tuple(indices)]
             return s_or_ss
-
-
-        pass
 
     def from_circuit_pin(self, pin):
         # pin is a magma object
@@ -342,32 +323,6 @@ class SignalManager:
         return ans
 
 
-
-
-        ans = [s_or_a for s_or_a in self.signals
-               if getattr(s_or_a, 'get_random', None)]
-        for s_or_a in ans:
-            if isinstance(s_or_a, SignalArray):
-                assert s_or_a.type_ == ''
-        return ans
-
-
-    #def random_analog(self):
-    #    def check_s(s):
-    #        return (isinstance(s, SignalIn)
-    #                and s.get_random
-    #                and s.type_ in ['analog', 'real'])
-
-    #    for s_or_a in self.signals:
-    #        if isinstance(s_or_a, SignalArray):
-    #            # TODO whole bus at once
-    #            for s in s_or_a.flatten():
-    #                if check_s(s):
-    #                    yield s
-    #        elif isinstance(s_or_a, SignalIn):
-    #            if check_s(s_or_a):
-    #                yield s_or_a
-
     def random_qa(self):
         # TODO right now it returns the whole SignalArray if it's full of qa,
         # but will return individual bits if they're not in a SA or mixed in
@@ -388,18 +343,10 @@ class SignalManager:
                 if check_s(s_or_a):
                     yield s_or_a
 
-    #def auto_set(self):
-        # return a list of signals
-    #    pass
-
     def true_digital(self):
         # return a list of signals - no SignalArrays
         ans = [s for s in self.flat() if s.type_ == 'true_digital']
         return ans
-
-    #def linear_input(self):
-    #    # list of optional inputs, signals (a) or SignalArrays (ba)
-    #    pass
 
     def optional_expr(self):
         ans = [x for x in self.signals if getattr(x, 'optional_expr', None)]
@@ -421,7 +368,6 @@ class SignalManager:
         ans = [x for x in self.optional_expr() if x.type_ == 'analog']
         return ans
 
-
     def flat(self):
         signals = []
         for s_or_a in self.signals:
@@ -435,10 +381,6 @@ class SignalManager:
         return iter(self.signals)
 
     def __getattr__(self, item):
-        #if item == 'signals_in':
-        #    return (s for s in self.signals if isinstance(s, SignalIn))
-        #if item == 'signals_out':
-        #    return (s for s in self.signals if isinstance(s, SignalOut))
         try:
             return self.from_template_name(item)
         except KeyError:
@@ -453,19 +395,8 @@ class SignalArray:
         self.template_name = template_name
         self.spice_name = spice_name
 
-    #def flat(self):
-    #    ss = []
-    #    for key in self.order:
-    #        x = self.map[key]
-    #        if isinstance(x, [SignalIn, SignalOut]):
-    #            ss.append(x)
-    #        else:
-    #            ss += x.flat()
-    #    return ss
-
     def map(self, fun):
         return np.vectorize(fun)(self.array)
-        #return np.array(map(fun, self.array))
 
     def __getitem__(self, key):
         slice = self.array[key]
@@ -492,9 +423,6 @@ class SignalArray:
             return ans
 
         return getattr(self.array, item)
-
-    #def __getattr__(self, name):
-    #    return getattr(self.token_item, name)
 
     def __getstate__(self):
         d = self.__dict__.copy()
