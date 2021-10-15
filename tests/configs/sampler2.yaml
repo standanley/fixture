@@ -22,5 +22,6 @@ template_pins:
 extras:
     #approx_settling_time: 3e-9
     approx_settling_time: 3e-10
+    max_slope: 3e9
 
 test_config_file: ngspice_sampler2.yaml

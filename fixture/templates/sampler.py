@@ -209,7 +209,7 @@ class SamplerTemplate(TemplateMaster):
             for p in self.ports.out:
                 self.debug(tester, p, debug_time)
             self.debug(tester, self.ports.in_, debug_time)
-            self.debug(tester, self.ports.fixture_debug, debug_time)
+            #self.debug(tester, self.ports.fixture_debug, debug_time)
 
             #self.debug(tester, self.template.dut.z_debug, debug_time)
 
@@ -322,7 +322,7 @@ class SamplerTemplate(TemplateMaster):
                 self.debug(tester, p, debug_length)
             self.debug(tester, self.ports.in_, debug_length)
             #self.debug(tester, self.template.dut.clk_v2t_l[0], debug_length)
-            self.debug(tester, self.ports.fixture_debug, debug_length)
+            #self.debug(tester, self.ports.fixture_debug, debug_length)
 
             tester.delay(wait*0.1)
 
@@ -478,7 +478,7 @@ class SamplerTemplate(TemplateMaster):
 
 
         def post_regression(self, regression_results, regression_dataframe):
-            print('hi')
+            return {}
             value = regression_dataframe['value']
             slope = regression_dataframe['slope']
             out = regression_dataframe['sample_out']

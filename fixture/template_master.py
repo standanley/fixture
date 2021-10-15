@@ -177,7 +177,7 @@ class TemplateMaster():
 
             results_each_mode = tb.get_results()
 
-            debug = True
+            debug = False
             if debug:
                 test.debug_plot()
 

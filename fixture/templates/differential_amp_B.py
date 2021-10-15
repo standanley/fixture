@@ -66,8 +66,11 @@ class DifferentialAmpTemplate(TemplateMaster):
             return {'out_diff': outp - outn, 'out_cm': (outp + outn) / 2,
                     'outp': outp, 'outn': outn, 'inp': reads[2], 'inn': reads[3]}
 
-        def post_regression(self, results):
+        def post_regression(self, results, data):
             if hasattr(self, 'IS_DEBUG_MODE'):
+                # TODO this does not work with the newer post_regression
+                # signature, but rather than fix it we should do it in an
+                # automated way with plot_helper
                 for param in results.keys():
                     reg = results[param]
 
@@ -177,7 +180,7 @@ class DifferentialAmpTemplate(TemplateMaster):
 
             return {'p1': ps[0], 'p2': ps[1], 'z1': zs[0]}
 
-        def post_regression(self, results):
+        def post_regression(self, results, data):
             #return {}
             if hasattr(self, 'IS_DEBUG_MODE'):
                 for param in results.keys():

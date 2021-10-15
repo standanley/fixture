@@ -17,6 +17,11 @@ class PlotHelper:
     def save_current_plot(cls, name):
         plt.grid()
         plt.savefig(cls.clean_filename(name), dpi=cls.dpi)
+        # I've had lots of problems with seeing the results of earlier plots
+        # on new plots, and this might be the solution?
+        # I think the issue is when a plot is created outside plot_helper,
+        # then future plot_helper things are done on top of it
+        plt.clf()
 
     @classmethod
     def plot_regression(cls, regression):
@@ -78,11 +83,11 @@ class PlotHelper:
 
         N = 101
         nominal_data_dict = {}
-        for ta in test.signals.true_analog():
+        for ta in test.signals.optional_true_analog():
             assert isinstance(ta.value, tuple) and len(ta.value) == 2
             nominal = sum(ta.value) / 2
             nominal_data_dict[regression_name(ta)] = [nominal] * N
-        ba_buses = test.signals.binary_analog()
+        ba_buses = test.signals.optional_quantized_analog()
         ba_bits = [bit for ba_bus in ba_buses for bit in ba_bus]
         for ba in ba_bits:
             nominal_data_dict[regression_name(ba)] = [0.5] * N
@@ -90,7 +95,7 @@ class PlotHelper:
         nominal_data = pandas.DataFrame(nominal_data_dict)
 
 
-        for opt in test.signals.true_analog():
+        for opt in test.signals.optional_true_analog():
             assert isinstance(opt.value, tuple) and len(opt.value) == 2
             xs = np.linspace(opt.value[0], opt.value[1], N)
             model_data = PlotHelper.modify_data(nominal_data,
@@ -126,16 +131,18 @@ class PlotHelper:
                 # (Ax + Bynom + C) = (Ax + By + C) - B(y - ynom)
                 adjustment = np.zeros(M)
 
-                for s in test.signals.true_analog() + ba_bits:
+                for s in test.signals.optional_true_analog() + ba_bits:
                     if s != opt:
                         y = PlotHelper.eval_factor(data, regression_name(s))
                         # TODO I think there's a better way to get ynom
                         ynom = PlotHelper.eval_factor(model_data, regression_name(s))[0]
-                        # TODO this originally ysed spice name, then regression name, and now
-                        # back to spice... the move to spice was for the sampler jitter signal,
-                        # which has no spice name but is still an optional input
-                        B = regression_results[parameter][regression_name(s)]
-                        #B = regression_results[parameter][s.spice_name]
+                        # We can't use spice name here because optional signals
+                        # don't necessarily correspond to pins (sampler jitter)
+                        # BUT we can't use regression_name() because it replaces
+                        # <> with __, which is bad here
+                        name_spice_preferred = (s.spice_name
+                            if s.spice_name is not None else s.template_name)
+                        B = regression_results[parameter][name_spice_preferred]
                         adjustment += B * (y - ynom)
                 parameter_measured_adjusted = parameter_measured - adjustment
 

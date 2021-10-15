@@ -22,6 +22,7 @@ template_pins:
 
 extras:
     approx_settling_time: 500e-6
+    max_slope: 2e3
     clks:
         unit: 10e-6
         period: 10

@@ -58,8 +58,8 @@ class SimpleAmpTemplate(TemplateMaster):
     #@debug
     class CubicCompression(TemplateMaster.Test):
         parameter_algebra = {
-            'amp_output': {'dcgainc': 'in_single ** 3',
-                           'dcgainq': 'in_single ** 2',
+            'amp_output': {'dcgainc': 'in_single**3',
+                           'dcgainq': 'in_single**2',
                            'dcgain': 'in_single',
                            'offset': '1'}
         }
@@ -87,22 +87,17 @@ class SimpleAmpTemplate(TemplateMaster):
             results = {'amp_output': reads.value}
             return results
 
-        def post_regression(self, regression_models):
-            print('Hello')
-            model = regression_models['I(amp_output)'].model
-            inputs = model.endog
-            outputs = model.exog[:, 0]
+        def post_regression(self, results, data):
+            inputs = data['in_single']
+            outputs = data['amp_output']
             ph = PlotHelper()
 
-            plt.plot(inputs, outputs)
+            plt.plot(inputs, outputs, '+')
 
             ph.save_current_plot('amp_test')
 
-            plt.plot(inputs, -outputs + 5)
+            plt.plot(inputs, -outputs + 5, 'x')
             ph.save_current_plot('amp_test_2')
-
-            bas = self.signals.binary_analog()
-            tas = self.signals.true_analog()
 
             return {}
 

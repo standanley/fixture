@@ -105,7 +105,9 @@ class MACTemplate(TemplateMaster):
 
             return ans
 
-        def post_regression(self, regression_models):
+        def post_regression(self, results, data):
+            return {}
+            # TODO not updated to new post_regressino style
             plot = False
             if plot:
                 import matplotlib as mpl

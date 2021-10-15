@@ -308,10 +308,6 @@ class SignalManager:
             s_or_ss = a[tuple(indices)]
             return s_or_ss
 
-    def circuit(self, name):
-        # return a Signal or SignalArray of signals according to circuit name
-        pass
-
     def inputs(self):
         for s in self.signals:
             if isinstance(s, SignalIn):
@@ -328,6 +324,26 @@ class SignalManager:
         # return a list of Signals (always analog) and SignalArrays (always qa)
         # basically we want to organize these the way they will be randomly
         # sampled; so each object in the list is one dimension
+        ans = []
+        for x in self.signals:
+            if isinstance(x, SignalIn):
+                if x.get_random:
+                    ans.append(x)
+            elif isinstance(x, SignalArray):
+                if x.type_ == 'binary_analog':
+                    assert x.get_random == True, 'qa that is not random?'
+                    ans.append(x)
+                else:
+                    # we can't include it as one SA, but we should check bits
+                    for bit in x.flatten():
+                        assert bit.type_ != 'binary analog', f'mixed qa/not in {x}'
+                        if getattr(bit, 'get_random', None):
+                            ans.append(bit)
+        return ans
+
+
+
+
         ans = [s_or_a for s_or_a in self.signals
                if getattr(s_or_a, 'get_random', None)]
         for s_or_a in ans:
@@ -336,21 +352,21 @@ class SignalManager:
         return ans
 
 
-    def random_analog(self):
-        def check_s(s):
-            return (isinstance(s, SignalIn)
-                    and s.get_random
-                    and s.type_ in ['analog', 'real'])
+    #def random_analog(self):
+    #    def check_s(s):
+    #        return (isinstance(s, SignalIn)
+    #                and s.get_random
+    #                and s.type_ in ['analog', 'real'])
 
-        for s_or_a in self.signals:
-            if isinstance(s_or_a, SignalArray):
-                # TODO whole bus at once
-                for s in s_or_a.flatten():
-                    if check_s(s):
-                        yield s
-            elif isinstance(s_or_a, SignalIn):
-                if check_s(s_or_a):
-                    yield s_or_a
+    #    for s_or_a in self.signals:
+    #        if isinstance(s_or_a, SignalArray):
+    #            # TODO whole bus at once
+    #            for s in s_or_a.flatten():
+    #                if check_s(s):
+    #                    yield s
+    #        elif isinstance(s_or_a, SignalIn):
+    #            if check_s(s_or_a):
+    #                yield s_or_a
 
     def random_qa(self):
         # TODO right now it returns the whole SignalArray if it's full of qa,
@@ -372,32 +388,37 @@ class SignalManager:
                 if check_s(s_or_a):
                     yield s_or_a
 
-    def auto_set(self):
+    #def auto_set(self):
         # return a list of signals
-        pass
+    #    pass
 
     def true_digital(self):
-        # return a list of signals
-        td = []
-        for s in self.flat():
-            if s.type_ == 'true_digital':
-                td.append(s)
-        return td
+        # return a list of signals - no SignalArrays
+        ans = [s for s in self.flat() if s.type_ == 'true_digital']
+        return ans
 
     #def linear_input(self):
     #    # list of optional inputs, signals (a) or SignalArrays (ba)
     #    pass
 
-    def binary_analog(self):
-        return [x for x in self.random_qa() if x.template_name is None]
-
-    def true_analog(self):
-        return [x for x in self.optional_expr() if x.type_ == 'analog']
-
     def optional_expr(self):
         ans = [x for x in self.signals if getattr(x, 'optional_expr', None)]
         for x in ans:
             assert x.type_ in ['analog', 'binary_analog']
+        return ans
+
+    def optional_quantized_analog(self):
+        for x in self.optional_expr():
+            assert x.type_ in ['analog', 'binary_analog']
+        for x in self.signals:
+            if isinstance(x, SignalArray):
+                assert x.type_ is not None
+        return [x for x in self.optional_expr() if x.type_ == 'binary_analog']
+
+    def optional_true_analog(self):
+        for x in self.optional_expr():
+            assert x.type_ in ['analog', 'binary_analog']
+        ans = [x for x in self.optional_expr() if x.type_ == 'analog']
         return ans
 
 
