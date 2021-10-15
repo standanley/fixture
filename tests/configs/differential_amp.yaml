@@ -1,6 +1,6 @@
 name: myamp
 filepath: ../spice/myamp_differential.sp
-template: DifferentialAmpTemplateB
+template: DifferentialAmpTemplate
 pin:
     vdd:
         direction: input

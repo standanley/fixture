@@ -1,6 +1,6 @@
 name: myamp
 filepath: ../models/myamp_differential_fake_param.sv
-template: DifferentialAmpTemplateB
+template: DifferentialAmpTemplate
 pin:
     vdd:
         direction: input
