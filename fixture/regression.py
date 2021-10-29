@@ -221,6 +221,7 @@ class Regression:
         results_models = {}
         regression_dicts = []
         for lhs, rhs in test.parameter_algebra.items():
+            lhs_not_wrapped = lhs
             lhs, rhs = self.parse_parameter_algebra(lhs, rhs)
 
             # TODO I want a better model for this so we can evaluate later
@@ -232,15 +233,33 @@ class Regression:
 
             formula = self.make_formula(lhs, rhs, optional_pin_expr)
 
-            stats_model = smf.ols(formula, self.df)
+            #df_row_mask = self.df[lhs_not_wrapped] != None
+
+            df_row_mask = ~ self.df[lhs_not_wrapped].isnull()
+            df_filtered = self.df[df_row_mask]
+
+            stats_model = smf.ols(formula, df_filtered)
+            #stats_model_unfiltered = smf.ols(formula, self.df)
             stat_results = stats_model.fit()
             result = self.parse_coefs(stat_results, rhs)
             for k, v in result.items():
-                assert not k in results, 'Parameter %s found in multiple parameter algebra formulas'
+                assert not k in results, f'Parameter {k} found in multiple parameter algebra formulas'
                 results[k] = v
 
             results_models[lhs] = stat_results
-            regression_dict = {self.clean_exog_name(name): values for
+
+            def fill_out(values):
+                # insert NaNs according to df_row_mask
+                i = 0
+                new_values = []
+                for m in df_row_mask:
+                    if m:
+                        new_values.append(values[i])
+                        i += 1
+                    else:
+                        new_values.append(float('nan'))
+                return new_values
+            regression_dict = {self.clean_exog_name(name): fill_out(values) for
                                     name, values in zip(stats_model.exog_names,
                                                         stats_model.exog.T)
                                }
@@ -255,29 +274,34 @@ class Regression:
                          for term, coef in terms.items()}
             results[param] = terms_new
 
+        data2 = data
         for regression_dict in regression_dicts:
             for term, values in regression_dict.items():
-                if term in data:
-                    assert all(data[term] == values)
+                if term in data2:
+                    # TODO issues here when the values have been filtered
+                    # differently by different parameter algebra entries
+                    # Not sure what the thing to do is
+                    #assert all(data2[term] == values)
+                    pass
                 else:
-                    data[term] = values
+                    data2[term] = values
 
         # for cases where we have a term like (A*adj+B)*in**2
-        # we should make sure that regression_data contains in**2
+        # we should make sure that regression_data2 contains in**2
         # I think right now it will always be in the columns as in**2*const_1
         # because of that B with no other coef, but even if that changes in
         # the future we should still include in**2 in our columns
-        for column in list(data.keys()):
+        for column in list(data2.keys()):
             if column[-1*len(self.one_literal)-1:] == '*'+self.one_literal:
-                data[column[:-1*len(self.one_literal)-1]] = data[column]
+                data2[column[:-1*len(self.one_literal)-1]] = data2[column]
 
         # remove spaces from column names
-        data = {k.replace(' ', ''): v for k, v in data.items()}
+        data2 = {k.replace(' ', ''): v for k, v in data2.items()}
 
 
 
         # TODO dump res to a yaml file
-        self.regression_dataframe = pandas.DataFrame(data)
+        self.regression_dataframe = pandas.DataFrame(data2)
         self.results = results
         self.results_models = results_models
 

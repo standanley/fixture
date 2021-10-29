@@ -156,43 +156,98 @@ class TemplateMaster():
             plt.legend(leg)
             plt.show()
 
+        def __str__(self):
+            s = repr(self)
+            return s.split(' ')[0].split('.')[-1]
+
 
     def go(self, checkpoint, checkpoint_start=0):
         '''
         Actually do the entire analysis of the circuit
         '''
+
+        checkpoint_controller = {
+            'StaticNonlinearityTest': {
+                'run_sim': True,
+                'run_regression': True,
+                'run_post_regression': 'save'
+            },
+            'ChannelTest': {
+                'run_sim': True,
+                'run_regression': True,
+                'run_post_regression': 'save'
+            },
+            'DelayTest': {
+                'run_sim': True,
+                'run_regression': True,
+                'run_post_regression': 'save'
+            }
+        }
+        #checkpoint_controller = {
+        #    'StaticNonlinearityTest': {
+        #        'run_sim': False,
+        #        'run_regression': False,
+        #        'run_post_regression': False
+        #    },
+        #    'ChannelTest': {
+        #        'run_sim': False,
+        #        'run_regression': False,
+        #        'run_post_regression': 'load'
+        #    }
+        #}
+
         checkpoint_num = 0
         params_by_mode_all = {}
         for test in self.tests:
-            tester = fault.Tester(self.dut)
-            tb = fixture.Testbench(self, tester, test)
-            tb.create_test_bench()
+            controller = checkpoint_controller[str(test)]
+            if controller['run_sim']:
+                tester = fault.Tester(self.dut)
+                tb = fixture.Testbench(self, tester, test)
+                tb.create_test_bench()
 
-            # TODO figure out how to save a fault testbench
-            #checkpoint.save((test, tb), 'pickletest_tb.json')
-            #test, tb = checkpoint.load('pickletest_tb.json')
-            #tester = tb.tester
+                # TODO figure out how to save a fault testbench
+                #checkpoint.save((test, tb), 'pickletest_tb.json')
+                #test, tb = checkpoint.load('pickletest_tb.json')
+                #tester = tb.tester
 
-            self.simulator.run(tester, no_run=False)
+                self.simulator.run(tester, no_run=True)
 
-            results_each_mode = tb.get_results()
+                debug = True
+                if debug:
+                    test.debug_plot()
 
-            debug = False
-            if debug:
-                test.debug_plot()
+                results_each_mode = tb.get_results()
+            else:
+                results_each_mode = [None]
 
             params_by_mode = {}
             for mode, results in enumerate(results_each_mode):
-                regression = fixture.Regression(self, test, results)
+                if controller['run_regression']:
+                    regression = fixture.Regression(self, test, results)
 
-                PlotHelper.plot_regression(regression)
-                PlotHelper.plot_optional_effects(test, regression.regression_dataframe, regression.results)
+                    PlotHelper.plot_regression(regression)
+                    PlotHelper.plot_optional_effects(test, regression.regression_dataframe, regression.results)
+                    rr = dict(regression.results)
+                else:
+                    rr = {}
 
-                # TODO this should really be handled in create_testbench
-                temp = test.post_regression(regression.results, regression.regression_dataframe)
+                if controller['run_post_regression'] == 'load':
+                    with open(f'{test}_{mode}_post_regression.pickle', 'rb') as f:
+                        import pickle
+                        data_in = pickle.load(f)
+                        test.post_regression(*data_in)
+                elif controller['run_post_regression'] == 'save':
+                    with open(f'{test}_{mode}_post_regression.pickle', 'wb') as f:
+                        import pickle
+                        pickle.dump((regression.results, regression.regression_dataframe), f)
+                    # TODO this should really be handled in create_testbench
+                    temp = test.post_regression(regression.results, regression.regression_dataframe)
+                    rr.update(temp)
+                elif controller['run_post_regression'] == False:
+                    pass
+                else:
+                    assert False
 
-                rr = dict(regression.results)
-                rr.update(temp)
                 params_by_mode[mode] = rr
 
             # merge results from this test in results from all tests

@@ -153,13 +153,17 @@ def parse_config(circuit_config_dict):
     for t, c in template_pins.items():
         t_bus_name, t_indices, t_info, _ = parse_bus(t)
         c_bus_name, c_indices, c_info, _ = parse_bus(c)
+        # c_array is for the whole circuit bus, not just this entry/entries
         c_array = signal_info_by_cname[c_bus_name]
 
+        # if bus is bus[0:2][0:3] and we assign to bus[1], we want c_indices
+        # to look like [(1,), (0:3)], not just [(1,)]
         c_shape = getattr(c_array, 'shape', [])
         assert len(c_shape) >= len(c_indices), f'Too many indices in {c}'
         # extend c_indices so it goes all the way to the end of c
         c_indices += [(0, x-1) for x in c_shape[len(c_indices):]]
 
+        # get back string form given indices; use the correct braces
         def get_t_name(t_indices_used):
             indices_text = [bs[0] + str(i) + bs[1] for i, bs in
                        zip(t_indices_used, t_info)]

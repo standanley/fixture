@@ -1,9 +1,16 @@
+import functools
+
+import numpy as np
+import scipy
+
 from fixture import TemplateMaster, PlotHelper
 from fixture import template_creation_utils
 from fixture import signals
 import fixture
 Regression = fixture.regression.Regression
 import math
+import matplotlib.pyplot as plt
+from fault import domain_read
 
 
 class SamplerTemplate(TemplateMaster):
@@ -22,17 +29,15 @@ class SamplerTemplate(TemplateMaster):
         # in the call to super
         extras = args[3]
         signal_manager = args[2]
-        if 'clks' in extras:
-            settle = float(extras['clks']['unit']) * float(extras['clks']['period'])
-            extras['approx_settling_time'] = settle
-
 
         # NOTE I think this block has to be before super() because that's when
         # the individual tests get copies of these signals ??
         # but must come after for self.signals to be defined?
         if 'clks' in extras:
             settle = float(extras['clks']['unit']) * float(extras['clks']['period'])
-            extras['approx_settling_time'] = settle
+            if 'approx_settling_time' not in extras:
+                extras['approx_settling_time'] = settle
+            extras['cycle_time'] = settle
 
             clks = extras['clks']
             clks = {k: v for k, v in clks.items() if (k != 'unit' and k != 'period')}
@@ -281,6 +286,23 @@ class SamplerTemplate(TemplateMaster):
 
             return ret
 
+        def post_regression(self, regression_models, regression_dataframe):
+            limits = self.signals.in_.value
+            num = self.template.nonlinearity_points
+            xs = []
+            for i in range(num):
+                dc = limits[0] + i * (limits[1] - limits[0]) / (num-1)
+                xs.append(dc)
+            ys = []
+            for i in range(num):
+                val = regression_models[f'nonlinearity_{i}']['1']
+                ys.append(val)
+
+            plt.plot(xs, ys, '*')
+            plt.grid()
+            plt.show()
+            return {}
+
     class ApertureTest(TemplateMaster.Test):
 
         # sample_out = should_be_1*value + slope * effective_delay
@@ -462,9 +484,8 @@ class SamplerTemplate(TemplateMaster):
             Z = f(X, 0, J)
 
             from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
-            import matplotlib.pyplot as plt
             fig = plt.figure()
-            ax = fig.add_subplot(111, projection='3d')
+            ax = fig.add_subplot(111, projection='3d', proj_type='ortho')
             ax.scatter(vs, jitter, samples)
             ax.plot_surface(X, J, Z, alpha=0.5)
 
@@ -498,9 +519,8 @@ class SamplerTemplate(TemplateMaster):
                     + beta * slope ** 2
                     + gamma * slope)
 
-            import matplotlib.pyplot as plt
             fig = plt.figure()
-            ax = fig.add_subplot(111, projection='3d')
+            ax = fig.add_subplot(111, projection='3d', proj_type='ortho')
             ax.scatter(value, slope, out, 'g')
             ax.scatter(value, slope, pred, 'b')
             #ax.plot_surface(X, J, Z, alpha=0.5)
@@ -544,7 +564,586 @@ class SamplerTemplate(TemplateMaster):
             return reads
 
 
-    tests = [#SineTest,
-             StaticNonlinearityTest,
-             ApertureTest]
+    class ChannelTest(TemplateMaster.Test):
+        # sample_out = should_be_1*value + slope * effective_delay
+        # effective_delay = alpha*value + beta*slope + gamma*1
+
+        # "sample_adj" is the amount we should add to an ideal sample to model
+        # the sampler actually sampling after the clock falls
+        # We expect it to be positive when the slope is positive
+        # sample_adj = slope * effective_delay
+        # effective_delay = alpha*value + beta*slope + gamma*1
+        # sample_adj = alpha*value*slope + beta*slope**2 + gamma*slope
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.poked_waveform = False
+
+        #parameter_algebra = {
+        #    'sample_out': {'should_be_1': 'value',
+        #                   'alpha': 'value*slope',
+        #                   'beta': 'slope**2',
+        #                   'gamma': 'slope'}
+        #}
+        parameter_algebra = {
+            'sample_adj': {'alpha': 'value*slope',
+                           'beta': 'slope**2',
+                           'gamma': 'slope',
+                           'delta': 'value',
+                           'constant': '1'},
+
+
+            'sample_adj_sp': {
+                'alpha_sp': 'value*slope',
+                'beta_sp': 'slope**2',
+                'gamma_sp': 'slope'
+            },
+            'sample_adj_sn': {
+                'alpha_sn': 'value*slope',
+                'beta_sn': 'slope**2',
+                'gamma_sn': 'slope'
+            },
+            'sample_adj_vp': {
+                'alpha_vp': 'value*slope',
+                'beta_vp': 'slope**2',
+                'gamma_vp': 'slope'
+            },
+            'sample_adj_vn': {
+                'alpha_vn': 'value*slope',
+                'beta_vn': 'slope**2',
+                'gamma_vn': 'slope'
+            }
+        }
+        num_samples = 400
+
+        def input_domain(self):
+            jitter_domain = self.template.get_clock_offset_domain()
+
+            return jitter_domain
+
+        def testbench(self, tester, values):
+            settle = float(self.extras['approx_settling_time'])
+            period = float(self.extras['cycle_time'])
+            clk = self.signals.clk[0] if hasattr(self.signals.clk,
+                                                 '__getitem__') else self.signals.clk
+
+            if not self.poked_waveform:
+                import numpy as np
+                data = np.genfromtxt('fixture/test_channel.csv', delimiter=',')
+                #ts = [t*settle*0.05 for t in range(200)]
+                #vs = [math.sin(t/settle)*0.25+0.95 for t in ts]
+                ts, vs = list(data[:, 0]), list(data[:, 1])
+                vs_unscaled = data[:, 1]
+                limits = self.signals.in_.value
+                vs = vs_unscaled*(limits[1] - limits[0]) + limits[0]
+                vs = list(vs)
+                dt = (data[0][-1] - data[0][0]) / (len(data[0])-1)
+                #ts = [dt]*len(vs)
+
+                tester.poke(self.ports.in_, 0, delay={
+                    'type': 'future',
+                    'waits': [ts[1]]*len(vs),
+                    'values': vs
+                })
+                self.poked_waveform = True
+
+            if hasattr(self.ports.clk, '__getitem__'):
+                for p in self.ports.clk[1:]:
+                    tester.poke(p, 0)
+
+            debug_length = 1 #wait*10
+            self.debug(tester, clk.spice_pin, debug_length)
+            self.debug(tester, self.ports.out[0], debug_length)
+            self.debug(tester, self.ports.in_, debug_length)
+
+            tester.delay(settle * 0.01)
+            print('scheduling clock in ', period)
+            self.template.schedule_clk(tester, clk, 0, period, values)
+
+
+            # TODO this is not the place to declare this
+            self.slope_dt = 10e-9#settle * 1e-4
+            dt = self.slope_dt
+            print('delaying', period-dt)
+            tester.delay(period - dt)
+            value_early = tester.get_value(self.ports.in_)
+            tester.delay(dt)
+            value = tester.get_value(self.ports.in_)
+            tester.delay(dt)
+            value_late = tester.get_value(self.ports.in_)
+
+            if hasattr(self.ports.out, '__getitem__'):
+                p = self.ports.out[0]
+            else:
+                p = self.ports.out
+            # TODO is this starting dt too late to see the pulse rising edge?
+            print('reading in', settle-dt)
+            output = self.template.read_value(tester, p, settle - dt)
+
+
+            return [value_early, value, value_late], output
+
+        def analysis(self, reads):
+            inputs, output = reads
+            input_values = [x.value for x in inputs]
+            output_value = self.template.interpret_value(output)
+
+            value_early, value, value_late = input_values
+            out_mapped = self.template.temp_inv(output_value)
+            slope = (value_late - value_early) / (2*self.slope_dt)
+            sample_adj = (out_mapped - value)
+
+            return {'value': value,
+                    'slope': slope,
+                    'sample_adj': sample_adj,
+                    'sample_adj_sp': sample_adj if slope >= 0 else None,
+                    'sample_adj_sn': sample_adj if slope < 0 else None,
+                    'sample_adj_vp': sample_adj if value >= .65 else None,
+                    'sample_adj_vn': sample_adj if value < .65 else None}
+
+        def post_regression(self, regression_results, data):
+            alpha = PlotHelper.eval_parameter(data, regression_results, 'alpha')
+            beta = PlotHelper.eval_parameter(data, regression_results, 'beta')
+            gamma = PlotHelper.eval_parameter(data, regression_results, 'gamma')
+            delta = PlotHelper.eval_parameter(data, regression_results, 'delta')
+            constant = PlotHelper.eval_parameter(data, regression_results, 'constant')
+            slope = data['slope']
+            value = data['value']
+            effective_delay = alpha*value + beta*slope + gamma
+            out_adj = effective_delay * slope + delta * value + constant
+
+
+            sp_mask = ~ data['sample_adj_sp'].isnull()
+            alpha_sp = PlotHelper.eval_parameter(data, regression_results, 'alpha_sp')[sp_mask]
+            beta_sp = PlotHelper.eval_parameter(data, regression_results, 'beta_sp')[sp_mask]
+            gamma_sp = PlotHelper.eval_parameter(data, regression_results, 'gamma_sp')[sp_mask]
+            value_sp = data['value'][sp_mask]
+            slope_sp = data['slope'][sp_mask]
+            effective_delay_sp = alpha_sp*value_sp + beta_sp*slope_sp + gamma_sp
+            out_adj_sp = effective_delay_sp * slope_sp
+
+            sn_mask = ~ data['sample_adj_sn'].isnull()
+            alpha_sn = PlotHelper.eval_parameter(data, regression_results, 'alpha_sn')[sn_mask]
+            beta_sn = PlotHelper.eval_parameter(data, regression_results, 'beta_sn')[sn_mask]
+            gamma_sn = PlotHelper.eval_parameter(data, regression_results, 'gamma_sn')[sn_mask]
+            value_sn = data['value'][sn_mask]
+            slope_sn = data['slope'][sn_mask]
+            effective_delay_sn = alpha_sn*value_sn + beta_sn*slope_sn + gamma_sn
+            out_adj_sn = effective_delay_sn * slope_sn
+
+            vp_mask = ~ data['sample_adj_vp'].isnull()
+            alpha_vp = PlotHelper.eval_parameter(data, regression_results, 'alpha_vp')[vp_mask]
+            beta_vp = PlotHelper.eval_parameter(data, regression_results, 'beta_vp')[vp_mask]
+            gamma_vp = PlotHelper.eval_parameter(data, regression_results, 'gamma_vp')[vp_mask]
+            value_vp = data['value'][vp_mask]
+            slope_vp = data['slope'][vp_mask]
+            effective_delay_vp = alpha_vp*value_vp + beta_vp*slope_vp + gamma_vp
+            out_adj_vp = effective_delay_vp * slope_vp
+
+            vn_mask = ~ data['sample_adj_vn'].isnull()
+            alpha_vn = PlotHelper.eval_parameter(data, regression_results, 'alpha_vn')[vn_mask]
+            beta_vn = PlotHelper.eval_parameter(data, regression_results, 'beta_vn')[vn_mask]
+            gamma_vn = PlotHelper.eval_parameter(data, regression_results, 'gamma_vn')[vn_mask]
+            value_vn = data['value'][vn_mask]
+            slope_vn = data['slope'][vn_mask]
+            effective_delay_vn = alpha_vn*value_vn + beta_vn*slope_vn + gamma_vn
+            out_adj_vn = effective_delay_vn * slope_vn
+
+            #plt.plot(value, effective_delay, '*')
+            #plt.grid()
+            #plt.show()
+
+            adj_measured = data['sample_adj']
+
+
+            fig = plt.figure()
+            plt.plot(slope, effective_delay, 'o')
+            plt.grid()
+            plt.xlabel('slope')
+            plt.ylabel('modeled effective delay')
+
+
+            fig = plt.figure()
+            plt.plot(value, out_adj - adj_measured, '*')
+            plt.grid()
+            plt.xlabel('input voltage')
+            plt.ylabel('predicted_output - measured_output')
+
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d', proj_type='ortho')
+            ax.scatter(value, slope, effective_delay)
+            ax.set_xlabel('value')
+            ax.set_ylabel('slope')
+            ax.set_zlabel('effective delay')
+
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d', proj_type='ortho')
+            ax.scatter(value, slope, adj_measured)
+            ax.scatter(value, slope, out_adj)
+            ax.set_xlabel('value')
+            ax.set_ylabel('slope')
+            ax.set_zlabel('output adjustment')
+
+
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d', proj_type='ortho')
+            ax.scatter(value, slope, out_adj - adj_measured)
+            ax.set_xlabel('value')
+            ax.set_ylabel('slope')
+            ax.set_zlabel('predicted_output - measured_output')
+
+            pred_high_map = out_adj - adj_measured > 0
+            pred_low_map = out_adj - adj_measured < 0
+
+
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d', proj_type='ortho')
+            ax.scatter(value[pred_low_map], slope[pred_low_map], adj_measured[pred_low_map])
+            ax.scatter(value[pred_high_map], slope[pred_high_map], adj_measured[pred_high_map])
+            ax.set_xlabel('value')
+            ax.set_ylabel('slope')
+            ax.set_zlabel('measured_output')
+
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d', proj_type='ortho')
+            ax.scatter(value, slope, out_adj - adj_measured)
+            ax.set_xlabel('value')
+            ax.set_ylabel('slope')
+            ax.set_zlabel('predicted_output - measured_output')
+
+
+            # not split
+            fig = plt.figure()
+            plt.plot(slope, adj_measured, 'o')
+            plt.plot(slope, out_adj, 'x')
+            plt.grid()
+            plt.xlabel('slope')
+            plt.ylabel('output adjustment')
+            plt.legend(['measured', 'predicted'])
+
+            fig = plt.figure()
+            plt.plot(slope, out_adj - adj_measured, '*')
+            plt.grid()
+            plt.xlabel('slope')
+            plt.ylabel('error (pred - meas)')
+
+            fig = plt.figure()
+            plt.plot(value, adj_measured, 'o')
+            plt.plot(value, out_adj, 'x')
+            plt.grid()
+            plt.xlabel('voltage')
+            plt.ylabel('output adjustment')
+            plt.legend(['measured', 'predicted'])
+
+            fig = plt.figure()
+            plt.plot(value, out_adj - adj_measured, '*')
+            plt.grid()
+            plt.xlabel('voltage')
+            plt.ylabel('error (pred - meas)')
+
+            # split by voltage
+            plt.figure()
+            plt.plot(slope, adj_measured, 'o')
+            plt.plot(slope_vp, out_adj_vp, 'x')
+            plt.plot(slope_vn, out_adj_vn, 'x')
+            plt.xlabel('slope')
+            plt.ylabel('output adjustment')
+            plt.legend(['measured', 'predicted (pos voltage)', 'predicted (neg voltage)'])
+            plt.grid()
+
+            plt.figure()
+            plt.plot(slope_vp, out_adj_vp - (adj_measured[vp_mask]), '*')
+            plt.plot(slope_vn, out_adj_vn - (adj_measured[vn_mask]), '*')
+            plt.xlabel('slope')
+            plt.ylabel('error (pred - meas)')
+            plt.grid()
+
+            plt.figure()
+            plt.plot(value, adj_measured, 'o')
+            plt.plot(value_vp, out_adj_vp, 'x')
+            plt.plot(value_vn, out_adj_vn, 'x')
+            plt.xlabel('voltage')
+            plt.ylabel('output adjustment')
+            plt.legend(['measured', 'predicted (pos voltage)', 'predicted (neg voltage)'])
+            plt.grid()
+
+            plt.figure()
+            plt.plot(value_vp, out_adj_vp - (adj_measured[vp_mask]), '*')
+            plt.plot(value_vn, out_adj_vn - (adj_measured[vn_mask]), '*')
+            plt.xlabel('voltage')
+            plt.ylabel('error (pred - meas)')
+            plt.grid()
+
+
+            # split by slope
+            plt.figure()
+            plt.plot(slope, adj_measured, 'o')
+            plt.plot(slope_sp, out_adj_sp, 'x')
+            plt.plot(slope_sn, out_adj_sn, 'x')
+            plt.xlabel('slope')
+            plt.ylabel('output adjustment')
+            plt.legend(['measured', 'predicted (pos slope)', 'predicted (neg slope)'])
+            plt.grid()
+
+            plt.figure()
+            plt.plot(slope_sp, out_adj_sp - (adj_measured[sp_mask]), '*')
+            plt.plot(slope_sn, out_adj_sn - (adj_measured[sn_mask]), '*')
+            plt.xlabel('slope')
+            plt.ylabel('error (pred - meas)')
+            plt.show()
+
+            plt.figure()
+            plt.plot(value, adj_measured, 'o')
+            plt.plot(value_sp, out_adj_sp, 'x')
+            plt.plot(value_sn, out_adj_sn, 'x')
+            plt.xlabel('voltage')
+            plt.ylabel('output adjustment')
+            plt.legend(['measured', 'predicted (pos slope)', 'predicted (neg slope)'])
+            plt.grid()
+
+            plt.figure()
+            plt.plot(value_sp, out_adj_sp - (adj_measured[sp_mask]), '*')
+            plt.plot(value_sn, out_adj_sn - (adj_measured[sn_mask]), '*')
+            plt.xlabel('voltage')
+            plt.ylabel('error (pred - meas)')
+            plt.show()
+            return {}
+
+
+    class DelayTest(TemplateMaster.Test):
+        parameter_algebra = {
+            'output_adj': {'alpha': 'value*slope',
+                           'beta': 'slope**2',
+                           'gamma': 'slope'},
+
+            'delay': {'A': 'value',
+                      'B': 'slope',
+                      'C': '1'},
+        }
+        num_samples = 400
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.poked_waveform = False
+            self.blocks = []
+
+        def input_domain(self):
+            return []
+
+        def testbench(self, tester, values):
+            settle = float(self.extras['approx_settling_time'])
+            period = float(self.extras['cycle_time'])
+            clk = self.signals.clk[0] if hasattr(self.signals.clk,
+                                                 '__getitem__') else self.signals.clk
+
+            if not self.poked_waveform:
+                import numpy as np
+                data = np.genfromtxt('fixture/test_channel.csv', delimiter=',')
+                #ts = [t*settle*0.05 for t in range(200)]
+                #vs = [math.sin(t/settle)*0.25+0.95 for t in ts]
+                ts, vs = list(data[:, 0]), list(data[:, 1])
+                vs_unscaled = data[:, 1]
+                limits = self.signals.in_.value
+                vs = vs_unscaled*(limits[1] - limits[0]) + limits[0]
+                vs = list(vs)
+                dt = (data[0][-1] - data[0][0]) / (len(data[0])-1)
+                #ts = [dt]*len(vs)
+
+                tester.poke(self.ports.in_, 0, delay={
+                    'type': 'future',
+                    'waits': [ts[1]]*len(vs),
+                    'values': vs
+                })
+                self.poked_waveform = True
+
+            if hasattr(self.ports.clk, '__getitem__'):
+                for p in self.ports.clk[1:]:
+                    tester.poke(p, 0)
+
+            debug_length = 1 #wait*10
+            self.debug(tester, clk.spice_pin, debug_length)
+            self.debug(tester, self.ports.out[0], debug_length)
+            self.debug(tester, self.ports.in_, debug_length)
+
+            tester.delay(settle * 0.01)
+            print('scheduling clock in ', period)
+            self.template.schedule_clk(tester, clk, 0, period, values)
+
+            block = tester.get_value(self.ports.in_,
+                             params={'style': 'block', 'duration': 2*period})
+
+
+
+            # TODO this breaks if settle > period
+            self.slope_dt = 10e-9
+            tester.delay(period - self.slope_dt)
+            v_early = tester.get_value(self.ports.in_)
+            tester.delay(self.slope_dt)
+            v_exact = tester.get_value(self.ports.in_)
+            tester.delay(self.slope_dt)
+            v_late = tester.get_value(self.ports.in_)
+            tester.delay(settle - self.slope_dt)
+
+            if hasattr(self.ports.out, '__getitem__'):
+                p = self.ports.out[0]
+            else:
+                p = self.ports.out
+            output = tester.get_value(p)
+            tester.delay(period - settle)
+
+
+
+
+            # TODO is this starting dt too late to see the pulse rising edge?
+            return block, v_early, v_exact, v_late, output
+
+        def analysis(self, reads):
+            block, v_early, v_exact, v_late, output = [x.value for x in reads]
+            v_early, v_exact, v_late, output = [float(x) for x in [v_early, v_exact, v_late, output]]
+            self.blocks.append(scipy.interpolate.interp1d(*block))
+
+            slope = (v_late - v_early) / (2 * self.slope_dt)
+
+            period = float(self.extras['cycle_time'])
+            def search(forward, rising):
+                try:
+                    es = domain_read.find_edge_spice(block[0], block[1],
+                            period, output, forward=forward, rising=rising)
+                    return es[0]
+                except domain_read.EdgeNotFoundError:
+                    return None
+
+            edges = [search(False, False),
+                     search(False, True),
+                     search(True, False),
+                     search(True, True)]
+
+
+
+
+            def closer(a, b):
+                if a is None:
+                    return b
+                elif b is None:
+                    return a
+                return a if abs(a) < abs(b) else b
+            closest = functools.reduce(closer, edges)
+            if closest is not None and (not (0.7e-8 < closest < 1.0e-8)):
+                closest = None
+
+
+            if False and closest == None:
+                plt.plot(block[0] - period, block[1], '-+')
+                plt.plot([-period, period], [output, output])
+                for e in edges:
+                    if e != None:
+                        plt.plot([e, e], [0.6, 0.7])
+                plt.show()
+
+            return {'value': v_exact, 'slope': slope, 'output': output,
+                    'output_adj': output - v_exact,
+                    'delay': closest}
+
+        def post_regression(self, regression_models, data):
+            value = data['value']
+            slope = data['slope']
+            #output = data['output']
+            output_adj = data['output_adj']
+            delay = data['delay']
+            period = float(self.extras['cycle_time'])
+
+            alpha = PlotHelper.eval_parameter(data, regression_models, 'alpha')
+            beta = PlotHelper.eval_parameter(data, regression_models, 'beta')
+            gamma = PlotHelper.eval_parameter(data, regression_models, 'gamma')
+            A = PlotHelper.eval_parameter(data, regression_models, 'A')
+            B = PlotHelper.eval_parameter(data, regression_models, 'B')
+            C = PlotHelper.eval_parameter(data, regression_models, 'C')
+            delay_v1 = alpha * value + beta * slope + gamma
+            delay_v2 = A * value + B * slope + C
+            projected_adj_v1 = delay_v1 * slope
+            projected_adj_v2 = delay_v2 * slope
+
+            def resample(delays):
+                xs = [self.blocks[i](period + dt) for i, dt in enumerate(delays)]
+                return np.array(xs)
+            resampled_adj_v1 = resample(delay_v1) - value
+            resampled_adj_v2 = resample(delay_v2) - value
+
+
+
+            # delay plots
+            #plt.figure()
+            plt.plot(slope, delay, '*')
+            plt.plot(slope, delay_v2, 'x')
+            plt.legend(['Measured ideal delay', 'Modeled delay'])
+            plt.title('Version 2: effective delay based on projecting slope')
+            plt.xlabel('slope')
+            plt.ylabel('delay')
+            plt.grid()
+
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d', proj_type='ortho')
+            ax.scatter(value, slope, delay)
+            ax.scatter(value, slope, delay_v2)
+            ax.set_xlabel('value')
+            ax.set_ylabel('slope')
+            ax.set_zlabel('delay')
+
+
+
+
+            # final 4 plots below
+            plt.figure()
+            plt.plot(slope, output_adj, '*')
+            plt.plot(slope, projected_adj_v1, 'x')
+            plt.plot(slope, resampled_adj_v1, '+')
+            plt.legend(['Measured adjustment', 'Modeled projected adjustment', 'Modeled resampled adjustment'])
+            plt.title('Version 1: effective delay based on projecting slope')
+            plt.xlabel('slope')
+            plt.ylabel('sample adjustment')
+            plt.grid()
+
+            plt.figure()
+            # empty to take up a color?
+            plt.plot([], [], '*')
+            plt.plot(slope, projected_adj_v1 - output_adj, 'x')
+            plt.plot(slope, resampled_adj_v1 - output_adj, '+')
+            #plt.legend(['Measured adjustment', 'Modeled projected adjustment', 'Modeled resampled adjustment'])
+            plt.title('Version 1: effective delay based on projecting slope')
+            plt.xlabel('slope')
+            plt.ylabel('sample model error')
+            plt.grid()
+
+            plt.figure()
+            plt.plot(slope, output_adj, '*')
+            plt.plot(slope, projected_adj_v2, 'x')
+            plt.plot(slope, resampled_adj_v2, '+')
+            plt.legend(['Measured adjustment', 'Modeled projected adjustment', 'Modeled resampled adjustment'])
+            plt.title('Version 2: effective delay based on incoming waveform')
+            plt.xlabel('slope')
+            plt.ylabel('sample adjustment')
+            plt.grid()
+
+            plt.figure()
+            # empty to take up a color?
+            plt.plot([], [], '*')
+            plt.plot(slope, projected_adj_v2 - output_adj, 'x')
+            plt.plot(slope, resampled_adj_v2 - output_adj, '+')
+            #plt.legend(['Measured adjustment', 'Modeled projected adjustment', 'Modeled resampled adjustment'])
+            plt.title('Version 2: effective delay based on incoming waveform')
+            plt.xlabel('slope')
+            plt.ylabel('sample model error')
+            plt.grid()
+            plt.show()
+            return {}
+
+
+
+    tests = [
+             #StaticNonlinearityTest,
+             #ChannelTest,
+             #SineTest,
+             #ApertureTest,
+             DelayTest
+            ]
 

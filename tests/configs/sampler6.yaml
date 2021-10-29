@@ -1,6 +1,7 @@
+# This uses the same spice model as sampler4, but looks at the internal sampled voltage instead of the time pulse output
 name: sampler4
 filepath: ../spice/sampler4.sp
-template: SamplerCustomTemplate
+template: SamplerTemplate
 pin:
     in_:
         direction: input
@@ -44,7 +45,8 @@ pin:
 
 template_pins:
    in_: in_
-   out<0:1>: out<0:1>
+   out<0>: z_debug
+   out<1>: out<1>
    clk<0:1>: clk_v2t<0:1>
 
    # With the new SignalArray I can't leae ignore[0:1] blank
@@ -58,18 +60,18 @@ template_pins:
    ignore[10:11]: clk_v2t_lb<0:1>
    ignore[12:13]: clk_v2t_gated<0:1>
    #ignore[14:15]: clk_v2tb_gated<0:1>
-   fixture_debug: z_debug
+   #fixture_debug: z_debug
 
 
 
-test_config_file: ngspice_sampler.yaml
+test_config_file: ngspice_sampler6.yaml
 
 extras:
-    approx_settling_time: 50e-6
+    approx_settling_time: 1e-7 #50e-6
     #max_slope: 19.7e9 # 3.125G sine wave
     max_slope: 0.5e6
     clks:
-        unit: 4e-8
+        unit: 0.5e-8 # 4e-8
         period: 250
 
         clk_v2t<0>:

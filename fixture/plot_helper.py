@@ -42,7 +42,7 @@ class PlotHelper:
             plt.xlabel('Measured value')
             plt.ylabel('Predicted by model')
             plt.grid()
-            #plt.show()
+            plt.show()
             cls.save_current_plot(f'{name}_fit')
 
 
