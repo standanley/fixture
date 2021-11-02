@@ -1,0 +1,87 @@
+name: sampler7
+filepath: ../spice/sampler7.sp
+template: SamplerTemplate
+pin:
+    in_:
+        direction: input
+        datatype: real
+        value: (0, 1.2)
+    clkn<0:3>:
+        direction: input
+        datatype: bit
+    clkp<0:3>:
+        direction: input
+        datatype: bit
+    out<0:3>:
+        direction: output
+        datatype: real
+    vdd:
+        direction: input
+        datatype: real
+        value: 1.2
+    vss:
+        direction: input
+        datatype: real
+        value: 0
+
+    debug:
+        direction: output
+        datatype: real
+
+
+template_pins:
+   in_: in_
+   clk<0:3>: clkn
+   clk<4:7>: clkp
+   #out: out
+   out<0:3>: out<0:3>
+
+extras:
+    approx_settling_time: 400e-9
+    max_slope: 5e6 # 1V over 200ns
+    clks:
+        unit: 1e-9
+        period: 1000
+        
+        clkn<0>: 
+            0: 0
+            500: 1
+        clkp<0>: 
+            0: 1
+            500: 0
+        out<0>:
+            0: sample
+            450: read
+
+        clkn<1>:
+            250: 0
+            750: 1
+        clkp<1>:
+            250: 1
+            750: 0
+        out<1>:
+            250: sample
+            700: read
+
+        clkn<2>:
+            500: 0
+            0: 1
+        clkp<2>:
+            500: 1
+            0: 0
+        out<2>:
+            500: sample
+            950: read
+
+        clkn<3>:
+            750: 0
+            250: 1
+        clkp<3>:
+            750: 1
+            250: 0
+        out<3>:
+            750: sample
+            200: read
+
+test_config_file: ngspice_sampler.yaml
+

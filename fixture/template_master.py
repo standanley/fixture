@@ -181,6 +181,11 @@ class TemplateMaster():
                 'run_sim': True,
                 'run_regression': True,
                 'run_post_regression': 'save'
+            },
+            'KickbackTest': {
+                'run_sim': True,
+                'run_regression': True,
+                'run_post_regression': 'save'
             }
         }
         #checkpoint_controller = {
@@ -210,7 +215,7 @@ class TemplateMaster():
                 #test, tb = checkpoint.load('pickletest_tb.json')
                 #tester = tb.tester
 
-                self.simulator.run(tester, no_run=True)
+                self.simulator.run(tester, no_run=False)
 
                 debug = True
                 if debug:

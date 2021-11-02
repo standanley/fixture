@@ -89,7 +89,7 @@ extras:
         clk_v2t_l<0>:
             145: 1
             20:  0
-            #max_jitter: 10
+            max_jitter: 10
         clk_v2t_lb<0>:
             145: 0
             20:  1
