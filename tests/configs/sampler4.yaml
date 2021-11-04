@@ -58,14 +58,14 @@ template_pins:
    ignore[10:11]: clk_v2t_lb<0:1>
    ignore[12:13]: clk_v2t_gated<0:1>
    #ignore[14:15]: clk_v2tb_gated<0:1>
-   fixture_debug: z_debug
+   debug: z_debug
 
 
 
 test_config_file: ngspice_sampler.yaml
 
 extras:
-    approx_settling_time: 50e-6
+    #approx_settling_time: 50e-6
     #max_slope: 19.7e9 # 3.125G sine wave
     max_slope: 0.5e6
     clks:
@@ -78,6 +78,17 @@ extras:
         clk_v2tb<0>:
             125: 0
             250: 1
+        out<0>:
+            249: sample
+            125: read
+
+
+        clk_v2t<1>:
+            250: 1
+            125: 0
+        clk_v2tb<1>:
+            250: 0
+            125: 1
 
         clk_v2t_e<0>:
             105: 1
@@ -89,7 +100,7 @@ extras:
         clk_v2t_l<0>:
             145: 1
             20:  0
-            max_jitter: 10
+            max_jitter: 0.1
         clk_v2t_lb<0>:
             145: 0
             20:  1

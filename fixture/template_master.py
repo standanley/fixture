@@ -146,6 +146,7 @@ class TemplateMaster():
 
         def debug_plot(self):
             import matplotlib.pyplot as plt
+            plt.figure()
             leg = []
             bump = 0
             for p, r in self.debug_dict.items():
@@ -154,7 +155,7 @@ class TemplateMaster():
                 bump += 0.0 # useful for separating clock signals
             plt.grid()
             plt.legend(leg)
-            plt.show()
+            #plt.show()
 
         def __str__(self):
             s = repr(self)
@@ -178,6 +179,16 @@ class TemplateMaster():
                 'run_post_regression': 'save'
             },
             'DelayTest': {
+                'run_sim': True,
+                'run_regression': True,
+                'run_post_regression': 'save'
+            },
+            'SineTest': {
+                'run_sim': True,
+                'run_regression': True,
+                'run_post_regression': 'save'
+            },
+            'ApertureTest': {
                 'run_sim': True,
                 'run_regression': True,
                 'run_post_regression': 'save'
@@ -230,8 +241,8 @@ class TemplateMaster():
                 if controller['run_regression']:
                     regression = fixture.Regression(self, test, results)
 
-                    PlotHelper.plot_regression(regression)
-                    PlotHelper.plot_optional_effects(test, regression.regression_dataframe, regression.results)
+                    #PlotHelper.plot_regression(regression)
+                    #PlotHelper.plot_optional_effects(test, regression.regression_dataframe, regression.results)
                     rr = dict(regression.results)
                 else:
                     rr = {}

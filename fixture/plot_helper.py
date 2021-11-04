@@ -34,16 +34,18 @@ class PlotHelper:
             predicted = model.predict(value.params)
             #predicted = model.predict(inputs)
 
-            plt.plot(measured, predicted, 'x')
-            start = min(0, min(measured))
-            end = max(0, max(measured))
-            plt.plot([start, end], [start, end], '--')
-            plt.title(name)
-            plt.xlabel('Measured value')
-            plt.ylabel('Predicted by model')
-            plt.grid()
-            plt.show()
-            cls.save_current_plot(f'{name}_fit')
+            ##fig = plt.figure()
+            #plt.plot(measured, predicted, 'x')
+            #start = min(0, min(measured))
+            #end = max(0, max(measured))
+            #plt.plot([start, end], [start, end], '--')
+            #plt.title(name)
+            #plt.xlabel('Measured value')
+            #plt.ylabel('Predicted by model')
+            #plt.grid()
+            ##plt.show()
+            #cls.save_current_plot(f'{name}_fit')
+            ##plt.close(fig)
 
 
     @staticmethod

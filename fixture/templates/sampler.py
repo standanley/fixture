@@ -78,22 +78,13 @@ class SamplerTemplate(TemplateMaster):
     def interpret_value(self, read):
         return read.value
 
-    #def schedule_clk(self, tester, port, value, wait):
-    #    tester.poke(port, value, delay={'type': 'future', 'wait': wait})
-
     def get_clock_offset_domain(self):
         return []
 
-    def schedule_clk(self, tester, main, value, wait, jitters={}):
+    def schedule_clk(self, tester, output, num_periods=1, pos=0.5, jitters={}):
+        # play num_periods periods, each time with "output" coming after
+        # period_len*pos
         assert 'clks' in self.extras
-        #if 'clks' not in self.extras:
-        #    # TODO make this better please
-        #    tester.poke(main.spice_pin, 0, delay={
-        #        'type': 'future',
-        #        'waits': [wait],
-        #        'values': [value]
-        #    })
-        #    return
 
         clks = self.extras['clks']
         if hasattr(self.signals, 'ignore'):
@@ -106,11 +97,11 @@ class SamplerTemplate(TemplateMaster):
         if isinstance(self.signals.clk, list):
             clk_list = self.signals.clk
             num_samplers = len(clk_list)
-            desired_sampler = clk_list.index(main)
+            #desired_sampler = clk_list.index(main)
         else:
             #main = self.get_name_circuit(port)
             num_samplers = 1
-            desired_sampler = 0
+            #desired_sampler = 0
         unit = float(clks['unit'])
         period = clks['period']
         #clks = {self.signals.from_circuit_name(k): v for k,v in clks.items()
@@ -124,36 +115,35 @@ class SamplerTemplate(TemplateMaster):
                     clks_new[x] = v
                 elif x in self.signals.out:
                     outs[x] = v
+                elif x in self.signals.ignore:
+                    # if it's in clks, we should poke it
+                    clks_new[x] = v
                 else:
-                    assert False, f'clk dict port {x} not clk or out'
+                    assert False, f'clk dict port {x} not clk or out or ignore'
             except KeyError:
                 continue
         clks = clks_new
 
-
-        # To take our measurement we will play through played_periods,
-        # and then take a measurement based on the falling edge of the main
-        # clock during the measured_period (zero-indexed)
-        played_periods = 2
-        measured_period = 1
 
         # main_period_start_time used to be rising edge of main clock
         # we were trying to put the falling edge in the middle of the period
         # Now we want to sampling time in the middle of the period
         #assert main in clks, f'"clks" spec missing {main}'
         #main_period_start_time = [t for t,v in clks[main].items() if v==1][0]
-        assert main in outs
-        main_dict_rev = {v: k for k, v in outs[main].items()}
-        main_period_start_time = main_dict_rev['sample']
+        assert output in outs
+        main_dict_rev = {v: k for k, v in outs[output].items()}
+        sample_time = main_dict_rev['sample']
         time_sample_to_read = (main_dict_rev['read'] - main_dict_rev['sample']) * unit
+        time_sample_to_read %= (period * unit)
 
-        # shift the user-given period such that the main clock's
+        # shift the user-given period such that main_period_start_time is position
         # rising edge just happened
-        # Presumably the sampling edge is now in the middle of the period
 
         for i in range(num_samplers):
-            offset = ((i - desired_sampler + num_samplers) % num_samplers) / num_samplers
-            period_start_time = (main_period_start_time + period * offset) % period
+            #offset = ((i - desired_sampler + num_samplers) % num_samplers) / num_samplers
+            #period_start_time = (main_period_start_time + period * offset) % period
+            # pick start time s.t. X plays after waiting pos*period
+            period_start_time = (sample_time - pos * period + period) % period
 
             clks_transform = {}
 
@@ -162,17 +152,17 @@ class SamplerTemplate(TemplateMaster):
                 name = clk[0].spice_name if isinstance(clk, list) else clk.spice_name
                 jitter_name = name + '_jitter'
                 jitter = jitters.get(jitter_name, 0)
-                for p in range(played_periods):
+                for p in range(num_periods):
                     for time, val in clks[clk].items():
                         if time == 'max_jitter':
                             # not actually a time spec,
                             # should maybe be removed from dict earleir
                             continue
                         time_transform = time + (period - period_start_time)
+                        # TODO is there a reason we didn't mod here?
                         if time_transform > period:
                             time_transform -= period
-                        #time_transform *= unit
-                        time_transform_shift = time_transform + (p - measured_period) * period
+                        time_transform_shift = time_transform + p * period
                         temp.append((time_transform_shift + jitter, val))
                 clks_transform[clk] = sorted(temp)
 
@@ -180,7 +170,7 @@ class SamplerTemplate(TemplateMaster):
             # happens after exactly "wait"
             # simply ignore any edges that would've been in the past
             # shift is the time in seconds from now until the period start
-            shift = wait - period_start_time * unit
+            shift = 0# wait - period_start_time * unit
             if shift < 0:
                 print('Cannot run a full period when scheduling clk edges', i)
 
@@ -201,6 +191,7 @@ class SamplerTemplate(TemplateMaster):
                     current_clk = clk
                 else:
                     current_clk = clk[i]
+                assert waits[0] >= 0 and all(w > 0 for w in waits[1:])
                 tester.poke(current_clk.spice_pin, 0, delay={
                     'type': 'future',
                     'waits': waits,
@@ -229,19 +220,19 @@ class SamplerTemplate(TemplateMaster):
 
         def testbench(self, tester, values):
             #print('Chose jitter value', values['clk_v2t_l_jitter'], 'In static test')
-            settle = float(self.extras['approx_settling_time'])
-            wait = 2 * settle
+            period = float(self.extras['cycle_time'])
             clk = self.signals.clk[0] if hasattr(self.signals.clk, '__getitem__') else self.signals.clk
             assert isinstance(clk, signals.SignalIn)
 
             # To see debug plots, also uncomment debug decorator for this class
             np = self.template.nonlinearity_points
-            debug_time = np * wait * 22
+            debug_time = np * period * 22
             self.debug(tester, clk.spice_pin, debug_time)
             for p in self.ports.out:
                 self.debug(tester, p, debug_time)
             self.debug(tester, self.ports.in_, debug_time)
-            #self.debug(tester, self.ports.fixture_debug, debug_time)
+            if hasattr(self.ports, 'debug'):
+                self.debug(tester, self.ports.debug, debug_time)
 
             #self.debug(tester, self.template.dut.z_debug, debug_time)
 
@@ -258,7 +249,8 @@ class SamplerTemplate(TemplateMaster):
             #self.debug(tester, self.template.dut.clk_v2tb_gated[0], debug_time)
             #self.debug(tester, self.template.dut.clk_v2tb_gated[1], debug_time)
 
-            tester.delay(wait*0.2)
+            # prevents overlapping points from confusing fault
+            tester.delay(period*0.01)
 
             # feed through to first output, leave the rest off
             # TODO should maybe leave half open, affects charge sharing?
@@ -276,20 +268,30 @@ class SamplerTemplate(TemplateMaster):
             limits = self.signals.in_.value
             num = self.template.nonlinearity_points
             results = []
+            prev_val = 0
             for i in range(num):
                 dc = limits[0] + i * (limits[1] - limits[0]) / (num-1)
-                tester.poke(clk.spice_pin, 1)
+                #tester.poke(clk.spice_pin, 1)
+                tester.poke(self.ports.in_, prev_val)
+                tester.delay(0.01 * period)
                 tester.poke(self.ports.in_, dc)
+                prev_val = dc
 
-                self.template.schedule_clk(tester, clk, 0, wait, values)
-                tester.delay(wait)
+                settle_time = self.template.schedule_clk(tester, self.signals.out[0], 1, 0.5, values)
+                tester.delay(period / 2)
 
                 # delays time "wait" for things to settle before reading
-                read = self.template.read_value(tester, p, wait)
+                tester.delay(settle_time)
+                read = self.template.read_value(tester, p, 0)
 
-                # small delay so value is not changed by start of next test
-                tester.delay(wait * 0.1)
+                if settle_time < period / 2:
+                    tester.delay(period / 2 - settle_time)
                 results.append((dc, read))
+            tester.poke(self.ports.in_, prev_val)
+            tester.delay(0.01*period)
+
+
+            tester.delay(2*period)
 
             return results
 
@@ -325,6 +327,7 @@ class SamplerTemplate(TemplateMaster):
                 val = regression_models[f'nonlinearity_{i}']['1']
                 ys.append(val)
 
+            plt.figure()
             plt.plot(xs, ys, '*')
             plt.grid()
             plt.show()
@@ -345,7 +348,6 @@ class SamplerTemplate(TemplateMaster):
 
         def input_domain(self):
             limits = self.signals.from_template_name('in_').value
-            settle = float(self.extras['approx_settling_time'])
             max_slope = 2*self.extras['max_slope'] # 50 * (limits[1]-limits[0]) / settle
 
             v = signals.create_input_domain_signal('value', limits)
@@ -356,8 +358,7 @@ class SamplerTemplate(TemplateMaster):
 
         def testbench(self, tester, values):
             #print('Chose jitter value', values['clk_v2t_l_jitter'], 'in dynamic test')
-            settle = float(self.extras['approx_settling_time'])
-            wait = 1 * settle
+            period = float(self.extras['cycle_time'])
             v = values['value']
             s = values['slope']
             clk = self.signals.clk[0] if hasattr(self.signals.clk, '__getitem__') else self.signals.clk
@@ -365,36 +366,41 @@ class SamplerTemplate(TemplateMaster):
 
             # To see debug plots, also uncomment debug decorator for this class
             np = self.template.nonlinearity_points
-            debug_length = np * wait * 30
+            debug_length = np * period * 30
             self.debug(tester, clk.spice_pin, debug_length)
             for p in self.ports.out:
                 self.debug(tester, p, debug_length)
             self.debug(tester, self.ports.in_, debug_length)
             #self.debug(tester, self.template.dut.clk_v2t_l[0], debug_length)
-            #self.debug(tester, self.ports.fixture_debug, debug_length)
+            #self.debug(tester, self.ports.debug, debug_length)
 
-            tester.delay(wait*0.1)
+            tester.delay(period*0.1)
 
             # feed through to first output, leave the rest off
             # TODO should maybe leave half open, affects charge sharing?
-            tester.poke(clk.spice_pin, 1)
-            if hasattr(self.ports.clk, '__getitem__'):
-                for p in self.ports.clk[1:]:
-                    tester.poke(p, 0)
+            #tester.poke(clk.spice_pin, 1)
+            #if hasattr(self.ports.clk, '__getitem__'):
+            #    for p in self.ports.clk[1:]:
+            #        tester.poke(p, 0)
+            output = self.signals.out[0]
 
             limits = self.signals.in_.value
             limit_range = abs(limits[1]-limits[0])
-            max_ramp_time = settle/5 # TODO
+            max_ramp_time = period / 4 # TODO maybe over num_samplers? look as tclk assertion
             if limit_range / abs(s) < max_ramp_time:
                 # use the full input range
                 start = (limits[0] if s > 0 else limits[1])
                 end = (limits[1] if s > 0 else limits[0])
 
+                # time it takes the ramp to get to v
                 t_clk = abs((v - start) / s) # TODO abs unnecessary?
-                self.template.schedule_clk(tester, clk, 0, t_clk + wait*2, values)
+
+
+                settle_time = self.template.schedule_clk(tester, output, 1, 0.5, values)
 
                 tester.poke(self.ports.in_, start)
-                tester.delay(wait*2) # because of finite rise time of prev line
+                assert period / 2 > t_clk
+                tester.delay(period/2 - t_clk) # because of finite rise time of prev line
                 tester.poke(self.ports.in_, 0, delay={
                     'type': 'ramp',
                     'start': start,
@@ -404,18 +410,21 @@ class SamplerTemplate(TemplateMaster):
                 })
 
                 tester.delay(t_clk)
+                # sampling is happening right now
 
                 # The read_value call actually does delay long enough for the thing to settle
                 if hasattr(self.ports.out, '__getitem__'):
                     p = self.ports.out[0]
                 else:
                     p = self.ports.out
-                read = self.template.read_value(tester, p, wait)
 
-                tester.delay(abs(limit_range/s) - t_clk)
-                tester.delay(wait * 1)
+                tester.delay(settle_time)
+                read = self.template.read_value(tester, p, 0)
+
+                #tester.delay(abs(limit_range/s) - t_clk)
+                if settle_time < period/2:
+                    tester.delay(period/2 - settle_time)
                 print('Using full range for slope', s, ', time', abs(limit_range/s))
-                pass
 
             else:
                 # use the full ramp time
@@ -430,11 +439,16 @@ class SamplerTemplate(TemplateMaster):
                 ss = clamp(v - s * (max_ramp_time/2))
                 se = clamp(v + s * (max_ramp_time/2))
 
-
+                ramp_start_to_sample = abs((ss - v) / s)
+                ramp_sample_to_end = abs((se - v) / s)
                 tester.poke(self.ports.in_, ss)
-                t_delay = abs((ss-v)/s)
-                self.template.schedule_clk(tester, clk, 0, t_delay + wait*2, values)
-                tester.delay(wait) # because of finite rise time of prev line
+
+
+                settle_time = self.template.schedule_clk(tester, output, 1, 0.5, values)
+
+                assert ramp_start_to_sample < period / 2
+                tester.delay(period / 2 - ramp_start_to_sample)
+
                 tester.poke(self.ports.in_, 0, delay={
                     'type': 'ramp',
                     'start': ss,
@@ -444,20 +458,24 @@ class SamplerTemplate(TemplateMaster):
                 })
 
 
-                tester.delay(t_delay)
+                tester.delay(ramp_start_to_sample)
                 # this is when the clk edge happens, but it's handled
                 # by schedule_clk
                 #tester.poke(clk, 0)
+
+                tester.delay(settle_time)
+
                 if hasattr(self.ports.out, '__getitem__'):
                     p = self.ports.out[0]
                 else:
                     p = self.ports.out
-                read = self.template.read_value(tester, p, wait)
+                read = self.template.read_value(tester, p, 0)
 
-                tester.delay(max_ramp_time/2)
+                if settle_time < period/2:
+                    tester.delay(period/2 - settle_time)
                 print('Using full time for slope', s, ', range', ss, se)
 
-            scale = 10**(int(math.log10(1/settle)))
+            scale = 10**(int(math.log10(1/period)))
             slope_over_scale = s / scale
             print('USING SCALE OF', scale)
             return read, slope_over_scale
@@ -531,8 +549,8 @@ class SamplerTemplate(TemplateMaster):
             slope = regression_dataframe['slope']
             out = regression_dataframe['sample_out']
 
-            settle = float(self.extras['approx_settling_time'])
-            scale = 10 ** (int(math.log10(1 / settle)))
+            period = float(self.extras['cycle_time'])
+            scale = 10 ** (int(math.log10(1 / period)))
 
             # here we explicity ignore dependence on jitter because it's nominally 0
             results = {k: v[Regression.one_literal] for k, v in regression_results.items()}
@@ -567,6 +585,7 @@ class SamplerTemplate(TemplateMaster):
         parameter_algebra = {}
 
         def input_domain(self):
+            assert False, 'must be converted to new schedule_clk style'
             return []
 
         def testbench(self, tester, values):
@@ -1002,7 +1021,9 @@ class SamplerTemplate(TemplateMaster):
             debug_length = 1 #wait*10
             self.debug(tester, self.ports.clk[0], debug_length)
             self.debug(tester, self.ports.clk[1], debug_length)
-            self.debug(tester, self.signals.from_circuit_name('debug').spice_pin, debug_length)
+            if hasattr(self.ports, 'debug'):
+                self.debug(tester, self.ports.debug, debug_length)
+
             self.debug(tester, self.ports.out[0], debug_length)
             self.debug(tester, self.ports.in_, debug_length)
 
@@ -1010,8 +1031,7 @@ class SamplerTemplate(TemplateMaster):
             # Now we need it so we aren't locked to channel freq
             tester.delay(period * 0.01)
 
-            print('scheduling clock in ', period)
-            time_sample_to_read = self.template.schedule_clk(tester, self.signals.out[0], 0, period, values)
+            time_sample_to_read = self.template.schedule_clk(tester, self.signals.out[0], 1, 0.5, values)
 
             block = tester.get_value(self.ports.in_,
                              params={'style': 'block', 'duration': 2*period})
@@ -1020,7 +1040,7 @@ class SamplerTemplate(TemplateMaster):
 
             # TODO this breaks if settle > period
             self.slope_dt = 10e-9
-            tester.delay(period - self.slope_dt)
+            tester.delay(period/2 - self.slope_dt)
             v_early = tester.get_value(self.ports.in_)
             tester.delay(self.slope_dt)
             v_exact = tester.get_value(self.ports.in_)
@@ -1033,8 +1053,10 @@ class SamplerTemplate(TemplateMaster):
                 p = self.ports.out[0]
             else:
                 p = self.ports.out
-            output = tester.get_value(p)
-            tester.delay(period - time_sample_to_read)
+            #output = tester.get_value(p)
+            output = self.template.read_value(tester, p, 0)
+            if period / 2 - time_sample_to_read > 0:
+                tester.delay(period/2 - time_sample_to_read)
 
 
 
@@ -1043,9 +1065,11 @@ class SamplerTemplate(TemplateMaster):
             return block, v_early, v_exact, v_late, output
 
         def analysis(self, reads):
-            block, v_early, v_exact, v_late, output = [x.value for x in reads]
-            v_early, v_exact, v_late, output = [float(x) for x in [v_early, v_exact, v_late, output]]
+            block, v_early, v_exact, v_late = [x.value for x in reads[:-1]]
+            v_early, v_exact, v_late = [float(x) for x in [v_early, v_exact, v_late]]
             self.blocks.append(scipy.interpolate.interp1d(*block))
+            output = self.template.interpret_value(reads[-1])
+            out_mapped = self.template.temp_inv(output)
 
             slope = (v_late - v_early) / (2 * self.slope_dt)
 
@@ -1053,7 +1077,7 @@ class SamplerTemplate(TemplateMaster):
             def search(forward, rising):
                 try:
                     es = domain_read.find_edge_spice(block[0], block[1],
-                            period, output, forward=forward, rising=rising)
+                            period, out_mapped, forward=forward, rising=rising)
                     return es[0]
                 except domain_read.EdgeNotFoundError:
                     return None
@@ -1081,9 +1105,9 @@ class SamplerTemplate(TemplateMaster):
             #    closest = None
 
 
-            if False and closest == None:
+            if closest == None:
                 plt.plot(block[0] - period, block[1], '-+')
-                plt.plot([-period, period], [output, output])
+                plt.plot([-period, period], [out_mapped, out_mapped])
                 for e in edges:
                     if e != None:
                         plt.plot([e, e], [0.6, 0.7])
@@ -1101,13 +1125,15 @@ class SamplerTemplate(TemplateMaster):
             closest_pv = closest if v_exact >= v_split else None
             closest_nv = closest if v_exact <  v_split else None
 
-            return {'value': v_exact, 'slope': slope, 'output': output,
-                    'output_adj': output - v_exact,
+
+            return {'value': v_exact, 'slope': slope, 'output': out_mapped,
+                    'output_adj': out_mapped- v_exact,
                     'delay': closest,
                     'delay_ps': closest_ps,
                     'delay_ns': closest_ns,
                     'delay_pv': closest_pv,
                     'delay_nv': closest_nv,
+                    'output_raw_debug': output
                     }
 
         def post_regression(self, regression_models, data):
@@ -1153,7 +1179,13 @@ class SamplerTemplate(TemplateMaster):
             projected_adj_v2_nv = delay_v2_nv * slope
 
             def resample(delays):
-                xs = [self.blocks[i](period + dt) for i, dt in enumerate(delays)]
+                def resample_one(i, dt):
+                    block = self.blocks[i]
+                    try:
+                        return block(period/2 + dt)
+                    except ValueError:
+                        return None
+                xs = [resample_one(i, dt) for i, dt in enumerate(delays)]
                 return np.array(xs)
             resampled_adj_v1 = resample(delay_v1) - value
             resampled_adj_v2 = resample(delay_v2) - value
@@ -1272,7 +1304,7 @@ class SamplerTemplate(TemplateMaster):
                          'beta': 'old_value',
                          'gamma': '1'},
         }
-        num_samples = 5
+        num_samples = 200
 
         #def __init__(self, *args, **kwargs):
         #    super().__init__(*args, **kwargs)
@@ -1282,52 +1314,71 @@ class SamplerTemplate(TemplateMaster):
         def input_domain(self):
             limits = self.signals.in_.value
             current = signals.create_input_domain_signal('current', limits)
-            three_ago = signals.create_input_domain_signal('three_ago', limits)
-            return [current, three_ago]
+            two_ago = signals.create_input_domain_signal('two_ago', limits)
+            return [current, two_ago]
 
         def testbench(self, tester, values):
             period = float(self.extras['cycle_time'])
             print('period is', period)
-            three_ago = values['three_ago']
+            two_ago = values['two_ago']
             current = values['current']
 
             debug_length = 1 #wait*10
             self.debug(tester, self.ports.clk[0], debug_length)
             self.debug(tester, self.ports.clk[1], debug_length)
-            self.debug(tester, self.signals.from_circuit_name('debug').spice_pin, debug_length)
+            try:
+                self.debug(tester, self.signals.from_circuit_name('debug').spice_pin, debug_length)
+            except KeyError:
+                pass
             self.debug(tester, self.ports.out[0], debug_length)
             self.debug(tester, self.ports.in_, debug_length)
 
 
-            time_sample_to_read = self.template.schedule_clk(tester, self.signals.out[0], 0, period*3/2, values)
+            time_sample_to_read = self.template.schedule_clk(tester, self.signals.out[0], 2, 0.5, values)
             print('tstr', time_sample_to_read)
+
+
+            #tester.delay(period*1.5)
+            #tester.poke(self.ports.in_, 0)
+            #tester.delay(period*0.005)
+            #tester.poke(self.ports.in_, 1)
+            #tester.delay(period*0.495)
+            #tester.poke(self.ports.in_, 1)
+            #tester.delay(period*0.005)
+            #tester.poke(self.ports.in_, 0)
+            #tester.delay(period*0.995)
+
 
             # 2 periods are about to play
             # our main clock edge is falling in period*1.5
             # we want to feed the other value into the edge at period*0.75
             tester.poke(self.ports.in_, 0)
-            #tester.delay(0.625*period)
-            tester.delay(0.5*period)
+            tester.delay(0.875*period)
+            #tester.delay(0.5*period) # debug
             tester.poke(self.ports.in_, 0)
             tester.delay(0.005*period)
-            tester.poke(self.ports.in_, three_ago)
-            tester.delay(0.245*period)
-            tester.poke(self.ports.in_, three_ago)
-            tester.delay(0.005*period)
-            tester.poke(self.ports.in_, 0)
+            tester.poke(self.ports.in_, two_ago)
             tester.delay(0.120*period)
 
             # end of 1st period
 
-            tester.delay(0.375*period)
+            tester.delay(0.125*period)
+            tester.poke(self.ports.in_, two_ago)
+            tester.delay(0.005*period)
+            tester.poke(self.ports.in_, 0)
+            tester.delay(0.120*period)
+
+            # 1.25 periods in
+
+            tester.delay(0.125*period)
             tester.poke(self.ports.in_, 0)
             tester.delay(0.005*period)
             tester.poke(self.ports.in_, current)
             tester.delay(0.120*period)
 
-            # sampling edge falls right here
+            # sampling edge falls right here, 1.5 periods in
             tester.delay(time_sample_to_read)
-            meas = tester.get_value(self.ports.in_)
+            meas = tester.get_value(self.ports.out[0])
             tester.delay(0.500*period - time_sample_to_read)
 
             # end of 2 periods
@@ -1338,33 +1389,37 @@ class SamplerTemplate(TemplateMaster):
             tester.delay(0.245*period)
 
 
-            return [current, three_ago, meas]
+            return [current, two_ago, meas]
 
         def analysis(self, reads):
-            current, three_ago, meas_gv = reads
+            current, two_ago, meas_gv = reads
             meas = meas_gv.value
 
             return {'value': current,
-                    'old_value': three_ago,
-                    'kickback': meas - current}
+                    'old_value': two_ago,
+                    'kickback': meas - current,
+                    'meas': meas}
 
         def post_regression(self, models, data):
-            value = PlotHelper.eval_parameter(data, models, 'value')
-            old_value = PlotHelper.eval_parameter(data, models, 'old_value')
-            kickback = PlotHelper.eval_parameter(data, models, 'kickback')
+            value = PlotHelper.eval_factor(data, 'current')
+            old_value = PlotHelper.eval_factor(data, 'two_ago')
+            kickback = PlotHelper.eval_factor(data, 'kickback')
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='3d', proj_type='ortho')
             ax.scatter(value, old_value, kickback)
-            ax.plot_surface(X, J, Z, alpha=0.5)
+            ax.set_xlabel('value')
+            ax.set_ylabel('old_value')
+            ax.set_zlabel('kickback')
+            plt.show()
             return {}
 
 
     tests = [
-             #StaticNonlinearityTest,
+             StaticNonlinearityTest,
+             #ApertureTest,
              #ChannelTest,
              #SineTest,
-             #ApertureTest,
-             #DelayTest
+             DelayTest,
              KickbackTest
             ]
 
