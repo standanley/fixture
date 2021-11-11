@@ -79,8 +79,8 @@ extras:
             125: 0
             250: 1
         out<0>:
-            249: sample
-            125: read
+            250: sample
+            124: read
 
 
         clk_v2t<1>:

@@ -1034,7 +1034,7 @@ class SamplerTemplate(TemplateMaster):
             time_sample_to_read = self.template.schedule_clk(tester, self.signals.out[0], 1, 0.5, values)
 
             block = tester.get_value(self.ports.in_,
-                             params={'style': 'block', 'duration': 2*period})
+                             params={'style': 'block', 'duration': 1*period})
 
 
 
@@ -1073,11 +1073,12 @@ class SamplerTemplate(TemplateMaster):
 
             slope = (v_late - v_early) / (2 * self.slope_dt)
 
+            # block read is 1 period, clk falls right in the middle
             period = float(self.extras['cycle_time'])
             def search(forward, rising):
                 try:
                     es = domain_read.find_edge_spice(block[0], block[1],
-                            period, out_mapped, forward=forward, rising=rising)
+                            period / 2, out_mapped, forward=forward, rising=rising)
                     return es[0]
                 except domain_read.EdgeNotFoundError:
                     return None
@@ -1106,7 +1107,7 @@ class SamplerTemplate(TemplateMaster):
 
 
             if closest == None:
-                plt.plot(block[0] - period, block[1], '-+')
+                plt.plot(block[0] - period/2, block[1], '-+')
                 plt.plot([-period, period], [out_mapped, out_mapped])
                 for e in edges:
                     if e != None:
@@ -1230,6 +1231,18 @@ class SamplerTemplate(TemplateMaster):
             ax.set_zlabel('delay (split by value)')
 
 
+            # split on slope stuff
+
+            plt.figure()
+            #plt.clf()
+            plt.plot(slope, delay, '*')
+            plt.plot(slope, delay_v2_ps, 'x')
+            plt.plot(slope, delay_v2_ns, '+')
+            plt.legend(['Measured delay', 'ps modeled delay', 'ns modeled delay'])
+            plt.title('Version 2: effective delay based on resampling')
+            plt.xlabel('slope')
+            plt.ylabel('delay')
+            plt.grid()
 
 
             # final 6 plots below
