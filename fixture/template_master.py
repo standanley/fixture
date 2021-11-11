@@ -167,38 +167,46 @@ class TemplateMaster():
         Actually do the entire analysis of the circuit
         '''
 
-        checkpoint_controller = {
-            'StaticNonlinearityTest': {
-                'run_sim': True,
-                'run_regression': True,
-                'run_post_regression': 'save'
-            },
-            'ChannelTest': {
-                'run_sim': True,
-                'run_regression': True,
-                'run_post_regression': 'save'
-            },
-            'DelayTest': {
-                'run_sim': True,
-                'run_regression': True,
-                'run_post_regression': 'save'
-            },
-            'SineTest': {
-                'run_sim': True,
-                'run_regression': True,
-                'run_post_regression': 'save'
-            },
-            'ApertureTest': {
-                'run_sim': True,
-                'run_regression': True,
-                'run_post_regression': 'save'
-            },
-            'KickbackTest': {
-                'run_sim': True,
-                'run_regression': True,
-                'run_post_regression': 'save'
-            }
-        }
+        checkpoint_controller = {str(test):
+                                    {
+                                        'run_sim': True,
+                                        'run_regression': True,
+                                        'run_post_regression': 'save'
+                                    }
+                                 for test in self.tests}
+
+        #checkpoint_controller = {
+        #    'StaticNonlinearityTest': {
+        #        'run_sim': True,
+        #        'run_regression': True,
+        #        'run_post_regression': 'save'
+        #    },
+        #    'ChannelTest': {
+        #        'run_sim': True,
+        #        'run_regression': True,
+        #        'run_post_regression': 'save'
+        #    },
+        #    'DelayTest': {
+        #        'run_sim': True,
+        #        'run_regression': True,
+        #        'run_post_regression': 'save'
+        #    },
+        #    'SineTest': {
+        #        'run_sim': True,
+        #        'run_regression': True,
+        #        'run_post_regression': 'save'
+        #    },
+        #    'ApertureTest': {
+        #        'run_sim': True,
+        #        'run_regression': True,
+        #        'run_post_regression': 'save'
+        #    },
+        #    'KickbackTest': {
+        #        'run_sim': True,
+        #        'run_regression': True,
+        #        'run_post_regression': 'save'
+        #    }
+        #}
         #checkpoint_controller = {
         #    'StaticNonlinearityTest': {
         #        'run_sim': False,
@@ -241,7 +249,7 @@ class TemplateMaster():
                 if controller['run_regression']:
                     regression = fixture.Regression(self, test, results)
 
-                    #PlotHelper.plot_regression(regression)
+                    PlotHelper.plot_regression(regression, test.parameter_algebra, regression.regression_dataframe)
                     #PlotHelper.plot_optional_effects(test, regression.regression_dataframe, regression.results)
                     rr = dict(regression.results)
                 else:

@@ -24,7 +24,7 @@ class PlotHelper:
         plt.clf()
 
     @classmethod
-    def plot_regression(cls, regression):
+    def plot_regression(cls, regression, parameter_algebra, data):
         models = regression.results_models
         for reg_name, value in models.items():
             name = reg_name[2:-1]
@@ -46,6 +46,26 @@ class PlotHelper:
             ##plt.show()
             #cls.save_current_plot(f'{name}_fit')
             ##plt.close(fig)
+
+
+        for model, pa in zip(models.values(), parameter_algebra.items()):
+            lhs, rhs = pa
+            #data = model.model.exog
+            y_pred = model.model.predict(model.params)
+            y_meas = cls.eval_factor(data, lhs)
+            for parameter, coefficient in rhs.items():
+                x = cls.eval_factor(data, coefficient)
+                #x = coefficient
+                plt.figure()
+                plt.plot(x, y_meas, '*')
+                plt.plot(x, y_pred, 'x')
+                plt.xlabel(coefficient)
+                plt.ylabel(lhs)
+                plt.grid()
+                plt.legend(['Measured', 'Predicted'])
+                #plt.show()
+                print('in PloHelper')
+                cls.save_current_plot(f'{lhs}_vs_{coefficient}')
 
 
     @staticmethod

@@ -13,7 +13,8 @@ pin:
     my_in:
         direction: input
         datatype: real
-        value: (.2, 1.0)
+        #value: (.2, 1.0)
+        value: (0.45, 0.7)
     adj:
         direction: input
         datatype: analog
