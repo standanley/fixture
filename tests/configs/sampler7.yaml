@@ -83,7 +83,7 @@ extras:
             750: sample
             200: read
     channel_info:
-        file_path: /home/dstanley/research/fixture/tests/channels/Case4_FM_13SI_20_T_D13_L6.s4p
+        file_path: ../channels/Case4_FM_13SI_20_T_D13_L6.s4p
         bit_freq: 1e6
         fake_channel_time_stretch: 1e-3
         voltage_range: (0, 1.2)

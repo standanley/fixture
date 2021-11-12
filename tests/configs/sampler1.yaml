@@ -35,7 +35,7 @@ extras:
             4: read
 
     channel_info:
-        file_path: /home/dstanley/research/fixture/tests/channels/Case4_FM_13SI_20_T_D13_L6.s4p
+        file_path: ../channels/Case4_FM_13SI_20_T_D13_L6.s4p
         bit_freq: 1e4
         # small number in time_stretch means your sampler is too slow for the channel
         # we want to take a real channel response and replace the real timesteps with ones that are bigger

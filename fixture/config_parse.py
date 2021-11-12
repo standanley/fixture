@@ -60,9 +60,12 @@ def parse_config(circuit_config_dict):
     test_config_filename_abs = path_relative(circuit_config_dict['filename'], test_config_filename)
     test_config_dict = parse_test_cfg(test_config_filename_abs)
 
-
-
-
+    # TODO this special case probably doesn't belong here
+    if 'extras' in circuit_config_dict:
+        if 'channel_info' in circuit_config_dict['extras']:
+            channel_file_relative = circuit_config_dict['extras']['channel_info']['file_path']
+            channel_file_abs = path_relative(circuit_config_dict['filename'], channel_file_relative)
+            circuit_config_dict['extras']['channel_info']['file_path'] = channel_file_abs
 
     # go through pin definitions and create list of
     # [pin_info, circuit_name, template_name]
