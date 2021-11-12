@@ -1,3 +1,4 @@
+import ast
 import functools
 
 import numpy as np
@@ -11,6 +12,7 @@ Regression = fixture.regression.Regression
 import math
 import matplotlib.pyplot as plt
 from fault import domain_read
+from fixture import ChannelUtil
 
 
 class SamplerTemplate(TemplateMaster):
@@ -279,13 +281,16 @@ class SamplerTemplate(TemplateMaster):
 
                 settle_time = self.template.schedule_clk(tester, self.signals.out[0], 1, 0.5, values)
                 tester.delay(period / 2)
+                print('1: delaying', period/2)
 
                 # delays time "wait" for things to settle before reading
                 tester.delay(settle_time)
+                print('2: delaying ', settle_time)
                 read = self.template.read_value(tester, p, 0)
 
                 if settle_time < period / 2:
                     tester.delay(period / 2 - settle_time)
+                    print('3: delaying', period/2 - settle_time)
                 results.append((dc, read))
             tester.poke(self.ports.in_, prev_val)
             tester.delay(0.01*period)
@@ -316,6 +321,7 @@ class SamplerTemplate(TemplateMaster):
             return ret
 
         def post_regression(self, regression_models, regression_dataframe):
+            return {}
             limits = self.signals.in_.value
             num = self.template.nonlinearity_points
             xs = []
@@ -739,15 +745,18 @@ class SamplerTemplate(TemplateMaster):
             slope = (value_late - value_early) / (2*self.slope_dt)
             sample_adj = (out_mapped - value)
 
+            v_center = sum(self.signals.in_.value) / 2
+
             return {'value': value,
                     'slope': slope,
                     'sample_adj': sample_adj,
                     'sample_adj_sp': sample_adj if slope >= 0 else None,
                     'sample_adj_sn': sample_adj if slope < 0 else None,
-                    'sample_adj_vp': sample_adj if value >= .65 else None,
-                    'sample_adj_vn': sample_adj if value < .65 else None}
+                    'sample_adj_vp': sample_adj if value >= v_center else None,
+                    'sample_adj_vn': sample_adj if value < v_center else None}
 
         def post_regression(self, regression_results, data):
+            return {}
             alpha = PlotHelper.eval_parameter(data, regression_results, 'alpha')
             beta = PlotHelper.eval_parameter(data, regression_results, 'beta')
             gamma = PlotHelper.eval_parameter(data, regression_results, 'gamma')
@@ -985,6 +994,31 @@ class SamplerTemplate(TemplateMaster):
             self.poked_waveform = False
             self.blocks = []
 
+            assert 'channel_info' in self.template.extras
+            info = self.template.extras['channel_info']
+            file_path = info['file_path']
+            bit_freq = float(info['bit_freq'])
+            voltage_range = ast.literal_eval(info['voltage_range'])
+
+            total_time = self.num_samples * self.template.extras['cycle_time']
+            total_time *= 1.5
+            time_stretch = float(info.get('fake_channel_time_stretch', 1))
+
+
+
+            channel_data = ChannelUtil.get_channel_data(
+                file_path,
+                bit_freq / time_stretch,
+                bit_freq / time_stretch * 100,
+                total_time * time_stretch,
+                debug=False
+            )
+            time = channel_data[:, 0]
+            data = channel_data[:, 1]
+            data = data*(voltage_range[1]-voltage_range[0]) + voltage_range[0]
+            time /= time_stretch
+            self.channel_data = (time, data)
+
         def input_domain(self):
             return []
 
@@ -995,17 +1029,18 @@ class SamplerTemplate(TemplateMaster):
             #                                     '__getitem__') else self.signals.clk
 
             if not self.poked_waveform:
-                import numpy as np
-                data = np.genfromtxt('fixture/test_channel.csv', delimiter=',')
-                #ts = [t*settle*0.05 for t in range(200)]
-                #vs = [math.sin(t/settle)*0.25+0.95 for t in ts]
-                ts, vs = list(data[:, 0]), list(data[:, 1])
-                vs_unscaled = data[:, 1]
-                limits = self.signals.in_.value
-                vs = vs_unscaled*(limits[1] - limits[0]) + limits[0]
-                vs = list(vs)
-                dt = (data[0][-1] - data[0][0]) / (len(data[0])-1)
-                #ts = [dt]*len(vs)
+                #import numpy as np
+                #data = np.genfromtxt('fixture/test_channel.csv', delimiter=',')
+                ##ts = [t*settle*0.05 for t in range(200)]
+                ##vs = [math.sin(t/settle)*0.25+0.95 for t in ts]
+                #ts, vs = list(data[:, 0]), list(data[:, 1])
+                #vs_unscaled = data[:, 1]
+                #limits = self.signals.in_.value
+                #vs = vs_unscaled*(limits[1] - limits[0]) + limits[0]
+                #vs = list(vs)
+                #dt = (data[0][-1] - data[0][0]) / (len(data[0])-1)
+                ##ts = [dt]*len(vs)
+                ts, vs = self.channel_data
 
                 tester.poke(self.ports.in_, 0, delay={
                     'type': 'future',
@@ -1020,7 +1055,7 @@ class SamplerTemplate(TemplateMaster):
 
             debug_length = 1 #wait*10
             self.debug(tester, self.ports.clk[0], debug_length)
-            self.debug(tester, self.ports.clk[1], debug_length)
+            #self.debug(tester, self.ports.clk[1], debug_length)
             if hasattr(self.ports, 'debug'):
                 self.debug(tester, self.ports.debug, debug_length)
 
@@ -1039,7 +1074,7 @@ class SamplerTemplate(TemplateMaster):
 
 
             # TODO this breaks if settle > period
-            self.slope_dt = 10e-9
+            self.slope_dt = period / 100 # 10e-9
             tester.delay(period/2 - self.slope_dt)
             v_early = tester.get_value(self.ports.in_)
             tester.delay(self.slope_dt)
@@ -1058,10 +1093,11 @@ class SamplerTemplate(TemplateMaster):
             if period / 2 - time_sample_to_read > 0:
                 tester.delay(period/2 - time_sample_to_read)
 
+            # delay about 10% a period so we are not locked to the sampling
+            # frequency, and use an irrational number so not locked at any ratio
+            unlock = (5**.5-1)/12
+            tester.delay(period*unlock)
 
-
-
-            # TODO is this starting dt too late to see the pulse rising edge?
             return block, v_early, v_exact, v_late, output
 
         def analysis(self, reads):
@@ -1138,6 +1174,7 @@ class SamplerTemplate(TemplateMaster):
                     }
 
         def post_regression(self, regression_models, data):
+            return {}
             value = data['value']
             slope = data['slope']
             #output = data['output']
@@ -1338,7 +1375,7 @@ class SamplerTemplate(TemplateMaster):
 
             debug_length = 1 #wait*10
             self.debug(tester, self.ports.clk[0], debug_length)
-            self.debug(tester, self.ports.clk[1], debug_length)
+            #self.debug(tester, self.ports.clk[1], debug_length)
             try:
                 self.debug(tester, self.signals.from_circuit_name('debug').spice_pin, debug_length)
             except KeyError:
@@ -1414,6 +1451,7 @@ class SamplerTemplate(TemplateMaster):
                     'meas': meas}
 
         def post_regression(self, models, data):
+            return {}
             value = PlotHelper.eval_factor(data, 'current')
             old_value = PlotHelper.eval_factor(data, 'two_ago')
             kickback = PlotHelper.eval_factor(data, 'kickback')

@@ -249,7 +249,7 @@ class TemplateMaster():
                 if controller['run_regression']:
                     regression = fixture.Regression(self, test, results)
 
-                    PlotHelper.plot_regression(regression, test.parameter_algebra, regression.regression_dataframe)
+                    #PlotHelper.plot_regression(regression, test.parameter_algebra, regression.regression_dataframe)
                     #PlotHelper.plot_optional_effects(test, regression.regression_dataframe, regression.results)
                     rr = dict(regression.results)
                 else:

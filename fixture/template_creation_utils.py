@@ -274,13 +274,13 @@ def invert_function(xs, ys):
     new_xs.append(xs[-1])
     new_ys.append(ys_up[-1])
 
-    import matplotlib.pyplot as plt
-    plt.figure()
-    plt.plot(xs, ys, '--')
-    plt.plot(xs, ys_up, '+')
-    plt.plot(new_xs, new_ys, '-x')
-    plt.grid()
-    plt.show()
+    #import matplotlib.pyplot as plt
+    #plt.figure()
+    #plt.plot(xs, ys, '--')
+    #plt.plot(xs, ys_up, '+')
+    #plt.plot(new_xs, new_ys, '-x')
+    #plt.grid()
+    #plt.show()
 
     # TODO I would like to give each flat region a slight tilt because it
     # would help in cases where the true curve is increasing but noise

@@ -21,7 +21,34 @@ template_pins:
 
 extras:
     #approx_settling_time: 3e-9
-    approx_settling_time: 3e-10
+    #approx_settling_time: 3e-10
     max_slope: 3e9
+
+    clks:
+        unit: 3e-11
+        period: 10
+        
+        clk<0>:
+            5: 1
+            10: 0
+        out<0>:
+            10: sample
+            4: read
+
+        
+        clk<1>:
+            0: 1
+            5: 0
+        out<1>:
+            5: sample
+            9: read
+
+    channel_info:
+        file_path: /home/dstanley/research/fixture/tests/channels/Case4_FM_13SI_20_T_D13_L6.s4p
+        bit_freq: 6.667e9
+        fake_channel_time_stretch: 10
+        voltage_range: (0, 0.7)
+
+
 
 test_config_file: ngspice_sampler2.yaml

@@ -56,9 +56,19 @@ class PlotHelper:
             for parameter, coefficient in rhs.items():
                 x = cls.eval_factor(data, coefficient)
                 #x = coefficient
+                x_nonan = x[~np.isnan(x)]
+
+                if len(x_nonan) != len(y_pred):
+                    # something to do with a nan removing rows from y_pred
+                    continue
+
+                assert len(x) == len(y_meas)
+                assert len(x_nonan) == len(y_pred)
+
+
                 plt.figure()
                 plt.plot(x, y_meas, '*')
-                plt.plot(x, y_pred, 'x')
+                plt.plot(x_nonan, y_pred, 'x')
                 plt.xlabel(coefficient)
                 plt.ylabel(lhs)
                 plt.grid()
