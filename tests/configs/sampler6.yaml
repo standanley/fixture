@@ -80,6 +80,10 @@ extras:
         clk_v2tb<0>:
             125: 0
             250: 1
+        #out<0>:
+        z_debug:
+            250: sample
+            3: read
 
         clk_v2t_e<0>:
             105: 1

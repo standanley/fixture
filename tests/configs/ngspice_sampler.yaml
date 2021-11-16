@@ -5,4 +5,5 @@ simulator: ngspice
 vsup: 1.2
 t_step: 0.5e-7
 t_tr: 1.0e-7
+pwl_signals: ['in_']
 #no_run: True

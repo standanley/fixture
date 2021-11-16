@@ -1142,13 +1142,13 @@ class SamplerTemplate(TemplateMaster):
             #    closest = None
 
 
-            if closest == None:
-                plt.plot(block[0] - period/2, block[1], '-+')
-                plt.plot([-period, period], [out_mapped, out_mapped])
-                for e in edges:
-                    if e != None:
-                        plt.plot([e, e], [0.6, 0.7])
-                plt.show()
+            #if closest == None:
+            #    plt.plot(block[0] - period/2, block[1], '-+')
+            #    plt.plot([-period, period], [out_mapped, out_mapped])
+            #    for e in edges:
+            #        if e != None:
+            #            plt.plot([e, e], [0.6, 0.7])
+            #    plt.show()
 
 
             #ps_mask = slope > 0

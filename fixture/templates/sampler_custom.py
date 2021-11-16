@@ -12,8 +12,8 @@ class SamplerCustomTemplate(SamplerTemplate):
 
 
     def read_value(self, tester, port, wait):
-        r = tester.get_value(port, params={'style': 'edge', 'forward':False, 'rising':False, 'count':1, 'on_error': [-1]})
-        r2 = tester.get_value(port, params={'style': 'edge', 'forward':False, 'rising':True, 'count':1, 'on_error': [-1]})
+        r = tester.get_value(port, params={'style': 'edge', 'forward':False, 'rising':False, 'count':1})
+        r2 = tester.get_value(port, params={'style': 'edge', 'forward':False, 'rising':True, 'count':1})
         assert wait == 0
         tester.delay(wait)
         return r, r2

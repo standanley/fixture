@@ -236,7 +236,7 @@ class TemplateMaster():
 
                 self.simulator.run(tester, no_run=False)
 
-                debug = True
+                debug = False
                 if debug:
                     test.debug_plot()
 
