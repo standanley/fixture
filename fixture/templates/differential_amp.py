@@ -27,7 +27,9 @@ class DifferentialAmpTemplate(TemplateMaster):
             'out_cm': {'gain_to_cm':'in_diff', 'cm_gain':'in_cm', 'cm_offset':'1'},
         }
         required_info = {
-            'approx_settling_time': 'Approximate time it takes for amp to settle within 99% (s)'
+            'approx_settling_time': 'Approximate time it takes for amp to settle within 99% (s)',
+            'limits_diff': 'Minimum and maximum differential input (V), e.g. (-0.8, 0.8)',
+            'limits_cm': 'Minimum and maximum common mode input (V), e.g. (0.4, 0.6)'
         }
         num_samples = 100
 

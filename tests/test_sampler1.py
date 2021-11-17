@@ -29,5 +29,14 @@ def test_sampler4():
 
     fixture.run(circuit_fname)
 
+def test_sampler6():
+    circuit_fname = file_relative_to_test('configs/sampler6.yaml')
+
+    fixture.run(circuit_fname)
+
+def test_sampler7():
+    circuit_fname = file_relative_to_test('configs/sampler7.yaml')
+
+    fixture.run(circuit_fname)
 if __name__ == '__main__':
-    test_sampler4()
+    test_sampler6()

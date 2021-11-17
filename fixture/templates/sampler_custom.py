@@ -12,13 +12,13 @@ class SamplerCustomTemplate(SamplerTemplate):
 
 
     def read_value(self, tester, port, wait):
-        r = tester.get_value(port, params={'style': 'edge', 'forward':True, 'rising':False, 'count':1})
-        r2 = tester.get_value(port, params={'style': 'edge', 'forward':True, 'rising':True, 'count':1})
+        r = tester.get_value(port, params={'style': 'edge', 'forward':False, 'rising':False, 'count':1})
+        r2 = tester.get_value(port, params={'style': 'edge', 'forward':False, 'rising':True, 'count':1})
+        assert wait == 0
         tester.delay(wait)
         return r, r2
 
     def interpret_value(self, read):
-        #return random.random()
         r, r2 = read
         return r.value[0] - r2.value[0]
 

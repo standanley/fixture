@@ -275,6 +275,7 @@ def invert_function(xs, ys):
     new_ys.append(ys_up[-1])
 
     #import matplotlib.pyplot as plt
+    #plt.figure()
     #plt.plot(xs, ys, '--')
     #plt.plot(xs, ys_up, '+')
     #plt.plot(new_xs, new_ys, '-x')

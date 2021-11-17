@@ -1,6 +1,7 @@
+# This uses the same spice model as sampler4, but looks at the internal sampled voltage instead of the time pulse output
 name: sampler4
 filepath: ../spice/sampler4.sp
-template: SamplerCustomTemplate
+template: SamplerTemplate
 pin:
     in_:
         direction: input
@@ -44,7 +45,8 @@ pin:
 
 template_pins:
    in_: in_
-   out<0:1>: out<0:1>
+   out<0>: z_debug
+   out<1>: out<1>
    clk<0:1>: clk_v2t<0:1>
 
    # With the new SignalArray I can't leae ignore[0:1] blank
@@ -58,18 +60,18 @@ template_pins:
    ignore[10:11]: clk_v2t_lb<0:1>
    ignore[12:13]: clk_v2t_gated<0:1>
    #ignore[14:15]: clk_v2tb_gated<0:1>
-   debug: z_debug
+   #fixture_debug: z_debug
 
 
 
-test_config_file: ngspice_sampler.yaml
+test_config_file: ngspice_sampler6.yaml
 
 extras:
-    #approx_settling_time: 50e-6
+    approx_settling_time: 1e-7 #50e-6
     #max_slope: 19.7e9 # 3.125G sine wave
     max_slope: 0.5e6
     clks:
-        unit: 4e-8
+        unit: 0.5e-8 # 4e-8
         period: 250
 
         clk_v2t<0>:
@@ -78,17 +80,10 @@ extras:
         clk_v2tb<0>:
             125: 0
             250: 1
-        out<0>:
+        #out<0>:
+        z_debug:
             250: sample
-            124: read
-
-
-        clk_v2t<1>:
-            250: 1
-            125: 0
-        clk_v2tb<1>:
-            250: 0
-            125: 1
+            3: read
 
         clk_v2t_e<0>:
             105: 1
@@ -100,7 +95,7 @@ extras:
         clk_v2t_l<0>:
             145: 1
             20:  0
-            max_jitter: 0.1
+            #max_jitter: 10
         clk_v2t_lb<0>:
             145: 0
             20:  1
@@ -112,9 +107,8 @@ extras:
             125: 0
             250: 1
 
-
     channel_info:
         file_path: ../channels/Case4_FM_13SI_20_T_D13_L6.s4p
-        bit_freq: 1e5
-        fake_channel_time_stretch: 1e-4
+        bit_freq: 0.8e6
+        fake_channel_time_stretch: 0.8e-3
         voltage_range: (0.6, 0.7)
