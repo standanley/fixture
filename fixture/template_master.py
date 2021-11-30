@@ -1,7 +1,8 @@
 import fault
 from abc import ABC, abstractmethod
 import fixture
-from fixture.signals import SignalManager, SignalArray
+from fixture import Tester
+from fixture.signals import SignalManager, SignalArray, SignalOut
 from fixture.plot_helper import PlotHelper
 
 class TemplateMaster():
@@ -138,6 +139,10 @@ class TemplateMaster():
             template_creation_utils is added. Unfortunately this means this
             input signature has to match
             '''
+            if isinstance(port, SignalOut):
+                # probably represetnation, no way to do that now
+                if hasattr(port, 'representation'):
+                    port = port.representation['signal']
             port_name = str(self.template.signals.from_circuit_pin(port))
             if port_name not in self.debug_dict:
                 r = tester.get_value(port, params={'style': 'block',
@@ -155,7 +160,7 @@ class TemplateMaster():
                 bump += 0.0 # useful for separating clock signals
             plt.grid()
             plt.legend(leg)
-            #plt.show()
+            plt.show()
 
         def __str__(self):
             s = repr(self)
@@ -225,7 +230,7 @@ class TemplateMaster():
         for test in self.tests:
             controller = checkpoint_controller[str(test)]
             if controller['run_sim']:
-                tester = fault.Tester(self.dut)
+                tester = Tester(self.dut)
                 tb = fixture.Testbench(self, tester, test)
                 tb.create_test_bench()
 

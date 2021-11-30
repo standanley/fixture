@@ -3,6 +3,7 @@ import collections.abc
 # importing it. Strangely, importing collections alone is not good enough
 
 from .temp_channel_data_generator import ChannelUtil
+from .tester import Tester
 from .template_master import TemplateMaster
 from .sampler import Sampler
 from .plot_helper import PlotHelper

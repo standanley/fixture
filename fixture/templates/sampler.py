@@ -8,6 +8,8 @@ from fixture import TemplateMaster, PlotHelper
 from fixture import template_creation_utils
 from fixture import signals
 import fixture
+from fixture.signals import SignalOut
+
 Regression = fixture.regression.Regression
 import math
 import matplotlib.pyplot as plt
@@ -75,7 +77,8 @@ class SamplerTemplate(TemplateMaster):
 
     def read_value(self, tester, port, wait):
         tester.delay(wait)
-        return tester.get_value(port)
+        s = self.signals.from_circuit_pin(port)
+        return tester.get_value(s)
 
     def interpret_value(self, read):
         return read.value
@@ -112,7 +115,10 @@ class SamplerTemplate(TemplateMaster):
         outs = {}
         for k, v in clks.items():
             try:
-                x = self.signals.from_circuit_name(k)
+                if isinstance(k, SignalOut):
+                    x = k
+                else:
+                    x = self.signals.from_circuit_name(k)
                 if x in self.signals.clk:
                     clks_new[x] = v
                 elif x in self.signals.out:
@@ -230,8 +236,9 @@ class SamplerTemplate(TemplateMaster):
             np = self.template.nonlinearity_points
             debug_time = np * period * 22
             self.debug(tester, clk.spice_pin, debug_time)
-            for p in self.ports.out:
-                self.debug(tester, p, debug_time)
+            #for p in self.ports.out:
+            #    self.debug(tester, p, debug_time)
+            self.debug(tester, self.signals.from_circuit_name('out<0>').spice_pin, debug_time)
             self.debug(tester, self.ports.in_, debug_time)
             if hasattr(self.ports, 'debug'):
                 self.debug(tester, self.ports.debug, debug_time)
@@ -1059,7 +1066,8 @@ class SamplerTemplate(TemplateMaster):
             if hasattr(self.ports, 'debug'):
                 self.debug(tester, self.ports.debug, debug_length)
 
-            self.debug(tester, self.ports.out[0], debug_length)
+            # TODO re-enable this debug
+            #self.debug(tester, self.ports.out[0], debug_length)
             self.debug(tester, self.ports.in_, debug_length)
 
             # TODO why was that delay there? simulator issues?
@@ -1105,7 +1113,8 @@ class SamplerTemplate(TemplateMaster):
             v_early, v_exact, v_late = [float(x) for x in [v_early, v_exact, v_late]]
             self.blocks.append(scipy.interpolate.interp1d(*block))
             output = self.template.interpret_value(reads[-1])
-            out_mapped = self.template.temp_inv(output)
+            # TODO I don't understand why that cast to float is necessary
+            out_mapped = float(self.template.temp_inv(output))
 
             slope = (v_late - v_early) / (2 * self.slope_dt)
 
@@ -1369,7 +1378,6 @@ class SamplerTemplate(TemplateMaster):
 
         def testbench(self, tester, values):
             period = float(self.extras['cycle_time'])
-            print('period is', period)
             two_ago = values['two_ago']
             current = values['current']
 
@@ -1380,12 +1388,12 @@ class SamplerTemplate(TemplateMaster):
                 self.debug(tester, self.signals.from_circuit_name('debug').spice_pin, debug_length)
             except KeyError:
                 pass
-            self.debug(tester, self.ports.out[0], debug_length)
+            # TODO reenable this debug
+            #self.debug(tester, self.ports.out[0], debug_length)
             self.debug(tester, self.ports.in_, debug_length)
 
 
             time_sample_to_read = self.template.schedule_clk(tester, self.signals.out[0], 2, 0.5, values)
-            print('tstr', time_sample_to_read)
 
 
             #tester.delay(period*1.5)
@@ -1428,7 +1436,8 @@ class SamplerTemplate(TemplateMaster):
 
             # sampling edge falls right here, 1.5 periods in
             tester.delay(time_sample_to_read)
-            meas = tester.get_value(self.ports.out[0])
+            #meas = tester.get_value(self.ports.out[0])
+            meas = self.template.read_value(tester, self.ports.out[0], 0)
             tester.delay(0.500*period - time_sample_to_read)
 
             # end of 2 periods
@@ -1444,11 +1453,12 @@ class SamplerTemplate(TemplateMaster):
         def analysis(self, reads):
             current, two_ago, meas_gv = reads
             meas = meas_gv.value
+            meas_mapped = float(self.template.temp_inv(meas))
 
             return {'value': current,
                     'old_value': two_ago,
-                    'kickback': meas - current,
-                    'meas': meas}
+                    'kickback': meas_mapped - current,
+                    'meas': meas_mapped}
 
         def post_regression(self, models, data):
             return {}
