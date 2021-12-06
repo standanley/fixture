@@ -1,15 +1,14 @@
 import fixture
 from itertools import product
 from numpy import ndarray
-from fixture.signals import SignalIn
+from fixture.signals import SignalIn, SignalOut
 
-# TODO timing
 
 def add_vectors():
     raise NotImplemented
 
 class Testbench():
-    def __init__(self, template, tester, test):
+    def __init__(self, template, tester, test, do_optional_out=False):
         '''
         tester: fault tester object
         test: TemplateMaster Test subclass object
@@ -19,6 +18,7 @@ class Testbench():
         self.tester = tester
         self.dut = tester.circuit.circuit
         self.test = test
+        self.do_optional_out = do_optional_out
 
     @staticmethod
     def scale_vector(vec, limits):
@@ -87,23 +87,20 @@ class Testbench():
             self.tester.poke(s.spice_pin, self.test_vectors[s][i])
 
 
-    ''' optional ouput not supported at the moment
     def read_optional_outputs(self):
-        # TODO use new read object
-        for port in self.dut.outputs_analog + self.dut.outputs_digital:
-            assert False # not really supported right now :(
-            r = self.tester.get_value(port)
+        if not self.do_optional_out:
+            return {}
+        reads = {}
+        for signal in self.test.signals:
+            if isinstance(signal, SignalOut) and signal.auto_measure:
+                r = self.tester.get_value(signal)
+                reads[signal.spice_name] = r
+        return reads
 
-    def process_optional_outputs(self):
-        results = {}
-        for port in self.dut.outputs_analog + self.dut.outputs_digital:
-            if not self.dut.is_required(port):
-                assert False # not really supported right now :(
-                result = self.results_raw[self.result_counter]
-                self.result_counter += 1
-                results[self.dut.get_name_circuit(port)] = result
+    def process_optional_outputs(self, reads):
+        # return dict with {str_name: float_val}
+        results = {k: r.value for k, r in reads.items()}
         return results
-    '''
 
     def run_test_point(self, i):
         self.apply_optional_inputs(i)
@@ -128,8 +125,9 @@ class Testbench():
                 test_inputs[name] = BitVector[len(val)](val)
         '''
 
-        reads = self.test.testbench(self.tester, test_inputs)
-        return reads
+        reads_template = self.test.testbench(self.tester, test_inputs)
+        reads_optional = self.read_optional_outputs()
+        return (reads_template, reads_optional)
     
     def create_test_bench(self):
         self.get_test_vectors()
@@ -154,18 +152,22 @@ class Testbench():
         for mode: for [in, out]: {pin:[x1, x2, x3, ...], }
         '''
         results_by_mode = {m: dict(self.test_vectors) for m in self.true_digital_modes}
-        for m, i, reads in self.result_processing_list:
-            results_out_req = self.test.analysis(reads)
+        for m, i, (reads_template, reads_optional) in self.result_processing_list:
+            results_out_req = self.test.analysis(reads_template)
             if not isinstance(results_out_req, dict):
                 assert False, 'Return from process_single_test should be a dict'
 
             for k,v in results_out_req.items():
                 if type(v) == ndarray:
                     results_out_req[k] = float(v)
-            # TODO: optional outputs
-            # results_out_opt = self.process_optional_outputs()
 
-            for k,v in results_out_req.items():
+            results_out_opt = self.process_optional_outputs(reads_optional)
+            # TODO this loop is copy/pasted from a few lines above
+            for k,v in results_out_opt.items():
+                if type(v) == ndarray:
+                    results_out_opt[k] = float(v)
+
+            for k,v in list(results_out_req.items()) + list(results_out_opt.items()):
                 if k not in results_by_mode[m]:
                     assert i == 0, f'result {k} seen first at sample {i}'
                     results_by_mode[m][k] = []

@@ -231,7 +231,9 @@ class TemplateMaster():
             controller = checkpoint_controller[str(test)]
             if controller['run_sim']:
                 tester = Tester(self.dut)
-                tb = fixture.Testbench(self, tester, test)
+                # TODO what 's a good way to specify do_optional_out
+                do_optional_out = test == self.tests[0]
+                tb = fixture.Testbench(self, tester, test, do_optional_out=do_optional_out)
                 tb.create_test_bench()
 
                 # TODO figure out how to save a fault testbench

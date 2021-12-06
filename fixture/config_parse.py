@@ -262,7 +262,8 @@ def parse_config(circuit_config_dict):
                 'real',
                 c_name,
                 None,
-                t_name
+                t_name,
+                t_name is None
             )
             s.representation = pin_dict
             return s

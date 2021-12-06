@@ -192,6 +192,12 @@ class Regression:
         data = {self._clean_string(k):v for k,v in data.items()}
         self.df = pandas.DataFrame(data)
 
+        # look for optional outputs
+        for s in test.signals.auto_measure():
+            if s.spice_name in self.df.columns:
+                # add parameter_algebra entry
+                test.parameter_algebra[s.spice_name] = {f'{s.spice_name}_meas': '1'}
+
         self.consts = {}
 
         def create_const(rhs):

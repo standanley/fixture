@@ -32,12 +32,14 @@ class SignalOut():
                  type_,
                  spice_name,
                  spice_pin,
-                 template_name
+                 template_name,
+                 auto_measure
                  ):
         self.type_ = type_
         self.spice_name = spice_name
         self.spice_pin = spice_pin
         self.template_name = template_name
+        self.auto_measure = auto_measure
 
     def __str__(self):
         return f'<{str(self.template_name)} / {self.spice_name}>'
@@ -79,7 +81,8 @@ def create_signal(pin_dict, c_name=None, c_pin=None, t_name=None):
         s = SignalOut(type_,
                       spice_name,
                       spice_pin,
-                      template_name)
+                      template_name,
+                      template_name is None)
         return s
     else:
         assert False, 'Unrecognized pin direction' + pin_dict['direction']
@@ -367,6 +370,11 @@ class SignalManager:
             assert x.type_ in ['analog', 'binary_analog']
         ans = [x for x in self.optional_expr() if x.type_ == 'analog']
         return ans
+
+    def auto_measure(self):
+        for s in self.flat():
+            if isinstance(s, SignalOut) and s.auto_measure:
+                yield s
 
     def flat(self):
         signals = []
