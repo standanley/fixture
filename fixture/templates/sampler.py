@@ -1363,7 +1363,7 @@ class SamplerTemplate(TemplateMaster):
                          'beta': 'old_value',
                          'gamma': '1'},
         }
-        num_samples = 200
+        num_samples = 1000
 
         #def __init__(self, *args, **kwargs):
         #    super().__init__(*args, **kwargs)
@@ -1461,7 +1461,7 @@ class SamplerTemplate(TemplateMaster):
                     'meas': meas_mapped}
 
         def post_regression(self, models, data):
-            return {}
+            #return {}
             value = PlotHelper.eval_factor(data, 'current')
             old_value = PlotHelper.eval_factor(data, 'two_ago')
             kickback = PlotHelper.eval_factor(data, 'kickback')

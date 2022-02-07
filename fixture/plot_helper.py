@@ -146,6 +146,11 @@ class PlotHelper:
                 other_terms = np.zeros(M)
                 pas = [(k, v) for k, v in test.parameter_algebra.items()
                        if parameter in v]
+                # TODO fix this
+                if len(pas) == 0:
+                    print(f'Could not find pa for {parameter}')
+                    continue
+                assert len(pas) > 0, f'Missing parameter algebra for {parameter}?'
                 assert len(pas) == 1, f'multiple parameter algebras for {parameter}?'
                 pa = pas[0]
                 for p, coef in pa[1].items():
@@ -179,7 +184,8 @@ class PlotHelper:
                 parameter_measured_adjusted = parameter_measured - adjustment
 
 
-                plt.figure(plt.gcf().number+1)
+                #plt.figure(plt.gcf().number+1)
+                plt.figure()
                 plt.plot(xs, model_prediction, '--')
                 plt.plot(opt_measured, parameter_measured_adjusted, 'o')
                 plt.xlabel(opt.spice_name)

@@ -150,6 +150,7 @@ class TemplateMaster():
                 self.debug_dict[port_name] = r
 
         def debug_plot(self):
+            return
             import matplotlib.pyplot as plt
             plt.figure()
             leg = []
@@ -243,7 +244,7 @@ class TemplateMaster():
 
                 self.simulator.run(tester, no_run=False)
 
-                debug = False
+                debug = True
                 if debug:
                     test.debug_plot()
 

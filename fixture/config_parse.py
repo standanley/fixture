@@ -1,6 +1,7 @@
 import os
 import yaml
 import fixture.cfg_cleaner as cfg_cleaner
+from fixture import Representation
 from fixture.signals import create_signal, parse_bus, parse_name, \
     SignalArray, SignalManager, SignalOut
 from fixture.checkpoints import Checkpoint
@@ -153,7 +154,6 @@ def parse_config(circuit_config_dict):
     # Now go through the template mapping and edit c_array to see template
     # names, also create t_array_entries_by_name with info by template name
     '''
-    issue right now: 
     t: c
     t: c[0:7]
     t: c[7:0]
@@ -265,7 +265,7 @@ def parse_config(circuit_config_dict):
                 t_name,
                 t_name is None
             )
-            s.representation = pin_dict
+            s.representation = Representation(c_name, pin_dict)
             return s
         else:
             # yes, this isn't the best place to edit the pin_dict, but it's okay
@@ -296,19 +296,6 @@ def parse_config(circuit_config_dict):
                 else:
                     info[k] = v
         return info
-
-
-    # TODO: issue with creating proxy signals
-    # At this point in the code, the signal objects don't exist yet, so if we
-    # want to hold references to other signals this is too early
-    # BUT just above this is where we inserted template info into signal_info,
-    # so if we want to allow proxy signals to have template names this is too
-    # late. I think this is sorta by design because we want the signal_info to
-    # have template info before creating signals because it affects some default
-    # values
-    # Solution (I think) is to create proxy signals earler than template stuff,
-    # and use the string version of the references at first. Replace the strings
-    # with the actual signals later
 
     signals = []
     for cn, c_info in signal_info_by_cname.items():
@@ -372,7 +359,8 @@ def parse_config(circuit_config_dict):
     for s in sm.flat():
         if hasattr(s, 'representation'):
             r = s.representation
-            r['reference'] = sm.from_circuit_name(r['reference'])
+            r.finish_init(sm)
+            #r['reference'] = sm.from_circuit_name(r['reference'])
 
     template_class_name = circuit_config_dict['template']
     extras = parse_extras(circuit_config_dict['extras'])

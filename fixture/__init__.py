@@ -2,6 +2,7 @@ import collections.abc
 # TODO this solves a problem where magma tries to use collections.abc before
 # importing it. Strangely, importing collections alone is not good enough
 
+from .representation import Representation
 from .temp_channel_data_generator import ChannelUtil
 from .tester import Tester
 from .template_master import TemplateMaster

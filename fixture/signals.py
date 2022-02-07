@@ -243,8 +243,8 @@ class SignalManager:
     def add(self, signal):
         # TODO should we allow SignalArray here?
         assert isinstance(signal, (SignalIn, SignalOut))
-        assert signal.spice_name is None
-        assert signal.template_name is not None
+        #assert signal.spice_name is None
+        #assert signal.template_name is not None
 
         self.signals.append(signal)
         if signal.template_name is not None:
