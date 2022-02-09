@@ -8,7 +8,8 @@ def add_vectors():
     raise NotImplemented
 
 class Testbench():
-    def __init__(self, template, tester, test, do_optional_out=False):
+    def __init__(self, template, tester, test, test_vectors,
+                 do_optional_out=False):
         '''
         tester: fault tester object
         test: TemplateMaster Test subclass object
@@ -18,6 +19,7 @@ class Testbench():
         self.tester = tester
         self.dut = tester.circuit.circuit
         self.test = test
+        self.test_vectors = test_vectors
         self.do_optional_out = do_optional_out
 
     @staticmethod
@@ -37,48 +39,6 @@ class Testbench():
         true_digital = self.test.signals.true_digital()
         for s, val in zip(true_digital, mode):
             self.tester.poke(s.spice_pin, val)
-
-    def get_test_vectors(self):
-        '''
-        Set self.test_vectors to a dict of {signal: list}
-        '''
-        # TODO don't have a default; force test to set num_samples
-        self.num_sample_points = getattr(self.test, 'num_samples', 10)
-        #all_signals = self.test.signals
-        #random_signals = [s for s in all_signals
-        #    if isinstance(s, fixture.signals.SignalIn) and s.get_random]
-        #random_analog = [s for s in random_signals if s.type_ in ['analog', 'real']]
-        #random_ba = [s for s in random_signals if s.type_ in ['binary_analog', 'bit']]
-
-
-        random = self.test.signals.random()
-        self.test_vectors = fixture.Sampler.get_samples(random, self.num_sample_points)
-        return
-        # TODO delete old stuff below this
-        random_analog = list(self.test.signals.random_analog())
-        random_ba = list(self.test.signals.random_qa())
-
-        sample_points = fixture.Sampler.get_orthogonal_samples(
-            len(random_analog),
-            len(random_ba),
-            self.num_sample_points
-        )
-
-        # Scale samples and put them into a dictionary
-        # it's important that keys is all the analog then all the ba to match Sampler
-        keys = random_analog + random_ba
-        test_vectors = {}
-        for i, s in enumerate(keys):
-            sample_values_unscaled = [sp[i] for sp in sample_points]
-            if s.type_ in ['analog', 'real']:
-                assert type(s.value) == tuple and len(s.value) == 2, 'bad value '+str(s)
-                sample_values = self.scale_vector(sample_values_unscaled, s.value)
-            else:
-                sample_values = sample_values_unscaled
-            test_vectors[s] = sample_values
-
-        self.test_vectors = test_vectors
-        return
 
     def apply_optional_inputs(self, i):
         for s in self.test_vectors.keys():
@@ -130,7 +90,6 @@ class Testbench():
         return (reads_template, reads_optional)
     
     def create_test_bench(self):
-        self.get_test_vectors()
         self.result_processing_list = []
         self.set_pinned_inputs()
 
@@ -143,7 +102,7 @@ class Testbench():
             #for v_optional, v_test in zip(self.optional_vectors, self.test_vectors):
             #    reads = self.run_test_vector(v_test, v_optional)
             #    self.result_processing_list.append((digital_mode, v_test, v_optional, reads))
-            for i in range(self.num_sample_points):
+            for i in range(self.test.num_samples):
                 reads = self.run_test_point(i)
                 self.result_processing_list.append((digital_mode, i, reads))
 

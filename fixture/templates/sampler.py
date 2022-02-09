@@ -1363,7 +1363,7 @@ class SamplerTemplate(TemplateMaster):
                          'beta': 'old_value',
                          'gamma': '1'},
         }
-        num_samples = 1000
+        num_samples = 100
 
         #def __init__(self, *args, **kwargs):
         #    super().__init__(*args, **kwargs)

@@ -1,3 +1,6 @@
+import csv
+import os
+
 import magma
 import fault
 import jsonpickle
@@ -6,6 +9,14 @@ import re
 import fixture
 
 
+
+
+
+
+
+
+
+# TODO delete this one, it's unused!
 class Checkpoint:
 
     def __init__(self):
@@ -197,3 +208,74 @@ if __name__ == '__main__':
     x = [5, 'hi', (1,2,3), MyCircuit, 'x']
     s = jsonpickle.encode(x)
     print(s)
+
+
+
+# This is the real one!
+class Checkpoint:
+    def __init__(self, template, filepath):
+        self.template = template
+        self.filepath = filepath
+        self.data = {}
+        for test in self.template.tests:
+            test_data = {
+                'input_vectors': None,
+                'sim_result_folder': None,
+                'extracted_data': None,
+                'regression_results': None
+            }
+            self.data[test] = test_data
+
+    def _get_save_file(self, test, filename):
+        # DON'T FORGET TO CLOSE IT
+        folder = os.path.join(self.filepath, str(test))
+        os.makedirs(folder, exist_ok=True)
+        filename = os.path.join(folder, filename)
+        if os.path.exists(filename):
+            print(f'Overwriting file {filename}')
+
+        f = open(filename, 'w')
+        return f
+
+    def _get_load_file(self, test, filename):
+        # DON'T FORGET TO CLOSE IT
+        folder = os.path.join(self.filepath, str(test))
+        filename = os.path.join(folder, filename)
+        f = open(filename, 'r')
+        return f
+
+
+    def save_input_vectors(self, test, input_vectors):
+        self.data[test]['input_vectors'] = input_vectors
+        f = self._get_save_file(test, 'input_vectors.csv')
+        writer = csv.writer(f)
+        keys = list(input_vectors.keys())
+        writer.writerow([str(key) for key in keys])
+        column_major = [input_vectors[key] for key in keys]
+        row_major = zip(*column_major)
+        writer.writerows(row_major)
+        f.close()
+
+    def load_input_vectors(self, test):
+        if False and self.data[test]['input_vectors'] is None:
+            f = self._get_load_file(test, 'input_vectors.csv')
+            reader = csv.reader(f)
+            headers = reader.fieldnames()
+            str_to_signal = {str(s): s for s in test.signals}
+            keys = [str_to_signal[h] for h in headers]
+            column_major = zip(*reader)
+            input_vectors = {key: values
+                             for key, values in zip(keys, column_major)}
+            self.data[test]['input_vectors'] = input_vectors
+
+        iv = self.data[test]['input_vectors']
+        return iv
+
+
+    def suggest_run_dir(self, test):
+        return os.path.join(self.filepath, str(test))
+
+    def save_run_dir(self, test, run_dir):
+        self.data[test]['sim_result_folder'] = run_dir
+
+

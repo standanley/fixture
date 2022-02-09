@@ -175,6 +175,7 @@ class TemplateMaster():
 
         checkpoint_controller = {str(test):
                                     {
+                                        'choose_inputs': True,
                                         'run_sim': True,
                                         'run_regression': True,
                                         'run_post_regression': 'save'
@@ -230,11 +231,19 @@ class TemplateMaster():
         params_by_mode_all = {}
         for test in self.tests:
             controller = checkpoint_controller[str(test)]
+            if controller['choose_inputs']:
+                test_vectors = fixture.Sampler.get_samples(
+                    test.signals.random(),
+                    getattr(test, 'num_samples', 10))
+                checkpoint.save_input_vectors(test, test_vectors)
             if controller['run_sim']:
                 tester = Tester(self.dut)
-                # TODO what 's a good way to specify do_optional_out
+                # TODO what's a good way to specify do_optional_out
                 do_optional_out = test == self.tests[0]
-                tb = fixture.Testbench(self, tester, test, do_optional_out=do_optional_out)
+
+                test_vectors = checkpoint.load_input_vectors(test)
+                tb = fixture.Testbench(self, tester, test, test_vectors,
+                                       do_optional_out=do_optional_out)
                 tb.create_test_bench()
 
                 # TODO figure out how to save a fault testbench
@@ -242,7 +251,11 @@ class TemplateMaster():
                 #test, tb = checkpoint.load('pickletest_tb.json')
                 #tester = tb.tester
 
-                self.simulator.run(tester, no_run=False)
+                run_dir = checkpoint.suggest_run_dir(test)
+                # TODO eventually we won't need no_run because we will just
+                # skip this whole block instead (I think)
+                self.simulator.run(tester, run_dir=run_dir, no_run=False)
+                checkpoint.save_run_dir(test, run_dir)
 
                 debug = True
                 if debug:

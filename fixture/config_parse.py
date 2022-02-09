@@ -4,7 +4,6 @@ import fixture.cfg_cleaner as cfg_cleaner
 from fixture import Representation
 from fixture.signals import create_signal, parse_bus, parse_name, \
     SignalArray, SignalManager, SignalOut
-from fixture.checkpoints import Checkpoint
 import magma
 import fault
 import ast
@@ -148,8 +147,11 @@ def parse_config(circuit_config_dict):
             value_dict[PROXY_SIGNAL_TAG] = True
             signal_info_by_cname[name] = [value_dict, name, None]
 
-    checkpoint = Checkpoint()
-    UserCircuit = checkpoint.create_circuit(circuit_config_dict['name'], io)
+    #checkpoint = Checkpoint()
+    #UserCircuit = checkpoint.create_circuit(circuit_config_dict['name'], io)
+    class UserCircuit(magma.Circuit):
+        name = circuit_config_dict['name']
+        IO = io
 
     # Now go through the template mapping and edit c_array to see template
     # names, also create t_array_entries_by_name with info by template name
@@ -370,7 +372,7 @@ def parse_config(circuit_config_dict):
     #del extras['clks'][old_out_0.spice_name]
     #extras['clks'][out_wrapper] = clk_value
 
-    return UserCircuit, template_class_name, sm, test_config_dict, extras, checkpoint
+    return UserCircuit, template_class_name, sm, test_config_dict, extras
 
 
 
