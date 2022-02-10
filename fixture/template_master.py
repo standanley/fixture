@@ -246,11 +246,6 @@ class TemplateMaster():
                                        do_optional_out=do_optional_out)
                 tb.create_test_bench()
 
-                # TODO figure out how to save a fault testbench
-                #checkpoint.save((test, tb), 'pickletest_tb.json')
-                #test, tb = checkpoint.load('pickletest_tb.json')
-                #tester = tb.tester
-
                 run_dir = checkpoint.suggest_run_dir(test)
                 # TODO eventually we won't need no_run because we will just
                 # skip this whole block instead (I think)
@@ -262,11 +257,14 @@ class TemplateMaster():
                     test.debug_plot()
 
                 results_each_mode = tb.get_results()
+                checkpoint.save_extracted_data(test, results_each_mode)
             else:
                 results_each_mode = [None]
 
+            results_each_mode = checkpoint.load_extracted_data(test)
             params_by_mode = {}
-            for mode, results in enumerate(results_each_mode):
+            for mode in set(results_each_mode.mode_id):
+                results = results_each_mode.loc[results_each_mode.mode_id==mode]
                 if controller['run_regression']:
                     regression = fixture.Regression(self, test, results)
 

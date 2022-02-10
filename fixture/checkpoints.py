@@ -6,6 +6,8 @@ import fault
 import jsonpickle
 import re
 
+import pandas
+
 import fixture
 
 
@@ -226,6 +228,11 @@ class Checkpoint:
             }
             self.data[test] = test_data
 
+    def convert_df_columns(self, test, df):
+        str_to_signal = {str(s): s for s in test.signals.flat()}
+        test = df.rename(str_to_signal, axis='columns', inplace=True)
+        print(test)
+
     def _get_save_file(self, test, filename):
         # DON'T FORGET TO CLOSE IT
         folder = os.path.join(self.filepath, str(test))
@@ -257,15 +264,20 @@ class Checkpoint:
         f.close()
 
     def load_input_vectors(self, test):
-        if False and self.data[test]['input_vectors'] is None:
+        if True or self.data[test]['input_vectors'] is None:
             f = self._get_load_file(test, 'input_vectors.csv')
-            reader = csv.reader(f)
-            headers = reader.fieldnames()
-            str_to_signal = {str(s): s for s in test.signals}
-            keys = [str_to_signal[h] for h in headers]
-            column_major = zip(*reader)
-            input_vectors = {key: values
-                             for key, values in zip(keys, column_major)}
+            #reader = csv.reader(f)
+            #headers = reader.__next__()
+            #str_to_signal = {str(s): s for s in test.signals.flat()}
+            ## TODO do we also need the non-flat versions of the buses?
+            #keys = [str_to_signal[h] for h in headers]
+            #column_major = zip(*reader)
+            #f.close()
+            #input_vectors = {key: values
+            #                 for key, values in zip(keys, column_major)}
+            input_vectors = pandas.read_csv(f)
+            self.convert_df_columns(test, input_vectors)
+            f.close()
             self.data[test]['input_vectors'] = input_vectors
 
         iv = self.data[test]['input_vectors']
@@ -277,5 +289,23 @@ class Checkpoint:
 
     def save_run_dir(self, test, run_dir):
         self.data[test]['sim_result_folder'] = run_dir
+
+    def save_extracted_data(self, test, data):
+        self.data[test]['extracted_data'] = data
+        f = self._get_save_file(test, 'extracted_data.csv')
+        data.to_csv(f)
+        f.close()
+
+    def load_extracted_data(self, test):
+        if True or self.data[test]['input_vectors'] is None:
+            f = self._get_load_file(test, 'extracted_data.csv')
+            data = pandas.read_csv(f)
+            self.convert_df_columns(test, data)
+            self.data[test]['extracted_data'] = data
+            f.close()
+
+        data = self.data[test]['extracted_data']
+        return data
+
 
 

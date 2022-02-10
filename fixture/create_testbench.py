@@ -1,3 +1,5 @@
+import pandas
+
 import fixture
 from itertools import product
 from numpy import ndarray
@@ -132,11 +134,23 @@ class Testbench():
                     results_by_mode[m][k] = []
                 results_by_mode[m][k].append(v)
 
+        results_chunks = []
+        for mode, results_for_mode in results_by_mode.items():
+            mode_id = sum(x*2**i for i, x in enumerate(mode[::-1]))
+            N = len(next(iter(results_for_mode.values())))
+            mode_col = [mode_id]*N
+            data_mode = {'mode_id': mode_col, **results_for_mode}
+            results_chunks.append(data_mode)
+        results = pandas.concat(pandas.DataFrame(rc) for rc in results_chunks)
+
         # TODO there should maybe be a default implementation that does nothing?
         if hasattr(self.test, 'post_process'):
-            for mode in results_by_mode:
-                results_by_mode[mode] = self.test.post_process(results_by_mode[mode])
+            for mode in set(results.mode_id):
+                results_for_mode = results.loc[results.mode_id == mode]
+                response = self.test.post_process(results_for_mode)
+                if response is not None:
+                    assert False, 'TODO changes in post_process'
 
-        self.results = [x for m,x in results_by_mode.items()]
+        self.results = results #[x for m,x in results_by_mode.items()]
         return self.results
 
