@@ -12,6 +12,7 @@ class OscillatorTemplate(TemplateMaster):
         parameter_algebra = {
             'frequency_meas': {'frequency': '1'}
         }
+        num_samples = 10
 
         def input_domain(self):
             return []

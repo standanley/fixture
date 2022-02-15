@@ -1461,7 +1461,7 @@ class SamplerTemplate(TemplateMaster):
                     'meas': meas_mapped}
 
         def post_regression(self, models, data):
-            #return {}
+            return {}
             value = PlotHelper.eval_factor(data, 'current')
             old_value = PlotHelper.eval_factor(data, 'two_ago')
             kickback = PlotHelper.eval_factor(data, 'kickback')

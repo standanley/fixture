@@ -56,7 +56,10 @@ class Checkpoint:
     def load_input_vectors(self, test):
         if True or self.data[test]['input_vectors'] is None:
             f = self._get_load_file(test, 'input_vectors.csv')
-            input_vectors = pandas.read_csv(f)
+            try:
+                input_vectors = pandas.read_csv(f)
+            except pandas.errors.EmptyDataError:
+                input_vectors = pandas.DataFrame({})
             self.convert_df_columns(test, input_vectors)
             f.close()
             self.data[test]['input_vectors'] = input_vectors
