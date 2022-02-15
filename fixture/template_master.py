@@ -227,15 +227,16 @@ class TemplateMaster():
         #    }
         #}
 
-        checkpoint_num = 0
         params_by_mode_all = {}
         for test in self.tests:
             controller = checkpoint_controller[str(test)]
+
             if controller['choose_inputs']:
                 test_vectors = fixture.Sampler.get_samples(
                     test.signals.random(),
                     getattr(test, 'num_samples', 10))
                 checkpoint.save_input_vectors(test, test_vectors)
+
             if controller['run_sim']:
                 tester = Tester(self.dut)
                 # TODO what's a good way to specify do_optional_out
@@ -258,8 +259,6 @@ class TemplateMaster():
 
                 results_each_mode = tb.get_results()
                 checkpoint.save_extracted_data(test, results_each_mode)
-            else:
-                results_each_mode = [None]
 
             results_each_mode = checkpoint.load_extracted_data(test)
             params_by_mode = {}
@@ -271,6 +270,8 @@ class TemplateMaster():
                     #PlotHelper.plot_regression(regression, test.parameter_algebra, regression.regression_dataframe)
                     #PlotHelper.plot_optional_effects(test, regression.regression_dataframe, regression.results)
                     rr = dict(regression.results)
+
+                    checkpoint.save_regression_results(test, rr)
                 else:
                     rr = {}
 
