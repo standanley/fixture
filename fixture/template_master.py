@@ -150,7 +150,6 @@ class TemplateMaster():
                 self.debug_dict[port_name] = r
 
         def debug_plot(self):
-            return
             import matplotlib.pyplot as plt
             plt.figure()
             leg = []
@@ -177,6 +176,8 @@ class TemplateMaster():
                                     {
                                         'choose_inputs': True,
                                         'run_sim': True,
+                                        'run_analysis': True,
+                                        #'run_post_process': True,
                                         'run_regression': True,
                                         'run_post_regression': 'save'
                                     }
@@ -237,7 +238,9 @@ class TemplateMaster():
                     getattr(test, 'num_samples', 10))
                 checkpoint.save_input_vectors(test, test_vectors)
 
-            if controller['run_sim']:
+            # analysis requires a fault testbench even if we skip the actual
+            # sim, so the checkpoint logic is not as straightforward here
+            if controller['run_sim'] or controller['run_analysis']:
                 tester = Tester(self.dut)
                 # TODO what's a good way to specify do_optional_out
                 do_optional_out = test == self.tests[0]
@@ -248,17 +251,20 @@ class TemplateMaster():
                 tb.create_test_bench()
 
                 run_dir = checkpoint.suggest_run_dir(test)
-                # TODO eventually we won't need no_run because we will just
-                # skip this whole block instead (I think)
-                self.simulator.run(tester, run_dir=run_dir, no_run=False)
-                checkpoint.save_run_dir(test, run_dir)
+                # even if we skip the sim, we still need fault to annotate all
+                # the reads in the test bench, so we still need this call
+                self.simulator.run(tester, run_dir=run_dir,
+                                   no_run=(not controller['run_sim']))
+                if controller['run_sim']:
+                    checkpoint.save_run_dir(test, run_dir)
 
-                debug = True
+                debug = False
                 if debug:
                     test.debug_plot()
 
-                results_each_mode = tb.get_results()
-                checkpoint.save_extracted_data(test, results_each_mode)
+                if controller['run_analysis']:
+                    results_each_mode = tb.get_results()
+                    checkpoint.save_extracted_data(test, results_each_mode)
 
             results_each_mode = checkpoint.load_extracted_data(test)
             params_by_mode = {}

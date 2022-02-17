@@ -143,14 +143,25 @@ class Testbench():
             results_chunks.append(data_mode)
         results = pandas.concat(pandas.DataFrame(rc) for rc in results_chunks)
 
-        # TODO there should maybe be a default implementation that does nothing?
+        # run through post-processing and append new columns
+        results_processed = results.copy()
         if hasattr(self.test, 'post_process'):
             for mode in set(results.mode_id):
                 results_for_mode = results.loc[results.mode_id == mode]
                 response = self.test.post_process(results_for_mode)
-                if response is not None:
-                    assert False, 'TODO changes in post_process'
 
-        self.results = results #[x for m,x in results_by_mode.items()]
+                if response is not None:
+                    for new_column, values in response.items():
+                        assert new_column not in results, f'Post-process column "{new_column}" already in results'
+                        if new_column not in results_processed:
+                            results_processed.insert(len(results_processed.columns),
+                                                     new_column, float('nan'))
+                        # TODO the commented version has a "chained indexing
+                        # assignment" issue; I'm 90% sure that the uncommented
+                        # version does the same thing but without that issue
+                        #results_processed[new_column].loc[results.mode_id == mode] = values
+                        results_processed.loc[results.mode_id == mode, new_column] = values
+
+        self.results = results_processed
         return self.results
 

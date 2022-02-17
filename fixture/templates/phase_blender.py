@@ -97,7 +97,7 @@ class PhaseBlenderTemplate(TemplateMaster):
             if out_delay > 0.9 * period:
                 out_delay -= period
 
-            ret = {'out_delay': out_delay}
+            ret = {'out_delay_wrapped': out_delay}
             return ret
 
         def post_process(self, results):
@@ -110,7 +110,7 @@ class PhaseBlenderTemplate(TemplateMaster):
             # we don't know where in the period they are clumped but we
             # will assume they are all in one clump
             # First find the gap between i and i+1
-            outs = results['out_delay']
+            outs = results['out_delay_wrapped']
             N = len(outs)
             gaps = []
             outs_sorted = sorted(outs)
@@ -129,15 +129,7 @@ class PhaseBlenderTemplate(TemplateMaster):
                 if outs[i] < cut:
                     outs[i] += period
 
-            # TODO check this. also, probably should either edit in place or return, not both
-            results['out_delay'] = outs
-
-            ## avoid precision issues in regression
-            ## TODO fix this next line
-            #in_phase_delay = self.inputs_analog[0]
-            #for k in ['out_delay', in_phase_delay]:
-            #    results[k] = [x*1e6 for x in results[k]]
-            return results
+            return {'out_delay': outs}
 
     tests = [Test1]
 
