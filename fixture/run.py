@@ -1,4 +1,5 @@
 import sys, yaml, os
+from fixture.checkpoints import Checkpoint
 import fixture.config_parse as config_parse
 import fault
 import fixture.templates as templates
@@ -36,7 +37,7 @@ def run(circuit_config_filename):
 
 def _run(circuit_config_dict):
 
-    UserCircuit, template_name, signal_manager, test_config_dict, extras, checkpoint = config_parse.parse_config(circuit_config_dict)
+    UserCircuit, template_name, signal_manager, test_config_dict, extras = config_parse.parse_config(circuit_config_dict)
     tester = fault.Tester(UserCircuit)
     TemplateClass = getattr(templates, template_name)
 
@@ -45,6 +46,7 @@ def _run(circuit_config_dict):
 
 
     t = TemplateClass(UserCircuit, simulator, signal_manager, extras)
+    checkpoint = Checkpoint(t, 'checkpoint_folder')
 
     # TODO figure out UI for saving and loading
     #checkpoint.save(t, 'pickletest4.json')

@@ -192,6 +192,15 @@ class Regression:
         data = {self._clean_string(k):v for k,v in data.items()}
         self.df = pandas.DataFrame(data)
 
+        # look for optional outputs
+        # don't edit the parameter_algebra directly, could persist to another
+        # call to fixture.run
+        pa = test.parameter_algebra.copy()
+        for s in test.signals.auto_measure():
+            if s.spice_name in self.df.columns:
+                # add parameter_algebra entry
+                pa[s.spice_name] = {f'{s.spice_name}_meas': '1'}
+
         self.consts = {}
 
         def create_const(rhs):
@@ -220,7 +229,7 @@ class Regression:
         results = {}
         results_models = {}
         regression_dicts = []
-        for lhs, rhs in test.parameter_algebra.items():
+        for lhs, rhs in pa.items():
             lhs_not_wrapped = lhs
             lhs, rhs = self.parse_parameter_algebra(lhs, rhs)
 

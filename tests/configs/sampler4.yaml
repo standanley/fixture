@@ -1,6 +1,7 @@
 name: sampler4
 filepath: ../spice/sampler4.sp
-template: SamplerCustomTemplate
+#template: SamplerCustomTemplate
+template: SamplerTemplate
 pin:
     in_:
         direction: input
@@ -42,9 +43,16 @@ pin:
         direction: output
         datatype: real
 
+proxy_signals:
+    out_0_proxy:
+        style: pulse_width
+        reference: out<0>
+
 template_pins:
    in_: in_
-   out<0:1>: out<0:1>
+   #out<0:1>: out<0:1>
+   out<0>: out_0_proxy
+   out<1>: out<1>
    clk<0:1>: clk_v2t<0:1>
 
    # With the new SignalArray I can't leae ignore[0:1] blank
@@ -78,7 +86,7 @@ extras:
         clk_v2tb<0>:
             125: 0
             250: 1
-        out<0>:
+        out_0_proxy:
             250: sample
             124: read
 

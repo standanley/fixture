@@ -169,18 +169,18 @@ def test_simple_parameterized():
 
     # regression = fixture.Regression(MyAmp, results_reformatted)
 
-def test_simple_config():
-    circuit_fname = file_relative_to_test('configs/simple_amp.yaml')
+def test_adj_config():
+    circuit_fname = file_relative_to_test('configs/simple_amp_adj.yaml')
     fixture.run(circuit_fname)
 
 def test_parameterized_config():
     circuit_fname = file_relative_to_test('configs/parameterized_amp.yaml')
     fixture.run(circuit_fname)
 
-def test_adj_config():
-    circuit_fname = file_relative_to_test('configs/simple_amp_adj.yaml')
-    fixture.run(circuit_fname)
 
+def test_simple_config():
+    circuit_fname = file_relative_to_test('configs/simple_amp.yaml')
+    fixture.run(circuit_fname)
 @pytest.mark.skipif(not os.path.exists(file_relative_to_test('../sky130/skywater-pdk')),
                     reason='Sky130 not installed')
 def test_skywater():
@@ -194,5 +194,5 @@ if __name__ == '__main__':
     #test_skywater()
     #test_simple_config()
     test_parameterized_config()
-    #test_adj_config()
+    test_adj_config()
 

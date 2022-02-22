@@ -1,7 +1,8 @@
 import fault
 from abc import ABC, abstractmethod
 import fixture
-from fixture.signals import SignalManager, SignalArray
+from fixture import Tester
+from fixture.signals import SignalManager, SignalArray, SignalOut
 from fixture.plot_helper import PlotHelper
 
 class TemplateMaster():
@@ -138,6 +139,10 @@ class TemplateMaster():
             template_creation_utils is added. Unfortunately this means this
             input signature has to match
             '''
+            if isinstance(port, SignalOut):
+                # probably represetnation, no way to do that now
+                if hasattr(port, 'representation'):
+                    port = port.representation['signal']
             port_name = str(self.template.signals.from_circuit_pin(port))
             if port_name not in self.debug_dict:
                 r = tester.get_value(port, params={'style': 'block',
@@ -155,7 +160,7 @@ class TemplateMaster():
                 bump += 0.0 # useful for separating clock signals
             plt.grid()
             plt.legend(leg)
-            #plt.show()
+            plt.show()
 
         def __str__(self):
             s = repr(self)
@@ -169,7 +174,10 @@ class TemplateMaster():
 
         checkpoint_controller = {str(test):
                                     {
+                                        'choose_inputs': True,
                                         'run_sim': True,
+                                        'run_analysis': True,
+                                        'run_post_process': True,
                                         'run_regression': True,
                                         'run_post_regression': 'save'
                                     }
@@ -220,38 +228,61 @@ class TemplateMaster():
         #    }
         #}
 
-        checkpoint_num = 0
         params_by_mode_all = {}
         for test in self.tests:
             controller = checkpoint_controller[str(test)]
-            if controller['run_sim']:
-                tester = fault.Tester(self.dut)
-                tb = fixture.Testbench(self, tester, test)
+
+            if controller['choose_inputs']:
+                test_vectors = fixture.Sampler.get_samples(
+                    test.signals.random(),
+                    getattr(test, 'num_samples', 10))
+                checkpoint.save_input_vectors(test, test_vectors)
+
+            # analysis requires a fault testbench even if we skip the actual
+            # sim, so the checkpoint logic is not as straightforward here
+            if controller['run_sim'] or controller['run_analysis']:
+                tester = Tester(self.dut)
+                # TODO what's a good way to specify do_optional_out
+                do_optional_out = test == self.tests[0]
+
+                test_vectors = checkpoint.load_input_vectors(test)
+                tb = fixture.Testbench(self, tester, test, test_vectors,
+                                       do_optional_out=do_optional_out)
                 tb.create_test_bench()
 
-                # TODO figure out how to save a fault testbench
-                #checkpoint.save((test, tb), 'pickletest_tb.json')
-                #test, tb = checkpoint.load('pickletest_tb.json')
-                #tester = tb.tester
-
-                self.simulator.run(tester, no_run=False)
+                run_dir = checkpoint.suggest_run_dir(test)
+                # even if we skip the sim, we still need fault to annotate all
+                # the reads in the test bench, so we still need this call
+                self.simulator.run(tester, run_dir=run_dir,
+                                   no_run=(not controller['run_sim']))
+                if controller['run_sim']:
+                    checkpoint.save_run_dir(test, run_dir)
 
                 debug = False
                 if debug:
                     test.debug_plot()
 
-                results_each_mode = tb.get_results()
-            else:
-                results_each_mode = [None]
+                if controller['run_analysis']:
+                    results_each_mode_unprocessed = tb.get_results()
+                    checkpoint.save_extracted_data_unprocessed(test, results_each_mode_unprocessed)
 
+            if controller['run_post_process']:
+                results_each_mode_unprocessed = checkpoint.load_extracted_data_unprocessed(test)
+                results_each_mode = tb.post_process(results_each_mode_unprocessed)
+                checkpoint.save_extracted_data(test, results_each_mode)
+
+            results_each_mode = checkpoint.load_extracted_data(test)
             params_by_mode = {}
-            for mode, results in enumerate(results_each_mode):
+            for mode in set(results_each_mode.mode_id):
+                results = results_each_mode.loc[results_each_mode.mode_id==mode]
                 if controller['run_regression']:
                     regression = fixture.Regression(self, test, results)
 
                     #PlotHelper.plot_regression(regression, test.parameter_algebra, regression.regression_dataframe)
                     #PlotHelper.plot_optional_effects(test, regression.regression_dataframe, regression.results)
                     rr = dict(regression.results)
+
+                    checkpoint.save_regression_results(test, rr)
                 else:
                     rr = {}
 

@@ -67,7 +67,8 @@ def test_simple_amp():
         'real',
         'spice_out',
         None,
-        'out_single'
+        'out_single',
+        False
     )
     sm = SignalManager([s_in, s_out], {'in_single': s_in, 'out_single': s_out})
     t = fixture.templates.SimpleAmpTemplate(dut, None, sm)

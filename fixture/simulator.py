@@ -26,7 +26,7 @@ class Simulator:
         self.test_config_dict = test_config_dict
 
 
-    def run(self, tester, no_run=False):
+    def run(self, tester, run_dir=None, no_run=False):
         # flgs will later get shell escaped, but I think the user should have escaped them already
         # ran into problems when a flag was like '-define NCVLOG'
         # if 'flags' in simulator_dict:
@@ -45,7 +45,8 @@ class Simulator:
         tester.compile_and_run(self.test_config_dict['target'],
                                simulator=self.test_config_dict['simulator'],
                                clock_step_delay=0,
-                               tmp_dir=False,
+                               tmp_dir=run_dir is None,
+                               directory=run_dir,
                                **no_run_dict,
                                **self.simulator_dict
                                )
