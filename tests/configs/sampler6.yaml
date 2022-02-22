@@ -107,6 +107,40 @@ extras:
             125: 0
             250: 1
 
+        # the rest are fake timings; just needed something here to make spice run
+        clk_v2t<1>:
+            125: 1
+            250: 0
+        clk_v2tb<1>:
+            125: 0
+            250: 1
+        #out<1>:
+        z_debug:
+            250: sample
+            3: read
+
+        clk_v2t_e<1>:
+            105: 1
+            230: 0
+        clk_v2t_eb<1>:
+            105: 0
+            230: 1
+
+        clk_v2t_l<1>:
+            145: 1
+            20:  0
+            #max_jitter: 10
+        clk_v2t_lb<1>:
+            145: 0
+            20:  1
+
+        clk_v2t_gated<1>:
+            125: 1
+            250: 0
+        clk_v2tb_gated<1>:
+            125: 0
+            250: 1
+
     channel_info:
         file_path: ../channels/Case4_FM_13SI_20_T_D13_L6.s4p
         bit_freq: 0.8e6
