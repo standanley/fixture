@@ -142,7 +142,9 @@ class Testbench():
             data_mode = {'mode_id': mode_col, **results_for_mode}
             results_chunks.append(data_mode)
         results = pandas.concat(pandas.DataFrame(rc) for rc in results_chunks)
+        return results
 
+    def post_process(self, results):
         # run through post-processing and append new columns
         results_processed = results.copy()
         if hasattr(self.test, 'post_process'):
@@ -162,6 +164,5 @@ class Testbench():
                         #results_processed[new_column].loc[results.mode_id == mode] = values
                         results_processed.loc[results.mode_id == mode, new_column] = values
 
-        self.results = results_processed
-        return self.results
+        return results_processed
 

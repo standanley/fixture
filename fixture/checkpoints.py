@@ -14,6 +14,7 @@ class Checkpoint:
                 'input_vectors': None,
                 'sim_result_folder': None,
                 'extracted_data': None,
+                'extracted_data_unprocessed': None,
                 'regression_results': None
             }
             self.data[test] = test_data
@@ -54,7 +55,7 @@ class Checkpoint:
         f.close()
 
     def load_input_vectors(self, test):
-        if True or self.data[test]['input_vectors'] is None:
+        if self.data[test]['input_vectors'] is None:
             f = self._get_load_file(test, 'input_vectors.csv')
             try:
                 input_vectors = pandas.read_csv(f)
@@ -74,6 +75,23 @@ class Checkpoint:
     def save_run_dir(self, test, run_dir):
         self.data[test]['sim_result_folder'] = run_dir
 
+    def save_extracted_data_unprocessed(self, test, data):
+        self.data[test]['extracted_data_unprocessed'] = data
+        f = self._get_save_file(test, 'extracted_data_unprocessed.csv')
+        data.to_csv(f)
+        f.close()
+
+    def load_extracted_data_unprocessed(self, test):
+        if self.data[test]['extracted_data_unprocessed'] is None:
+            f = self._get_load_file(test, 'extracted_data_unprocessed.csv')
+            data = pandas.read_csv(f)
+            self.convert_df_columns(test, data)
+            self.data[test]['extracted_data_unprocessed'] = data
+            f.close()
+
+        data = self.data[test]['extracted_data_unprocessed']
+        return data
+
     def save_extracted_data(self, test, data):
         self.data[test]['extracted_data'] = data
         f = self._get_save_file(test, 'extracted_data.csv')
@@ -81,7 +99,7 @@ class Checkpoint:
         f.close()
 
     def load_extracted_data(self, test):
-        if True or self.data[test]['input_vectors'] is None:
+        if True or self.data[test]['extracted_data'] is None:
             f = self._get_load_file(test, 'extracted_data.csv')
             data = pandas.read_csv(f)
             self.convert_df_columns(test, data)

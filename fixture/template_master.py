@@ -177,7 +177,7 @@ class TemplateMaster():
                                         'choose_inputs': True,
                                         'run_sim': True,
                                         'run_analysis': True,
-                                        #'run_post_process': True,
+                                        'run_post_process': True,
                                         'run_regression': True,
                                         'run_post_regression': 'save'
                                     }
@@ -263,8 +263,13 @@ class TemplateMaster():
                     test.debug_plot()
 
                 if controller['run_analysis']:
-                    results_each_mode = tb.get_results()
-                    checkpoint.save_extracted_data(test, results_each_mode)
+                    results_each_mode_unprocessed = tb.get_results()
+                    checkpoint.save_extracted_data_unprocessed(test, results_each_mode_unprocessed)
+
+            if controller['run_post_process']:
+                results_each_mode_unprocessed = checkpoint.load_extracted_data_unprocessed(test)
+                results_each_mode = tb.post_process(results_each_mode_unprocessed)
+                checkpoint.save_extracted_data(test, results_each_mode)
 
             results_each_mode = checkpoint.load_extracted_data(test)
             params_by_mode = {}
