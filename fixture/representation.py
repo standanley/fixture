@@ -20,7 +20,7 @@ class Representation:
     @staticmethod
     def get_referenced_signal_names(params):
         if params['style'] == 'pulse_width':
-            return [params['reference'], params['reference2']]
+            return [params['reference']]
         elif params['style'] == 'vector':
             return params['components']
 
@@ -85,7 +85,10 @@ class Representation:
                 None,
                 True
             )
+            # TODO do I put self.parent_signal as the parent signal for
+            # the pulse_start too?
             ps_representation = Representation(f'{self.name}_pulse_start',
+                                               None,
                                                {
                                                    'reference': None,
                                                    'style': 'rising_edge_timer',

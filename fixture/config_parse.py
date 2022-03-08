@@ -149,7 +149,11 @@ def parse_config(circuit_config_dict):
             signal_info_by_cname[name] = [value_dict, name, None]
             refs = Representation.get_referenced_signal_names(value_dict)
             for ref in refs:
-                signal_info_by_cname[ref][0]['is_proxy_component'] = True
+                if ref in signal_info_by_cname:
+                    signal_info_by_cname[ref][0]['is_proxy_component'] = True
+                else:
+                    bus_name, indices = parse_name(ref)
+                    signal_info_by_cname[bus_name][indices][0]['is_proxy_component'] = True
 
     ## TODO amp vector test stuff
     #signal_info_by_cname['inp'][0]['is_proxy_component'] = True
@@ -319,7 +323,8 @@ def parse_config(circuit_config_dict):
         signals_by_template_name[t_bus_name] = np.zeros(t_array_limits, dtype=object)
 
     # go through signals and place them in the right spots
-    all_signals = ({*signals} | {*signals})
+    all_signals = ({*signals} |
+                   {s for a in signals if isinstance(a, SignalArray) for s in a })
     #signals_flat = [s for s_or_a in signals for s in
     #                (s_or_a.flatten() if isinstance(s_or_a, SignalArray)
     #                 else [s_or_a])]
