@@ -147,10 +147,13 @@ def parse_config(circuit_config_dict):
             value_dict[PROXY_SIGNAL_TAG] = True
             # TODO mark all referenced signals as is_proxy_component
             signal_info_by_cname[name] = [value_dict, name, None]
+            refs = Representation.get_referenced_signal_names(value_dict)
+            for ref in refs:
+                signal_info_by_cname[ref][0]['is_proxy_component'] = True
 
-    # TODO amp vector test stuff
-    signal_info_by_cname['inp'][0]['is_proxy_component'] = True
-    signal_info_by_cname['inn'][0]['is_proxy_component'] = True
+    ## TODO amp vector test stuff
+    #signal_info_by_cname['inp'][0]['is_proxy_component'] = True
+    #signal_info_by_cname['inn'][0]['is_proxy_component'] = True
 
     #checkpoint = Checkpoint()
     #UserCircuit = checkpoint.create_circuit(circuit_config_dict['name'], io)

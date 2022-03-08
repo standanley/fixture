@@ -17,6 +17,14 @@ class Representation:
     #        else:
     #            super().__setattr__(key, value)
 
+    @staticmethod
+    def get_referenced_signal_names(params):
+        if params['style'] == 'pulse_width':
+            return [params['reference'], params['reference2']]
+        elif params['style'] == 'vector':
+            return params['components']
+
+
     @classmethod
     def create_signal(cls, c_name, t_name, params):
         if params['style'] == 'pulse_width':
