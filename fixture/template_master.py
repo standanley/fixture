@@ -52,6 +52,7 @@ class TemplateMaster():
         for test in self.tests:
             test.signals = self.signals.copy()
             test_dimensions = test.input_domain()
+            # TODO I don't like editing signal.get_random as it might be used in other tests
             for s in test_dimensions:
                 if isinstance(s, fixture.signals.SignalIn):
                     s.get_random = True
@@ -140,8 +141,7 @@ class TemplateMaster():
             input signature has to match
             '''
             if isinstance(port, SignalOut):
-                # probably represetnation, no way to do that now
-                if hasattr(port, 'representation'):
+                if port.representation is not None:
                     port = port.representation['signal']
             port_name = str(self.template.signals.from_circuit_pin(port))
             if port_name not in self.debug_dict:

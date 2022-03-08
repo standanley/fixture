@@ -2,8 +2,8 @@ import pandas
 
 import fixture
 from itertools import product
-from numpy import ndarray
-from fixture.signals import SignalIn, SignalOut
+import numpy as np
+from fixture.signals import SignalIn, SignalOut, SignalArray
 
 
 def add_vectors():
@@ -73,9 +73,11 @@ class Testbench():
         # TODO instead of this, iterate through required ports, this way we get buses too
         for s in self.test_vectors.keys():
             if not s.auto_set:
-                assert s.template_name is not None, 'Not auto_set but not template? '+str(s)
+                #assert s.template_name is not None, 'Not auto_set but not template? '+str(s)
+                # can be neither auto-set nor template if it's an entry in a vectored input
                 test_inputs[s] = self.test_vectors[s][i]
-                test_inputs[s.template_name] = self.test_vectors[s][i]
+                if s.template_name is not None:
+                    test_inputs[s.template_name] = self.test_vectors[s][i]
                 if hasattr(s, 'spice_pin'):
                     test_inputs[s.spice_pin] = self.test_vectors[s][i]
 
@@ -86,6 +88,16 @@ class Testbench():
             if type(val) == list:
                 test_inputs[name] = BitVector[len(val)](val)
         '''
+
+        # Condense vectored inputs into a single entry in test_inputs
+        for s in self.test.signals:
+            if isinstance(s, SignalArray):
+                # TODO I think maybe just ignore any and use all
+                if any(entry in test_inputs for entry in s):
+                    assert all(entry in test_inputs for entry in s)
+                    # TODO could this be more than 1-D?
+                    test_vec = np.array([test_inputs[entry] for entry in s])
+                    test_inputs[s] = test_vec
 
         reads_template = self.test.testbench(self.tester, test_inputs)
         reads_optional = self.read_optional_outputs()
@@ -119,13 +131,13 @@ class Testbench():
                 assert False, 'Return from process_single_test should be a dict'
 
             for k,v in results_out_req.items():
-                if type(v) == ndarray:
+                if type(v) == np.ndarray:
                     results_out_req[k] = float(v)
 
             results_out_opt = self.process_optional_outputs(reads_optional)
             # TODO this loop is copy/pasted from a few lines above
             for k,v in results_out_opt.items():
-                if type(v) == ndarray:
+                if type(v) == np.ndarray:
                     results_out_opt[k] = float(v)
 
             for k,v in list(results_out_req.items()) + list(results_out_opt.items()):

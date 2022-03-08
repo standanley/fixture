@@ -3,7 +3,7 @@ import yaml
 import fixture.cfg_cleaner as cfg_cleaner
 from fixture import Representation
 from fixture.signals import create_signal, parse_bus, parse_name, \
-    SignalArray, SignalManager, SignalOut
+    SignalArray, SignalManager, SignalOut, SignalIn
 import magma
 import fault
 import ast
@@ -145,7 +145,12 @@ def parse_config(circuit_config_dict):
             # list is [info_dict, circuit_name, template_name]
             # template name does not get assigned until later
             value_dict[PROXY_SIGNAL_TAG] = True
+            # TODO mark all referenced signals as is_proxy_component
             signal_info_by_cname[name] = [value_dict, name, None]
+
+    # TODO amp vector test stuff
+    signal_info_by_cname['inp'][0]['is_proxy_component'] = True
+    signal_info_by_cname['inn'][0]['is_proxy_component'] = True
 
     #checkpoint = Checkpoint()
     #UserCircuit = checkpoint.create_circuit(circuit_config_dict['name'], io)
@@ -259,16 +264,7 @@ def parse_config(circuit_config_dict):
     def my_create_signal(c_info):
         pin_dict, c_name, t_name = c_info
         if PROXY_SIGNAL_TAG in pin_dict:
-            # TODO what are good defaults?
-            s = SignalOut(
-                'real',
-                c_name,
-                None,
-                t_name,
-                t_name is None
-            )
-            s.representation = Representation(c_name, pin_dict)
-            return s
+            return Representation.create_signal(c_name, t_name, pin_dict)
         else:
             # yes, this isn't the best place to edit the pin_dict, but it's okay
             value = ast.literal_eval(str(pin_dict.get('value', None)))
@@ -320,10 +316,11 @@ def parse_config(circuit_config_dict):
         signals_by_template_name[t_bus_name] = np.zeros(t_array_limits, dtype=object)
 
     # go through signals and place them in the right spots
-    signals_flat = [s for s_or_a in signals for s in
-                    (s_or_a.flatten() if isinstance(s_or_a, SignalArray)
-                     else [s_or_a])]
-    for s in signals_flat:
+    all_signals = ({*signals} | {*signals})
+    #signals_flat = [s for s_or_a in signals for s in
+    #                (s_or_a.flatten() if isinstance(s_or_a, SignalArray)
+    #                 else [s_or_a])]
+    for s in all_signals:
         if s.template_name is not None:
             t_bus_name, t_indices = parse_name(s.template_name)
             if len(t_indices) == 0:
@@ -333,8 +330,7 @@ def parse_config(circuit_config_dict):
                 a[t_indices] = s
 
     # and turn the ndarrays into SignalArrays
-    for t_name in list(signals_by_template_name):
-        s_or_a = signals_by_template_name[t_name]
+    for t_name, s_or_a in signals_by_template_name.items():
         if isinstance(s_or_a, np.ndarray):
             # TODO is there a way that this would need associated info?
             sa = SignalArray(s_or_a, {}, template_name=t_name)
@@ -358,8 +354,9 @@ def parse_config(circuit_config_dict):
     # now we just pack all our info into the signal manager
     sm = SignalManager(signals, signals_by_template_name)
     # TODO this is a bad spot to initialize proxy things I think
-    for s in sm.flat():
-        if hasattr(s, 'representation'):
+    # TODO I think we really do want to check entire arrays and their components
+    for s in all_signals:
+        if s.representation is not None:
             r = s.representation
             r.finish_init(sm)
             #r['reference'] = sm.from_circuit_name(r['reference'])
@@ -371,6 +368,16 @@ def parse_config(circuit_config_dict):
     #clk_value = extras['clks'][old_out_0.spice_name]
     #del extras['clks'][old_out_0.spice_name]
     #extras['clks'][out_wrapper] = clk_value
+
+    ## TODO VECTORED INPUT TEST STUFF
+    #inp = SignalIn((0, 0.8), 'real', True, False, 'inp_spice', None, None, '')
+    #inn = SignalIn((0, 0.8), 'real', True, False, 'inn_spice', None, None, '')
+    #vector = np.array([inp, inn])
+    #test = SignalArray(vector, {}, 'in_single', None, True)
+    #sm.signals[2] = test
+    #sm.signals_by_template_name['in_single'] = test
+    #del sm.signals_by_circuit_name['my_in']
+
 
     return UserCircuit, template_class_name, sm, test_config_dict, extras
 

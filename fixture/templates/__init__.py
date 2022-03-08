@@ -8,3 +8,4 @@ from .sampler import SamplerTemplate
 from .sampler_custom import SamplerCustomTemplate
 from .mac import MACTemplate
 from .cap_dac import DACTemplate
+from .amplifier import AmplifierTemplate

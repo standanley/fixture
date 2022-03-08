@@ -12,7 +12,8 @@ class SignalIn():
                  spice_name,
                  spice_pin,
                  template_name,
-                 optional_expr
+                 optional_expr,
+                 representation=None
             ):
         # TODO: do we need bus info?
         self.value = value
@@ -23,6 +24,7 @@ class SignalIn():
         self.spice_pin = spice_pin
         self.template_name = template_name
         self.optional_expr = optional_expr
+        self.representation = representation
 
     def __str__(self):
         return f'<{str(self.template_name)} / {self.spice_name}>'
@@ -33,13 +35,15 @@ class SignalOut():
                  spice_name,
                  spice_pin,
                  template_name,
-                 auto_measure
+                 auto_measure,
+                 representation=None
                  ):
         self.type_ = type_
         self.spice_name = spice_name
         self.spice_pin = spice_pin
         self.template_name = template_name
         self.auto_measure = auto_measure
+        self.representation = representation
 
     def __str__(self):
         return f'<{str(self.template_name)} / {self.spice_name}>'
@@ -52,14 +56,18 @@ def create_signal(pin_dict, c_name=None, c_pin=None, t_name=None):
     template_name = t_name
 
     if pin_dict['direction'] == 'input':
+        is_proxy_component = pin_dict.get('is_proxy_component', False)
         if template_name is None:
             pinned = isinstance(pin_dict.get('value', None), numbers.Number)
             optional_types = ['analog', 'binary_analog', 'true_digital']
-            assert pinned or type_ in optional_types, f'Optional datatype for {spice_name} must be {optional_types}, not {type_}'
+            assert (pinned
+                    or is_proxy_component
+                    or type_ in optional_types), f'Optional datatype for {spice_name} must be {optional_types}, not {type_}'
 
         value = pin_dict.get('value', None)
         get_random = pin_dict.get('get_random',
-                                  template_name is None and (
+                                  not is_proxy_component
+                                  and template_name is None and (
                                   (type(value) == tuple) or (type_ == 'binary_analog' and value == None)))
         auto_set = pin_dict.get('auto_set',
                                 get_random or type(value) == int or type(value) == float)
@@ -396,12 +404,24 @@ class SignalManager:
 
 
 class SignalArray:
+    attributes_from_children = ['value',
+                                'type_',
+                                'get_random',
+                                'auto_set',
+                                'spice_name',
+                                'spice_pin',
+                                'template_name',
+                                'optional_expr',
+                                ]
 
-    def __init__(self, signal_array, info, template_name=None, spice_name=None):
+    def __init__(self, signal_array, info, template_name=None, spice_name=None,
+                 is_vectored_input=False):
         self.array = signal_array
         self.info = info
         self.template_name = template_name
         self.spice_name = spice_name
+        self.is_vectored_input = is_vectored_input
+        self.representation = None
 
     def map(self, fun):
         return np.vectorize(fun)(self.array)
@@ -414,24 +434,25 @@ class SignalArray:
         else:
             return slice
 
-    def __getattr__(self, item):
+    def __getattr__(self, name):
         # if you're stuck in a loop here, self probably has no .array
-        if item in ['value',
-                    'type_',
-                    'get_random',
-                    'auto_set',
-                    'spice_name',
-                    'spice_pin',
-                    'template_name',
-                    'optional_expr'
-                    ]:
+        if name in self.attributes_from_children:
             # If every signal in this array agrees, return that. Otherwise None
-            entries = map(lambda s: getattr(s, item, None), self.array.flatten())
+            entries = map(lambda s: getattr(s, name, None), self.array.flatten())
             ans = reduce(lambda a, b: a if a == b else None, entries)
             return ans
+        else:
+            return getattr(self.array, name)
 
-        return getattr(self.array, item)
+    def __setattr__(self, name, value):
+        # TODO
+        if False and name in self.attributes_from_children:
+            for child in self.array.flatten():
+                child.__setattr__(name, value)
+        else:
+            super().__setattr__(name, value)
 
+    # TODO I don't think these are used any more
     def __getstate__(self):
         d = self.__dict__.copy()
         ndarray = d['array']
@@ -451,4 +472,6 @@ class SignalArray:
         state['array'] = np.array(state['array'], dtype=object)
         self.__dict__ = state
 
+    def __str__(self):
+        return f'<{str(self.template_name)} / {self.spice_name} / {self.array.shape}>'
 

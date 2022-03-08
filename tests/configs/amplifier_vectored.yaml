@@ -1,0 +1,46 @@
+name: myamp
+filepath: ../spice/myamp_differential.sp
+template: AmplifierTemplate
+pin:
+    vdd:
+        direction: input
+        datatype: analog
+        value: (2.7, 3.3)
+    #vss:
+    #    direction: input
+    #    datatype: real
+    #    value: 0
+    inp:
+        direction: input
+        datatype: real
+        value: (0.5, 2.5)
+    outp:
+        direction: output
+        datatype: real
+    inn:
+        direction: input
+        datatype: real
+        value: (0.5, 2.5)
+    outn:
+        direction: output
+        datatype: real
+
+proxy_signals:
+    input_test:
+        style: vector
+        components: [inp, inn]
+    #output_test:
+    #    style: linear_combination
+    #    reference: TODO
+
+template_pins:
+    input: input_test
+    output: outn # output_test
+
+extras:
+    approx_settling_time: 10e-9
+    limits_diff: (-0.03, 0.03)
+    limits_cm: (1.15, 1.25)
+
+#test_config_file: ngspice_small_tstep.yaml
+test_config_file: ngspice.yaml
