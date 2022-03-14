@@ -23,6 +23,10 @@ class Representation:
             return [params['reference']]
         elif params['style'] == 'vector':
             return params['components']
+        elif params['style'] == 'linear_combination':
+            return params['components']
+        else:
+            assert False, f'Unknown proxy style {params["style"]}'
 
 
     @classmethod
@@ -36,7 +40,7 @@ class Representation:
                 t_name,
                 t_name is None
             )
-        if params['style'] == 'vector':
+        elif params['style'] == 'vector':
             #s = cls.VectorSignalIn(
             #    None,
             #    'real',
@@ -59,6 +63,19 @@ class Representation:
                 template_name=t_name,
                 spice_name=c_name
             )
+        elif params['style'] == 'linear_combination':
+            s = SignalIn(
+                None,
+                'will_complete_in_fix_init',
+                'will_complete_in_fix_init',
+                'will_complete_in_fix_init',
+                c_name,
+                None,
+                t_name,
+                'will_complete_in_fix_init',
+            )
+        else:
+            assert False, f'Unknown proxy style {params["style"]}'
         rep = cls(c_name, s, params)
         s.representation = rep
         return s
@@ -100,7 +117,22 @@ class Representation:
         elif self.style == 'rising_edge_timer':
             assert False, 'TODO'
         elif self.style == 'linear_combination':
-            assert False, 'TODO'
+            components_str = []
+            components = []
+            for component_str in self.params['components']:
+                components_str.append(component_str)
+                component = signal_manager.from_circuit_name(component_str)
+                components.append(component)
+            self.params['components_str'] = components_str
+            self.params['components'] = components
+
+            # copy signal properties from one of the components
+            ref_signal = self.params['components'][0]
+            self.parent_signal.type_ = ref_signal.type_
+            self.parent_signal.value = ref_signal.value
+            self.parent_signal.get_random = ref_signal.get_random
+            self.parent_signal.auto_set = ref_signal.auto_set
+            self.parent_signal.optional_expr = ref_signal.optional_expr
         elif self.style == 'vector':
             # convert component strings to actual objects
             components_str = []
@@ -169,6 +201,13 @@ class Representation:
                 return [gv.value for gv in gvs]
             return tester.GetValueReturnObject(callback)
 
+        elif self.style == 'linear_combination':
+            components = self.params['components']
+            gvs = [tester.get_value(s.spice_pin) for s in components]
+            coefs = self.params['coefficients']
+            def callback():
+                return sum(gv.value*coef for gv, coef in zip(gvs, coefs))
+            return tester.GetValueReturnObject(callback)
         else:
             assert False, f'unknown proxy style {self.style}'
 

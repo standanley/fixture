@@ -26,9 +26,24 @@ pin:
         datatype: real
 
 proxy_signals:
+
+    indiff:
+        value: (-0.8, 0.8)
+        style: linear_combination
+        #expression: inp - inn
+        components: [inp, inn]
+        coefficients: [1, -1]
+    incm:
+        value: (0.5, 0.7)
+        style: linear_combination
+        #expression: 0.5*inp + 0.5*inn
+        components: [inp, inn]
+        coefficients: [0.5, 0.5]
+
+
     input_test:
         style: vector
-        components: [inp, inn]
+        components: [indiff, incm]
     #output_test:
     #    style: linear_combination
     #    reference: TODO
