@@ -90,7 +90,8 @@ def create_signal(pin_dict, c_name=None, c_pin=None, t_name=None):
                       spice_name,
                       spice_pin,
                       template_name,
-                      template_name is None)
+                      (template_name is None
+                       and not pin_dict.get('is_proxy_component', False)))
         return s
     else:
         assert False, 'Unrecognized pin direction' + pin_dict['direction']
@@ -383,6 +384,16 @@ class SignalManager:
         for s in self.flat():
             if isinstance(s, SignalOut) and s.auto_measure:
                 yield s
+
+    def vectored_out(self):
+        ans = []
+        for s in self.signals:
+            if (isinstance(s, SignalArray)
+                    and s.representation is not None
+                    and s.representation.style == 'vector'
+                    and isinstance(s[0], SignalOut)):
+                ans.append(s)
+        return ans
 
     def flat(self):
         signals = []

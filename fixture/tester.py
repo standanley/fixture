@@ -27,7 +27,8 @@ class Tester(fault.Tester):
         elif isinstance(port, SignalArray):
             def is_lc(s):
                 return (s.representation is not None
-                        and s.representation.style == 'linear_combination')
+                        and (s.representation.style == 'linear_combination_in'
+                             or s.representation.style == 'linear_combination_out'))
             if any(is_lc(s) for s in port):
                 # linear combination
                 assert all(is_lc(s) for s in port), 'TODO mixed lc and not in single poke'
@@ -69,6 +70,21 @@ class Tester(fault.Tester):
                 return self.callback()
             raise AttributeError
 
+    def _array_get_value(self, array, params):
+        get_value_objects = []
+        for sub_array in array:
+            gvo = self.get_value(sub_array, params=params)
+            get_value_objects.append(gvo)
+        def callback():
+            if array in self.vector_read_mode:
+                target = self.vector_read_mode[array]
+                index = list(array).index(target)
+                return get_value_objects[index].value
+            else:
+                return [gvo.value for gvo in get_value_objects]
+
+        return self.GetValueReturnObject(callback)
+
     def get_value(self, port, params=None):
         if isinstance(port, (SignalIn, SignalOut)):
             # TODO in the future we should take only signals as arg
@@ -79,12 +95,19 @@ class Tester(fault.Tester):
                 return super().get_value(magma_port, params=params)
 
         elif isinstance(port, SignalArray):
-            get_value_objects = []
-            for sub_array in port:
-                gvo = self.get_value(sub_array, params=params)
-                get_value_objects.append(gvo)
-            return self.GetValueReturnObject(
-                lambda: [gvo.value for gvo in get_value_objects]
-            )
+            return self._array_get_value(port, params)
         else:
             return super().get_value(port, params=params)
+
+
+    vector_read_mode = {}
+    def set_vector_read_mode(self, signal_array, component):
+        # when someone asks for get_value on signal_array, do it on component
+        # There's no real need for these asserts, but I intend for this
+        # function to be used this way only
+        assert isinstance(signal_array, SignalArray)
+        assert component in signal_array
+        self.vector_read_mode[signal_array] = component
+
+    def clear_vector_read_mode(self, signal_array):
+        del self.vector_read_mode[signal_array]

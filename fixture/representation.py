@@ -23,7 +23,7 @@ class Representation:
             return [params['reference']]
         elif params['style'] == 'vector':
             return params['components']
-        elif params['style'] == 'linear_combination':
+        elif params['style'] == 'linear_combination_in' or params['style'] == 'linear_combination_out':
             return params['components']
         else:
             assert False, f'Unknown proxy style {params["style"]}'
@@ -63,16 +63,24 @@ class Representation:
                 template_name=t_name,
                 spice_name=c_name
             )
-        elif params['style'] == 'linear_combination':
+        elif params['style'] == 'linear_combination_in':
             s = SignalIn(
                 None,
-                'will_complete_in_fix_init',
-                'will_complete_in_fix_init',
-                'will_complete_in_fix_init',
+                'will_complete_in_finish_init',
+                'will_complete_in_finish_init',
+                'will_complete_in_finish_init',
                 c_name,
                 None,
                 t_name,
-                'will_complete_in_fix_init',
+                'will_complete_in_finish_init',
+            )
+        elif params['style'] == 'linear_combination_out':
+            s = SignalOut(
+                'will_complete_in_finish_init',
+                c_name,
+                None,
+                t_name,
+                'will_complete_in_finish_init',
             )
         else:
             assert False, f'Unknown proxy style {params["style"]}'
@@ -84,7 +92,8 @@ class Representation:
         self.name = name
 
         assert params['style'] in ['pulse_width', 'rising_edge_timer',
-                                   'linear_combination', 'vector']
+                                   'linear_combination_in',
+                                   'linear_combination_out', 'vector']
         self.style = params['style']
         self.params = params
         self.parent_signal = parent_signal
@@ -116,7 +125,7 @@ class Representation:
             signal_manager.add(pulse_start)
         elif self.style == 'rising_edge_timer':
             assert False, 'TODO'
-        elif self.style == 'linear_combination':
+        elif self.style == 'linear_combination_in' or self.style == 'linear_combination_out':
             components_str = []
             components = []
             for component_str in self.params['components']:
@@ -128,11 +137,19 @@ class Representation:
 
             # copy signal properties from one of the components
             ref_signal = self.params['components'][0]
-            self.parent_signal.type_ = ref_signal.type_
-            self.parent_signal.value = ref_signal.value
-            self.parent_signal.get_random = ref_signal.get_random
-            self.parent_signal.auto_set = ref_signal.auto_set
-            self.parent_signal.optional_expr = ref_signal.optional_expr
+            if self.style == 'linear_combination_in':
+                assert isinstance(ref_signal, SignalIn)
+                self.parent_signal.type_ = ref_signal.type_
+                self.parent_signal.value = ref_signal.value
+                self.parent_signal.get_random = ref_signal.get_random
+                self.parent_signal.auto_set = ref_signal.auto_set
+                self.parent_signal.optional_expr = ref_signal.optional_expr
+            elif self.style == 'linear_combination_out':
+                assert isinstance(ref_signal, SignalOut)
+                self.parent_signal.type_ = ref_signal.type_
+                self.parent_signal.auto_measure = ref_signal.auto_measure
+            else:
+                assert False, f'TODO make linear combination out of signal type {type(ref_signal)}'
         elif self.style == 'vector':
             # convert component strings to actual objects
             components_str = []
@@ -201,7 +218,7 @@ class Representation:
                 return [gv.value for gv in gvs]
             return tester.GetValueReturnObject(callback)
 
-        elif self.style == 'linear_combination':
+        elif self.style == 'linear_combination_in' or self.style == 'linear_combination_out':
             components = self.params['components']
             gvs = [tester.get_value(s.spice_pin) for s in components]
             coefs = self.params['coefficients']

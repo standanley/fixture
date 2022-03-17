@@ -126,9 +126,27 @@ class Testbench():
         '''
         results_by_mode = {m: dict(self.test_vectors) for m in self.true_digital_modes}
         for m, i, (reads_template, reads_optional) in self.result_processing_list:
-            results_out_req = self.test.analysis(reads_template)
-            if not isinstance(results_out_req, dict):
-                assert False, 'Return from process_single_test should be a dict'
+
+            vectored_outputs = self.test.signals.vectored_out()
+            if len(vectored_outputs) == 0:
+                # no vectored output
+                results_out_req = self.test.analysis(reads_template)
+                if not isinstance(results_out_req, dict):
+                    assert False, 'Return from process_single_test should be a dict'
+            else:
+                # yes vectored output
+                assert len(vectored_outputs) == 1, 'TODO multiple vectored outputs'
+                vectored_output = vectored_outputs[0]
+                results_out_req = {}
+                for vec_i, component in enumerate(vectored_output):
+                    self.tester.set_vector_read_mode(vectored_output, component)
+                    results_out_req_orig = self.test.analysis(reads_template)
+                    for k, v in results_out_req_orig.items():
+                        vec_name = fixture.Regression.vector_parameter_name(k, vec_i, component)
+                        results_out_req[vec_name] = v
+                self.tester.clear_vector_read_mode(vectored_output)
+
+
 
             for k,v in results_out_req.items():
                 if type(v) == np.ndarray:

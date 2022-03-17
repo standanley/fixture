@@ -29,28 +29,29 @@ proxy_signals:
 
     indiff:
         value: (-0.8, 0.8)
-        style: linear_combination
+        style: linear_combination_in
         #expression: inp - inn
         components: [inp, inn]
         coefficients: [1, -1]
     incm:
         value: (0.5, 0.7)
-        style: linear_combination
+        style: linear_combination_in
         #expression: 0.5*inp + 0.5*inn
         components: [inp, inn]
         coefficients: [0.5, 0.5]
 
 
+
     input_test:
         style: vector
         components: [indiff, incm]
-    #output_test:
-    #    style: linear_combination
-    #    reference: TODO
+    output_test:
+        style: vector
+        components: [outp, outn]
 
 template_pins:
     input: input_test
-    output: outn # output_test
+    output: output_test
 
 extras:
     approx_settling_time: 10e-9

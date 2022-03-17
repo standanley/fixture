@@ -178,6 +178,10 @@ class Regression:
             assert s.spice_name is not None, f'Signal {s} has neither template nor spice name!'
             return s.spice_name
 
+    @staticmethod
+    def vector_parameter_name(name, vec_i, signal):
+        return f'{name}_vec[{vec_i}]'
+
     def __init__(self, template, test, data):
         '''
         Incoming data should be of the form 
@@ -186,6 +190,11 @@ class Regression:
 
         self.component_tag = '_component_'
         self.name_mapping = {}
+
+        vectored_columns = []
+        for column, entries in data.items():
+            pass
+
         # translate from circuit names to template names
         data = {self.regression_name(k): v for k, v in data.items()}
         data[self.one_literal] = [1 for _ in list(data.values())[0]]
@@ -226,10 +235,28 @@ class Regression:
                     # not a constant
                     pass
 
+        # vector pa if there are vectored outputs
+        vectored_outputs = test.signals.vectored_out()
+        if len(vectored_outputs) == 0:
+            pa_vec = pa
+        else:
+            assert len(vectored_outputs) == 1, 'TODO multiple vectored outputs'
+            vectored_output = vectored_outputs[0]
+            pa_vec = {}
+            for vec_i, component in enumerate(vectored_output):
+                for lhs, rhs in pa.items():
+                    lhs_vec = self.vector_parameter_name(lhs, vec_i, component)
+                    rhs_vec = {}
+                    for k, v in rhs.items():
+                        rhs_vec[self.vector_parameter_name(k, vec_i, component)] = v
+                    pa_vec[lhs_vec] = rhs_vec
+
+
+
         results = {}
         results_models = {}
         regression_dicts = []
-        for lhs, rhs in pa.items():
+        for lhs, rhs in pa_vec.items():
             lhs_not_wrapped = lhs
             lhs, rhs = self.parse_parameter_algebra(lhs, rhs)
 
@@ -244,7 +271,7 @@ class Regression:
 
             #df_row_mask = self.df[lhs_not_wrapped] != None
 
-            df_row_mask = ~ self.df[lhs_not_wrapped].isnull()
+            df_row_mask = ~ self.df[self.clean_string(lhs_not_wrapped)].isnull()
             df_filtered = self.df[df_row_mask]
 
             stats_model = smf.ols(formula, df_filtered)
