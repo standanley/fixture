@@ -142,7 +142,7 @@ class Testbench():
                     self.tester.set_vector_read_mode(vectored_output, component)
                     results_out_req_orig = self.test.analysis(reads_template)
                     for k, v in results_out_req_orig.items():
-                        vec_name = fixture.Regression.vector_parameter_name(k, vec_i, component)
+                        vec_name = fixture.Regression.vector_parameter_name_output(k, vec_i, component)
                         results_out_req[vec_name] = v
                 self.tester.clear_vector_read_mode(vectored_output)
 

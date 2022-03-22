@@ -103,7 +103,10 @@ class AmplifierTemplate(TemplateMaster):
 
             return {}
 
-    tests = [DCTest, CubicCompression]
+    tests = [
+        DCTest,
+        #CubicCompression,
+    ]
 
     
 

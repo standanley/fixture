@@ -1,7 +1,7 @@
 import fault
 from abc import ABC, abstractmethod
 import fixture
-from fixture import Tester
+from fixture import Tester, regression
 from fixture.signals import SignalManager, SignalArray, SignalOut
 from fixture.plot_helper import PlotHelper
 
@@ -93,9 +93,63 @@ class TemplateMaster():
             self.ports = template.ports
             self.extras = template.extras
             self.debug_dict = {}
+
             # TODO this assert was removed at one point, but seems necessary?
             # I think it was to allow the algebra to be added later programatically?
             assert hasattr(self, 'parameter_algebra'), f'{self} should specify parameter_algebra!'
+            self._expand_parameter_algebra()
+
+
+        def _expand_parameter_algebra(self):
+            # Edit self.parameter_algebra to do 2 things:
+            # Expand input pins that are buses
+            # Duplicate equations for vectored outputs
+            self.parameter_algebra_vectored = {k: v.copy() for k, v in self.parameter_algebra.items()}
+
+            # TODO don't edit original parameter_algebra because it cvan persist
+            # between multiple cvalls to fixtyure
+            for lhs, rhs in self.parameter_algebra_vectored.items():
+                # vector inputs, which are rhs values
+                to_add = {}
+                to_remove = []
+                for param, factor in rhs.items():
+                    try:
+                        test = self.template.signals.from_template_name(factor)
+                        assert factor in self.template.required_ports, 'Unexpected case'
+                        if isinstance(test, SignalArray):
+                            # vector this one
+                            to_remove.append(param)
+                            for vec_i, component in enumerate(test):
+                                param_name = regression.Regression.vector_parameter_name_input(param, vec_i, component)
+                                # TODO is template_name the best choice here?
+                                to_add[param_name] = component.template_name
+
+                    except KeyError:
+                        # this factor is not a template input
+                        assert factor not in self.template.required_ports, 'Unexpected case'
+                        pass
+
+                for remove in to_remove:
+                    del rhs[remove]
+                for add in to_add:
+                    rhs[add] = to_add[add]
+
+            vectored_outputs = self.template.signals.vectored_out()
+            if len(vectored_outputs) > 0:
+                assert len(vectored_outputs) == 1, 'TODO multiple vectored outputs'
+                vectored_output = vectored_outputs[0]
+                pa_vec = {}
+                for vec_i, component in enumerate(vectored_output):
+                    for lhs, rhs in self.parameter_algebra_vectored.items():
+                        lhs_vec = regression.Regression.vector_parameter_name_output(lhs, vec_i, component)
+                        rhs_vec = {}
+                        for k, v in rhs.items():
+                            # TODO I think we don't need to edit this at all
+                            # because we already did a name change a few lines above
+                            #rhs_vec[regression.Regression.vector_parameter_name_output(k, vec_i, component)] = v
+                            rhs_vec[k] = v
+                        pa_vec[lhs_vec] = rhs_vec
+                self.parameter_algebra_vectored = pa_vec
 
         @abstractmethod
         def input_domain(self):

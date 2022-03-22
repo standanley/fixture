@@ -14,23 +14,26 @@ class Regression:
     # statsmodels gets confused if you try to use '1' to mean a column of 
     # ones, so we manually add a column of ones with the following name
     one_literal = 'const_1'
+    component_tag = '_component_'
 
     @staticmethod
     def parse_parameter_algebra(lhs, rhs):
         '''
         Removes spaces, wraps in I(), and flips RHS terms so expr is the key
+        Also replaces braces with underscore
         :param f:
         :return:
         '''
         def clean(s):
-            return f'I({s.replace("" "", "")})'
+            s2 = Regression.clean_string(s)
+            return f'I({s2.replace("" "", "")})'
 
         if rhs == 'const':
             rhs = {lhs:'1'}
 
         res = {}
         for k,v in rhs.items():
-            res[clean(v)] = k.replace(' ', '_')
+            res[clean(v)] = clean(k).replace(' ', '_')
         return (clean(lhs), res)
 
     #@staticmethod
@@ -123,14 +126,16 @@ class Regression:
         tokens = [self.revert_names(strip_I(t)) for t in name.split(':')]
         return '*'.join(tokens)
 
-    def convert_required_ba(self, test, rhs):
+    @classmethod
+    def convert_required_ba(cls, test, rhs):
         '''
         when the parameter algebra contains an Array (most likely ba required input),
         we have to break that term into multiple terms.
         This function edits rhs in place to split terms with an array.
-        The param is also split accordingly, and tagged with self.component_tag.
+        The param is also split accordingly, and tagged with cls.component_tag.
         '''
 
+        # TODO not sure classmethod is okay here because of self.name_mapping
         template_bus_names = [n for n in test.template.required_ports if
             isinstance(test.signals.from_template_name(n), SignalArray)]
 
@@ -143,9 +148,9 @@ class Regression:
                     # the required bus is in this term
                     to_be_deleted.add(key_term)
                     for bit in test.signals.from_template_name(n):
-                        bit_name = self._clean_string(bit.template_name)
+                        bit_name = bit.template_name #cls._clean_string(bit.template_name)
                         new_key_term = re.sub(search_str, bit_name, key_term)
-                        new_param = rhs[key_term] + self.component_tag + bit_name
+                        new_param = rhs[key_term] + cls.component_tag + bit_name
                         to_be_added[new_key_term] = new_param
 
         for key in to_be_deleted:
@@ -179,7 +184,11 @@ class Regression:
             return s.spice_name
 
     @staticmethod
-    def vector_parameter_name(name, vec_i, signal):
+    def vector_parameter_name_output(name, vec_i, signal):
+        return f'{name}_vec[{vec_i}]'
+
+    @staticmethod
+    def vector_parameter_name_input(name, vec_i, signal):
         return f'{name}_vec[{vec_i}]'
 
     def __init__(self, template, test, data):
@@ -188,12 +197,7 @@ class Regression:
         {pin:[x1, ...], ...}
         '''
 
-        self.component_tag = '_component_'
         self.name_mapping = {}
-
-        vectored_columns = []
-        for column, entries in data.items():
-            pass
 
         # translate from circuit names to template names
         data = {self.regression_name(k): v for k, v in data.items()}
@@ -204,7 +208,7 @@ class Regression:
         # look for optional outputs
         # don't edit the parameter_algebra directly, could persist to another
         # call to fixture.run
-        pa = test.parameter_algebra.copy()
+        pa = test.parameter_algebra_vectored.copy()
         for s in test.signals.auto_measure():
             if s.spice_name in self.df.columns:
                 # add parameter_algebra entry
@@ -235,28 +239,13 @@ class Regression:
                     # not a constant
                     pass
 
-        # vector pa if there are vectored outputs
-        vectored_outputs = test.signals.vectored_out()
-        if len(vectored_outputs) == 0:
-            pa_vec = pa
-        else:
-            assert len(vectored_outputs) == 1, 'TODO multiple vectored outputs'
-            vectored_output = vectored_outputs[0]
-            pa_vec = {}
-            for vec_i, component in enumerate(vectored_output):
-                for lhs, rhs in pa.items():
-                    lhs_vec = self.vector_parameter_name(lhs, vec_i, component)
-                    rhs_vec = {}
-                    for k, v in rhs.items():
-                        rhs_vec[self.vector_parameter_name(k, vec_i, component)] = v
-                    pa_vec[lhs_vec] = rhs_vec
 
 
 
-        results = {}
+        results = {lhs: {} for lhs in pa}
         results_models = {}
         regression_dicts = []
-        for lhs, rhs in pa_vec.items():
+        for lhs, rhs in pa.items():
             lhs_not_wrapped = lhs
             lhs, rhs = self.parse_parameter_algebra(lhs, rhs)
 
@@ -264,7 +253,7 @@ class Regression:
             # e.g. given the inputs, what does the pin_expr evaluate to?
             optional_pin_expr = self.get_optional_pin_expression(template)
 
-            self.convert_required_ba(test, rhs)
+            #self.convert_required_ba(test, rhs)
             create_const(rhs)
 
             formula = self.make_formula(lhs, rhs, optional_pin_expr)
@@ -278,9 +267,10 @@ class Regression:
             #stats_model_unfiltered = smf.ols(formula, self.df)
             stat_results = stats_model.fit()
             result = self.parse_coefs(stat_results, rhs)
+            results_entry = results[lhs_not_wrapped]
             for k, v in result.items():
-                assert not k in results, f'Parameter {k} found in multiple parameter algebra formulas'
-                results[k] = v
+                assert not k in results_entry, f'Parameter {k} found in multiple parameter algebra formulas'
+                results_entry[k] = v
 
             results_models[lhs] = stat_results
 
@@ -301,7 +291,7 @@ class Regression:
                                }
             regression_dicts.append(regression_dict)
 
-        self.condense_required_ba(results)
+        #self.condense_required_ba(results)
 
         # change regression names back to spice names
         for param in list(results.keys()):
