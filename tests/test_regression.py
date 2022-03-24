@@ -54,8 +54,6 @@ def get_parameterized_amp():
 
 
 def test_simple_amp():
-    data = pandas.DataFrame({'in_single': [1, 2, 3, 4, 5],
-                             'amp_output': [6,4,5,2,2]})
     dut, mapping = get_simple_amp()
     s_in = signals.SignalIn(
         None,
@@ -74,6 +72,9 @@ def test_simple_amp():
         'out_single',
         False
     )
+    data = pandas.DataFrame({s_in: [1, 2, 3, 4, 5],
+                             'amp_output': [6, 4, 5, 2, 2],
+                             Regression.one_literal: [1, 1, 1, 1, 1]})
     sm = SignalManager([s_in, s_out], {'in_single': s_in, 'out_single': s_out})
     t = fixture.templates.SimpleAmpTemplate(dut, None, sm)
     reg = Regression(t, t.tests[0], data)
