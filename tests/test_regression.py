@@ -1,8 +1,11 @@
+import pandas
+
 import fixture
 from fixture import Regression
 from fixture import signals
 import fault, magma
 import random
+import numpy as np
 
 from fixture.signals import SignalManager
 
@@ -51,7 +54,8 @@ def get_parameterized_amp():
 
 
 def test_simple_amp():
-    data = ({'in_single':[1, 2, 3, 4, 5], 'amp_output':[6,4,5,2,2]})
+    data = pandas.DataFrame({'in_single': [1, 2, 3, 4, 5],
+                             'amp_output': [6,4,5,2,2]})
     dut, mapping = get_simple_amp()
     s_in = signals.SignalIn(
         None,

@@ -1,7 +1,7 @@
 import fault
 from abc import ABC, abstractmethod
 import fixture
-from fixture import Tester, regression
+from fixture import Tester, Regression
 from fixture.signals import SignalManager, SignalArray, SignalOut
 from fixture.plot_helper import PlotHelper
 
@@ -65,6 +65,7 @@ class TemplateMaster():
                         test.signals.add(s)
                 else:
                     assert False, 'input_domain must return SignalIn objects'
+            test._expand_parameter_algebra()
 
     def required_port_info(self):
         # TODO: this should give more info than just the names of the ports
@@ -97,59 +98,92 @@ class TemplateMaster():
             # TODO this assert was removed at one point, but seems necessary?
             # I think it was to allow the algebra to be added later programatically?
             assert hasattr(self, 'parameter_algebra'), f'{self} should specify parameter_algebra!'
-            self._expand_parameter_algebra()
 
 
         def _expand_parameter_algebra(self):
-            # Edit self.parameter_algebra to do 2 things:
+            # Edit self.parameter_algebra to do 4 things:
+            # replace strings with references to Signals
             # Expand input pins that are buses
             # Duplicate equations for vectored outputs
-            self.parameter_algebra_vectored = {k: v.copy() for k, v in self.parameter_algebra.items()}
+            # put everything in "sum of products" form, i.e. dict of tuples
+            #self.parameter_algebra_vectored = {k: v.copy() for k, v in self.parameter_algebra.items()}
+            pa_vec = {}
+            ones = ['1', Regression.one_literal]
+            def convert_string(string):
+                if string in ones:
+                    return Regression.one_literal
+                try:
+                    factor_obj = self.signals.from_template_name(string)
+                    return factor_obj
 
-            # TODO don't edit original parameter_algebra because it cvan persist
-            # between multiple cvalls to fixtyure
-            for lhs, rhs in self.parameter_algebra_vectored.items():
-                # vector inputs, which are rhs values
-                to_add = {}
-                to_remove = []
-                for param, factor in rhs.items():
-                    try:
-                        test = self.template.signals.from_template_name(factor)
-                        assert factor in self.template.required_ports, 'Unexpected case'
-                        if isinstance(test, SignalArray):
+                except KeyError:
+                    # this term is not a template input
+                    assert string not in self.template.required_ports, 'Unexpected case'
+                    return string
+
+            # copy and convert to objects
+            for lhs, rhs in self.parameter_algebra.items():
+                pa_vec[lhs] = {}
+                for param, term in rhs.items():
+                    if isinstance(term, tuple):
+                        term_objs = tuple(convert_string(s) for s in term)
+                        pa_vec[lhs][param] = term_objs
+                    else:
+                        term_obj = convert_string(term)
+                        pa_vec[lhs][param] = (term_obj,)
+
+            # vector inputs
+            # we do this in multiple passes in case there are products
+            # of multiple vectored objects
+            # first collect things to vector
+            vectored_inputs = set()
+            for lhs, rhs in pa_vec.items():
+                for param, term in rhs.items():
+                    for component in term:
+                        if isinstance(component, SignalArray):
                             # vector this one
+                            vectored_inputs.add(component)
+            # now vector them one at a time
+            for vectored_input in vectored_inputs:
+                for lhs, rhs in pa_vec.items():
+                    to_remove = []
+                    to_add = {}
+                    for param, term in rhs.items():
+                        if vectored_input in term:
                             to_remove.append(param)
-                            for vec_i, component in enumerate(test):
-                                param_name = regression.Regression.vector_parameter_name_input(param, vec_i, component)
+                            for vec_i, sub in enumerate(vectored_input):
+                                term_subbed = tuple((sub if x == vectored_input else x)
+                                                    for x in term)
+                                param_name = Regression.vector_parameter_name_input(param, vec_i, component)
                                 # TODO is template_name the best choice here?
-                                to_add[param_name] = component.template_name
+                                to_add[param_name] = term_subbed
+                    for r in to_remove:
+                        del pa_vec[lhs][r]
+                    for a in to_add:
+                        pa_vec[lhs][a] = to_add[a]
 
-                    except KeyError:
-                        # this factor is not a template input
-                        assert factor not in self.template.required_ports, 'Unexpected case'
-                        pass
-
-                for remove in to_remove:
-                    del rhs[remove]
-                for add in to_add:
-                    rhs[add] = to_add[add]
-
+            # vector outputs
             vectored_outputs = self.template.signals.vectored_out()
             if len(vectored_outputs) > 0:
                 assert len(vectored_outputs) == 1, 'TODO multiple vectored outputs'
                 vectored_output = vectored_outputs[0]
-                pa_vec = {}
-                for vec_i, component in enumerate(vectored_output):
-                    for lhs, rhs in self.parameter_algebra_vectored.items():
-                        lhs_vec = regression.Regression.vector_parameter_name_output(lhs, vec_i, component)
-                        rhs_vec = {}
-                        for k, v in rhs.items():
-                            # TODO I think we don't need to edit this at all
-                            # because we already did a name change a few lines above
-                            #rhs_vec[regression.Regression.vector_parameter_name_output(k, vec_i, component)] = v
-                            rhs_vec[k] = v
-                        pa_vec[lhs_vec] = rhs_vec
-                self.parameter_algebra_vectored = pa_vec
+                for lhs in list(pa_vec):
+                    rhs = pa_vec[lhs]
+                    del pa_vec[lhs]
+                    for vec_i, component in enumerate(vectored_output):
+                        lhs_vec = Regression.vector_parameter_name_output(lhs, vec_i, component)
+                        # TODO should we shallow copy rhs here?
+                        # at the moment there is no need, but it seems weird
+                        pa_vec[lhs_vec] = rhs
+
+            self.parameter_algebra_vectored = pa_vec
+
+        #def make_parameter_algebra_objects(self):
+        #    # edit self.parameter_algebra_vectored to replace strings with
+        #    # signals
+        #    for lhs, rhs in self.parameter_algebra_vectored:
+        #        for param, component_str:
+
 
         @abstractmethod
         def input_domain(self):
@@ -326,11 +360,12 @@ class TemplateMaster():
                 checkpoint.save_extracted_data(test, results_each_mode)
 
             results_each_mode = checkpoint.load_extracted_data(test)
+            results_each_mode[Regression.one_literal] = 1
             params_by_mode = {}
             for mode in set(results_each_mode.mode_id):
                 results = results_each_mode.loc[results_each_mode.mode_id==mode]
                 if controller['run_regression']:
-                    regression = fixture.Regression(self, test, results)
+                    regression = Regression(self, test, results)
 
                     #PlotHelper.plot_regression(regression, test.parameter_algebra, regression.regression_dataframe)
                     #PlotHelper.plot_optional_effects(test, regression.regression_dataframe, regression.results)
@@ -340,22 +375,24 @@ class TemplateMaster():
                 else:
                     rr = {}
 
-                if controller['run_post_regression'] == 'load':
-                    with open(f'{test}_{mode}_post_regression.pickle', 'rb') as f:
-                        import pickle
-                        data_in = pickle.load(f)
-                        test.post_regression(*data_in)
-                elif controller['run_post_regression'] == 'save':
-                    with open(f'{test}_{mode}_post_regression.pickle', 'wb') as f:
-                        import pickle
-                        pickle.dump((regression.results, regression.regression_dataframe), f)
-                    # TODO this should really be handled in create_testbench
-                    temp = test.post_regression(regression.results, regression.regression_dataframe)
-                    rr.update(temp)
-                elif controller['run_post_regression'] == False:
-                    pass
-                else:
-                    assert False
+                #if controller['run_post_regression'] == 'load':
+                #    with open(f'{test}_{mode}_post_regression.pickle', 'rb') as f:
+                #        import pickle
+                #        data_in = pickle.load(f)
+                #        test.post_regression(*data_in)
+                #elif controller['run_post_regression'] == 'save':
+                #    with open(f'{test}_{mode}_post_regression.pickle', 'wb') as f:
+                #        import pickle
+                #        pickle.dump((regression.results, regression.regression_dataframe), f)
+                #    # TODO this should really be handled in create_testbench
+                #    temp = test.post_regression(regression.results, regression.regression_dataframe)
+                #    rr.update(temp)
+                #elif controller['run_post_regression'] == False:
+                #    pass
+                #else:
+                #    assert False
+                temp = test.post_regression(regression.results, regression.regression_dataframe)
+                rr.update(temp)
 
                 params_by_mode[mode] = rr
 
