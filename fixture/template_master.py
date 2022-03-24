@@ -101,15 +101,46 @@ class TemplateMaster():
 
 
         def _expand_parameter_algebra(self):
-            # Edit self.parameter_algebra to do 4 things:
-            # replace strings with references to Signals
+            # Edit self.parameter_algebra to do many things:
+            # Interpret algebra in the rhs strings
+            # Replace strings with references to Signals
             # Expand input pins that are buses
             # Duplicate equations for vectored outputs
-            # put everything in "sum of products" form, i.e. dict of tuples
+            # Put everything in "sum of products" form, i.e. dict of tuples
             #self.parameter_algebra_vectored = {k: v.copy() for k, v in self.parameter_algebra.items()}
             pa_vec = {}
             ones = ['1', Regression.one_literal]
+
+            def read_algebra(algebra_string):
+                # first, multiplication
+                s = algebra_string.replace('**', '^')
+                factors = s.split('*')
+                ans = []
+                for f in factors:
+                    # now, powers
+                    power_split = f.split('^')
+                    if len(power_split) == 1:
+                        ans.append(f)
+                    elif len(power_split) == 2:
+                        power = [power_split[0]]*int(power_split[1])
+                        ans += power
+                    else:
+                        assert False, f'Double power in {algebra_string}?'
+                return tuple(ans)
+
+
+            # Copy and Interpret algebra in string
+            for lhs, rhs in self.parameter_algebra.items():
+                pa_vec[lhs] = {}
+                for param, term in rhs.items():
+                    if isinstance(term, str):
+                        term_exp = read_algebra(term)
+                        pa_vec[lhs][param] = term_exp
+                    else:
+                        pa_vec[lhs][param] = term
+
             def convert_string(string):
+                # string to object
                 if string in ones:
                     return Regression.one_literal
                 try:
@@ -121,10 +152,11 @@ class TemplateMaster():
                     assert string not in self.template.required_ports, 'Unexpected case'
                     return string
 
-            # copy and convert to objects
-            for lhs, rhs in self.parameter_algebra.items():
-                pa_vec[lhs] = {}
+
+            # convert to objects
+            for lhs, rhs in pa_vec.items():
                 for param, term in rhs.items():
+                    # if the top level was a string, we still want it to be a
                     if isinstance(term, tuple):
                         term_objs = tuple(convert_string(s) for s in term)
                         pa_vec[lhs][param] = term_objs
@@ -331,7 +363,8 @@ class TemplateMaster():
             if controller['run_sim'] or controller['run_analysis']:
                 tester = Tester(self.dut)
                 # TODO what's a good way to specify do_optional_out
-                do_optional_out = test == self.tests[0]
+                #do_optional_out = test == self.tests[0]
+                do_optional_out = True
 
                 test_vectors = checkpoint.load_input_vectors(test)
                 tb = fixture.Testbench(self, tester, test, test_vectors,

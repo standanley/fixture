@@ -53,10 +53,9 @@ class Testbench():
         if not self.do_optional_out:
             return {}
         reads = {}
-        for signal in self.test.signals:
-            if isinstance(signal, SignalOut) and signal.auto_measure:
-                r = self.tester.get_value(signal)
-                reads[signal.spice_name] = r
+        for signal in self.test.signals.auto_measure():
+            r = self.tester.get_value(signal)
+            reads[signal.spice_name] = r
         return reads
 
     def process_optional_outputs(self, reads):
