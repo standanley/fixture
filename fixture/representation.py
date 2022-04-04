@@ -65,7 +65,7 @@ class Representation:
             )
         elif params['style'] == 'linear_combination_in':
             s = SignalIn(
-                None,
+                params.get('value', None),
                 'will_complete_in_finish_init',
                 'will_complete_in_finish_init',
                 'will_complete_in_finish_init',
@@ -138,9 +138,10 @@ class Representation:
             # copy signal properties from one of the components
             ref_signal = self.params['components'][0]
             if self.style == 'linear_combination_in':
+                # TODO does it makes sense to calculate the value from refs?
+                # I think not, but I don't know the right way to handle this
                 assert isinstance(ref_signal, SignalIn)
                 self.parent_signal.type_ = ref_signal.type_
-                self.parent_signal.value = ref_signal.value
                 self.parent_signal.get_random = ref_signal.get_random
                 self.parent_signal.auto_set = ref_signal.auto_set
                 self.parent_signal.optional_expr = ref_signal.optional_expr

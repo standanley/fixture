@@ -317,22 +317,22 @@ class SignalManager:
         # return a list of Signals (always analog) and SignalArrays (always qa)
         # basically we want to organize these the way they will be randomly
         # sampled; so each object in the list is one dimension
-        ans = []
+        ans = set()
         for x in self.signals:
             if isinstance(x, SignalIn):
                 if x.get_random:
-                    ans.append(x)
+                    ans.add(x)
             elif isinstance(x, SignalArray):
                 if x.type_ == 'binary_analog':
                     assert x.get_random == True, 'qa that is not random?'
-                    ans.append(x)
+                    ans.add(x)
                 else:
                     # we can't include it as one SA, but we should check bits
                     for bit in x.flatten():
                         assert bit.type_ != 'binary analog', f'mixed qa/not in {x}'
                         if getattr(bit, 'get_random', None):
-                            ans.append(bit)
-        return ans
+                            ans.add(bit)
+        return list(ans)
 
 
     def random_qa(self):

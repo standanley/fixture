@@ -270,12 +270,13 @@ def parse_config(circuit_config_dict):
     # now actually create the signals
     def my_create_signal(c_info):
         pin_dict, c_name, t_name = c_info
+        # yes, this isn't the best place to edit the pin_dict, but it's okay
+        if 'value' in pin_dict:
+            value = ast.literal_eval(str(pin_dict.get('value', None)))
+            pin_dict['value'] = value
         if PROXY_SIGNAL_TAG in pin_dict:
             return Representation.create_signal(c_name, t_name, pin_dict)
         else:
-            # yes, this isn't the best place to edit the pin_dict, but it's okay
-            value = ast.literal_eval(str(pin_dict.get('value', None)))
-            pin_dict['value'] = value
             # TODO this needs to split the cname into parts
             bus_name, indices = parse_name(c_name)
             c_pin = getattr(UserCircuit, bus_name)

@@ -204,9 +204,11 @@ class TemplateMaster():
                     del pa_vec[lhs]
                     for vec_i, component in enumerate(vectored_output):
                         lhs_vec = Regression.vector_parameter_name_output(lhs, vec_i, component)
-                        # TODO should we shallow copy rhs here?
-                        # at the moment there is no need, but it seems weird
-                        pa_vec[lhs_vec] = rhs
+                        # we do need to rename params so they aren't confused
+                        # in PlotHelper
+                        rhs_renamed = {Regression.vector_parameter_name_output(param, vec_i, component): factors
+                                       for param, factors in rhs.items()}
+                        pa_vec[lhs_vec] = rhs_renamed
 
             self.parameter_algebra_vectored = pa_vec
 
@@ -400,8 +402,13 @@ class TemplateMaster():
                 if controller['run_regression']:
                     regression = Regression(self, test, results)
 
-                    #PlotHelper.plot_regression(regression, test.parameter_algebra, regression.regression_dataframe)
+                    #PlotHelper.plot_regression(regression, test.parameter_algebra_vectored, regression.regression_dataframe)
                     #PlotHelper.plot_optional_effects(test, regression.regression_dataframe, regression.results)
+                    ph = PlotHelper(regression.regression_dataframe,
+                                    test.parameter_algebra_vectored,
+                                    regression.results)
+                    ph.plot_regression()
+
                     rr = dict(regression.results)
 
                     checkpoint.save_regression_results(test, rr)
@@ -424,7 +431,7 @@ class TemplateMaster():
                 #    pass
                 #else:
                 #    assert False
-                temp = test.post_regression(regression.results, regression.regression_dataframe)
+                temp = test.post_regression(regression.results_models, regression.regression_dataframe)
                 rr.update(temp)
 
                 params_by_mode[mode] = rr

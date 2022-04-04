@@ -96,6 +96,7 @@ class Regression:
         # 3) Which param it is part of
         # 4) The optional pin it corresponds to (for reporting to user)
         ones = ['1', self.one_literal]
+        ones = ones + [(x,) for x in ones]
         def product(a, b):
             if a in ones:
                 a = tuple()
@@ -175,6 +176,8 @@ class Regression:
                                 [data[x] for x in term],
                                 data[self.one_literal])
                 regression_data_dict[name] = column
+            # TODO if every instance of 'vdd' is in a product term, should we
+            # still add 'vdd' to the dataframe by itself?
             regression_data = pandas.DataFrame(regression_data_dict)
 
 

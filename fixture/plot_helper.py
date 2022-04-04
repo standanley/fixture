@@ -1,12 +1,125 @@
+import itertools
+import operator
+from functools import reduce
+
 import matplotlib.pyplot as plt
 import statsmodels.formula.api as smf
 import pandas
 import numpy as np
 from fixture.regression import Regression
+from fixture.signals import SignalIn, SignalOut
+from scipy.interpolate import griddata
 
 
 class PlotHelper:
-    dpi = 600
+    dpi = 300
+
+    def __init__(self, data, parameter_algebra, regression_results):
+        self.data = data
+        self.parameter_algebra = parameter_algebra
+        self.regression_results = regression_results
+
+    def get_column(self, target, overrides=None, lhs_pred=False, param_meas=False):
+        '''
+        6 possibilities:
+        out = gain*in + offset
+        gain and offset are functions of vdd
+
+        1) lhs: out
+        2) input: in
+        3) optional in: vdd
+        4) param: gain = gain_vdd_fit * vdd + gain_const_fit
+        5) lhs_pred: out_lhs_pred = gain*in + offset
+        6) param_meas: gain_param_meas = (out - offset) / gain
+
+        Cases 5 and 6 are accessed with the corresponding kwargs
+
+        Also, cases [1, 4, 5, 6] can be adjusted to mimic optional input values
+        Also, if target is a tuple, returns the product of the elements
+        '''
+
+        # clean up some inputs
+        if overrides is None:
+            overrides = {}
+        if isinstance(target, (SignalIn, SignalOut)):
+            target = Regression.regression_name(target)
+
+        # easy cases
+        if target in overrides:
+            # TODO what if override is a number, not column?
+            return overrides[target]
+        overrides_str = {Regression.regression_name(s): v for s, v in overrides.items()}
+        if target in overrides_str:
+            return overrides_str[target]
+        if isinstance(target, tuple):
+            return reduce(operator.mul,
+                          [self.get_column(elem) for elem in target],
+                          self.data[Regression.one_literal])
+
+        # now we start breaking it up by the 6 cases
+        if target in self.parameter_algebra:
+            if not lhs_pred:
+                # Case 1) lhs
+                if overrides == {}:
+                    print('case 1, no override')
+                    return self.data[Regression.regression_name(target)]
+                else:
+                    print('case 1, override')
+                    adjustment = (self.get_column(target, lhs_pred=True, overrides=overrides)
+                                  - self.get_column(target, lhs_pred=True))
+                    result = self.get_column(target) + adjustment
+                    return result
+
+            else:
+                # Case 5) lhs_pred
+                print('case 5, no override')
+                rhs = self.parameter_algebra[target]
+                pred = reduce(operator.add,
+                              [self.get_column(param, overrides) * self.get_column(factors)
+                               for param, factors in rhs.items()])
+                return pred
+
+        #params = {p: t
+        #          for rhs in self.parameter_algebra.values()
+        #          for p, t in rhs.items()}
+        for lhs, rhs in self.parameter_algebra.items():
+            if target in rhs:
+                if not param_meas:
+                    # Case 4) param
+                    print('case 4, overrides=', overrides)
+                    fit = self.regression_results[lhs][target]
+                    param = reduce(operator.add,
+                                  [self.get_column(param_comp, overrides) * coef
+                                   for param_comp, coef in fit.items()])
+                    return param
+                else:
+                    # Case 6: gain = (out - offset) / in
+                    print('case 6')
+
+                    other_terms = reduce(operator.add,
+                        [self.get_column(param, overrides) * self.get_column(factors)
+                         for param, factors in rhs.items() if param != target],
+                        np.zeros(self.data.shape[0]))
+                    this_term_factors = self.get_column(rhs[target])
+                    lhs_column = self.get_column(lhs)
+                    result = (lhs_column - other_terms) / this_term_factors
+                    return result
+        # if we are still here, it should be Case 2 or 3
+        # without access to signals, we can't check if it's case 3, so we just
+        # assume target will be in data and go with it
+        print('Case 2 or 3')
+        #inputs_obj = {x for rhs in self.parameter_algebra.values()
+        #                for factors in rhs
+        #                for x in factors}
+        #inputs = {Regression.regression_name(x) for x in inputs_obj)
+        #if target in inputs:
+        #    # Case 2) input
+        #    return data[target]
+
+        target = Regression.regression_name(target)
+        assert target in self.data, f"Can't find target {target}, assumed this was Case 2 or 3"
+        return self.data[target]
+
 
     @classmethod
     def clean_filename(cls, orig):
@@ -23,39 +136,58 @@ class PlotHelper:
         # then future plot_helper things are done on top of it
         plt.clf()
 
-    @classmethod
-    def plot_regression(cls, regression, parameter_algebra, data):
-        models = regression.results_models
-        for reg_name, value in models.items():
-            name = reg_name[2:-1]
-            model = value.model
-            inputs = model.exog
-            measured = model.endog
-            predicted = model.predict(value.params)
-            #predicted = model.predict(inputs)
+    #@classmethod(parameter_algebra, data, )
 
-            ##fig = plt.figure()
-            #plt.plot(measured, predicted, 'x')
-            #start = min(0, min(measured))
-            #end = max(0, max(measured))
-            #plt.plot([start, end], [start, end], '--')
-            #plt.title(name)
-            #plt.xlabel('Measured value')
-            #plt.ylabel('Predicted by model')
-            #plt.grid()
-            ##plt.show()
-            #cls.save_current_plot(f'{name}_fit')
-            ##plt.close(fig)
+    def plot_regression(self):
+        #models = regression.results_models
+        #for reg_name, value in models.items():
+        #    name = reg_name[2:-1]
+        #    model = value.model
+        #    inputs = model.exog
+        #    measured = model.endog
+        #    predicted = model.predict(value.params)
+        #    #predicted = model.predict(inputs)
 
+        #    ##fig = plt.figure()
+        #    #plt.plot(measured, predicted, 'x')
+        #    #start = min(0, min(measured))
+        #    #end = max(0, max(measured))
+        #    #plt.plot([start, end], [start, end], '--')
+        #    #plt.title(name)
+        #    #plt.xlabel('Measured value')
+        #    #plt.ylabel('Predicted by model')
+        #    #plt.grid()
+        #    ##plt.show()
+        #    #cls.save_current_plot(f'{name}_fit')
+        #    ##plt.close(fig)
 
-        for model, pa in zip(models.values(), parameter_algebra.items()):
-            lhs, rhs = pa
+        #self.get_column('amp_output_vec[0]')
+        #self.get_column('input[0]')
+        #self.get_column('vdd')
+        ##self.get_column(('vdd', 'vdd'))
+        #self.get_column('dcgain_vec[0]')
+        #self.get_column('amp_output_vec[0]', lhs_pred=True)
+        #self.get_column('dcgain_vec[0]', param_meas=True)
+
+        for lhs, rhs in self.parameter_algebra.items():
             #data = model.model.exog
-            y_pred = model.model.predict(model.params)
-            y_meas = cls.eval_factor(data, lhs)
-            for parameter, coefficient in rhs.items():
-                x = cls.eval_factor(data, coefficient)
-                #x = coefficient
+            #y_pred = model.model.predict(model.params)
+            #y_meas = cls.eval_factor(data, lhs)
+            # TODO regression doesn't support expressions on the lhs right now
+            y_meas = self.get_column(lhs)
+            y_pred = self.get_column(lhs, lhs_pred=True)
+
+            inputs = {x for factors in rhs.values() for x in factors}
+            if Regression.one_literal in inputs:
+                inputs.remove(Regression.one_literal)
+
+            # regression lhs vs. each input
+
+            optional = list(self.regression_results[lhs].values())[0].keys()
+            optional = [x for x in optional if x != Regression.one_literal]
+            inputs_and_opt = list(inputs) + optional
+            for input in inputs_and_opt:
+                x = self.get_column(input)
                 x_nonan = x[~np.isnan(x)]
 
                 if len(x_nonan) != len(y_pred):
@@ -69,13 +201,69 @@ class PlotHelper:
                 plt.figure()
                 plt.plot(x, y_meas, '*')
                 plt.plot(x_nonan, y_pred, 'x')
-                plt.xlabel(coefficient)
+                plt.xlabel(input)
                 plt.ylabel(lhs)
                 plt.grid()
                 plt.legend(['Measured', 'Predicted'])
+                #cls.save_current_plot(f'{lhs}_vs_{coefficient}')
+                plt.title(f'{lhs} vs. {input}')
+                plt.show()
+
+                nom_dict = {}
+                for opt in optional:
+                    if opt == input:
+                        continue
+                    nominal = np.average(
+                        self.data[Regression.regression_name(opt)])
+                    nom_dict[opt] = nominal
+                if len(nom_dict) != 0:
+
+                    x_adj = self.get_column(input, overrides=nom_dict)
+                    y_meas_adj = self.get_column(lhs, overrides=nom_dict)
+                    y_pred_adj = self.get_column(lhs, overrides=nom_dict, lhs_pred=True)
+                    plt.figure()
+                    plt.plot(x_adj, y_meas_adj, '*')
+                    plt.plot(x_adj, y_pred_adj, 'x')
+                    plt.xlabel(input)
+                    plt.ylabel(lhs)
+                    plt.grid()
+                    plt.legend(['Measured', 'Predicted'])
+                    #cls.save_current_plot(f'{lhs}_vs_{coefficient}')
+                    plt.title(f'{lhs} vs. {input}, corrected for nominal {[str(opt) for opt in optional]}')
+                    plt.show()
+
+
+
+            for input_pair in itertools.combinations(inputs_and_opt, 2):
+                input1, input2 = sorted(input_pair, key=Regression.regression_name)
+                x1 = self.get_column(input1)
+                x2 = self.get_column(input2)
+                gridx, gridy = np.mgrid[min(x1):max(x1):500j,
+                                        min(x2):max(x2):500j]
+                points = np.vstack((x1, x2)).T
+                contour_data_meas = griddata(points, y_meas, (gridx, gridy), method='linear')
+                contour_data_pred = griddata(points, y_pred, (gridx, gridy), method='linear')
+
+                plt.figure()
+                cp = plt.contourf(gridx, gridy, contour_data_meas)#, levels=5)
+                plt.colorbar(cp)
+                meas_levels = cp.cvalues
+                meas_breaks = meas_levels[:-1] + np.diff(meas_levels)/2
+                plt.contour(gridx, gridy, contour_data_meas, levels=meas_breaks, colors='black', linestyles='solid')
+                plt.contour(gridx, gridy, contour_data_pred, levels=meas_breaks, colors='black', linestyles='dashed')
+                plt.xlabel(input1)
+                plt.ylabel(input2)
+                plt.title(lhs)
                 #plt.show()
-                print('in PloHelper')
-                cls.save_current_plot(f'{lhs}_vs_{coefficient}')
+
+
+                fig = plt.figure()
+                ax = fig.add_subplot(111, projection='3d')
+                ax.scatter(x1, x2, y_meas)
+                ax.scatter(x1, x2, y_pred)
+                # ax.scatter(in_diff, in_cm, pred_tmp)
+                plt.show()
+                print()
 
 
     @staticmethod
@@ -84,8 +272,12 @@ class PlotHelper:
         if factor == '1':
             return np.ones(data.shape[0])
         else:
-            clean_factor = Regression.clean_string(factor)
-            return data[clean_factor]
+            #clean_factor = Regression.clean_string(factor)
+            term = (Regression.regression_name(x) for x in factor)
+            column = reduce(operator.mul,
+                            [data[x] for x in term],
+                            data[Regression.one_literal])
+            return column
 
     @staticmethod
     def eval_parameter(data, regression_results, parameter):
@@ -106,6 +298,7 @@ class PlotHelper:
             value = overrides.get(name, orig[name])
             new_dict[new_name] = value
         return pandas.DataFrame(new_dict)
+
 
     @classmethod
     def plot_optional_effects(cls, test, data, regression_results):
