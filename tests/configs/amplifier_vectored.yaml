@@ -6,6 +6,7 @@ pin:
         direction: input
         datatype: analog
         value: (2.7, 3.3)
+        #value: 3.0
     #vss:
     #    direction: input
     #    datatype: real
@@ -13,14 +14,14 @@ pin:
     inp:
         direction: input
         datatype: real
-        value: (0.5, 2.5)
+        #value: (0.5, 2.5)
     outp:
         direction: output
         datatype: real
     inn:
         direction: input
         datatype: real
-        value: (0.5, 2.5)
+        #value: (0.5, 2.5)
     outn:
         direction: output
         datatype: real
@@ -34,10 +35,20 @@ proxy_signals:
         components: [inp, inn]
         coefficients: [1, -1]
     incm:
-        value: (0.5, 0.7)
+        value: (0.4, 0.5)
         style: linear_combination_in
         #expression: 0.5*inp + 0.5*inn
         components: [inp, inn]
+        coefficients: [0.5, 0.5]
+
+    outdiff:
+        style: linear_combination_out
+        components: [outp, outn]
+        coefficients: [1, -1]
+
+    outcm:
+        style: linear_combination_out
+        components: [outp, outn]
         coefficients: [0.5, 0.5]
 
 
@@ -47,7 +58,7 @@ proxy_signals:
         components: [indiff, incm]
     output_test:
         style: vector
-        components: [outp, outn]
+        components: [outdiff, outcm]
 
 template_pins:
     input: input_test
