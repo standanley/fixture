@@ -88,6 +88,8 @@ class TemplateMaster():
     class Test(ABC):
         # TODO perhaps put an init method that checks some parameter algebra
         # has been specified
+        input_vector_mapping = {}
+
         def __init__(self, template):
             self.template = template
             #self.dut = template.dut
@@ -168,22 +170,28 @@ class TemplateMaster():
             # we do this in multiple passes in case there are products
             # of multiple vectored objects
             # first collect things to vector
-            vectored_inputs = set()
+            vectored_inputs = {}
             for lhs, rhs in pa_vec.items():
                 for param, term in rhs.items():
                     for component in term:
                         if isinstance(component, SignalArray):
                             # vector this one
-                            vectored_inputs.add(component)
+                            vectored_inputs[component] = list(component)
+                        elif component in self.input_vector_mapping:
+                            parent_input = self.signals.from_template_name(self.input_vector_mapping[component])
+                            if isinstance(parent_input, SignalArray):
+                                num = parent_input.shape[0]
+                                vec_version = [Regression.vector_input_name(component, i) for i in range(num)]
+                                vectored_inputs[component] = vec_version
             # now vector them one at a time
-            for vectored_input in vectored_inputs:
+            for vectored_input, components in vectored_inputs.items():
                 for lhs, rhs in pa_vec.items():
                     to_remove = []
                     to_add = {}
                     for param, term in rhs.items():
                         if vectored_input in term:
                             to_remove.append(param)
-                            for vec_i, sub in enumerate(vectored_input):
+                            for vec_i, sub in enumerate(components):
                                 term_subbed = tuple((sub if x == vectored_input else x)
                                                     for x in term)
                                 param_name = Regression.vector_parameter_name_input(param, vec_i, component)

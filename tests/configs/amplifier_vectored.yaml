@@ -5,8 +5,8 @@ pin:
     vdd:
         direction: input
         datatype: analog
-        value: (2.7, 3.3)
-        #value: 3.0
+        #value: (2.7, 3.3)
+        value: 3.0
     #vss:
     #    direction: input
     #    datatype: real
@@ -29,13 +29,13 @@ pin:
 proxy_signals:
 
     indiff:
-        value: (-0.8, 0.8)
+        value: (-0.25, 0.25)
         style: linear_combination_in
         #expression: inp - inn
         components: [inp, inn]
         coefficients: [1, -1]
     incm:
-        value: (0.4, 0.5)
+        value: (1.0, 1.2)
         style: linear_combination_in
         #expression: 0.5*inp + 0.5*inn
         components: [inp, inn]

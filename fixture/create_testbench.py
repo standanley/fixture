@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import pandas
 
 import fixture
@@ -124,9 +126,10 @@ class Testbench():
         for mode: for [in, out]: {pin:[x1, x2, x3, ...], }
         '''
         results_by_mode = {m: dict(self.test_vectors) for m in self.true_digital_modes}
-        for m, i, (reads_template, reads_optional) in self.result_processing_list:
+        for m, result_i, (reads_template, reads_optional) in self.result_processing_list:
 
             vectored_outputs = self.test.signals.vectored_out()
+            out_vec_name_mapping = {}
             if len(vectored_outputs) == 0:
                 # no vectored output
                 results_out_req = self.test.analysis(reads_template)
@@ -142,14 +145,38 @@ class Testbench():
                     results_out_req_orig = self.test.analysis(reads_template)
                     for k, v in results_out_req_orig.items():
                         vec_name = fixture.Regression.vector_parameter_name_output(k, vec_i, component)
+                        out_vec_name_mapping[vec_name] = k
+                        assert vec_name not in results_out_req
                         results_out_req[vec_name] = v
                 self.tester.clear_vector_read_mode(vectored_output)
 
+            # deal with results derived from vectored inputs/outputs
+            to_add = {}
+            to_delete = []
+            for k, v in results_out_req.items():
+                k_orig = out_vec_name_mapping.get(k, k)
+                if k_orig in self.test.input_vector_mapping:
+                    input_s = self.test.signals.from_template_name(
+                        self.test.input_vector_mapping[k_orig])
+                    if isinstance(input_s, SignalArray):
+                        # if input_s in self.test.input_vector_mapping:
+                        # if True:
+                        # v_s = self.test.input_vector_mapping[input_s]
+                        assert v.shape == input_s.shape, f'Expected {v} to have the same shape as {input_s}'
+                        to_delete.append(k)
+                        for i, x in enumerate(v):
+                            # TODO we use k_orig here because we assume things in
+                            # input_vector_mapping weren't supposed to be output vectored
+                            new_input_name = fixture.Regression.vector_input_name(k_orig, i)
+                            to_add[new_input_name] = x
+            for d in to_delete:
+                del results_out_req[d]
+            for k, v in to_add.items():
+                results_out_req[k] = v
 
-
-            for k,v in results_out_req.items():
-                if type(v) == np.ndarray:
-                    results_out_req[k] = float(v)
+            #for k,v in results_out_req.items():
+            #    if type(v) == np.ndarray:
+            #        results_out_req[k] = float(v)
 
             results_out_opt = self.process_optional_outputs(reads_optional)
             # TODO this loop is copy/pasted from a few lines above
@@ -159,7 +186,7 @@ class Testbench():
 
             for k,v in list(results_out_req.items()) + list(results_out_opt.items()):
                 if k not in results_by_mode[m]:
-                    assert i == 0, f'result {k} seen first at sample {i}'
+                    assert result_i == 0, f'result {k} seen first at sample {result_i}'
                     results_by_mode[m][k] = []
                 results_by_mode[m][k].append(v)
 

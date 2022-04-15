@@ -12,7 +12,9 @@ class AmplifierTemplate(TemplateMaster):
     #@debug
     class DCTest(TemplateMaster.Test):
         parameter_algebra = {
-            'amp_output': {'dcgain': 'input', 'gainsq': 'input^2', 'offset': '1'}
+            'amp_output': {'dcgain': 'input',
+                           'gainsq': 'input^2',
+                           'offset': '1'}
         }
         num_samples = 300
 
@@ -132,9 +134,42 @@ class AmplifierTemplate(TemplateMaster):
 
             return {}
 
+
+    class AbsoluteValue(TemplateMaster.Test):
+        parameter_algebra = {
+            'amp_output': {'dcgain': 'input',
+                           'abs_param': 'input_abs',
+                           'offset': '1'}
+        }
+        num_samples = 300
+        input_vector_mapping = {'input_abs': 'input'}
+        out_vector = ['amp_output']
+
+        def input_domain(self):
+            # could also use fixture.RealIn(self.input.limits, 'my_name')
+            return [self.signals.from_template_name('input')]
+
+        def testbench(self, tester, values):
+            self.debug(tester, self.signals.input, 1)
+            self.debug(tester, self.signals.output, 1)
+            input = self.signals.input
+            tester.poke(input, values[input])
+            wait_time = float(self.extras['approx_settling_time'])*2
+            tester.delay(wait_time)
+            out = tester.get_value(self.signals.output)
+            return (out, values[input])
+
+        def analysis(self, reads):
+            output, input = reads
+            results = {'amp_output': output.value,
+                       'input_abs': np.abs(input)}
+            return results
+
+
     tests = [
-        DCTest,
+        #DCTest,
         #CubicCompression,
+        AbsoluteValue,
     ]
 
     

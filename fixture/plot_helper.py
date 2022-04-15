@@ -3,6 +3,7 @@ import operator
 from functools import reduce
 
 import matplotlib.pyplot as plt
+import scipy
 import statsmodels.formula.api as smf
 import pandas
 import numpy as np
@@ -61,10 +62,8 @@ class PlotHelper:
             if not lhs_pred:
                 # Case 1) lhs
                 if overrides == {}:
-                    print('case 1, no override')
                     return self.data[Regression.regression_name(target)]
                 else:
-                    print('case 1, override')
                     adjustment = (self.get_column(target, lhs_pred=True, overrides=overrides)
                                   - self.get_column(target, lhs_pred=True))
                     result = self.get_column(target) + adjustment
@@ -72,7 +71,6 @@ class PlotHelper:
 
             else:
                 # Case 5) lhs_pred
-                print('case 5, no override')
                 rhs = self.parameter_algebra[target]
                 pred = reduce(operator.add,
                               [self.get_column(param, overrides) * self.get_column(factors)
@@ -86,7 +84,6 @@ class PlotHelper:
             if target in rhs:
                 if not param_meas:
                     # Case 4) param
-                    print('case 4, overrides=', overrides)
                     fit = self.regression_results[lhs][target]
                     param = reduce(operator.add,
                                   [self.get_column(param_comp, overrides) * coef
@@ -94,7 +91,6 @@ class PlotHelper:
                     return param
                 else:
                     # Case 6: gain = (out - offset) / in
-                    print('case 6')
 
                     other_terms = reduce(operator.add,
                         [self.get_column(param, overrides) * self.get_column(factors)
@@ -107,14 +103,6 @@ class PlotHelper:
         # if we are still here, it should be Case 2 or 3
         # without access to signals, we can't check if it's case 3, so we just
         # assume target will be in data and go with it
-        print('Case 2 or 3')
-        #inputs_obj = {x for rhs in self.parameter_algebra.values()
-        #                for factors in rhs
-        #                for x in factors}
-        #inputs = {Regression.regression_name(x) for x in inputs_obj)
-        #if target in inputs:
-        #    # Case 2) input
-        #    return data[target]
 
         target = Regression.regression_name(target)
         assert target in self.data, f"Can't find target {target}, assumed this was Case 2 or 3"
@@ -205,9 +193,9 @@ class PlotHelper:
                 plt.ylabel(lhs)
                 plt.grid()
                 plt.legend(['Measured', 'Predicted'])
-                #cls.save_current_plot(f'{lhs}_vs_{coefficient}')
                 plt.title(f'{lhs} vs. {input}')
-                plt.show()
+                self.save_current_plot(f'{lhs}_vs_{input}')
+                #plt.show()
 
                 nom_dict = {}
                 for opt in optional:
@@ -228,9 +216,9 @@ class PlotHelper:
                     plt.ylabel(lhs)
                     plt.grid()
                     plt.legend(['Measured', 'Predicted'])
-                    #cls.save_current_plot(f'{lhs}_vs_{coefficient}')
                     plt.title(f'{lhs} vs. {input}, corrected for nominal {[str(opt) for opt in optional]}')
-                    plt.show()
+                    self.save_current_plot(f'{lhs}_vs_{input}_nom_{[str(opt) for opt in optional]}')
+                    #plt.show()
 
 
 
@@ -241,8 +229,12 @@ class PlotHelper:
                 gridx, gridy = np.mgrid[min(x1):max(x1):500j,
                                         min(x2):max(x2):500j]
                 points = np.vstack((x1, x2)).T
-                contour_data_meas = griddata(points, y_meas, (gridx, gridy), method='linear')
-                contour_data_pred = griddata(points, y_pred, (gridx, gridy), method='linear')
+                try:
+                    contour_data_meas = griddata(points, y_meas, (gridx, gridy), method='linear')
+                    contour_data_pred = griddata(points, y_pred, (gridx, gridy), method='linear')
+                except scipy.spatial.qhull.QhullError:
+                    print(f'Issue with input point collinearity for contour plot {lhs}, {input1} vs {input2}')
+                    continue
 
                 plt.figure()
                 cp = plt.contourf(gridx, gridy, contour_data_meas)#, levels=5)
@@ -254,16 +246,18 @@ class PlotHelper:
                 plt.xlabel(input1)
                 plt.ylabel(input2)
                 plt.title(lhs)
+                self.save_current_plot(
+                    f'{lhs}_vs_{input1}_and_{input2}')
                 #plt.show()
 
 
-                fig = plt.figure()
-                ax = fig.add_subplot(111, projection='3d')
-                ax.scatter(x1, x2, y_meas)
-                ax.scatter(x1, x2, y_pred)
-                # ax.scatter(in_diff, in_cm, pred_tmp)
-                plt.show()
-                print()
+                #fig = plt.figure()
+                #ax = fig.add_subplot(111, projection='3d')
+                #ax.scatter(x1, x2, y_meas)
+                #ax.scatter(x1, x2, y_pred)
+                ## ax.scatter(in_diff, in_cm, pred_tmp)
+                ##plt.show()
+                #print()
 
 
     @staticmethod
