@@ -121,58 +121,92 @@ class Testbench():
                 reads = self.run_test_point(i)
                 self.result_processing_list.append((digital_mode, i, reads))
 
+    def condense_results_analysis(self, results):
+        # look at raw results to find input and output vectors
+        # Output vectors: value changes between output modes
+        # Input vectors: value is an ndarray
+        # deal with results derived from vectored inputs/outputs
+        if None in results:
+            assert len(results) == 1
+            results_out = results[None]
+        else:
+            # sort of want to transpose the order of the dicts
+            output_vecs = list(results)
+            names = list(results[output_vecs[0]])
+            examples = {k: np.array(v) for k, v in results[output_vecs[0]].items()}
+            results_out = {}
+            for name in names:
+                perfect_match = True
+                for ov in output_vecs[1:]:
+                    # issues with equality when the result is a list of ndarrays
+                    result_ndarray = np.array(results[ov][name])
+                    if not np.all(result_ndarray == examples[name]):
+                        perfect_match = False
+                        break
+                if perfect_match:
+                    # doesn't change with respect to vectored output
+                    results_out[name] = results[output_vecs[0]][name]
+                else:
+                    # does change, we need to vector name based on vectored output
+                    for vec_i, ov in enumerate(output_vecs):
+                        name_vec = fixture.Regression.vector_parameter_name_output(name, vec_i, ov)
+                        results_out[name_vec] = results[ov][name]
+
+        # we've done output vectoring, now look for vectored inputs
+        results_out_in = {}
+        for name in results_out:
+            entry = results_out[name][0]
+            if isinstance(entry, np.ndarray) and len(entry.shape) > 0:
+                # each entry is vectored
+                parent_input_name = self.test.input_vector_mapping[name]
+                parent_input = self.test.signals.from_template_name(parent_input_name)
+                assert parent_input.shape == entry.shape, f'Vector length for {name} does not match {parent_input}'
+                for vec_i, parent_input_entry in enumerate(parent_input):
+                    data = [x[vec_i] for x in results_out[name]]
+                    name_vec = fixture.Regression.vector_input_name(name, vec_i)
+                    results_out_in[name_vec] = data
+            else:
+                results_out_in[name] = results_out[name]
+
+        return results_out_in
+
+
+
+
+
+
+
     def get_results(self):
         ''' Return results in the following format:
         for mode: for [in, out]: {pin:[x1, x2, x3, ...], }
         '''
-        results_by_mode = {m: dict(self.test_vectors) for m in self.true_digital_modes}
+        # results_analysis holds any results from self.test.analysis()
+        # results_analysis = {output_mode: {name: [value0, value1]}}
+        # results_other holds the rest, which is optional reads and mode_id
+        # results_other = {name: [value0, value1]}
+        results_analysis = {}
+        results_other = {}
         for m, result_i, (reads_template, reads_optional) in self.result_processing_list:
 
             vectored_outputs = self.test.signals.vectored_out()
-            out_vec_name_mapping = {}
+            #out_vec_name_mapping = {}
             if len(vectored_outputs) == 0:
                 # no vectored output
                 results_out_req = self.test.analysis(reads_template)
                 if not isinstance(results_out_req, dict):
                     assert False, 'Return from process_single_test should be a dict'
+                results_out_req_vec = {None: results_out_req}
             else:
                 # yes vectored output
                 assert len(vectored_outputs) == 1, 'TODO multiple vectored outputs'
                 vectored_output = vectored_outputs[0]
-                results_out_req = {}
+                results_out_req_vec = {}
                 for vec_i, component in enumerate(vectored_output):
                     self.tester.set_vector_read_mode(vectored_output, component)
-                    results_out_req_orig = self.test.analysis(reads_template)
-                    for k, v in results_out_req_orig.items():
-                        vec_name = fixture.Regression.vector_parameter_name_output(k, vec_i, component)
-                        out_vec_name_mapping[vec_name] = k
-                        assert vec_name not in results_out_req
-                        results_out_req[vec_name] = v
+                    results_out_req = self.test.analysis(reads_template)
+                    results_out_req_vec[component] = results_out_req
                 self.tester.clear_vector_read_mode(vectored_output)
 
-            # deal with results derived from vectored inputs/outputs
-            to_add = {}
-            to_delete = []
-            for k, v in results_out_req.items():
-                k_orig = out_vec_name_mapping.get(k, k)
-                if k_orig in self.test.input_vector_mapping:
-                    input_s = self.test.signals.from_template_name(
-                        self.test.input_vector_mapping[k_orig])
-                    if isinstance(input_s, SignalArray):
-                        # if input_s in self.test.input_vector_mapping:
-                        # if True:
-                        # v_s = self.test.input_vector_mapping[input_s]
-                        assert v.shape == input_s.shape, f'Expected {v} to have the same shape as {input_s}'
-                        to_delete.append(k)
-                        for i, x in enumerate(v):
-                            # TODO we use k_orig here because we assume things in
-                            # input_vector_mapping weren't supposed to be output vectored
-                            new_input_name = fixture.Regression.vector_input_name(k_orig, i)
-                            to_add[new_input_name] = x
-            for d in to_delete:
-                del results_out_req[d]
-            for k, v in to_add.items():
-                results_out_req[k] = v
 
             #for k,v in results_out_req.items():
             #    if type(v) == np.ndarray:
@@ -180,24 +214,43 @@ class Testbench():
 
             results_out_opt = self.process_optional_outputs(reads_optional)
             # TODO this loop is copy/pasted from a few lines above
-            for k,v in results_out_opt.items():
-                if type(v) == np.ndarray:
-                    results_out_opt[k] = float(v)
+            #for k,v in results_out_opt.items():
+            #    if type(v) == np.ndarray:
+            #        results_out_opt[k] = float(v)
 
-            for k,v in list(results_out_req.items()) + list(results_out_opt.items()):
-                if k not in results_by_mode[m]:
-                    assert result_i == 0, f'result {k} seen first at sample {result_i}'
-                    results_by_mode[m][k] = []
-                results_by_mode[m][k].append(v)
+            # put results_analysis into lists
+            if result_i == 0:
+                # first time; set up new dictionaries and lists
+                for output_vec, result_dict in results_out_req_vec.items():
+                    results_analysis[output_vec] = {}
+                    for name, value in result_dict.items():
+                        results_analysis[output_vec][name] = [value]
+            else:
+                for output_vec, result_dict in results_out_req_vec.items():
+                    assert output_vec in results_analysis
+                    for name, value in result_dict.items():
+                        assert name in results_analysis[output_vec]
+                        results_analysis[output_vec][name].append(value)
 
-        results_chunks = []
-        for mode, results_for_mode in results_by_mode.items():
-            mode_id = sum(x*2**i for i, x in enumerate(mode[::-1]))
-            N = len(next(iter(results_for_mode.values())))
-            mode_col = [mode_id]*N
-            data_mode = {'mode_id': mode_col, **results_for_mode}
-            results_chunks.append(data_mode)
-        results = pandas.concat(pandas.DataFrame(rc) for rc in results_chunks)
+            # put results_other into list
+            if result_i == 0:
+                # first time; set up new dictionaries and lists
+                for name, value in results_out_opt:
+                    results_other[name] = [value]
+                results_other['mode_id'] = [m]
+            else:
+                for name, value in results_out_opt:
+                    assert name in results_other
+                    results_other[name].append(value)
+                assert 'mode_id' in results_other
+                results_other['mode_id'].append(m)
+
+        results_analysis_vec = self.condense_results_analysis(results_analysis)
+
+        results_comb = {**self.test_vectors,
+                        **results_analysis_vec,
+                        **results_other}
+        results = pandas.DataFrame(results_comb)
         return results
 
     def post_process(self, results):
