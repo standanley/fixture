@@ -5,7 +5,7 @@ DEBUG = True
 from scipy import interpolate
 
 class ModalAnalysis:
-    debug = False
+    debug = True
 
     def get_test_h_step(self):
         np.random.seed(5)
@@ -38,21 +38,27 @@ class ModalAnalysis:
         return h_step
 
 
-    def get_slowest_pole(self, h_step, dt, NP, known_poles, stride):
+    def get_slowest_pole(self, h_step, t, NP, known_poles, target_period):
+        # we assume the data starts at t=0; we accept earlier starts for the
+        # purpose of interpolating the value at t=0
         #print('\nget_slowest called with', NP, known_poles, stride)
 
-        def d(n, stride):
-            return np.array([h_step[n+stride*i] for i in range(NP+1)])
-
-        def get_data_for_stride(stride):
-            num_samples = len(h_step) - NP*stride
-            samples = [d(n, stride) for n in range(num_samples)]
-
-            # make samples rows in a (tall) matrix
-            sample_matrix = np.stack(samples, 0)
-            return sample_matrix
-
-        data = get_data_for_stride(stride)
+        interp = interpolate.interp1d(t, h_step)
+        # We want NUM_DATA rows, each row corresponds to target_period
+        # seconds, and we only look at data up to 5 total periods after t=0
+        # If there's not enough h_step data then squish, don't truncate
+        NUM_DATA = 100
+        total_time = t[-1]
+        chunk_duration = min(target_period, total_time/2)
+        first_chunk_start = min(0.2*target_period, total_time-chunk_duration*2)
+        dt = chunk_duration / (NP)
+        last_chunk_start = min(target_period * 5, total_time - chunk_duration)
+        starts = np.linspace(first_chunk_start, last_chunk_start, NUM_DATA)
+        samples = [interp(np.linspace(s, s+chunk_duration, NP+1))
+                   for s in starts]
+        # make samples rows in a (tall) matrix
+        data = np.stack(samples, 0)
+        print(f'using data from {first_chunk_start} to {last_chunk_start}, chunk {chunk_duration}, period {target_period}')
 
         # We split the collected data into the initial points, and the final point
         A = data[:,:-1]
@@ -100,7 +106,7 @@ class ModalAnalysis:
         # to first use it to modify the B vector
         # Similarly, X = Z~ Y~ becomes X = Z Y + Z~_last_column
 
-        known_rs = np.exp(np.array(known_poles)*stride)
+        known_rs = np.exp(np.array(known_poles)*dt)
         if np.isinf(known_rs).any():
             # probably got a bad pole in known_poles, should just give up
             return []
@@ -139,7 +145,7 @@ class ModalAnalysis:
             else:
                 return np.log(x)
         ps_with_stride = np.vectorize(mylog)(roots)
-        ps = ps_with_stride / (stride * dt)
+        ps = ps_with_stride / (dt)
 
         # remove known poles
         key=lambda x: float('inf') if np.isnan(x) else abs(x)
@@ -177,34 +183,44 @@ class ModalAnalysis:
             return new_ps[:0]
 
 
-    def get_all_poles(self, h_step, dt, NP, known_poles):
+    def get_all_poles(self, h_step, t, NP, known_poles):
         known_poles = known_poles.copy()
         # get_largest_pole works well when the stride is correctly chosen for the
         # largest non-given pole
         period_ratio = 2
-        target_period = len(h_step)*dt * 0.5
+        target_period = (t[-1] - t[0]) * 0.5
+        min_period = t[2]
         while len(known_poles) < NP:
-            stride = max(1, int((target_period/dt)/NP))
-            new_ps = self.get_slowest_pole(h_step, dt, NP, known_poles, stride)
+            #stride = max(1, int((target_period/dt)/NP))
+            new_ps = self.get_slowest_pole(h_step, t, NP, known_poles, target_period)
 
             # for complex conjugate, we want to look at the faster of the envelope and ring
             period = (float('inf') if len(new_ps) == 0
                       else abs(1/new_ps[0]) if len(new_ps) == 1
                       else min(abs(1/np.real(new_ps[0])), abs(1/np.imag(new_ps[0]))))
-            period *= 3
+
+            # TODO I have no idea why this period*=3 used to be here uncommented
+            #period *= 3
 
             # the exponent in period_ratio**2 is kind of empirical
-            if period < target_period / period_ratio**2 and stride != 1:
-                #print('rejecting pole(s)', new_ps, 'because stride', stride, ' was too large')
+            if period < target_period / period_ratio**2 and target_period > min_period:
+                if self.debug:
+                    #print('rejecting pole(s)', new_ps, 'because period', target_period, ' was too large')
+                    pass
                 target_period /= period_ratio
-            elif len(new_ps) == 0 and stride != 1:
+            elif len(new_ps) == 0 and target_period > min_period:
+                if self.debug:
+                    #print('didnt find new poles; next round would have smaller period')
+                    pass
                 target_period /= period_ratio
             elif len(new_ps) == 0:
-                #print('Did not find all the requested poles!')
+                if self.debug:
+                    print('Did not find all the requested poles!')
                 break
             else:
                 known_poles += list(new_ps)
-                #print('added pole(s)', new_ps, 'target period now', target_period)
+                if self.debug:
+                    print('added pole(s)', new_ps, 'target period now', target_period)
         return np.array(known_poles)
 
     def get_zeros(self, h_step, dt, poles, NZ):
@@ -252,16 +268,17 @@ class ModalAnalysis:
         #print('zeros', zeros)
 
 
-        #h_step_est = exps.T @ X
-        #h_step_est_2 = exps.T @ coefs
-        #plt.figure()
-        #plt.plot(t, h_step, 'o')
-        #plt.plot(t, np.real(h_step_est))
-        #plt.plot(t, np.real(h_step_est_2), '--')
-        #plt.legend(['Orig', 'est', 'est_2'])
-        #plt.grid()
-        #plt.title('I forget')
-        #plt.show()
+        if self.debug:
+            h_step_est = exps.T @ X
+            h_step_est_2 = exps.T @ coefs
+            plt.figure()
+            plt.plot(t, h_step, 'o')
+            plt.plot(t, np.real(h_step_est))
+            plt.plot(t, np.real(h_step_est_2), '--')
+            plt.legend(['Orig', 'est', 'est_2'])
+            plt.grid()
+            plt.title('I forget')
+            plt.show()
 
 
         dc = N[0] / np.prod([-p*dt for p in poles if p != 0])
@@ -269,8 +286,11 @@ class ModalAnalysis:
         zeros_sorted = zeros[np.lexsort((abs(zeros),))]
         return zeros_sorted, dc
 
-    def debug_plot(self, h_step, dt, ps, zs, scale):
-        t = np.array(range(len(h_step))) * dt
+    def debug_plot(self, h_step, dt, ps, zs, scale, custom_t=None):
+        if custom_t is None:
+            t = np.array(range(len(h_step))) * dt
+        else:
+            t = custom_t
 
         zs = zs[np.isfinite(zs)]
         ps = ps[np.isfinite(ps)]
@@ -300,7 +320,7 @@ class ModalAnalysis:
         dt = (t_new[-1] - t_new[0]) / (len(t_new) - 1)
         h_new = spline_fn(t_new)
 
-        if self.debug:
+        if False and self.debug:
             plt.figure()
             plt.plot(t, h, 'o')
             plt.plot(t_new, h_new, '-+')
@@ -319,13 +339,13 @@ class ModalAnalysis:
         h_step_est = exps.T @ coefs
         return h_step_est
 
-    def extract_pzs_uniform(self, h_step, dt, NP, NZ, known_poles):
+    def extract_pzs_inner(self, h_step, t, NP, NZ, known_poles):
         # first, extract poles with no regard to how many were asked for
 
         def error_poles(poles):
             poles_column = np.array(poles).reshape((len(poles), 1))
             #poles_scaled = poles_column * timescale_dt
-            t = np.array(range(len(h_step))) * dt
+            #t = np.array(range(len(h_step))) * dt
             exps = np.exp(poles_column * t)
 
             h_step_column = h_step.reshape((len(h_step), 1))
@@ -340,11 +360,11 @@ class ModalAnalysis:
         num_ps = 1
         while num_ps < NP+3:
             # TODO dt
-            poles = self.get_all_poles(h_step, 1, num_ps, known_poles)
-            poles = poles * 1/dt
+            poles = self.get_all_poles(h_step, t, num_ps, known_poles)
+            #poles = poles * 1/dt
 
             if self.debug:
-                t = np.array(range(len(h_step))) * dt
+                #t = np.array(range(len(h_step))) * dt
                 plt.plot(t, self.debug_fit_with_poles(t, h_step, poles))
 
             err = error_poles(poles)
@@ -352,12 +372,12 @@ class ModalAnalysis:
             #print(num_ps, -np.log(abs(err)), poles)
             if len(poles) > len(all_results[best_num]) and err < best_err * .5:
                 #print('NEW BEST', num_ps, len(poles))
-                best_num = num_ps
+                best_num = len(all_results)-1
                 best_err = err
             num_ps += 1
 
         if self.debug:
-            t = np.array(range(len(h_step))) * dt
+            #t = np.array(range(len(h_step))) * dt
             plt.plot(t, h_step, 'o')
             legend = [f'{i} poles' for i in range(1, NP+3)]+['h']
             plt.legend(legend)
@@ -402,15 +422,17 @@ class ModalAnalysis:
         return ps_final, zs_final, scale
 
     def extract_pzs(self, h, t, NP, NZ, known_poles=[]):
+        h_orig = h
+        t_orig = t
         dts = np.diff(t)
         if (max(dts) - min(dts)) / max(dts) > 1e-6:
             h, dt = self.resample(h, t)
         else:
             dt = (t[-1] - t[0]) / (len(t) - 1)
 
-        res = self.extract_pzs_uniform(h, dt, NP, NZ, known_poles)
+        res = self.extract_pzs_inner(h_orig, t_orig, NP, NZ, known_poles)
         if self.debug:
-            self.debug_plot(h, dt, *res)
+            self.debug_plot(h_orig, dt, *res, custom_t=t_orig)
         return res
 
 if __name__ == '__main__':

@@ -6,6 +6,7 @@ from fixture.signals import SignalManager, SignalArray, SignalOut
 from fixture.plot_helper import PlotHelper
 
 class TemplateMaster():
+    debug = True
 
     class Ports:
         def __init__(self, signal_manager):
@@ -389,8 +390,7 @@ class TemplateMaster():
                 if controller['run_sim']:
                     checkpoint.save_run_dir(test, run_dir)
 
-                debug = False
-                if debug:
+                if self.debug:
                     test.debug_plot()
 
                 if controller['run_analysis']:

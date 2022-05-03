@@ -13,7 +13,7 @@ class AmplifierTemplate(TemplateMaster):
     class DCTest(TemplateMaster.Test):
         parameter_algebra = {
             'amp_output': {'dcgain': 'input',
-                           'gainsq': 'input^2',
+                           #'gainsq': 'input^2',
                            'offset': '1'}
         }
         num_samples = 300
@@ -167,9 +167,9 @@ class AmplifierTemplate(TemplateMaster):
 
 
     tests = [
-        #DCTest,
+        DCTest,
         #CubicCompression,
-        AbsoluteValue,
+        #AbsoluteValue,
     ]
 
     
