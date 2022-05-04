@@ -117,8 +117,7 @@ class PlotHelper:
     @classmethod
     def save_current_plot(cls, name):
         plt.grid()
-        plt.show()
-        return
+        #plt.show()
         plt.savefig(cls.clean_filename(name), dpi=cls.dpi)
         # I've had lots of problems with seeing the results of earlier plots
         # on new plots, and this might be the solution?

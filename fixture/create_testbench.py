@@ -235,11 +235,11 @@ class Testbench():
             # put results_other into list
             if result_i == 0:
                 # first time; set up new dictionaries and lists
-                for name, value in results_out_opt:
+                for name, value in results_out_opt.items():
                     results_other[name] = [value]
                 results_other['mode_id'] = [m]
             else:
-                for name, value in results_out_opt:
+                for name, value in results_out_opt.items():
                     assert name in results_other
                     results_other[name].append(value)
                 assert 'mode_id' in results_other

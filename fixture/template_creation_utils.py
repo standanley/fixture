@@ -1,6 +1,6 @@
 from scipy.interpolate import interp1d
 from fixture import template_master
-import fixture.modal_analysis2 as modal_analysis
+import fixture.modal_analysis as modal_analysis
 import numpy as np
 
 def plot(x, y, legend = None):

@@ -88,6 +88,7 @@ class SimpleAmpTemplate(TemplateMaster):
             return results
 
         def post_regression(self, results, data):
+            return {}
             inputs = data['in_single']
             outputs = data['amp_output']
             ph = PlotHelper()
