@@ -12,7 +12,7 @@ jobs:
           python-version: "3.7"
 
       - name: Installation with ubuntu
-      - run: |
+        run: |
           sudo apt-get install ngspice
           sudo apt-get install verilator
 
