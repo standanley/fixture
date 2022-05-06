@@ -40,9 +40,9 @@ def test_differential_amp2_B():
     res = subprocess.run(command.split(), check=True)
 
 if __name__ == '__main__':
-    #test_simple_amp()
+    test_simple_amp()
     #test_parameterized_amp()
     #test_simple_amp_direct()
     #test_differential_amp()
     #test_differential_amp_B()
-    test_differential_amp2_B()
+    #test_differential_amp2_B()
