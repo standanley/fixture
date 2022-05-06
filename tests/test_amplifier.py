@@ -12,6 +12,9 @@ def file_relative_to_test(fname):
 
 tests = [
     ('configs/amplifier_vectored.yaml', None),
+    ('configs/amplifier_diff_to_single.yaml', None),
+    ('configs/amplifier_diff_to_single_two_stage.yaml', None),
+    ('configs/tia1.yaml', None),
 ]
 
 @pytest.mark.parametrize('test', tests)

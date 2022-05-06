@@ -25,8 +25,11 @@ class AmplifierTemplate(TemplateMaster):
             return [self.signals.from_template_name('input')]
 
         def testbench(self, tester, values):
-            self.debug(tester, self.signals.input, 1)
+            #self.debug(tester, self.signals.input, 1)
             self.debug(tester, self.signals.output, 1)
+            self.debug(tester, self.signals.input, 1)
+            #self.debug(tester, self.signals.input[0], 1)
+            #self.debug(tester, self.signals.input[1], 1)
             #self.debug(tester, self.signals.from_spice_name('cm_adj<0>').spice_pin, 1)
             #self.debug(tester, self.signals.from_spice_name('cm_adj<1>').spice_pin, 1)
             #self.debug(tester, self.signals.from_spice_name('cm_adj<2>').spice_pin, 1)
@@ -36,6 +39,8 @@ class AmplifierTemplate(TemplateMaster):
             tester.poke(input, values[input])
             wait_time = float(self.extras['approx_settling_time'])*2
             tester.delay(wait_time)
+            # next line shouldn't be necessary
+            tester.poke(input, values[input])
             return tester.get_value(self.signals.output)
 
         def analysis(self, reads):
@@ -168,10 +173,11 @@ class AmplifierTemplate(TemplateMaster):
             return results
 
     class DynamicTest(TemplateMaster.Test):
+        NP = 2
+        NZ = 1
         parameter_algebra = {
-            'p1': {'const_p1': '1'},
-            'p2': {'const_p2': '1'},
-            'z1': {'const_z1': '1'},
+            **{f'p{i}': {f'const_p{i}': '1'} for i in range(1, NP+1)},
+            **{f'z{i}': {f'const_z{i}': '1'} for i in range(1, NZ+1)},
         }
         required_info = {
             'approx_settling_time': 'Approximate time it takes for amp to settle within 99% (s)'
@@ -185,10 +191,10 @@ class AmplifierTemplate(TemplateMaster):
                 # vectored in
                 values = [x.value for x in input]
                 step_sizes = [((v[1]-v[0])*max_step, v[1]-v[0]) for v in values]
-                size = [create_input_domain_signal(f'step_size_{i}',
+                size = [create_input_domain_signal(f'step_size[{i}]',
                                                    step_size)
                         for i, step_size in enumerate(step_sizes)]
-                pos = [create_input_domain_signal(f'step_pos_{i}', (0, 1))
+                pos = [create_input_domain_signal(f'step_pos[{i}]', (0, 1))
                        for i in range(len(step_sizes))]
                 return size + pos
             else:
@@ -198,72 +204,61 @@ class AmplifierTemplate(TemplateMaster):
                 step_pos = create_input_domain_signal('step_pos', (0, 1))
                 return [step_size, step_pos]
 
-        def testbench(self, tester, value):
+        def testbench(self, tester, values):
             wait_time = float(self.extras['approx_settling_time'])*2
             #self.debug(tester, self.ports.inp, 1)
             #self.debug(tester, self.ports.inn, 1)
             #self.debug(tester, self.ports.outp, 1)
             #self.debug(tester, self.ports.outn, 1)
             #self.debug(tester, self.signals.from_spice_name('v_fz').spice_pin, 1)
+            self.debug(tester, self.signals.input, 1)
+            self.debug(tester, self.signals.output, 1)
 
             # settle from changes to optional inputs
             #tester.delay(wait_time * 1.0)
 
-            in_cm = value['in_cm']
-            vmin, vmax = self.extras['limits_diff']
-            step_start = vmin + ((vmax-vmin) - value['step_size']) * value['step_pos']
-            step_end = step_start + value['step_size']
-            inp_start, inn_start = in_cm + step_start/2, in_cm - step_start/2
-            inp_end, inn_end = in_cm + step_end/2, in_cm - step_end/2
 
-            tester.poke(self.ports.inp, inp_start)
-            tester.poke(self.ports.inn, inn_start)
+            if isinstance(self.signals.input, SignalArray):
+                ranges = [s.value for s in self.signals.input]
+                vmin = np.array([r[0] for r in ranges])
+                vmax = np.array([r[1] for r in ranges])
+            else:
+                vmin, vmax = self.signals.input.value
+            step_start = vmin + ((vmax-vmin) - values['step_size']) * values['step_pos']
+            step_end = step_start + values['step_size']
+
+            tester.poke(self.signals.input, step_start)
 
             # let everything settle before the step
-            tester.delay(wait_time)
+            tester.delay(wait_time*2)
 
-            tester.poke(self.ports.inp, inp_end)
-            tester.poke(self.ports.inn, inn_end)
-            rp = tester.get_value(self.ports.outp, params=
-            {'style':'block', 'duration': wait_time}
-                                  )
-            rn = tester.get_value(self.ports.outn, params=
-            {'style':'block', 'duration': wait_time}
+            tester.poke(self.signals.input, step_end)
+            read = tester.get_value(self.signals.output, params=
+                {'style':'block', 'duration': wait_time}
                                   )
 
             # we wait a tiny bit extra so we're not messed up by the next edge
             tester.delay(wait_time * 1.1)
 
-            return [rp, rn]
+            return [read]
 
 
         def analysis(self, reads):
-            outp = reads[0].value
-            outn = reads[1].value
+            out = reads[0].value
+            t = out[0]
+            v = out[1] - out[1][0]
 
-            # haven't written good logic for if the timesteps don't match
-            if len(outp[0]) != len(outn[0]) or any(outp[0] != outn[0]):
-                assert False
-
-            # we want to cut some off, but leave at least 60-15*2 ??
-            CUTOFF = 0#min(max(0, len(outp[0]) - 60), 15)
-
-            step_start_output = outp[1][0] - outn[1][0]
-            outdiff = outp[0], outp[1] - outn[1] - step_start_output
-
-            # FLIP
-            #outdiff = outdiff[0], -1 * outdiff[1]
-
-
-            ps, zs = extract_pzs(2, 1, outdiff[0][CUTOFF:], outdiff[1][CUTOFF:])
+            ps, zs = extract_pzs(self.NP, self.NZ, t, v)
             list(ps).sort(key=abs)
             zs.sort()
 
-
-            return {'p1': ps[0], 'p2': ps[1], 'z1': zs[0]}
+            poles = {f'p{i+1}': p for i, p in enumerate(ps)}
+            zeros = {f'z{i+1}': z for i, z in enumerate(zs)}
+            return {**poles, **zeros}
 
 
     tests = [
+        #DCTest,
         DynamicTest,
         #CubicCompression,
         #AbsoluteValue,

@@ -150,9 +150,11 @@ def parse_config(circuit_config_dict):
             refs = Representation.get_referenced_signal_names(value_dict)
             for ref in refs:
                 if ref in signal_info_by_cname:
+                    assert ref in signal_info_by_cname, f'Could not find signal component "{ref}"'
                     signal_info_by_cname[ref][0]['is_proxy_component'] = True
                 else:
                     bus_name, indices = parse_name(ref)
+                    assert bus_name in signal_info_by_cname, f'Could not find signal component "{bus_name}"'
                     signal_info_by_cname[bus_name][indices][0]['is_proxy_component'] = True
 
     ## TODO amp vector test stuff

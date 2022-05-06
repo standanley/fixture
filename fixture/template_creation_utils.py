@@ -55,8 +55,8 @@ def extract_pzs(nps, nzs, x, y):
     ps = ps_step[1:]
     ps = ps / (2*np.pi)
     zs = zs / (2*np.pi)
-    print('GOT PZs')
-    print(ps, zs)
+    #print('GOT PZs')
+    #print(ps, zs)
 
     #ps, zs = ma.optimize(x_trimmed, y_trimmed, ps, zs)
 

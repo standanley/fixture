@@ -171,7 +171,7 @@ class ModalAnalysis:
                                   -max_freq_guess,
                                   num_poles_guess)
 
-        #poles_guess = np.array([-2e9, -20e9])*self.scale
+        poles_guess = np.array([-2e9, -20e9])*self.scale
 
         if self.debug:
             print('guessing ps', poles_guess)
@@ -182,9 +182,11 @@ class ModalAnalysis:
         poles_opt = np.concatenate((known_poles, self.poles_from_coefs(coefs_opt)))
 
         if self.debug:
-
+            e = round(self.error_from_poles(poles_opt, NZ), 10)
+            print('error for those poles was', e)
             print('got coefs', coefs_opt, 'poles', poles_opt)
             self.debug_plot(poles_opt, NZ)
+            print()
 
         zeros_opt, dc_opt = self.get_zeros(poles_opt, NZ)
 

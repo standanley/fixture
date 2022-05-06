@@ -2,7 +2,7 @@ import fault
 from abc import ABC, abstractmethod
 import fixture
 from fixture import Tester, Regression
-from fixture.signals import SignalManager, SignalArray, SignalOut
+from fixture.signals import SignalManager, SignalArray, SignalOut, SignalIn
 from fixture.plot_helper import PlotHelper
 
 class TemplateMaster():
@@ -265,20 +265,43 @@ class TemplateMaster():
             '''
             return {}
 
-        def debug(self, tester, port, duration):
+        #def debug(self, tester, port, duration):
+        #    '''
+        #    This method will be overridden when the @debug decorator from
+        #    template_creation_utils is added. Unfortunately this means this
+        #    input signature has to match
+        #    '''
+        #    if isinstance(port, SignalOut):
+        #        if port.representation is not None:
+        #            port = port.representation['signal']
+        #    elif isinstance(port, SignalArray):
+        #        for signal in port:
+        #            self.debug(tester, signal, duration)
+        #        return
+        #        #else:
+        #        #    port = port.spice_name
+        #    #elif isinstance(port, SignalIn):
+        #    #    port = port.spice_name
+        #    #port_name = str(self.template.signals.from_circuit_pin(port))
+        #    port_name = port.spice_name
+        #    if port_name not in self.debug_dict:
+        #        r = tester.get_value(port, params={'style': 'block',
+        #                                           'duration': duration})
+        #        self.debug_dict[port_name] = r
+        def debug(self, tester, signal, duration):
             '''
             This method will be overridden when the @debug decorator from
             template_creation_utils is added. Unfortunately this means this
             input signature has to match
             '''
-            if isinstance(port, SignalOut):
-                if port.representation is not None:
-                    port = port.representation['signal']
-            port_name = str(self.template.signals.from_circuit_pin(port))
-            if port_name not in self.debug_dict:
-                r = tester.get_value(port, params={'style': 'block',
+            if isinstance(signal, SignalArray):
+                for signal in signal:
+                    self.debug(tester, signal, duration)
+                return
+            if signal not in self.debug_dict:
+                r = tester.get_value(signal, params={'style': 'block',
                                                    'duration': duration})
-                self.debug_dict[port_name] = r
+                self.debug_dict[signal] = r
 
         def debug_plot(self):
             import matplotlib.pyplot as plt

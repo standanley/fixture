@@ -5,7 +5,8 @@ import pandas
 import fixture
 from itertools import product
 import numpy as np
-from fixture.signals import SignalIn, SignalOut, SignalArray
+from fixture.signals import SignalIn, SignalOut, SignalArray, parse_bus, \
+    parse_name
 
 
 def add_vectors():
@@ -99,6 +100,25 @@ class Testbench():
                     # TODO could this be more than 1-D?
                     test_vec = np.array([test_inputs[entry] for entry in s])
                     test_inputs[s] = test_vec
+
+        # look for string entries formatted like bus entries and create the
+        # entire bus based on that
+        # I wish we could just keep these organized as a bus since their
+        # creation, but it's hard for input dimensions that are based on
+        # vectored inputs
+        bus_entries = defaultdict(dict)
+        for t in test_inputs:
+            if isinstance(t, str):
+                bus, indices = parse_name(t)
+                if len(indices) == 0:
+                    continue
+                bus_entries[bus][indices] = test_inputs[t]
+        for bus, entries in bus_entries.items():
+            dims = np.max(np.array(list(entries.keys())), 0) + 1
+            bus_data = np.full(dims, np.nan)
+            for loc, val in entries.items():
+                bus_data[loc] = val
+            test_inputs[bus] = bus_data
 
         reads_template = self.test.testbench(self.tester, test_inputs)
         reads_optional = self.read_optional_outputs()

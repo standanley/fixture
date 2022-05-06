@@ -1,5 +1,6 @@
 * from ltspice
 * tested with input cm=1.2v, vdd=3v
+* cm_out is 2.41-0.45*cm_in, gain is 9.83
 
 *XX1 N001 N003 N005 N002 N004 myamp
 *C1 N004 0 5p

@@ -1,8 +1,6 @@
-from fault.domain_read import EdgeNotFoundError
-
+from fault.domain_read import EdgeNotFoundError, domain_read
 from fixture.signals import SignalOut, SignalIn, SignalArray
 import numpy as np
-
 
 class Representation:
 
@@ -172,7 +170,9 @@ class Representation:
 
 
 
-    def representation_get_value(self, tester):
+    def representation_get_value(self, tester, params=None):
+        if params == None:
+            params = {}
         if self.style == 'pulse_width':
 
             a = self.params['reference'].spice_pin
@@ -221,10 +221,21 @@ class Representation:
 
         elif self.style == 'linear_combination_in' or self.style == 'linear_combination_out':
             components = self.params['components']
-            gvs = [tester.get_value(s.spice_pin) for s in components]
+            gvs = [tester.get_value(s.spice_pin, params=params) for s in components]
             coefs = self.params['coefficients']
             def callback():
-                return sum(gv.value*coef for gv, coef in zip(gvs, coefs))
+                if (len(gvs)>0 and gvs[0].params.get('style', None) == 'block'):
+                    # probably block read
+                    ts, vs = zip(*[gv.value for gv in gvs])
+                    time_check = all([all(ts[0] == ts[i])
+                                      for i in range(1, len(ts))])
+                    assert time_check, f'Inconsistent time steps in block read of vector {self.name}'
+                    t = ts[0]
+                    v = sum(vi*coef for vi, coef in zip(vs, coefs))
+                    return t, v
+
+                else:
+                    return sum(gv.value*coef for gv, coef in zip(gvs, coefs))
             return tester.GetValueReturnObject(callback)
         else:
             assert False, f'unknown proxy style {self.style}'

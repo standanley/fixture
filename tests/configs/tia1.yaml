@@ -1,0 +1,70 @@
+name: tia
+filepath: ../spice/tia1.sp
+template: AmplifierTemplate
+pin:
+    vdd:
+        direction: input
+        datatype: analog
+        #value: (2.7, 3.3)
+        value: 3.0
+    #vss:
+    #    direction: input
+    #    datatype: real
+    #    value: 0
+    iin:
+        direction: input
+        electricaltype: current
+        datatype: real
+        value: (0, -10e-6)
+    vout:
+        direction: output
+        datatype: real
+    vref:
+        direction: input
+        datatype: analog
+        value: (1.2, 1.5)
+
+#proxy_signals:
+#
+#    indiff:
+#        #value: (-0.25, 0.25)
+#        value: (-0.15, 0.15)
+#        style: linear_combination_in
+#        #expression: inp - inn
+#        components: [inp, inn]
+#        coefficients: [1, -1]
+#    incm:
+#        value: (1.0, 1.2)
+#        style: linear_combination_in
+#        #expression: 0.5*inp + 0.5*inn
+#        components: [inp, inn]
+#        coefficients: [0.5, 0.5]
+#
+#    outdiff:
+#        style: linear_combination_out
+#        components: [outp, outn]
+#        coefficients: [1, -1]
+#
+#    outcm:
+#        style: linear_combination_out
+#        components: [outp, outn]
+#        coefficients: [0.5, 0.5]
+#
+#
+#
+#    input_test:
+#        style: vector
+#        components: [indiff, incm]
+#    output_test:
+#        style: vector
+#        components: [outdiff, outcm]
+
+template_pins:
+    input: iin
+    output: vout
+
+extras:
+    approx_settling_time: 1000e-9
+
+#test_config_file: ngspice_small_tstep.yaml
+test_config_file: ngspice.yaml

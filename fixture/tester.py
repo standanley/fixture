@@ -89,7 +89,7 @@ class Tester(fault.Tester):
         if isinstance(port, (SignalIn, SignalOut)):
             # TODO in the future we should take only signals as arg
             if hasattr(port, 'representation') and port.representation is not None:
-                return port.representation.representation_get_value(self)
+                return port.representation.representation_get_value(self, params=params)
             else:
                 magma_port = port.spice_pin
                 return super().get_value(magma_port, params=params)
