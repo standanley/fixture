@@ -163,7 +163,11 @@ class Testbench():
                     if not np.all(result_ndarray == examples[name]):
                         perfect_match = False
                         break
-                if perfect_match:
+
+                # TODO had some issues with pole/zero extraction where things
+                # happened to be a perfect match even though the user did not
+                # expect it
+                if False and perfect_match:
                     # doesn't change with respect to vectored output
                     results_out[name] = results[output_vecs[0]][name]
                 else:
