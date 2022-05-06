@@ -2,27 +2,28 @@ name: pytest
 on: push
 
 jobs:
-    test:
-        runs-on: ubuntu-latest
-        timeout-minutes: 60
-        steps:
-            - name: Setup Python
-              uses: actions/setup-python@v2
-              with:
-                python-version: "3.7"
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.7"
 
-            - name: Installation with ubuntu
-            - run: |
-                sudo apt-get install ngspice
-                sudo apt-get install verilator
+      - name: Installation with ubuntu
+      - run: |
+          sudo apt-get install ngspice
+          sudo apt-get install verilator
 
-            - name: Installation outside ubuntu
-              run: |
-                ./install_dragonphy.sh
-                ./install_fault.sh
-                pip install -r requirements.txt
-                pip install pytest
-                pip install -e .
+      - name: Installation outside ubuntu
+        run: |
+          ./install_dragonphy.sh
+          ./install_fault.sh
+          pip install -r requirements.txt
+          pip install pytest
+          pip install -e .
 
-            - name: Run pytest
-                pytest ./tests
+      - name: Run pytest
+        run: |
+          pytest ./tests
