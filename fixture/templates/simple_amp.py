@@ -58,8 +58,8 @@ class SimpleAmpTemplate(TemplateMaster):
     #@debug
     class CubicCompression(TemplateMaster.Test):
         parameter_algebra = {
-            'amp_output': {'dcgainc': 'in_single**3',
-                           'dcgainq': 'in_single**2',
+            'amp_output': {'dcgainc': ('in_single', 'in_single', 'in_single'),
+                           'dcgainq': ('in_single', 'in_single'),
                            'dcgain': 'in_single',
                            'offset': '1'}
         }
@@ -88,6 +88,7 @@ class SimpleAmpTemplate(TemplateMaster):
             return results
 
         def post_regression(self, results, data):
+            return {}
             inputs = data['in_single']
             outputs = data['amp_output']
             ph = PlotHelper()

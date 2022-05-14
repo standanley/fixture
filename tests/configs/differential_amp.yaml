@@ -30,9 +30,11 @@ template_pins:
     outn: outn
 
 extras:
-    approx_settling_time: 10e-9
+    approx_settling_time: 2e-9
+    #approx_settling_time: 10e-9
     limits_diff: (-0.03, 0.03)
     limits_cm: (1.15, 1.25)
 
+test_config_file: ngspice_dynamics.yaml
 #test_config_file: ngspice_small_tstep.yaml
-test_config_file: ngspice.yaml
+#test_config_file: ngspice.yaml

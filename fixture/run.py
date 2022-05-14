@@ -66,10 +66,11 @@ def _run(circuit_config_dict):
 
     for mode, results in params_by_mode.items():
         print('For mode', mode)
-        print('param\tterm\tcoef')
-        for param, d in results.items():
-            for partial_term_optional, coef in d.items():
-                print('%s\t%s\t%.3e' % (param, partial_term_optional, coef))
+        print('category\tparam\tterm\tcoef')
+        for category, result_batch in results.items():
+            for param, d in result_batch.items():
+                for partial_term_optional, coef in d.items():
+                    print('%s\t%s\t%s\t%.3e' % (category, param, partial_term_optional, coef))
 
     if 'mgenero' in circuit_config_dict:
         mgenero_config_dir = circuit_config_dict['mgenero']

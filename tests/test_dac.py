@@ -18,5 +18,5 @@ def test_dac_therm():
 
 
 if __name__ == '__main__':
-    #test_dac()
+    test_dac()
     test_dac_therm()

@@ -40,21 +40,23 @@ def extract_pzs(nps, nzs, x, y):
     x_trimmed = x[first_good_index:]
     y_trimmed = y[first_good_index:]
 
+    #plot(x_trimmed, y_trimmed, ['input data'])
 
-    ma = modal_analysis.ModalAnalysis()
+
+    ma = modal_analysis.ModalAnalysis(x_trimmed, y_trimmed)
 
     #import matplotlib.pyplot as plt
     #plt.plot(x_trimmed, y_trimmed, '-+')
     #plt.show()
 
     # step response definitely has a pole at zero
-    ps_step, zs, scale = ma.extract_pzs(y_trimmed, x_trimmed, nps+1, nzs, [0])
+    ps_step, zs, scale = ma.extract_pzs(nps+1, nzs, [0])
     assert ps_step[0] == 0
     ps = ps_step[1:]
     ps = ps / (2*np.pi)
     zs = zs / (2*np.pi)
-    print('GOT PZs')
-    print(ps, zs)
+    #print('GOT PZs')
+    #print(ps, zs)
 
     #ps, zs = ma.optimize(x_trimmed, y_trimmed, ps, zs)
 

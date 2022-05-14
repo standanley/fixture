@@ -353,8 +353,8 @@ class SamplerTemplate(TemplateMaster):
 
         parameter_algebra = {
             'sample_out': {'should_be_1': 'value',
-                           'alpha_times_scale': 'value*slope_over_scale',
-                           'beta_times_scale2': 'slope_over_scale**2',
+                           'alpha_times_scale': ('value', 'slope_over_scale'),
+                           'beta_times_scale2': ('slope_over_scale', 'slope_over_scale'),
                            'gamma_times_scale': 'slope_over_scale'}
         }
         num_samples = 20

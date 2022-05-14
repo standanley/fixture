@@ -157,6 +157,7 @@ class DifferentialAmpTemplate(TemplateMaster):
 
             # haven't written good logic for if the timesteps don't match
             if len(outp[0]) != len(outn[0]) or any(outp[0] != outn[0]):
+                print('interpolating to match timesteps')
                 outp = remove_repeated_timesteps(*outp)
                 outn = remove_repeated_timesteps(*outn)
                 # hmm, timesteps don't match
@@ -298,6 +299,7 @@ class DifferentialAmpTemplate(TemplateMaster):
             return {'p1': ps[0], 'p2': ps[1], 'z1': zs[0]}
 
 
-    tests = [GainTest, DynamicTest]
+    #tests = [GainTest, DynamicTest]
+    tests = [GainTest]
     #tests = [DynamicTest]
 
