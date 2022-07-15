@@ -1,8 +1,9 @@
 import math
 import itertools
 import random
+
+from fixture import PlotHelper
 from fixture.signals import SignalIn, SignalArray
-random.seed(4)
 
 class Sampler:
     @classmethod
@@ -15,6 +16,9 @@ class Sampler:
         # will be broken out) and values are length N lists of scaled samples
 
         samples = cls.get_orthogonal_samples(len(dims), N)
+
+        #visualize([(x[1], x[2]) for x in samples])
+
         samples_dict = {}
         for i, dim in enumerate(dims):
             if isinstance(dim, SignalArray):
@@ -64,13 +68,14 @@ class Sampler:
         return samples_dict
 
     @classmethod
-    def get_orthogonal_samples(cls, D, N):
+    def get_orthogonal_samples(cls, D, N, seed=4):
         '''
         :param D: Number of true analog dimensions
         :param N: Number of samples
         :return: NxD array of samples, every entry between 0 and 1
         Does Latin Hypercube Sampling and Orthogonal sampling
         '''
+        random.seed(seed)
 
         points = []
         # untaken rows and columns for LHS
@@ -294,6 +299,9 @@ class Sampler:
 
 
 def visualize(samples):
+    import matplotlib
+    matplotlib.use('Agg')
+    plt = matplotlib.pyplot
 
     #print('\n'.join(str(x) for x in samples))
     import matplotlib.pyplot as plt
@@ -325,7 +333,9 @@ def visualize(samples):
 
     plt.xlim(0, 1)
     plt.ylim(0, 1)
-    plt.show()
+    #plt.show()
+    PlotHelper.save_current_plot('sample_test')
+    print('created sample_test plot')
 
 
 if __name__ == '__main__':

@@ -227,7 +227,7 @@ class Representation:
                 if (len(gvs)>0 and gvs[0].params.get('style', None) == 'block'):
                     # probably block read
                     ts, vs = zip(*[gv.value for gv in gvs])
-                    time_check = all([all(ts[0] == ts[i])
+                    time_check = all([np.array_equal(ts[0], ts[i])
                                       for i in range(1, len(ts))])
                     assert time_check, f'Inconsistent time steps in block read of vector {self.name}'
                     t = ts[0]

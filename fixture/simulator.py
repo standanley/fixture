@@ -8,7 +8,8 @@ class Simulator:
         approved_simulator_args = ['ic', 'vsup', 'bus_delim', 'ext_libs', 'inc_dirs',
                                    'defines', 'flags', 't_step', 'num_cycles',
                                    'conn_order', 'no_run', 'directory', 't_tr',
-                                   'dump_waveforms', 'timescale', 'pwl_signals']
+                                   'dump_waveforms', 'timescale', 'pwl_signals', 'rz',
+                                   'sim_cmd']
         simulator_dict = {k: v for k, v in test_config_dict.items() if
                           k in approved_simulator_args}
 
@@ -42,7 +43,7 @@ class Simulator:
             # I pass it in this dict because no_run=False doesn't work for all simulators
             no_run_dict['no_run'] = True
 
-        tester.compile_and_run(self.test_config_dict['target'],
+        res = tester.compile_and_run(self.test_config_dict['target'],
                                simulator=self.test_config_dict['simulator'],
                                clock_step_delay=0,
                                tmp_dir=run_dir is None,

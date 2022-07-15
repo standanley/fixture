@@ -71,6 +71,7 @@ class Tester(fault.Tester):
             raise AttributeError
 
     def _array_get_value(self, array, params):
+        #print('array gv', array, params)
         get_value_objects = []
         for sub_array in array:
             gvo = self.get_value(sub_array, params=params)
@@ -86,6 +87,7 @@ class Tester(fault.Tester):
         return self.GetValueReturnObject(callback)
 
     def get_value(self, port, params=None):
+        #print('gv', port, params)
         if isinstance(port, (SignalIn, SignalOut)):
             # TODO in the future we should take only signals as arg
             if hasattr(port, 'representation') and port.representation is not None:

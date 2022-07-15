@@ -29,6 +29,9 @@ class SignalIn():
     def __str__(self):
         return f'<{str(self.template_name)} / {self.spice_name}>'
 
+    def friendly_name(self):
+        return self.template_name if self.spice_name is None else self.spice_name
+
 class SignalOut():
     def __init__(self,
                  type_,
@@ -47,6 +50,9 @@ class SignalOut():
 
     def __str__(self):
         return f'<{str(self.template_name)} / {self.spice_name}>'
+
+    def friendly_name(self):
+        return self.template_name if self.spice_name is None else self.spice_name
 
 def create_signal(pin_dict, c_name=None, c_pin=None, t_name=None):
     type_ = pin_dict.get('datatype', 'analog')
@@ -486,3 +492,5 @@ class SignalArray:
     def __str__(self):
         return f'<{str(self.template_name)} / {self.spice_name} / {self.array.shape}>'
 
+    def friendly_name(self):
+        return self.template_name if self.spice_name is None else self.spice_name

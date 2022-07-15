@@ -1,7 +1,7 @@
 #from dragonphy import *
 import math
 
-from dragonphy import Channel
+#from dragonphy import Channel
 import numpy as np
 from scipy import linalg
 import matplotlib.pyplot as plt

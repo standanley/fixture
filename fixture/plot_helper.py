@@ -1,8 +1,12 @@
 import itertools
 import operator
+import os
 from functools import reduce
 
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
+plt = matplotlib.pyplot
 import scipy
 import statsmodels.formula.api as smf
 import pandas
@@ -15,10 +19,12 @@ from scipy.interpolate import griddata
 class PlotHelper:
     dpi = 300
 
-    def __init__(self, data, parameter_algebra, regression_results):
+    def __init__(self, test, data, parameter_algebra, regression_results, mode_prefix):
+        self.test = test
         self.data = data
         self.parameter_algebra = parameter_algebra
         self.regression_results = regression_results
+        self.mode_prefix = mode_prefix
 
     def get_column(self, target, overrides=None, lhs_pred=False, param_meas=False):
         '''
@@ -31,7 +37,7 @@ class PlotHelper:
         3) optional in: vdd
         4) param: gain = gain_vdd_fit * vdd + gain_const_fit
         5) lhs_pred: out_lhs_pred = gain*in + offset
-        6) param_meas: gain_param_meas = (out - offset) / gain
+        6) param_meas: gain_param_meas = (out - offset) / in
 
         Cases 5 and 6 are accessed with the corresponding kwargs
 
@@ -54,8 +60,8 @@ class PlotHelper:
             return overrides_str[target]
         if isinstance(target, tuple):
             return reduce(operator.mul,
-                          [self.get_column(elem) for elem in target],
-                          self.data[Regression.one_literal])
+                          [self.get_column(elem, overrides) for elem in target],
+                          1)
 
         # now we start breaking it up by the 6 cases
         if target in self.parameter_algebra:
@@ -114,11 +120,15 @@ class PlotHelper:
         clean = orig.replace('/', '_over_')
         return clean
 
+    def _save_current_plot(self, name):
+        self.save_current_plot(self.mode_prefix + name)
+
     @classmethod
     def save_current_plot(cls, name):
-        plt.grid()
+        #plt.grid()
         #plt.show()
-        plt.savefig(cls.clean_filename(name), dpi=cls.dpi)
+        os.makedirs('plots', exist_ok=True)
+        plt.savefig('./plots/' + cls.clean_filename(name), dpi=cls.dpi)
         # I've had lots of problems with seeing the results of earlier plots
         # on new plots, and this might be the solution?
         # I think the issue is when a plot is created outside plot_helper,
@@ -147,7 +157,7 @@ class PlotHelper:
         #    #plt.ylabel('Predicted by model')
         #    #plt.grid()
         #    ##plt.show()
-        #    #cls.save_current_plot(f'{name}_fit')
+        #    #self._save_current_plot(f'{name}_fit')
         #    ##plt.close(fig)
 
         #self.get_column('amp_output_vec[0]')
@@ -190,12 +200,12 @@ class PlotHelper:
                 plt.figure()
                 plt.plot(x, y_meas, '*')
                 plt.plot(x_nonan, y_pred, 'x')
-                plt.xlabel(input)
+                plt.xlabel(input.friendly_name())
                 plt.ylabel(lhs)
                 plt.grid()
                 plt.legend(['Measured', 'Predicted'])
-                plt.title(f'{lhs} vs. {input}')
-                self.save_current_plot(f'{lhs}_vs_{input}')
+                plt.title(f'{lhs} vs. {input.friendly_name()}')
+                self._save_current_plot(f'{lhs}_vs_{input.friendly_name()}')
                 #plt.show()
 
                 nom_dict = {}
@@ -211,14 +221,15 @@ class PlotHelper:
                     y_meas_adj = self.get_column(lhs, overrides=nom_dict)
                     y_pred_adj = self.get_column(lhs, overrides=nom_dict, lhs_pred=True)
                     plt.figure()
-                    plt.plot(x_adj, y_meas_adj, '*')
-                    plt.plot(x_adj, y_pred_adj, 'x')
-                    plt.xlabel(input)
+                    plt.scatter(x_adj, y_meas_adj, marker='*', s=20)
+                    plt.scatter(x_adj, y_pred_adj, marker='x', s=20)
+                    plt.xlabel(input.friendly_name())
                     plt.ylabel(lhs)
                     plt.grid()
                     plt.legend(['Measured', 'Predicted'])
-                    plt.title(f'{lhs} vs. {input}, corrected for nominal {[str(opt) for opt in optional]}')
-                    self.save_current_plot(f'{lhs}_vs_{input}_nom_{[str(opt) for opt in optional]}')
+                    plt.title(f'{lhs} vs. {input.friendly_name()}, corrected for nominal {[opt.friendly_name() for opt in optional]}')
+                    #self._save_current_plot(f'{lhs}_vs_{input}_nom_{[str(opt) for opt in optional]}')
+                    self._save_current_plot(f'{lhs}_vs_{input.friendly_name()}_nom_opt')
                     #plt.show()
 
 
@@ -227,8 +238,8 @@ class PlotHelper:
                 input1, input2 = sorted(input_pair, key=Regression.regression_name)
                 x1 = self.get_column(input1)
                 x2 = self.get_column(input2)
-                gridx, gridy = np.mgrid[min(x1):max(x1):500j,
-                                        min(x2):max(x2):500j]
+                gridx, gridy = np.mgrid[min(x1):max(x1):1000j,
+                                        min(x2):max(x2):1000j]
                 points = np.vstack((x1, x2)).T
                 try:
                     contour_data_meas = griddata(points, y_meas, (gridx, gridy), method='linear')
@@ -243,12 +254,14 @@ class PlotHelper:
                 meas_levels = cp.cvalues
                 meas_breaks = meas_levels[:-1] + np.diff(meas_levels)/2
                 plt.contour(gridx, gridy, contour_data_meas, levels=meas_breaks, colors='black', linestyles='solid')
+                plt.plot(*(points.T), 'x')
                 plt.contour(gridx, gridy, contour_data_pred, levels=meas_breaks, colors='black', linestyles='dashed')
-                plt.xlabel(input1)
-                plt.ylabel(input2)
+                plt.xlabel(input1.friendly_name())
+                plt.ylabel(input2.friendly_name())
                 plt.title(lhs)
-                self.save_current_plot(
-                    f'{lhs}_vs_{input1}_and_{input2}')
+                plt.grid()
+                self._save_current_plot(
+                    f'{lhs}_vs_{input1.friendly_name()}_and_{input2.friendly_name()}')
                 #plt.show()
 
 
@@ -288,22 +301,23 @@ class PlotHelper:
     def modify_data(orig, overrides):
         # copy original dataframe and replace overrides
         new_dict = {}
-        for name in orig.columns:
-            new_name = Regression.clean_string(name)
+        for name in orig.keys():
+            #new_name = Regression.clean_string(name)
+            new_name = name
             value = overrides.get(name, orig[name])
             new_dict[new_name] = value
-        return pandas.DataFrame(new_dict)
+        return new_dict #pandas.DataFrame(new_dict)
 
 
-    @classmethod
-    def plot_optional_effects(cls, test, data, regression_results):
+    def plot_optional_effects(self):
 
         def regression_name(s):
             return Regression.clean_string(Regression.regression_name(s))
 
+        print(self)
         N = 101
         nominal_data_dict = {}
-        for ta in test.signals.optional_true_analog():
+        for ta in self.test.signals.optional_true_analog():
             assert isinstance(ta.value, tuple) and len(ta.value) == 2
             nominal = sum(ta.value) / 2
             nominal_data_dict[regression_name(ta)] = [nominal] * N
@@ -315,16 +329,18 @@ class PlotHelper:
         nominal_data = pandas.DataFrame(nominal_data_dict)
 
 
-        for opt in test.signals.optional_true_analog():
+        for opt in self.test.signals.optional_true_analog():
             assert isinstance(opt.value, tuple) and len(opt.value) == 2
             xs = np.linspace(opt.value[0], opt.value[1], N)
-            model_data = PlotHelper.modify_data(nominal_data,
+            model_data = self.modify_data(nominal_data,
                                                 {regression_name(opt): xs})
 
-            for parameter, fit in regression_results.items():
+            print('TODO fix plotting of optional outputs')
+            for parameter, fit in list(self.regression_results.items())[:2]:
                 # prediction just based on  parameter = (Ax + By + C)
-                model_prediction = PlotHelper.eval_parameter(
-                    model_data, regression_results, parameter)
+                model_prediction = self.get_column(parameter, lhs_pred=True, overrides=model_data)
+                #model_prediction = PlotHelper.eval_parameter(
+                #    model_data, regression_results, parameter)
 
                 # prediction based on measured data
                 # OUT = (Ax + By + C) * IN + (Dx + Ey + F)
@@ -376,9 +392,9 @@ class PlotHelper:
                 plt.figure()
                 plt.plot(xs, model_prediction, '--')
                 plt.plot(opt_measured, parameter_measured_adjusted, 'o')
-                plt.xlabel(opt.spice_name)
+                plt.xlabel(opt.friendly_name())
                 plt.ylabel(parameter)
-                cls.save_current_plot(f'{parameter}_vs_{opt.spice_name}')
+                self._save_current_plot(f'{parameter}_vs_{opt.friendly_name()}')
                 plt.grid()
                 #plt.show()
 

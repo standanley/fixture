@@ -27,26 +27,29 @@ def binary(x, y):
     return [(x//(i+1))%2 for i in range(y)]
 
 def dump_yaml(template, params_by_mode, mapping):
-    d = {}
+    d = defaultdict(list)
     for mode, params in params_by_mode.items():
+        params_flat = {}
+        for rhs in params.values():
+            params_flat.update(rhs)
 #        # TODO I haven't found a good way to deal with required BA, so this is a bit of a hack
-#        # Note all params that are part of a bus
+#        # Note all params_flat that are part of a bus
 #        buss = defaultdict(list)
-#        for param in params:
+#        for param in params_flat:
 #            if param[-1] == ']':
 #                name = param.split('[')[0]
 #                buss[name].append(param)
 #        aggregates = defaultdict(dict)
 #
 #        # add buses at the end that are the sum of their components
-#        # also delete entries from 'params' for the individual bits
+#        # also delete entries from 'params_flat' for the individual bits
 #        for name, bits in buss.items():
-#            params[name] = {}
+#            params_flat[name] = {}
 #            for bit in bits:
-#                terms = params.pop(bit)
+#                terms = params_flat.pop(bit)
 #                for factor, coef in terms.items():
 #                    new_factor = f'{bit}*{factor}'
-#                    params[name][new_factor] = coef
+#                    params_flat[name][new_factor] = coef
 
         # TODO for required BA mgenero needs us to treat them as a bus
         # maybe we can loop through required pins and check whether each is a bus?
@@ -62,20 +65,26 @@ def dump_yaml(template, params_by_mode, mapping):
                             return s.template_name
 
         def convert_term_to_verilog(term):
+            if term == Regression.one_literal:
+                return '1'
             # square
             term = re.sub('I\\((.*)\\*\\*2\\)', '\\1*\\1', term)
             # cube
             term = re.sub('I\\((.*)\\*\\*3\\)', '\\1*\\1*\\1', term)
+            # angle braces ot brackets
+            term = term.replace('<', '[').replace('>', ']')
+
             return term
 
-        for param, terms in params.items():
+        for param, terms in params_flat.items():
+            param_mapped = mapping.get(param, param)
             if len(params_by_mode) == 1:
                 mode_dict = {'dummy_digitalmode': 0}
             else:
                 # mode dict keys are true digital pins
                 names = [s.spice_name for s in template.signals if s.type_ == 'true_digital']
                 mode_dict = {name:x for name,x in zip(names, binary(mode, len(names)))}
-            coefs_by_mode = d.get(param, [])
+            coefs_by_mode = d[param_mapped]
             terms_verilog = {convert_term_to_verilog(k): v for k,v in terms.items()}
             coefs_this_mode = {
                     'mode': mode_dict,
@@ -84,18 +93,15 @@ def dump_yaml(template, params_by_mode, mapping):
             }
             coefs_by_mode.append(coefs_this_mode)
 
-            # TODO should these be unindented?
-            param_mapped = mapping.get(param, param)
-            d[param_mapped] = coefs_by_mode
-
     #print('hello', d['gain'][0]['mode'])
 
-    final = {'test1':d}
+    final = {'test1': dict(d)}
     return yaml.dump(final)
 
-def create_interface(template, collateral_dict):
+def create_interface(template, collateral_dict, params):
     circuit = template.dut
-
+    special_template_pins_rev = collateral_dict.get('pin_mapping', {})
+    special_template_pins = {v: k for k, v in special_template_pins_rev.items()}
 
     def my_in(p, ps):
         ''' computes (p in ps) without importing mantle '''
@@ -148,6 +154,8 @@ def create_interface(template, collateral_dict):
 
     pins = {}
     for s in template.signals:
+        if s.representation is not None:
+            continue
         if isinstance(s, SignalArray):
             circuit_names = [x.spice_name is not None for x in s.flatten()]
             if any(circuit_names):
@@ -170,6 +178,8 @@ def create_interface(template, collateral_dict):
                             name = name.replace(c, '_')
                         return name
                     for bit in s.flatten():
+                        if bit.representation is not None:
+                            continue
                         # TODO doesn't work for mixed template and not in bus
                         pins[bit.template_name] = create_pin(bit)
                         pins[bit.template_name]['name'] = clean_name(bit.spice_name)
@@ -180,7 +190,8 @@ def create_interface(template, collateral_dict):
                 # use the template name as the dictionary key here, and the
                 # circuit name as the 'name' entry in the dict. Then mgenero
                 # will do the correct translation in the verilog
-                name = s.template_name if s.template_name is not None else s.spice_name
+                name = (s.template_name if s.template_name is not None
+                        else special_template_pins.get(s.spice_name, s.spice_name))
                 pins[name] = create_pin(s)
         '''
         if (isinstance(s, SignalIn) or isinstance(s, SignalOut)) and s.spice_name is not None:
@@ -203,9 +214,22 @@ def create_interface(template, collateral_dict):
     cfg['module_name'] = circuit.name
 
     if 'interface_extras' in collateral_dict:
+
         interface.update(collateral_dict['interface_extras'])
     if 'circuit_extras' in collateral_dict:
-        cfg.update(collateral_dict['circuit_extras'])
+        #cfg.update(collateral_dict['circuit_extras'])
+        es = collateral_dict['circuit_extras']
+        metrics = es.get('metric', {})
+        for metric in list(metrics):
+            if 'fixture_dependence' in metrics[metric]:
+                # remove this metric if we don't have the dependence
+                dependence_name = metrics[metric]['fixture_dependence']
+                dependence_by_mode = [dependence_name in vs for k, vs in params.items()]
+                if all(dependence_by_mode) != any(dependence_by_mode):
+                    assert False, f'{dependence_name} defined for some modes but not others'
+                if not all(dependence_by_mode):
+                    # delete this metric since we can't model it
+                    del metrics[metric]
 
     interface_text = yaml.dump(interface)
     cfg_text = yaml.dump(cfg)
@@ -216,7 +240,7 @@ def create_interface(template, collateral_dict):
 def create_all(template, config, params):
     # TODO:
     params_text = dump_yaml(template, params, config.get('mapping', {}))
-    interface_text, circuit_text = create_interface(template, config)
+    interface_text, circuit_text = create_interface(template, config, params)
     generate_text = get_generate_text(config['template_name'])
     directory = config['build_folder']
 

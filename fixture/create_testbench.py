@@ -40,10 +40,11 @@ class Testbench():
                     assert isinstance(s.value, float) or isinstance(s.value, int), f'Unknown pin value for {s}'
                     self.tester.poke(s.spice_pin, s.value)
 
-    def set_digital_mode(self, mode):
+    def set_digital_mode(self, mode, delay_time=0):
         true_digital = self.test.signals.true_digital()
         for s, val in zip(true_digital, mode):
             self.tester.poke(s.spice_pin, val)
+        self.tester.delay(delay_time)
 
     def apply_optional_inputs(self, i):
         for s in self.test_vectors.keys():
@@ -133,7 +134,7 @@ class Testbench():
         num_digital = len(true_digital)
         self.true_digital_modes = list(product(range(2), repeat=num_digital))
         for digital_mode in self.true_digital_modes:
-            self.set_digital_mode(digital_mode)
+            self.set_digital_mode(digital_mode, self.template.extras.get('mode_settle_time', 0))
             #for v_optional, v_test in zip(self.optional_vectors, self.test_vectors):
             #    reads = self.run_test_vector(v_test, v_optional)
             #    self.result_processing_list.append((digital_mode, v_test, v_optional, reads))
@@ -210,7 +211,8 @@ class Testbench():
         # results_other = {name: [value0, value1]}
         results_analysis = {}
         results_other = {}
-        for m, result_i, (reads_template, reads_optional) in self.result_processing_list:
+        for loop_i, (m, result_i, (reads_template, reads_optional)) in enumerate(self.result_processing_list):
+            # Note loop_i != result_i when there are multiple digital modes
 
             vectored_outputs = self.test.signals.vectored_out()
             #out_vec_name_mapping = {}
@@ -243,7 +245,7 @@ class Testbench():
             #        results_out_opt[k] = float(v)
 
             # put results_analysis into lists
-            if result_i == 0:
+            if loop_i == 0:
                 # first time; set up new dictionaries and lists
                 for output_vec, result_dict in results_out_req_vec.items():
                     results_analysis[output_vec] = {}
@@ -257,7 +259,7 @@ class Testbench():
                         results_analysis[output_vec][name].append(value)
 
             # put results_other into list
-            if result_i == 0:
+            if loop_i == 0:
                 # first time; set up new dictionaries and lists
                 for name, value in results_out_opt.items():
                     results_other[name] = [value]
@@ -270,8 +272,10 @@ class Testbench():
                 results_other['mode_id'].append(m)
 
         results_analysis_vec = self.condense_results_analysis(results_analysis)
+        num_modes = len(set(results_other['mode_id']))
+        results_test_vectors = {k: np.concatenate([v]*num_modes) for k, v in self.test_vectors.items()}
 
-        results_comb = {**self.test_vectors,
+        results_comb = {**results_test_vectors,
                         **results_analysis_vec,
                         **results_other}
         results = pandas.DataFrame(results_comb)

@@ -20,7 +20,7 @@ class Checkpoint:
             self.data[test] = test_data
 
     def convert_df_columns(self, test, df):
-        str_to_signal = {str(s): s for s in test.signals.flat()}
+        str_to_signal = {str(s): s for s in test.signals.flat() + list(test.signals)}
         test = df.rename(str_to_signal, axis='columns', inplace=True)
         print(test)
 

@@ -15,8 +15,14 @@ class AmplifierTemplate(TemplateMaster):
     class DCTest(TemplateMaster.Test):
         parameter_algebra = {
             'amp_output': {'dcgain': 'input',
-                           #'gainsq': 'input^2',
-                           'offset': '1'}
+                           'offset': '1'},
+            #output_diff = dcgain_from_diff*input_diff + ... + offset
+            #output_cm = dcgain_from_diff*input_diff + ... + offset
+            #'amp_output_copy': {'just_offset': '1'}
+            #'amp_output_copy': {'dcgain_3': 'input**3',
+            #               'dcgain_2': 'input**2',
+            #               'dcgain_1': 'input',
+            #               'dcgain_0': '1'}
         }
         num_samples = 300
 
@@ -25,16 +31,17 @@ class AmplifierTemplate(TemplateMaster):
             return [self.signals.from_template_name('input')]
 
         def testbench(self, tester, values):
-            #self.debug(tester, self.signals.input, 1)
-            self.debug(tester, self.signals.output, 1)
-            self.debug(tester, self.signals.input, 1)
-            #self.debug(tester, self.signals.input[0], 1)
-            #self.debug(tester, self.signals.input[1], 1)
-            #self.debug(tester, self.signals.from_spice_name('cm_adj<0>').spice_pin, 1)
-            #self.debug(tester, self.signals.from_spice_name('cm_adj<1>').spice_pin, 1)
-            #self.debug(tester, self.signals.from_spice_name('cm_adj<2>').spice_pin, 1)
-            #self.debug(tester, self.signals.from_spice_name('cm_adj<3>').spice_pin, 1)
-            #self.debug(tester, self.signals.from_spice_name('vbias').spice_pin, 1)
+            debug_time = 500e-9
+            #self.debug(tester, self.signals.input, debug_time)
+            self.debug(tester, self.signals.output[0], debug_time)
+            self.debug(tester, self.signals.input[0], debug_time)
+            #self.debug(tester, self.signals.input[0], debug_time)
+            #self.debug(tester, self.signals.input[1], debug_time)
+            #self.debug(tester, self.signals.from_spice_name('cm_adj<0>').spice_pin, debug_time)
+            #self.debug(tester, self.signals.from_spice_name('cm_adj<1>').spice_pin, debug_time)
+            #self.debug(tester, self.signals.from_spice_name('cm_adj<2>').spice_pin, debug_time)
+            #self.debug(tester, self.signals.from_spice_name('cm_adj<3>').spice_pin, debug_time)
+            #self.debug(tester, self.signals.from_spice_name('vbias').spice_pin, debug_time)
             input = self.signals.input
             tester.poke(input, values[input])
             wait_time = float(self.extras['approx_settling_time'])*2
@@ -172,6 +179,100 @@ class AmplifierTemplate(TemplateMaster):
                        'input_abs': np.abs(input)}
             return results
 
+    class DynamicTFTest(TemplateMaster.Test):
+        NP = 2
+        NZ = 1
+        parameter_algebra = {
+            **{f'numerator{i}': {f'const_numerator{i}': '1'} for i in range(1, NZ+1)},
+            **{f'denominator{i}': {f'const_denominator{i}': '1'} for i in range(1, NP+1)},
+        }
+        required_info = {
+            'approx_settling_time': 'Approximate time it takes for amp to settle within 99% (s)'
+        }
+        num_samples = 100
+
+        def input_domain(self):
+            max_step = 0.5
+            input = self.signals.from_template_name('input')
+            if isinstance(input, SignalArray):
+                # vectored in
+                values = [x.value for x in input]
+                step_sizes = [((v[1]-v[0])*max_step, v[1]-v[0]) for v in values]
+                size = [create_input_domain_signal(f'step_size[{i}]',
+                                                   step_size)
+                        for i, step_size in enumerate(step_sizes)]
+                pos = [create_input_domain_signal(f'step_pos[{i}]', (0, 1))
+                       for i in range(len(step_sizes))]
+                return size + pos
+            else:
+                vmin, vmax = input.value
+                step_size = create_input_domain_signal('step_size',
+                                                       ((vmax-vmin)*max_step, vmax-vmin))
+                step_pos = create_input_domain_signal('step_pos', (0, 1))
+                return [step_size, step_pos]
+
+        def testbench(self, tester, values):
+            wait_time = float(self.extras['approx_settling_time'])*2
+            #self.debug(tester, self.ports.inp, 1)
+            #self.debug(tester, self.ports.inn, 1)
+            #self.debug(tester, self.ports.outp, 1)
+            #self.debug(tester, self.ports.outn, 1)
+            #self.debug(tester, self.signals.from_spice_name('v_fz').spice_pin, 1)
+            self.debug(tester, self.signals.input, 1)
+            self.debug(tester, self.signals.output, 1)
+
+            # settle from changes to optional inputs
+            #tester.delay(wait_time * 1.0)
+
+
+            if isinstance(self.signals.input, SignalArray):
+                ranges = [s.value for s in self.signals.input]
+                vmin = np.array([r[0] for r in ranges])
+                vmax = np.array([r[1] for r in ranges])
+            else:
+                vmin, vmax = self.signals.input.value
+            step_start = vmin + ((vmax-vmin) - values['step_size']) * values['step_pos']
+            step_end = step_start + values['step_size']
+
+            tester.poke(self.signals.input, step_start)
+
+            # let everything settle before the step
+            tester.delay(wait_time*2)
+
+            tester.poke(self.signals.input, step_end)
+            read = tester.get_value(self.signals.output, params=
+            {'style':'block', 'duration': wait_time}
+                                    )
+
+            # we wait a tiny bit extra so we're not messed up by the next edge
+            tester.delay(wait_time * 1.1)
+
+            return [read]
+
+
+        def analysis(self, reads):
+            out = reads[0].value
+            t = out[0]
+            v = out[1] - out[1][0]
+
+            ps, zs = extract_pzs(self.NP, self.NZ, t, v)
+
+            den_full = np.poly(ps)
+            num_full = np.poly(zs)
+
+            den = np.real(den_full[1:])
+            num = np.real(num_full[1:])
+
+            poles = {f'denominator{i+1}': c for i, c in enumerate(den)}
+            zeros = {f'numerator{i+1}': c for i, c in enumerate(num)}
+            return {**poles, **zeros}
+
+        def post_regression(self, regression_models, regression_dataframe):
+            print()
+            return {}
+
+
+
     class DynamicTest(TemplateMaster.Test):
         NP = 2
         NZ = 1
@@ -256,10 +357,14 @@ class AmplifierTemplate(TemplateMaster):
             zeros = {f'z{i+1}': z for i, z in enumerate(zs)}
             return {**poles, **zeros}
 
+        def post_regression(self, regression_models, regression_dataframe):
+            print()
+            return {}
+
 
     tests = [
-        #DCTest,
-        DynamicTest,
+        DCTest,
+        DynamicTFTest,
         #CubicCompression,
         #AbsoluteValue,
     ]

@@ -139,7 +139,7 @@ def parse_config(circuit_config_dict):
     # now create proxy signals
     PROXY_SIGNAL_TAG = 'this_is_a_proxy_signal'
     if 'proxy_signals' in circuit_config_dict:
-        test = circuit_config_dict['proxy_signals']
+        test = circuit_config_dict.get('proxy_signals', {})
         for name, value_dict in test.items():
             assert name not in signal_info_by_cname, f'Duplicate name "{name}"'
             # list is [info_dict, circuit_name, template_name]

@@ -7,8 +7,8 @@ from .temp_channel_data_generator import ChannelUtil
 from .tester import Tester
 from .regression import Regression
 from .template_master import TemplateMaster
-from .sampler import Sampler
 from .plot_helper import PlotHelper
+from .sampler import Sampler
 from .templates import *
 from .create_testbench import Testbench
 from .dump_yaml import dummy_dump

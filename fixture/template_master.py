@@ -6,7 +6,7 @@ from fixture.signals import SignalManager, SignalArray, SignalOut, SignalIn
 from fixture.plot_helper import PlotHelper
 
 class TemplateMaster():
-    debug = False
+    debug = True
 
     class Ports:
         def __init__(self, signal_manager):
@@ -304,7 +304,11 @@ class TemplateMaster():
                 self.debug_dict[signal] = r
 
         def debug_plot(self):
-            import matplotlib.pyplot as plt
+            #import matplotlib.pyplot as plt
+            import matplotlib
+            matplotlib.use('Agg')
+            plt = matplotlib.pyplot
+
             plt.figure()
             leg = []
             bump = 0
@@ -435,10 +439,14 @@ class TemplateMaster():
 
                     #PlotHelper.plot_regression(regression, test.parameter_algebra_vectored, regression.regression_dataframe)
                     #PlotHelper.plot_optional_effects(test, regression.regression_dataframe, regression.results)
-                    ph = PlotHelper(regression.regression_dataframe,
+                    mode_prefix = '' if mode == tuple() else f'mode_{mode}_'
+                    ph = PlotHelper(test,
+                                    regression.regression_dataframe,
                                     test.parameter_algebra_vectored,
-                                    regression.results)
+                                    regression.results,
+                                    mode_prefix)
                     ph.plot_regression()
+                    ph.plot_optional_effects()
 
                     rr = dict(regression.results)
 

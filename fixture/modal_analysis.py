@@ -1,9 +1,16 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize
 
+#import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
+plt = matplotlib.pyplot
+from fixture import PlotHelper
+PLOT_COUNTER = 0
+
+
 class ModalAnalysis:
-    debug = False
+    debug = True
 
     def __init__(self, t, h_step):
         self.scale = t[-1]/2.0
@@ -44,17 +51,24 @@ class ModalAnalysis:
         return t, h_step
 
     def debug_plot(self, ps, NZ):
+        global PLOT_COUNTER
+        if PLOT_COUNTER == 20:
+            return
         zs, dc = self.get_zeros(ps, NZ)
         h_step_est = self.step_response_from_pz(ps, zs, dc)
         print('Plotting ps, zs, dc', ps, zs, dc)
         t = self.t*self.scale
+        END = len(t)//3
 
         plt.figure()
-        plt.plot(t, self.h_step, '--+')
-        plt.plot(t, h_step_est, '-+')
+        plt.plot(t[:END], self.h_step[:END], 'o')
+        plt.plot(t[:END], h_step_est[:END], '+')
         plt.legend(['Step response', 'Fit'])
         plt.grid()
-        plt.show()
+        #plt.show()
+        ps_txt = ''#'_'.join(f'{abs(p/self.scale):.1f}' for p in ps).replace('.', 'p')
+        PlotHelper.save_current_plot(f'step_debug_{PLOT_COUNTER}_{ps_txt}')
+        PLOT_COUNTER += 1
 
 
     def get_zeros(self, poles, NZ):
@@ -165,19 +179,20 @@ class ModalAnalysis:
                 return float('inf')
             return err
 
-        max_freq_guess = 2.0/self.t[-1]
+        max_freq_guess = 4.0/self.t[-1]
         num_poles_guess = NP - len(known_poles)
         poles_guess = np.linspace(-max_freq_guess/num_poles_guess,
                                   -max_freq_guess,
                                   num_poles_guess)
 
-        poles_guess = np.array([-2e9, -20e9])*self.scale
+        #poles_guess = np.array([-2e9, -20e9])*self.scale
+        #poles_guess = np.array([-15+20j, -15-20j, -70])
 
-        if self.debug:
-            print('guessing ps', poles_guess)
-            self.debug_plot(np.concatenate((known_poles, poles_guess)), NZ)
+        #if self.debug:
+        #    print('guessing ps', poles_guess)
+        #    self.debug_plot(np.concatenate((known_poles, poles_guess)), NZ)
         coefs_guess = self.coefs_from_poles(poles_guess)
-        minimizer = scipy.optimize.minimize(err_minimizer, coefs_guess)
+        minimizer = scipy.optimize.minimize(err_minimizer, coefs_guess, tol=1e-10, options={'gtol':1e-10})
         coefs_opt = minimizer.x
         poles_opt = np.concatenate((known_poles, self.poles_from_coefs(coefs_opt)))
 

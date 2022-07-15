@@ -61,7 +61,8 @@ def extract_pzs(nps, nzs, x, y):
     #ps, zs = ma.optimize(x_trimmed, y_trimmed, ps, zs)
 
 
-    ps, zs = np.abs(ps), np.abs(zs)
+    #ps, zs = np.abs(ps), np.abs(zs)
+    ps, zs = -1*ps, -1*zs
 
     #bode_plot(ps, zs)
 

@@ -81,11 +81,13 @@ class Regression:
 
     @staticmethod
     def vector_parameter_name_output(name, vec_i, signal):
-        return f'{name}_outvec[{vec_i}]'
+        #return f'{name}_outvec[{vec_i}]'
+        return f'{name}_{signal.friendly_name()}'
 
     @staticmethod
     def vector_parameter_name_input(name, vec_i, signal):
-        return f'{name}_invec[{vec_i}]'
+        #return f'{name}_invec[{vec_i}]'
+        return f'{name}_{signal.friendly_name()}'
 
     @staticmethod
     def vector_input_name(name, vec_i):
