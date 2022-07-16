@@ -1,6 +1,8 @@
+import itertools
 from collections import defaultdict
 from functools import reduce
 
+import pandas.core.computation.ops
 import statsmodels.formula.api as smf
 import pandas
 from itertools import combinations, product
@@ -8,7 +10,7 @@ import magma
 import re
 from ast import literal_eval
 
-from fixture.signals import SignalArray
+from fixture.signals import SignalArray, SignalIn, CenteredSignalIn
 import operator
 
 
@@ -171,13 +173,61 @@ class Regression:
         # look for optional outputs
         # don't edit the parameter_algebra directly, could persist to another
         # call to fixture.run
-        pa = test.parameter_algebra_vectored.copy()
-        for s in test.signals.auto_measure():
-            if s.spice_name in data.columns:
-                # add parameter_algebra entry
-                pa[s.spice_name] = {f'{s.spice_name}_meas': '1'}
-            else:
-                assert False, f'Where to get value for auto_measure {s}?'
+        pa = {lhs: rhs.copy() for lhs, rhs in test.parameter_algebra_vectored.items()}
+        # now handled in template_master
+        #for s in test.signals.auto_measure():
+        #    if s.spice_name in data.columns:
+        #        # add parameter_algebra entry
+        #        pa[s.spice_name] = {f'{s.spice_name}_meas': '1'}
+        #    else:
+        #        assert False, f'Where to get value for auto_measure {s}?'
+
+
+        #def get_center(s):
+        #    # for now, just do real types with range
+        #    if (isinstance(s, SignalIn)
+        #        and isinstance(s.value, tuple)
+        #        and len(s.value) == 2):
+        #        nom = sum(s.value) / 2
+        #        return nom
+        #    else:
+        #        return 0
+        def get_term_centering(term):
+            # This was an attempt to keep track of the effects of centering on regression results
+            # I decided that it's too complicated to track the effects of these shifts, and
+            # we should just do regression twice instead
+            # One issue is that it's possible (unlikely?) for the shifts to introduce new terms,
+            # and in those cases the two runs of results will have different predictions
+            # -----
+            # for the term (cm_in,) the centering is just cm_in_NOM
+            # for the term (diff_in, cm_in, cm_in) it's:
+            # 2*diff_in*cm_in * cm_in_NOM  +  diff_in * cm_in_NOM^2
+            # So we need to call out which terms need to be adjusted, and coefficients:
+            # {(): cm_in_NOM}
+            # {(diff_in, cm_in): 2*cm_in_NOM, (diff_in,): cm_in_NOM^2}
+            pass
+
+        #to_center = {}
+        #for lhs, rhs in test.parameter_algebra_vectored.items():
+        #    for param, term:
+
+
+        center_mapping = {}
+        for lhs, rhs in pa.items():
+            for param, term in rhs.items():
+                for factor in term:
+                    if isinstance(factor, CenteredSignalIn):
+                        # create a column for this centered thing
+                        if factor.ref in center_mapping:
+                            continue
+                        orig_column = data[factor.ref]
+                        nom = sum(factor.ref.value) / 2
+                        new_column = orig_column - nom
+                        #new_name = self.regression_name(factor)
+                        #data[factor] = new_column
+                        data.insert(len(data.columns), factor, new_column)
+                        center_mapping[factor.ref] = factor
+
 
         self.consts = {}
 
@@ -205,16 +255,33 @@ class Regression:
             for name, term, param, opt in rhs_info:
                 assert name not in self.info_mapping, f'Duplicate term: {name}'
                 self.info_mapping[name] = (term, param, opt)
-                column = reduce(operator.mul,
-                                [data[x] for x in term],
-                                data[self.one_literal])
+                try:
+                    column = reduce(operator.mul,
+                                    [data[x] for x in term],
+                                    data[self.one_literal])
+                except KeyError as e:
+                    missing = str(e.args[0])
+                    keys = [str(k) for k in data]
+                    raise KeyError(f'Could not find {missing} in data, available keys are {keys}')
                 regression_data_dict[name] = column
+
+                # also put term elements into the dict, useful for plotting
+                if len(term) > 1:
+                    for term_element in term:
+                        element_name = self.regression_name(term_element)
+                        regression_data_dict[element_name] = data[term_element]
+
+                # also put centered elements into the dict; useful for plotting
+                for orig in center_mapping:
+                    regression_data_dict[self.regression_name(orig)] = data[orig]
+
             # TODO if every instance of 'vdd' is in a product term, should we
             # still add 'vdd' to the dataframe by itself?
             regression_data = pandas.DataFrame(regression_data_dict)
 
 
             df_row_mask = ~ regression_data[lhs_clean].isnull()
+            # TODO when I blank out entries in the data spreadsheet they appear as nan, but those rows aren't filtered. Is that bad?
             df_filtered = regression_data[df_row_mask]
 
             formula = self.make_formula(lhs_clean, [x[0] for x in rhs_info])

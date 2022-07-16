@@ -2,7 +2,7 @@ import fault
 from abc import ABC, abstractmethod
 import fixture
 from fixture import Tester, Regression
-from fixture.signals import SignalManager, SignalArray, SignalOut, SignalIn
+from fixture.signals import SignalManager, SignalArray, SignalOut, SignalIn, CenteredSignalIn
 from fixture.plot_helper import PlotHelper
 
 class TemplateMaster():
@@ -66,7 +66,7 @@ class TemplateMaster():
                         test.signals.add(s)
                 else:
                     assert False, 'input_domain must return SignalIn objects'
-            test._expand_parameter_algebra()
+            test._expand_parameter_algebra2()
 
     def required_port_info(self):
         # TODO: this should give more info than just the names of the ports
@@ -102,13 +102,13 @@ class TemplateMaster():
             # I think it was to allow the algebra to be added later programatically?
             assert hasattr(self, 'parameter_algebra'), f'{self} should specify parameter_algebra!'
 
-
         def _expand_parameter_algebra(self):
             # Edit self.parameter_algebra to do many things:
             # Interpret algebra in the rhs strings
             # Replace strings with references to Signals
             # Expand input pins that are buses
             # Duplicate equations for vectored outputs
+            # Replace input signals with centered versions where necessary
             # Put everything in "sum of products" form, i.e. dict of tuples
             #self.parameter_algebra_vectored = {k: v.copy() for k, v in self.parameter_algebra.items()}
             pa_vec = {}
@@ -203,6 +203,32 @@ class TemplateMaster():
                     for a in to_add:
                         pa_vec[lhs][a] = to_add[a]
 
+            # center inputs
+            self.center_mapping = {}
+            def center(s):
+                if (isinstance(s, SignalIn)
+                        and isinstance(s.value, tuple)
+                        and len(s.value) == 2):
+                    if s in self.center_mapping:
+                        # already have a ref for this
+                        return self.center_mapping[s]
+                    nom = sum(s.value) / 2
+                    if nom == 0:
+                        # no need to center
+                        return s
+
+                    # we need to create a new CenteredSignalIn
+                    csi = CenteredSignalIn(s)
+                    self.center_mapping[s] = csi
+                    return csi
+
+                else:
+                    return s
+            for lhs, rhs in pa_vec.items():
+                for param in rhs:
+                    expr = rhs[param]
+                    rhs[param] = tuple(center(s) for s in expr)
+
             # vector outputs
             vectored_outputs = self.template.signals.vectored_out()
             if len(vectored_outputs) > 0:
@@ -218,6 +244,190 @@ class TemplateMaster():
                         rhs_renamed = {Regression.vector_parameter_name_output(param, vec_i, component): factors
                                        for param, factors in rhs.items()}
                         pa_vec[lhs_vec] = rhs_renamed
+
+            # optional outputs
+            for s in self.signals.auto_measure():
+                pa_vec[s.spice_name] = {f'{s.spice_name}_meas': (Regression.one_literal,)}
+
+            self.parameter_algebra_vectored = pa_vec
+
+        def _expand_parameter_algebra2(self):
+            # Edit self.parameter_algebra to do many things:
+            # Interpret algebra in the rhs strings
+            # Replace strings with references to Signals
+            # Expand input pins that are buses
+            # Duplicate equations for vectored outputs
+            # Replace input signals with centered versions where necessary
+            # Put everything in "sum of products" form, i.e. dict of tuples
+            #self.parameter_algebra_vectored = {k: v.copy() for k, v in self.parameter_algebra.items()}
+            pa_vec = {}
+            ones = ['1', Regression.one_literal]
+
+            def read_algebra(algebra_string):
+                # first, multiplication
+                s = algebra_string.replace('**', '^')
+                factors = s.split('*')
+                ans = []
+                for f in factors:
+                    # now, powers
+                    power_split = f.split('^')
+                    if len(power_split) == 1:
+                        ans.append(f)
+                    elif len(power_split) == 2:
+                        power = [power_split[0]]*int(power_split[1])
+                        ans += power
+                    else:
+                        assert False, f'Double power in {algebra_string}?'
+                return tuple(ans)
+
+
+            # Copy and Interpret algebra in string
+            for lhs, rhs in self.parameter_algebra.items():
+                pa_vec[lhs] = {}
+                for param, term in rhs.items():
+                    if isinstance(term, str):
+                        term_exp = read_algebra(term)
+                        pa_vec[lhs][param] = term_exp
+                    else:
+                        pa_vec[lhs][param] = term
+
+            def convert_string(string):
+                # string to object
+                if string in ones:
+                    return Regression.one_literal
+                try:
+                    factor_obj = self.signals.from_template_name(string)
+                    return factor_obj
+
+                except KeyError:
+                    # this term is not a template input
+                    assert string not in self.template.required_ports, 'Unexpected case'
+                    return string
+
+
+            # convert to objects
+            for lhs, rhs in pa_vec.items():
+                for param, term in rhs.items():
+                    # if the top level was a string, we still want it to be a
+                    if isinstance(term, tuple):
+                        term_objs = tuple(convert_string(s) for s in term)
+                        pa_vec[lhs][param] = term_objs
+                    else:
+                        term_obj = convert_string(term)
+                        pa_vec[lhs][param] = (term_obj,)
+
+
+            # clean self.vector_mapping
+            # TODO I think this can be done in Test.__init__, with better error handling, etc.
+            vector_mapping_sig = {}
+            if not hasattr(self, 'vector_mapping'):
+                self.vector_mapping = {}
+            for child_thing, parent_signals_str in self.vector_mapping.items():
+                # child_thing can be a signal or a string used as a lhs
+                parent_signals = [self.signals.from_template_name(name) for name in parent_signals_str]
+                vector_mapping_sig[child_thing] = parent_signals
+
+            # vector parameters (usually due to vectored inputs)
+            # we do this in multiple passes in case there are products
+            # of multiple vectored objects
+            # first collect things to vector
+            vectored_inputs = {}
+            for lhs, rhs in pa_vec.items():
+                for param, term in rhs.items():
+                    for component in term:
+                        vec_version = [component]
+
+                        # when the component itself is vectored
+                        if isinstance(component, SignalArray):
+                            # vector this one
+                            vec_version = list(component)
+
+                        # when vector_mapping links the component to a vectored parent_input
+                        for parent_input in vector_mapping_sig.get(component, []):
+                            if isinstance(parent_input, SignalArray):
+                                new_vec_version = []
+                                for parent_i, parent_comp in enumerate(parent_input):
+                                    rename_fun = (Regression.vector_parameter_name_input if isinstance(parent_comp, SignalIn)
+                                                  else Regression.vector_parameter_name_output())
+                                    parent_comp_vec = [rename_fun(comp, parent_i, parent_comp) for comp in vec_version]
+                                    new_vec_version += parent_comp_vec
+                                vec_version = new_vec_version
+
+                        # if neither of those cases happened, then the length will still be 1
+                        if len(vec_version) > 1:
+                            vectored_inputs[component] = vec_version
+
+            # now vector them one at a time
+            for vectored_input, components in vectored_inputs.items():
+                for lhs, rhs in pa_vec.items():
+                    to_remove = []
+                    to_add = {}
+                    for param, term in rhs.items():
+                        if vectored_input in term:
+                            to_remove.append(param)
+                            for vec_i, sub in enumerate(components):
+                                term_subbed = tuple((sub if x == vectored_input else x)
+                                                    for x in term)
+                                param_name = Regression.vector_parameter_name_input(param, vec_i, sub)
+                                # TODO is template_name the best choice here?
+                                to_add[param_name] = term_subbed
+                    for r in to_remove:
+                        del pa_vec[lhs][r]
+                    for a in to_add:
+                        pa_vec[lhs][a] = to_add[a]
+
+            # vector equations (usually due to vectored outputs, but can also happen when the LHS depends on
+            # a vectored input)
+            for lhs in list(pa_vec):
+                if lhs in vector_mapping_sig:
+                    rhs = pa_vec[lhs]
+                    del pa_vec[lhs]
+                    eqs = [(lhs, rhs)]
+                    for vectored_output in vector_mapping_sig[lhs]:
+                        new_eqs = []
+                        for vec_i, component in enumerate(vectored_output):
+                            for lhs_j, rhs_j in eqs:
+                                lhs_j_vec = Regression.vector_parameter_name_output(lhs_j, vec_i, component)
+                                # we do need to rename params so they aren't confused
+                                # in PlotHelper
+                                rhs_j_renamed = {Regression.vector_parameter_name_output(param, vec_i, component): factors
+                                               for param, factors in rhs_j.items()}
+                                new_eqs.append((lhs_j_vec, rhs_j_renamed))
+                        eqs = new_eqs
+
+                    for new_lhs, new_rhs in eqs:
+                        pa_vec[new_lhs] = new_rhs
+
+            # center inputs
+            self.center_mapping = {}
+            def center(s):
+                if (isinstance(s, SignalIn)
+                        and isinstance(s.value, tuple)
+                        and len(s.value) == 2):
+                    if s in self.center_mapping:
+                        # already have a ref for this
+                        return self.center_mapping[s]
+                    nom = sum(s.value) / 2
+                    if nom == 0:
+                        # no need to center
+                        return s
+
+                    # we need to create a new CenteredSignalIn
+                    csi = CenteredSignalIn(s)
+                    self.center_mapping[s] = csi
+                    return csi
+
+                else:
+                    return s
+            for lhs, rhs in pa_vec.items():
+                for param in rhs:
+                    expr = rhs[param]
+                    rhs[param] = tuple(center(s) for s in expr)
+
+
+            # optional outputs
+            for s in self.signals.auto_measure():
+                pa_vec[s.spice_name] = {f'{s.spice_name}_meas': (Regression.one_literal,)}
 
             self.parameter_algebra_vectored = pa_vec
 

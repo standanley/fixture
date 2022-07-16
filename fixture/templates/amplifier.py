@@ -24,6 +24,7 @@ class AmplifierTemplate(TemplateMaster):
             #               'dcgain_1': 'input',
             #               'dcgain_0': '1'}
         }
+        vector_mapping = {'amp_output': ['output']}
         num_samples = 300
 
         def input_domain(self):
@@ -51,7 +52,12 @@ class AmplifierTemplate(TemplateMaster):
             return tester.get_value(self.signals.output)
 
         def analysis(self, reads):
-            results = {'amp_output': reads.value}
+           #
+           # if isinstance(self.signals.input, SignalArray):
+           #     # we are vectored
+
+            results = {'amp_output': reads.value,
+                       'amp_output_copy': reads.value}
             return results
 
         def post_regression(self, regression_models, regression_dataframe):
@@ -156,7 +162,7 @@ class AmplifierTemplate(TemplateMaster):
                            'offset': '1'}
         }
         num_samples = 300
-        input_vector_mapping = {'input_abs': 'input'}
+        vector_mapping = {'input_abs': ['input']}
         out_vector = ['amp_output']
 
         def input_domain(self):

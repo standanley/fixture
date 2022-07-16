@@ -32,6 +32,19 @@ class SignalIn():
     def friendly_name(self):
         return self.template_name if self.spice_name is None else self.spice_name
 
+class CenteredSignalIn:
+    def __init__(self, ref):
+        self.ref = ref
+
+        def name(n):
+            return None if n is None else f'{n}_centered'
+        self.spice_name = name(ref.spice_name)
+        self.template_name = name(ref.template_name)
+
+    def __str__(self):
+        return f'<{str(self.template_name)} / {self.spice_name}>'
+
+
 class SignalOut():
     def __init__(self,
                  type_,

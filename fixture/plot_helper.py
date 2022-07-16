@@ -12,7 +12,7 @@ import statsmodels.formula.api as smf
 import pandas
 import numpy as np
 from fixture.regression import Regression
-from fixture.signals import SignalIn, SignalOut
+from fixture.signals import SignalIn, SignalOut, SignalArray, CenteredSignalIn
 from scipy.interpolate import griddata
 
 
@@ -192,10 +192,14 @@ class PlotHelper:
 
             # regression lhs vs. each input
 
-            optional = list(self.regression_results[lhs].values())[0].keys()
-            optional = [x for x in optional if x != Regression.one_literal]
+            #optional = list(self.regression_results[lhs].values())[0].keys()
+            #optional = [x for x in optional if x != Regression.one_literal]
+            optional = self.test.signals.optional_expr()
             inputs_and_opt = list(inputs) + optional
-            for input in inputs_and_opt:
+            def uncenter(s):
+                return s.ref if isinstance(s, CenteredSignalIn) else s
+            inputs_clean = [uncenter(s) for s in inputs_and_opt]
+            for input in inputs_clean:
                 x = self.get_column(input)
                 x_nonan = x[~np.isnan(x)]
 
@@ -254,7 +258,7 @@ class PlotHelper:
 
 
 
-            for input_pair in itertools.combinations(inputs_and_opt, 2):
+            for input_pair in itertools.combinations(inputs_clean, 2):
                 input1, input2 = sorted(input_pair, key=Regression.regression_name)
                 x1 = self.get_column(input1)
                 x2 = self.get_column(input2)

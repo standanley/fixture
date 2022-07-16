@@ -224,6 +224,13 @@ def create_interface(template, collateral_dict, params):
     interface['module_name'] = 'placeholder'
     interface['template_name'] = 'placeholder'
     interface['description'] = 'placeholder'
+
+    for param, info in collateral_dict['modelparam'].items():
+        if 'get_nominal_from_signal' in info:
+            signal = template.signals.from_template_name(info['get_nominal_from_signal'])
+            info['value'] = sum(signal.value) / 2
+
+
     interface['modelparam'] = collateral_dict['modelparam']
 
     cfg = {}
