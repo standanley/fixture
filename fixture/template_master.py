@@ -48,7 +48,7 @@ class TemplateMaster():
 
         assert hasattr(self, 'tests')
         # replace test classes with instance
-        self.tests = [T(self) for T in self.tests]
+        self.tests = [T(self) for T in self.tests_all]
 
         for test in self.tests:
             test.signals = self.signals.copy()
@@ -528,28 +528,45 @@ class TemplateMaster():
                 bump += 0.0 # useful for separating clock signals
             plt.grid()
             plt.legend(leg)
-            plt.show()
+            #plt.show()
+            PlotHelper.save_current_plot(f'{self}_debug.png')
+            #plt.savefig(f'{self}_debug.png', dpi=300)
+            #plt.clf()
+
 
         def __str__(self):
             s = repr(self)
             return s.split(' ')[0].split('.')[-1]
 
 
-    def go(self, checkpoint, checkpoint_start=0):
+    def go(self, checkpoint, checkpoint_controller):
         '''
         Actually do the entire analysis of the circuit
         '''
 
-        checkpoint_controller = {str(test):
-                                    {
-                                        'choose_inputs': True,
-                                        'run_sim': True,
-                                        'run_analysis': True,
-                                        'run_post_process': True,
-                                        'run_regression': True,
-                                        'run_post_regression': 'save'
-                                    }
-                                 for test in self.tests}
+        #RUN_SIMULATION = True
+        #if RUN_SIMULATION:
+        #    checkpoint_controller = {str(test):
+        #        {
+        #            'choose_inputs': True,
+        #            'run_sim': True,
+        #            'run_analysis': True,
+        #            'run_post_process': True,
+        #            'run_regression': True,
+        #            'run_post_regression': 'save'
+        #        }
+        #        for test in self.tests}
+        #else:
+        #    checkpoint_controller = {str(test):
+        #        {
+        #            'choose_inputs': False,
+        #            'run_sim': False,
+        #            'run_analysis': False,
+        #            'run_post_process': False,
+        #            'run_regression': True,
+        #            'run_post_regression': 'save'
+        #        }
+        #        for test in self.tests}
 
         #checkpoint_controller = {
         #    'StaticNonlinearityTest': {
@@ -597,8 +614,7 @@ class TemplateMaster():
         #}
 
         params_by_mode_all = {}
-        for test in self.tests:
-            controller = checkpoint_controller[str(test)]
+        for test, controller in checkpoint_controller.items():
 
             if controller['choose_inputs']:
                 test_vectors = fixture.Sampler.get_samples(

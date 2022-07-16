@@ -62,7 +62,22 @@ def _run(circuit_config_dict):
 
 
 
-    params_by_mode = t.go(checkpoint)
+    all_checkpionts = {
+        'choose_inputs': True,
+        'run_sim': True,
+        'run_analysis': True,
+        'run_post_process': True,
+        'run_regression': True,
+    }
+
+    if 'checkpoint_controller' in circuit_config_dict:
+        cc_str = circuit_config_dict['checkpoint_controller']
+        test_mapping = {str(test): test for test in t.tests}
+        checkpoint_controller = {test_mapping[test_name]: x for test_name, x in cc_str.items()}
+    else:
+        checkpoint_controller = {test: all_checkpionts for test in t.tests}
+
+    params_by_mode = t.go(checkpoint, checkpoint_controller)
 
     for mode, results in params_by_mode.items():
         print('For mode', mode)

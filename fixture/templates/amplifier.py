@@ -368,6 +368,14 @@ class AmplifierTemplate(TemplateMaster):
             return {}
 
 
+    tests_all = [
+        DCTest,
+        DynamicTFTest,
+        ManualGainTest
+        #CubicCompression,
+        #AbsoluteValue,
+    ]
+
     tests = [
         DCTest,
         DynamicTFTest,
