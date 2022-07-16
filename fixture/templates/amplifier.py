@@ -107,52 +107,73 @@ class AmplifierTemplate(TemplateMaster):
 
 
             return {}
-    #@debug
-    class CubicCompression(TemplateMaster.Test):
+
+
+    class ManualGainTest(TemplateMaster.Test):
         parameter_algebra = {
-            'amp_output': {'dcgainc': 'input**3',
-                           'dcgainq': 'input**2',
-                           'dcgain': 'input',
-                           'offset': '1'}
+            'dcgain_spec': {'dcgain': '1'},
+            'offset_spec': {'offset': '1'}
         }
-        num_samples = 300
+        vector_mapping = {'dcgain_spec': ['input', 'output'],
+                          'offset_spec': ['output']}
+        num_samples = None # not implemented for manual Test
 
         def input_domain(self):
-            # could also use fixture.RealIn(self.input.limits, 'my_name')
-            return [self.signals.from_template_name('input')]
+            return []
+            #assert False, 'Not implemented for manual Test'
 
         def testbench(self, tester, values):
-            self.debug(tester, self.signals.input, 1)
-            self.debug(tester, self.signals.output, 1)
-            #self.debug(tester, self.signals.from_spice_name('cm_adj<0>').spice_pin, 1)
-            #self.debug(tester, self.signals.from_spice_name('cm_adj<1>').spice_pin, 1)
-            #self.debug(tester, self.signals.from_spice_name('cm_adj<2>').spice_pin, 1)
-            #self.debug(tester, self.signals.from_spice_name('cm_adj<3>').spice_pin, 1)
-            #self.debug(tester, self.signals.from_spice_name('vbias').spice_pin, 1)
-            input = self.signals.input
-            tester.poke(input, values[input])
-            wait_time = float(self.extras['approx_settling_time'])*2
-            tester.delay(wait_time)
-            return tester.get_value(self.signals.output)
+            assert False, 'Not implemented for manual Test'
 
         def analysis(self, reads):
-            results = {'amp_output': reads.value}
-            return results
+            assert False, 'Not implemented for manual Test'
 
-        def post_regression(self, results, data):
-            return {}
-            inputs = data['input']
-            outputs = data['amp_output']
-            ph = PlotHelper()
+    #@debug
+    class CubicCompression(DCTest):
+        parameter_algebra = {
+            'amp_output': {'dcgain_3': 'input**3',
+                           'dcgain_2': 'input**2',
+                           'dcgain_1': 'input',
+                           'dcgain_0': '1'}
+        }
+        num_samples = 100
 
-            plt.plot(inputs, outputs, '+')
+        #def input_domain(self):
+        #    # could also use fixture.RealIn(self.input.limits, 'my_name')
+        #    return [self.signals.from_template_name('input')]
 
-            ph.save_current_plot('amp_test')
+        #def testbench(self, tester, values):
+        #    self.debug(tester, self.signals.input, 1)
+        #    self.debug(tester, self.signals.output, 1)
+        #    #self.debug(tester, self.signals.from_spice_name('cm_adj<0>').spice_pin, 1)
+        #    #self.debug(tester, self.signals.from_spice_name('cm_adj<1>').spice_pin, 1)
+        #    #self.debug(tester, self.signals.from_spice_name('cm_adj<2>').spice_pin, 1)
+        #    #self.debug(tester, self.signals.from_spice_name('cm_adj<3>').spice_pin, 1)
+        #    #self.debug(tester, self.signals.from_spice_name('vbias').spice_pin, 1)
+        #    input = self.signals.input
+        #    tester.poke(input, values[input])
+        #    wait_time = float(self.extras['approx_settling_time'])*2
+        #    tester.delay(wait_time)
+        #    return tester.get_value(self.signals.output)
 
-            plt.plot(inputs, -outputs + 5, 'x')
-            ph.save_current_plot('amp_test_2')
+        #def analysis(self, reads):
+        #    results = {'amp_output': reads.value}
+        #    return results
 
-            return {}
+        #def post_regression(self, results, data):
+        #    return {}
+        #    inputs = data['input']
+        #    outputs = data['amp_output']
+        #    ph = PlotHelper()
+
+        #    plt.plot(inputs, outputs, '+')
+
+        #    ph.save_current_plot('amp_test')
+
+        #    plt.plot(inputs, -outputs + 5, 'x')
+        #    ph.save_current_plot('amp_test_2')
+
+        #    return {}
 
 
     class AbsoluteValue(TemplateMaster.Test):
