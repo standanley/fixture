@@ -62,6 +62,16 @@ class PlotHelper:
             return reduce(operator.mul,
                           [self.get_column(elem, overrides) for elem in target],
                           1)
+        if isinstance(target, SignalArray) and target.info['datatype'] == 'binary_analog':
+            regression_name = Regression.regression_name(target)
+            # TODO issues if regression_name(b) is in overrides?
+            if regression_name in self.data and all(b not in overrides for b in target):
+                # no need to build the decimal version here if it's already in the data
+                return self.data[regression_name]
+            # I think we only get here if the user manually enters the bits but not decimal in the spreadsheet
+            elements = [self.get_column(b, overrides) for b in target]
+            result = target.get_decimal_value(elements)
+            return result
 
         # now we start breaking it up by the 6 cases
         if target in self.parameter_algebra:
@@ -212,9 +222,19 @@ class PlotHelper:
                 for opt in optional:
                     if opt == input:
                         continue
-                    nominal = np.average(
-                        self.data[Regression.regression_name(opt)])
-                    nom_dict[opt] = nominal
+
+                    # could be in df as decimal, binary, or both (or neither, I guess)
+                    regression_name = Regression.regression_name(opt)
+                    if regression_name in self.data:
+                        nominal = np.average(self.data[regression_name])
+                        nom_dict[opt] = nominal
+
+                    opt_flat = opt.flat if isinstance(opt, SignalArray) else [opt]
+                    for opt_single in opt_flat:
+                        regression_name = Regression.regression_name(opt_single)
+                        if regression_name in self.data:
+                            nominal = np.average(self.data[regression_name])
+                            nom_dict[opt_single] = nominal
                 if len(nom_dict) != 0:
 
                     x_adj = self.get_column(input, overrides=nom_dict)
@@ -320,14 +340,42 @@ class PlotHelper:
         for ta in self.test.signals.optional_true_analog():
             assert isinstance(ta.value, tuple) and len(ta.value) == 2
             nominal = sum(ta.value) / 2
-            nominal_data_dict[regression_name(ta)] = [nominal] * N
-        ba_buses = test.signals.optional_quantized_analog()
+            nominal_data_dict[ta] = nominal
+        ba_buses = self.test.signals.optional_quantized_analog()
         ba_bits = [bit for ba_bus in ba_buses for bit in ba_bus]
         for ba in ba_bits:
-            nominal_data_dict[regression_name(ba)] = [0.5] * N
-        nominal_data_dict[Regression.one_literal] = [1]*N
-        nominal_data = pandas.DataFrame(nominal_data_dict)
+            nominal_data_dict[ba] = 0.5
+        nominal_data_dict[Regression.one_literal] = 1
+        #nominal_data = pandas.DataFrame(nominal_data_dict)
+        nominal_data = nominal_data_dict
 
+        for opt in self.test.signals.optional_quantized_analog():
+            assert opt.info['datatype'] == 'binary_analog'
+            codes = np.array(list(itertools.product(range(2), repeat=len(list(opt)))))
+            sweep_data = {b: xs for b, xs in zip(opt, codes.T)}
+            model_data = self.modify_data(nominal_data, sweep_data)
+            model_data_dec = opt.get_decimal_value(codes.T)
+            print(model_data)
+
+            print('TODO fix plotting of optional outputs')
+            for lhs, rhs in list(self.regression_results.items())[:2]:
+                for parameter, fit in rhs.items():
+                    if parameter == 'default_factory':
+                        # unfortunately comes up as a key in a defaultdict
+                        continue
+                    parameter_fit = self.get_column(parameter, overrides=model_data)
+                    parameter_measured = self.get_column(parameter, overrides={}, param_meas=True)
+                    opt_measured_dec = (self.data[Regression.regression_name(opt)] if Regression.regression_name(opt) in self.data
+                                        else opt.get_decimal_value(self.data[[regression_name(x) for x in opt]].T))
+                    plt.figure()
+                    plt.scatter(opt_measured_dec, parameter_measured, marker='o', s=4)
+                    plt.scatter(model_data_dec, parameter_fit, marker='+', s=4)
+                    plt.legend(['measured', 'modeled'])
+                    plt.xlabel(opt.friendly_name())
+                    plt.ylabel(str(parameter))
+                    plt.title(f'{parameter} vs. {opt.friendly_name()}, adjusted for nominal')
+                    plt.grid()
+                    self._save_current_plot(f'{parameter}_vs_{opt.friendly_name()}_adjfornominal')
 
         for opt in self.test.signals.optional_true_analog():
             assert isinstance(opt.value, tuple) and len(opt.value) == 2

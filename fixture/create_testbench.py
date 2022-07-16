@@ -39,6 +39,10 @@ class Testbench():
                 if not s.get_random:
                     assert isinstance(s.value, float) or isinstance(s.value, int), f'Unknown pin value for {s}'
                     self.tester.poke(s.spice_pin, s.value)
+            if isinstance(s, SignalArray) and s.auto_set and not s.get_random:
+                bin_value = s.get_binary_value(s.value)
+                for bit, val in zip(s, bin_value):
+                    self.tester.poke(bit.spice_pin, val)
 
     def set_digital_mode(self, mode, delay_time=0):
         true_digital = self.test.signals.true_digital()
@@ -274,6 +278,16 @@ class Testbench():
         results_analysis_vec = self.condense_results_analysis(results_analysis)
         num_modes = len(set(results_other['mode_id']))
         results_test_vectors = {k: np.concatenate([v]*num_modes) for k, v in self.test_vectors.items()}
+
+        # add additional rows to results_test_vectors to include the decimal value of binary buses
+        for s in self.test.signals.random_qa():
+            # possible to not be an array if bits are declared separately I think...
+            if isinstance(s, SignalArray):
+                results_binary = [results_test_vectors[b] for b in s]
+                results_decimal = s.get_decimal_value(results_binary)
+                results_test_vectors[s] = results_decimal
+
+
 
         results_comb = {**results_test_vectors,
                         **results_analysis_vec,

@@ -75,7 +75,7 @@ def parse_config(circuit_config_dict):
     io = []
     signal_info_by_cname = {}
     pins = circuit_config_dict['pin']
-    pin_params = ['datatype', 'direction', 'value', 'electricaltype', 'bus_type', 'first_one']
+    pin_params = ['datatype', 'direction', 'value', 'electricaltype', 'bus_type', 'first_one', 'break_binary_for_bits']
     digital_types = ['bit', 'binary_analog', 'true_digital']
     analog_types = ['real', 'analog']
     for name, p in pins.items():

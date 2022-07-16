@@ -443,6 +443,61 @@ class SignalArray:
     def map(self, fun):
         return np.vectorize(fun)(self.array)
 
+    def get_decimal_value(self, data):
+        assert self.info['datatype'] == 'binary_analog'
+        if isinstance(data, dict):
+            assert False, 'TODO'
+        else:
+            data = np.array(data)
+
+        if self.info['bus_type'] == 'binary' or self.info['bus_type'] == 'binary_exact':
+            # TODO I don't like making the assumption here, but it should only affect plots, not functionality
+            first_one = self.info.get('first_one', 'low')
+            assert first_one in ['low', 'high']
+            def to_dec(seq):
+                seq_ordered = seq if first_one == 'low' else seq[::-1]
+                val = sum(2**i*x for i, x in enumerate(seq_ordered))
+                return val
+        elif self.info['bus_type'] == 'signed_magnitude':
+            # NOTE we assume the sign bit is the highest-order, i.e. not the "first_one"
+            first_one = self.info.get('first_one', 'low')
+            assert first_one in ['low', 'high']
+            def to_dec(seq):
+                if first_one == 'low':
+                    seq = seq[::-1]
+                sign, seq = seq[0], seq[1:]
+                s = ''.join(str(x) for x in seq)
+                magnitude = int(s, 2)
+                sign = 1 if sign == 0 else -1
+                return sign * magnitude
+        else:
+            assert False, 'TODO'
+
+        if len(data.shape) == 1:
+            return to_dec(data)
+        else:
+            to_dec_vec = np.vectorize(to_dec, signature='(n)->()')
+            ans = to_dec_vec(data.T)
+            return ans
+
+    def get_binary_value(self, decimal):
+        assert self.info['datatype'] in ['binary_analog', 'bit']
+        assert isinstance(decimal, int)
+
+        if self.info['bus_type'] == 'binary':
+            first_one = self.info.get('first_one', None)
+            assert first_one in ['low', 'high'], f'{self} must set first_one to be "low" or "high"'
+            ans_str = bin(decimal)[2:]
+            ans = [0]*(self.shape[0] - len(ans_str)) + [int(x) for x in ans_str]
+            if first_one == 'low':
+                ans = ans[::-1]
+            return ans
+        elif self.info['bus_type'] == 'signed_magnitude':
+            assert False, 'TODO'
+        else:
+            assert False, 'TODO'
+
+
     def __getitem__(self, key):
         slice = self.array[key]
         if isinstance(slice, np.ndarray):

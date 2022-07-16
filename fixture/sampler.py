@@ -43,12 +43,15 @@ class Sampler:
                         samples_this_bit = [data[k][j] for k in range(N)]
                         samples_dict[s] = samples_this_bit
 
-                elif bus_type == 'binary':
+                elif bus_type == 'binary' or bus_type == 'signed_magnitude' or 'binary_exact':
                     # TODO could probably make this a little better
                     # For now, do nothing special, although we could try to
                     # balance the number of 1s and 0s on a particular bit, etc.
                     samples_this_dim = [samples[j][i] for j in range(N)]
-                    data = cls.convert_qa_binary(samples_this_dim, dim.shape[0])
+                    # TODO we might want to require first_one instead of choosing a default
+                    # if we choose wrong it won't have good coverage of the input space
+                    first_one = dim.info.get('first_one', 'high')
+                    data = cls.convert_qa_binary(samples_this_dim, dim.shape[0], first_one, dim.value)
                     for j, s in enumerate(dim):
                         samples_this_bit = [data[k][j] for k in range(N)]
                         samples_dict[s] = samples_this_bit
@@ -263,15 +266,23 @@ class Sampler:
         return data
 
     @classmethod
-    def convert_qa_binary(cls, samples, num_bits):
+    def convert_qa_binary(cls, samples, num_bits, first_one, range_inclusive=None):
+        assert first_one in ['low', 'high']
         data = []
-        N = 2**num_bits
+        if range_inclusive is not None:
+            N = range_inclusive[1] - range_inclusive[0] + 1
+            minimum = range_inclusive[0]
+        else:
+            N = 2**num_bits
+            minimum = 0
         for x in samples:
-            v = int(x * N)
+            v = minimum + int(x * N)
             # kinda ugly to get a variable value into a format specifier
             b = f'{{:0{num_bits}b}}'.format(v)
             #b = bin(v)[2:]
             bits = [0 if c == '0' else 1 for c in b]
+            if first_one == 'low':
+                bits = bits[::-1]
             data.append(bits)
         return data
 

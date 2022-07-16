@@ -195,7 +195,7 @@ class TemplateMaster():
                             for vec_i, sub in enumerate(components):
                                 term_subbed = tuple((sub if x == vectored_input else x)
                                                     for x in term)
-                                param_name = Regression.vector_parameter_name_input(param, vec_i, component)
+                                param_name = Regression.vector_parameter_name_input(param, vec_i, sub)
                                 # TODO is template_name the best choice here?
                                 to_add[param_name] = term_subbed
                     for r in to_remove:

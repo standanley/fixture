@@ -24,7 +24,11 @@ A parameter file for mgenero looks like this:
 
 
 def binary(x, y):
-    return [(x//(i+1))%2 for i in range(y)]
+    #return [(x//(i+1))%2 for i in range(y)]
+    # x is a string tuple for some reason
+    bits_str = x[1:-1].split(',')[:y]
+    bits = [int(b) for b in bits_str]
+    return bits
 
 def dump_yaml(template, params_by_mode, mapping):
     d = defaultdict(list)
@@ -65,6 +69,19 @@ def dump_yaml(template, params_by_mode, mapping):
                             return s.template_name
 
         def convert_term_to_verilog(term):
+            if isinstance(term, SignalIn):
+                term = term.spice_name
+            if isinstance(term, tuple):
+                return ' * '.join(convert_term_to_verilog(x) for x in term)
+            if isinstance(term, SignalArray):
+                assert term.info['datatype'] == 'binary_analog', f'Cannot make verilog for {term} if it is not binary_analog'
+                if term.info['bus_type'] == 'binary_exact':
+                    term_ordered = list(term) if term.info['first_one'] == 'low' else list(term)[::-1]
+                    # TODO I think this should be wrapped in parentheses but they break mGenero
+                    return '(' + '+'.join(f'{2**i}*'+convert_term_to_verilog(b) for i, b in enumerate(term_ordered)) + ')'
+                    #return '+'.join(f'{2**i}*'+convert_term_to_verilog(b) for i, b in enumerate(term_ordered))
+                else:
+                    assert False, 'TODO'
             if term == Regression.one_literal:
                 return '1'
             # square

@@ -34,7 +34,34 @@ class Regression:
         opt_signals_flat = [s for x in opt_signals for s in (x if isinstance(x, SignalArray) else [x])]
         # TODO accept real in addition to analog?
         opt_a = [s for s in opt_signals_flat if s.type_ == 'analog']
-        opt_ba = [s for s in opt_signals_flat if s.type_ == 'binary_analog']
+        #opt_ba = [s for s in opt_signals_flat if s.type_ == 'binary_analog']
+        opt_ba_notflat = [s for s in opt_signals if s.type_ == 'binary_analog']
+        def flatten_ba(s):
+            if s.info['bus_type'] == 'signed_magnitude':
+                flat_ver = list(s.flat)
+                sign = flat_ver.pop()
+                return flat_ver + [sign] + [(sign, x) for x in flat_ver]
+            elif s.info['bus_type'] == 'binary':
+                if 'break_binary_for_bits' in s.info:
+                    ans = []
+                    expanded_i = s.info['break_binary_for_bits']
+                    unexpanded = [b for i, b in enumerate(s) if i not in expanded_i]
+                    for mask in itertools.product(range(2), repeat=len(expanded_i)):
+                        prod = [s[expanded_i[i]] for i, include in enumerate(mask) if include==1]
+                        # don't include constant, that is done outside of flatten_ba
+                        if prod != []:
+                            ans.append(tuple(prod))
+                        for b in unexpanded:
+                            ans.append((b, *prod))
+                    return ans
+                else:
+                    return list(s.flat)
+            elif s.info['bus_type'] == 'binary_exact':
+                # convert bits to a number and use that number instead
+                return [s]
+            else:
+                return list(s.flat)
+        opt_ba = [term for s in opt_ba_notflat for term in flatten_ba(s)]
 
         terms = [cls.one_literal]
         for a in opt_a:
