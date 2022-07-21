@@ -4,7 +4,7 @@
 
 
 
-<form>
+<form id="form">
     <label for="circuit_filepath_text">Filepath to circuit definition</label>
     <input type="text" id="circuit_filepath_text" oninput="circuit_filepath_fun()"/> <br>
     <br>
@@ -14,7 +14,15 @@
     <br>
     <button type="button" id="add_pins" onclick="add_pin()">Add Pin</button>
 
+    <br>
+    <br>
+
+    <button type="button" id="finished" onclick="finish()">Create config</button>
 </form>
+
+<h2> Config: </h2>
+
+<pre id="config"></pre>
 
 
 <script src="interactive_config_code.js"></script>
