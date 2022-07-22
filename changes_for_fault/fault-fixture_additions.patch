@@ -1,0 +1,912 @@
+diff -ruN fault-fixture_additions/fault/ms_types.py ../fixture_tool/fault-fixture_additions/fault/ms_types.py
+--- fault-fixture_additions/fault/ms_types.py	2022-03-09 17:54:41.000000000 -0500
++++ ../fixture_tool/fault-fixture_additions/fault/ms_types.py	2022-06-28 20:19:24.063220000 -0400
+@@ -1,7 +1,22 @@
+-from magma import Digital, Direction
++from magma import Digital, Direction, DigitalMeta, Type, Wireable
+ 
+ 
+-class RealType(Digital):
++# DigitalMeta considers all classes under DigitalMeta "equal" to it ,
++# which breaks checks like isinstance(Bit, RealType)
++# We create RealMeta to override that DigitalMeta equality check
++# Once we've broken that equality with the MetaType, then isinstance seems
++# to behave as expected with respect to the parent classes actually listed
++# in the declaration. Note that including Digital (or one of its children)
++# as a parent is required to make it compile, which is fine by me
++# Beware that issubclass(RealType, magma.Bit) still says True; I can live with that
++# since asking (not issubclass(my_wire, RealType)) will work correctly
++class RealMeta(DigitalMeta):
++    def __eq__(cls, other):
++        return isinstance(other, RealMeta)
++    __hash__ = type.__hash__
++
++
++class RealType(Digital, metaclass=RealMeta):
+     pass
+ 
+ 
+@@ -10,15 +25,31 @@
+ RealInOut = RealType[Direction.InOut]
+ 
+ 
+-class CurrentType(Digital):
+-    pass
++class CurrentMeta(RealMeta):
++    def __eq__(cls, other):
++        # we d
++        return isinstance(other, CurrentMeta)
++    __hash__ = type.__hash__
++
+ 
++class CurrentType(RealType, metaclass=CurrentMeta):
++    pass
+ 
+ CurrentIn = CurrentType[Direction.In]
+ CurrentOut = CurrentType[Direction.Out]
+ CurrentInOut = CurrentType[Direction.InOut]
+ 
+ 
++
++print(issubclass(CurrentType, Digital))
++print(issubclass(CurrentType, RealType))
++print(issubclass(CurrentType, CurrentType))
++print(issubclass(Digital, CurrentType))
++print(issubclass(RealType, CurrentType))
++print(issubclass(CurrentType, CurrentType))
++
++
++# TODO does this need its own metaclass too?
+ class ElectType(Digital):
+     pass
+ 
+Binary files fault-fixture_additions/fault/__pycache__/actions.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/actions.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/array.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/array.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/assert_immediate.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/assert_immediate.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/assert_utils.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/assert_utils.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/background_poke.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/background_poke.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/circuit_utils.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/circuit_utils.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/codegen.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/codegen.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/config.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/config.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/domain_read.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/domain_read.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/expression.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/expression.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/fault_errors.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/fault_errors.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/file.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/file.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/infix.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/infix.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/__init__.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/__init__.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/magma_simulator_target.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/magma_simulator_target.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/magma_utils.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/magma_utils.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/ms_types.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/ms_types.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/pono_target.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/pono_target.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/power_tester.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/power_tester.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/property.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/property.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/pwl.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/pwl.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/pysv.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/pysv.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/random.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/random.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/result_parse.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/result_parse.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/select_path.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/select_path.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/spice.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/spice.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/spice_target.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/spice_target.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/subprocess_run.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/subprocess_run.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/sva.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/sva.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/system_verilog_target.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/system_verilog_target.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/target.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/target.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/tester_samples.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/tester_samples.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/user_cfg.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/user_cfg.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/util.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/util.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/utils.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/utils.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/value.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/value.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/value_utils.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/value_utils.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/vector_builder.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/vector_builder.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/verilator_target.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/verilator_target.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/verilator_utils.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/verilator_utils.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/verilogams.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/verilogams.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/verilogams_target.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/verilogams_target.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/verilog_target.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/verilog_target.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/verilog_utils.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/verilog_utils.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/wrapped_internal_port.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/wrapped_internal_port.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/__pycache__/wrapper.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/__pycache__/wrapper.cpython-36.pyc differ
+diff -ruN fault-fixture_additions/fault/result_parse.py ../fixture_tool/fault-fixture_additions/fault/result_parse.py
+--- fault-fixture_additions/fault/result_parse.py	2022-03-09 17:54:41.000000000 -0500
++++ ../fixture_tool/fault-fixture_additions/fault/result_parse.py	2022-07-01 17:21:59.581947000 -0400
+@@ -91,7 +91,9 @@
+ 
+ def psf_parse(psf_file, time='time'):
+     data = decida.Data.Data()
++    print(f'Starting psf read for {psf_file}...')
+     data.read_psf(f'{psf_file}')
++    print('Finished psf read')
+     return data_to_interp(data=data, time=time)
+ 
+ 
+@@ -133,11 +135,9 @@
+ 
+ 
+ def parse_vcd(filename, dut, interp='previous'):
+-    # unfortunately this vcd parser has an annoyin quirk:
++    # unfortunately this vcd parser has an annoying quirk:
+     # it throws away the format specifier for numbers so we can't tell if they're binary or real
+     # so "reg [7:0] a = 8'd4;" and "real a = 100.0;" both come back as the string '100'
+-    # TODO fix this
+-    filename = 'build/' + filename
+ 
+     # library doesn't grab timescale, so we do it manually
+     with open(filename) as f:
+diff -ruN fault-fixture_additions/fault/spice.py ../fixture_tool/fault-fixture_additions/fault/spice.py
+--- fault-fixture_additions/fault/spice.py	2022-03-09 17:54:41.000000000 -0500
++++ ../fixture_tool/fault-fixture_additions/fault/spice.py	2022-05-23 20:00:18.974533000 -0400
+@@ -95,12 +95,13 @@
+ 
+         # print the line
+         self.println(' '.join(line))
++        return line[0]
+ 
+     def voltage(self, p, n, dc=None, pwl=None, inst_name=None):
+         self.stimulus('V', p, n, dc=dc, pwl=pwl, inst_name=inst_name)
+ 
+     def current(self, p, n, dc=None, pwl=None, inst_name=None):
+-        self.stimulus('I', p, n, dc=dc, pwl=pwl, inst_name=inst_name)
++        return self.stimulus('I', p, n, dc=dc, pwl=pwl, inst_name=inst_name)
+ 
+     def capacitor(self, p, n, value, inst_name=None):
+         # set defaults
+@@ -169,6 +170,7 @@
+         line += ['.tran']
+         line += [f'{t_step}']
+         line += [f'{t_stop}']
++        line += [f'maxstep={t_step}']
+         if uic:
+             line += ['uic']
+         self.println(' '.join(line))
+diff -ruN fault-fixture_additions/fault/spice_target.py ../fixture_tool/fault-fixture_additions/fault/spice_target.py
+--- fault-fixture_additions/fault/spice_target.py	2022-03-09 17:54:41.000000000 -0500
++++ ../fixture_tool/fault-fixture_additions/fault/spice_target.py	2022-07-05 13:54:51.162050000 -0400
+@@ -1,4 +1,5 @@
+ import os
++import re
+ from pathlib import Path
+ from copy import copy
+ import magma as m
+@@ -85,7 +86,7 @@
+                  bus_order='descend', flags=None, ic=None, cap_loads=None,
+                  disp_type='on_error', mc_runs=0, mc_variations='all',
+                  vol_rel=0.1, voh_rel=0.9, no_run=False, uic=None,
+-                 pwl_signals=None):
++                 pwl_signals=None, sim_cmd=None):
+         """
+         circuit: a magma circuit
+ 
+@@ -153,6 +154,8 @@
+ 
+         uic: If True, use initial conditions.  If not specified, "uic" is True
+              if any initial conditions are specified, and is false otherwise.
++
++        sim_cmd: Name of the command to call the simulator, if None default to simulator
+         """
+         # call the super constructor
+         super().__init__(circuit)
+@@ -196,6 +199,7 @@
+         self.voh_rel = voh_rel
+         self.no_run = no_run
+         self.pwl_signals = pwl_signals if pwl_signals is not None else []
++        self.sim_cmd = simulator if sim_cmd is None else sim_cmd
+ 
+         # set default for "uic"
+         if uic is None:
+@@ -251,7 +255,7 @@
+ 
+         # generate simulator commands
+         if self.simulator == 'ngspice':
+-            cmd, raw_files = self.ngspice_cmds(tb_file)
++            md, raw_files = self.ngspice_cmds(tb_file)
+         elif self.simulator == 'spectre':
+             cmd, raw_files = self.spectre_cmds(tb_file)
+         elif self.simulator == 'hspice':
+@@ -259,6 +263,17 @@
+         else:
+             raise NotImplementedError(self.simulator)
+ 
++        print()
++        print('PRINTING FROM fault/spice_target.py BEFORE RUNNING')
++        #cmd_mine = ['/pkg/qct/software/cadence/mmsim171_isr14/tools/bin/spectre']
++        #cmd_mine = ['bsub', '-q', 'normal',  '-P', '15421.00.rfa', '-R', 'select[type==LINUX64] rusage[mem=16000]', '/pkg/qct/software/cadence/mmsim171_isr14/tools/bin/spectre', '++aps']
++        #cmd_mine = ['bsub', '-q', 'normal',  '-P', '15421.00.rfa', '-R', 'select[type==LINUX64] rusage[mem=16000]', '/pkg/qct/software/cadence/mmsim201_isr12/tools/bin/spectre', '++aps']
++        #cmd = cmd_mine + cmd[1:]
++        print(cmd)
++        print(self.sim_env)
++        print()
++        #exit()
++
+         # run the simulation commands
+         if not self.no_run:
+             res = subprocess_run(cmd, cwd=self.directory, env=self.sim_env,
+@@ -271,10 +286,23 @@
+ 
+         # process the results
+         for raw_file in raw_files:
++            assert os.path.exists(raw_file), f'Missing sim output file {raw_file}, did the simulation fail?'
+             if self.simulator in {'ngspice'}:
+                 results = nut_parse(raw_file)
+             elif self.simulator in {'spectre'}:
+                 results = psf_parse(raw_file)
++                #for k, v in results.items():
++                #    print(k, v, type(v))
++                #print()
++                #plt.figure()
++                #print(list(results.keys()))
++                #import matplotlib
++                #matplotlib.use('Agg')
++                #plt = matplotlib.pyplot
++                #plt.figure()
++                #for test_name in ['inp', 'inn']:
++                #    plt.plot(results[test_name].t, results[test_name].v, '-+')
++                #plt.savefig('./plots/read_test.png', dpi=300)
+             elif self.simulator in {'hspice'}:
+                 results = hspice_parse(raw_file)
+             else:
+@@ -359,10 +387,13 @@
+                 # determine the stimulus value, performing a digital
+                 # to analog conversion if needed and controlling
+                 # the output switch as needed
++                import magma
++                test = fault.RealType == magma.Bit
+                 if action.value is fault.HiZ:
+                     stim_v = 0
+                     stim_s = 0
+-                elif isinstance(action.port, m.Bit):
++                #elif not 'Real' in str(type(action.port)): #isinstance(action.port, fault.RealType):
++                elif not isinstance(action.port, fault.RealType):
+                     stim_v = self.vsup if action.value else 0
+                     stim_s = 1
+                 else:
+@@ -477,6 +508,7 @@
+         for path in self.model_paths:
+             parser = SimulatorNetlist(f'{path}')
+             search_name = f'{self.circuit.name}'.lower()
++            print('got subckts', parser.get('subckts'))
+             if search_name in parser.get('subckts'):
+                 return parser.get_subckt(search_name, detail='ports')
+         else:
+@@ -492,8 +524,10 @@
+             netlist.include(Path(file_).resolve())
+ 
+         # instantiate the DUT
++        print('NOT instantiating DUT from fault')
+         dut_name = f'{self.circuit.name}'
+-        netlist.instantiate(dut_name, *self.get_ordered_ports())
++        # TODO when should we instantiate this?
++        #netlist.instantiate(dut_name, *self.get_ordered_ports())
+ 
+         # add a capacitance to some ports if specified
+         for port, val in self.cap_loads.items():
+@@ -528,9 +562,14 @@
+         for port, (pwl_v, pwl_s) in comp.pwls.items():
+             name = f'{port.name}'
+             #port = self.circuit.IO.ports[name]
+-            if isinstance(port, fault.CurrentType):
++            if 'CurrentType' in str(type(port)): #isinstance(port, fault.CurrentType):
++                # NOTE isinstance doesn't work here because CurrentType is == to magma.Digital
++                # I think it is intentional because the two of them can be wired together
++                # we should probably change CurrentType so that's not the case
+                 # TODO assert pwl_s is always high
+-                netlist.current('0', name, pwl=pwl_v)
++                #print('port', port, 'is CurrentType', type(port), type(type(port)))
++                isource_name = netlist.current('0', name, pwl=pwl_v)
++                netlist.probe(f'I({isource_name})', wrap=False)
+             elif isinstance(port, (fault.RealType, m.Bit, type(m.Bit))):
+                 # instantiate switch between voltage source and DUT
+                 vnet = f'__{name}_v'
+@@ -574,6 +613,8 @@
+         # write end of file
+         if self.simulator == 'spectre':
+             netlist.probe(*comp.saves, wrap=True)
++            ## TEMP PROBES
++            #netlist.probe('I(abc)', wrap=False)
+             if self.mc_runs == 0:
+                 netlist.tran(t_step=t_step, t_stop=comp.stop_time, uic=self.uic)
+             else:
+@@ -677,12 +718,13 @@
+             res = results[get_spice_name(action.port)]
+         except KeyError:
+             res = results[get_spice_name(action.port).lower()]
+-        if action.params == None:
++        if action.params == None or action.params == {}:
+             # straightforward read of voltage
+             # get port values
+             port_value = res(time)
+             # write value back to action
+             action.value = port_value
++            print('got value', port_value, 'for action', action)
+         elif type(action.params) == dict and 'style' in action.params:
+             # requires some analysis of signal
+             # get height of slice point based on spice config if not specified
+@@ -692,12 +734,14 @@
+             # so passing in the name is not good enough
+             get_value_domain(results, action, time, get_spice_name)
+         else:
++            print('bad params', action.params)
++            print('action', action)
+             raise NotImplementedError
+ 
+     def ngspice_cmds(self, tb_file):
+         # build up the command
+         cmd = []
+-        cmd += ['ngspice']
++        cmd += [self.sim_cmd]
+         cmd += ['-b']
+         cmd += [f'{tb_file}']
+         raw_file = (Path(self.directory) / 'out.raw').absolute()
+@@ -710,7 +754,12 @@
+     def spectre_cmds(self, tb_file):
+         # build up the command
+         cmd = []
+-        cmd += ['spectre']
++        temp = re.search('\\S|".*?"', self.sim_cmd)
++        # split on whitespace, but don't split within a quoted thing
++        # then get rid of the quotes
++        sim_cmd_tokens = re.findall('".*?"|\'.*?\'|\\S+', self.sim_cmd)
++        sim_cmd_tokens = [t.replace('"', '').replace("'", "") for t in sim_cmd_tokens]
++        cmd += sim_cmd_tokens
+         cmd += [f'{tb_file}']
+         cmd += ['-format', 'psfascii']
+         raw_dir = (Path(self.directory) / 'psf').resolve()
+@@ -732,7 +781,7 @@
+     def hspice_cmds(self, tb_file):
+         # build up the simulation command
+         cmd = []
+-        cmd += ['hspice']
++        cmd += [self.sim_cmd]
+         cmd += ['-i', f'{tb_file}']
+         out_file = (Path(self.directory) / 'out.raw').absolute()
+         cmd += ['-o', f'{out_file}']
+diff -ruN fault-fixture_additions/fault/subprocess_run.py ../fixture_tool/fault-fixture_additions/fault/subprocess_run.py
+--- fault-fixture_additions/fault/subprocess_run.py	2022-03-09 17:54:41.000000000 -0500
++++ ../fixture_tool/fault-fixture_additions/fault/subprocess_run.py	2022-06-23 19:36:16.391058000 -0400
+@@ -173,6 +173,15 @@
+         _throw(args, cwd, env, disp_type, err_str,
+                chk_ret_code, shell, use_fault_cfg)
+ 
++
++    # wait for job to finish
++    if 'submitted to queue' in stdout:
++        job_id = re.search('Job <([0-9]+)>', stdout).group(1)
++        print(f'Waiting for Job <{job_id}> to finish...')
++        with Popen(f"bwait -w 'ended({job_id})'", shell=True) as _:
++            pass
++        print(f'Job <{job_id}> finished.')
++
+     # if there were no errors, then return directly
+     return CompletedProcess(args=args, returncode=p.returncode,
+                             stdout=stdout, stderr=stderr)
+diff -ruN fault-fixture_additions/fault/system_verilog_target.py ../fixture_tool/fault-fixture_additions/fault/system_verilog_target.py
+--- fault-fixture_additions/fault/system_verilog_target.py	2022-03-09 17:54:41.000000000 -0500
++++ ../fixture_tool/fault-fixture_additions/fault/system_verilog_target.py	2022-06-21 19:01:56.556150000 -0400
+@@ -280,7 +280,7 @@
+ 
+         # set up cadence tools command
+         self.ncsim_cmd = self.cadence_cmd("irun")
+-        self.xcelium_cmd = self.cadence_cmd("xrun")
++        self.xcelium_cmd = self.cadence_cmd("/pkg/qct/software/cadence/xcelium22.02.a001/tools.lnx86/bin/xrun")
+ 
+     def add_decl(self, type_, name, exist_ok=False):
+         if str(name) in self.declarations:
+@@ -957,6 +957,10 @@
+             tcl_timescale = 'fs' if 'fs' in time_precision else 'ps'
+             tcl_cmds += [f'database -open -vcd vcddb -into {self.waveform_file} -default -timescale {tcl_timescale}']  # noqa
+             tcl_cmds += [f'probe -create -all -vcd -depth all']
++            #tcl_cmds += [f'probe -create -all -vcd -name wl_txbb_tia_wrapped_tb/dut/xfilter/xfilter/* -depth 1']
++            #tcl_cmds += [f'probe -create wl_txbb_tia_wrapped_tb/dut/xfilter/xfilter -all -vcd']
++            tcl_cmds += [f'probe -create dut -all -vcd']
++            tcl_cmds += [f'probe -create dut -all -vcd -depth 1']
+         tcl_cmds += [f'run {self.num_cycles}ns']
+         tcl_cmds += ['assertion -summary -final']
+         tcl_cmds += [f'quit']
+Binary files fault-fixture_additions/fault/tester/__pycache__/base.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/tester/__pycache__/base.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/tester/__pycache__/control.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/tester/__pycache__/control.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/tester/__pycache__/__init__.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/tester/__pycache__/__init__.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/tester/__pycache__/interactive_tester.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/tester/__pycache__/interactive_tester.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/tester/__pycache__/staged_tester.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/tester/__pycache__/staged_tester.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/tester/__pycache__/symbolic_tester.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/tester/__pycache__/symbolic_tester.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/tester/__pycache__/synchronous.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/tester/__pycache__/synchronous.cpython-36.pyc differ
+Binary files fault-fixture_additions/fault/tester/__pycache__/utils.cpython-36.pyc and ../fixture_tool/fault-fixture_additions/fault/tester/__pycache__/utils.cpython-36.pyc differ
+diff -ruN fault-fixture_additions/fault/value_utils.py ../fixture_tool/fault-fixture_additions/fault/value_utils.py
+--- fault-fixture_additions/fault/value_utils.py	2022-03-09 17:54:41.000000000 -0500
++++ ../fixture_tool/fault-fixture_additions/fault/value_utils.py	2022-06-28 16:53:36.616080000 -0400
+@@ -19,9 +19,9 @@
+         if not value.const():
+             raise TypeError("Expected const value when poking with instance of "
+                             "MagmaProtocol")
+-    if issubclass(type_, RealType):
++    if 'Real' in str(type_): #issubclass(type_, RealType):
+         return make_real(value)
+-    if issubclass(type_, CurrentType):
++    if 'Current' in str(type_): #issubclass(type_, CurrentType):
+         return make_real(value)
+     if issubclass(type_, magma.Digital):
+         return make_bit(value)
+diff -ruN fault-fixture_additions/fault/verilog_target.py ../fixture_tool/fault-fixture_additions/fault/verilog_target.py
+--- fault-fixture_additions/fault/verilog_target.py	2022-03-09 17:54:41.000000000 -0500
++++ ../fixture_tool/fault-fixture_additions/fault/verilog_target.py	2022-06-21 19:22:27.882085000 -0400
+@@ -330,7 +330,7 @@
+                 action.update_from_line(line)
+ 
+         # sort out actions with params
+-        get_value_actions_params = [action for action in get_value_actions if action.params != None]
++        get_value_actions_params = [action for action in get_value_actions if (action.params != None and len(action.params) > 0)]
+ 
+         def get_name(port):
+             return str(port.name)
+@@ -343,7 +343,8 @@
+             err_msg = ('No waveform file found for domain_read. '
+                        + 'Did you compile Tester with "dump_waveforms=True"?')
+             assert self.waveform_file is not None, err_msg
+-            res = parse_vcd(self.waveform_file, self.circuit)
++            waveform_fname = os.path.join(self.directory, self.waveform_file)
++            res = parse_vcd(waveform_fname, self.circuit)
+             for a in get_value_actions_params:
+                 # the time has already been temporarily stored in a.value
+                 get_value_domain(res, a, a.value, get_name)
+diff -ruN fault-fixture_additions/fault.egg-info/dependency_links.txt ../fixture_tool/fault-fixture_additions/fault.egg-info/dependency_links.txt
+--- fault-fixture_additions/fault.egg-info/dependency_links.txt	1969-12-31 19:00:00.000000000 -0500
++++ ../fixture_tool/fault-fixture_additions/fault.egg-info/dependency_links.txt	2022-05-17 14:38:04.271520000 -0400
+@@ -0,0 +1 @@
++
+diff -ruN fault-fixture_additions/fault.egg-info/PKG-INFO ../fixture_tool/fault-fixture_additions/fault.egg-info/PKG-INFO
+--- fault-fixture_additions/fault.egg-info/PKG-INFO	1969-12-31 19:00:00.000000000 -0500
++++ ../fixture_tool/fault-fixture_additions/fault.egg-info/PKG-INFO	2022-05-17 14:38:04.270520000 -0400
+@@ -0,0 +1,360 @@
++Metadata-Version: 2.1
++Name: fault
++Version: 3.0.52
++Summary: A Python package for testing hardware (part of the magma ecosystem)
++Home-page: https://github.com/leonardt/fault
++Author: Leonard Truong
++Author-email: lenny@cs.stanford.edu
++License: BSD License
++Description: # Fault
++        ![Linux Test](https://github.com/leonardt/fault/workflows/Linux%20Test/badge.svg)
++        ![MacOS Test](https://github.com/leonardt/fault/workflows/MacOS%20Test/badge.svg)
++        [![BuildKite Status](https://badge.buildkite.com/c724929c65201c6ed5aebc027ffac02b5092d0bd8fad4341b6.svg?branch=master)](https://buildkite.com/stanford-aha/fault)
++        [![Code Coverage](https://codecov.io/gh/leonardt/fault/branch/master/graph/badge.svg)](https://codecov.io/gh/leonardt/fault)
++        [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
++        
++        A Python package for testing hardware (part of the magma ecosystem).
++        
++        [API Documentation](http://truong.io/fault/)
++        
++        [CHANGELOG](./CHANGELOG.md)
++        
++        ## Installation
++        ```
++        pip install fault
++        ```
++        
++        ## Documentation
++        Check out the [fault tutorial](https://github.com/leonardt/fault/tree/master/tutorial)
++        
++        * [Actions](https://github.com/leonardt/fault/blob/master/doc/actions.md)
++        * [Tester](https://github.com/leonardt/fault/blob/master/doc/tester.md)
++        * [Integrating External Verilog](https://github.com/leonardt/fault/blob/master/doc/verilog_integration.ipynb)
++        * [Properties](https://github.com/leonardt/fault/blob/master/doc/property.md)
++        
++        ## Supported Simulators
++        
++        * Digital simulation
++          * [Verilator](https://www.veripool.org/wiki/verilator)
++          * [Icarus Verilog](http://iverilog.icarus.com)
++          * [Cadence Incisive/Xcelium](https://www.cadence.com/en_US/home/tools/system-design-and-verification/simulation-and-testbench-verification/xcelium-parallel-simulator.html)
++          * [Synopsys VCS](https://www.synopsys.com/verification/simulation/vcs.html)
++          * [Xilinx Vivado](https://www.xilinx.com/products/design-tools/vivado.html)
++        * Formal verification
++          * Engines supported by [pySMT](https://github.com/pysmt/pysmt)
++        * Analog simulation
++          * [ngspice](http://ngspice.sourceforge.net)
++          * [Cadence Spectre](https://www.cadence.com/en_US/home/tools/custom-ic-analog-rf-design/circuit-simulation/spectre-simulation-platform.html)
++          * [Synopsys HSPICE](https://www.synopsys.com/verification/ams-verification/hspice.html)
++        * Mixed-signal simulation
++          * [Verilog-AMS](https://www.verilogams.com) via Cadence Incisive/Xcelium
++        
++        ## Example
++        Here is a simple ALU defined in magma.
++        ```python
++        import magma as m
++        import mantle
++        
++        
++        class ConfigReg(m.Circuit):
++            io = m.IO(D=m.In(m.Bits[2]), Q=m.Out(m.Bits[2])) + \
++                m.ClockIO(has_ce=True)
++        
++            reg = mantle.Register(2, has_ce=True, name="conf_reg")
++            io.Q @= reg(io.D, CE=io.CE)
++        
++        
++        class SimpleALU(m.Circuit):
++            io = m.IO(
++                a=m.In(m.UInt[16]),
++                b=m.In(m.UInt[16]),
++                c=m.Out(m.UInt[16]),
++                config_data=m.In(m.Bits[2]),
++                config_en=m.In(m.Enable)
++            ) + m.ClockIO()
++        
++            opcode = ConfigReg(name="config_reg")(io.config_data, CE=io.config_en)
++            io.c @= mantle.mux(
++                [io.a + io.b, io.a - io.b, io.a * io.b, io.a ^ io.b], opcode)
++        ```
++        
++        Here's an example test in fault that uses the configuration interface, expects
++        a value on the internal register, and checks the result of performing the
++        expected operation.
++        
++        ```python
++        import operator
++        import fault
++        
++        ops = [operator.add, operator.sub, operator.mul, operator.floordiv]
++        tester = fault.Tester(SimpleALU, SimpleALU.CLK)
++        tester.circuit.CLK = 0
++        tester.circuit.config_en = 1
++        for i in range(0, 4):
++            tester.circuit.config_data = i
++            tester.step(2)
++            tester.circuit.a = 3
++            tester.circuit.b = 2
++            tester.eval()
++            tester.circuit.c.expect(ops[i](3, 2))
++        ```
++        
++        We can run this with three different simulators
++        
++        ```python
++        tester.compile_and_run("verilator", flags=["-Wno-fatal"], directory="build")
++        tester.compile_and_run("system-verilog", simulator="ncsim", directory="build")
++        tester.compile_and_run("system-verilog", simulator="vcs", directory="build")
++        ```
++        
++        ### Working with internal signals
++        Fault supports peeking, expecting, and printing internal signals. For the
++        `verilator` target, you should use the keyword argument `magma_opts` with
++        `"verilator_debug"` set to true.  This will cause coreir to compile the verilog
++        with the required debug comments.  Example:
++        ```python
++        tester.compile_and_run("verilator", flags=["-Wno-fatal"], 
++                               magma_opts={"verilator_debug": True}, directory="build")
++        ```
++        
++        If you're using `mantle.Register` from the `coreir` implementation, you can
++        also poke the internal register value directly using the `value` field.  Notice
++        that `conf_reg` is defined in `ConfigReg` to be an instance of
++        `mantle.Register` and the test bench pokes it by setting `confg_reg.value`
++        equal to `1`.
++        
++        ```python
++        tester = fault.Tester(SimpleALU, SimpleALU.CLK)
++        tester.circuit.CLK = 0
++        # Set config_en to 0 so stepping the clock doesn't clobber the poked value
++        tester.circuit.config_en = 0
++        # Initialize
++        tester.step(2)
++        for i in reversed(range(4)):
++            tester.circuit.config_reg.conf_reg.value = i
++            tester.step(2)
++            tester.circuit.config_reg.conf_reg.O.expect(i)
++            # You can also print these internal signals using the getattr interface
++            tester.print("O=%d\n", tester.circuit.config_reg.conf_reg.O)
++        ```
++        
++        ## FAQ
++        
++        ### How can I write test bench logic that depends on the runtime state of the circuit?
++        A common pattern in testing is to only perform certain actions depending on the
++        state of the circuit.  For example, one may only want to expect an output value
++        when a valid signal is high, ignoring it otherwise.  Another pattern is to change
++        the expected value over time by using a looping structure.  Finally, one may
++        want to expect a value that is a function of other runtime values.  To support
++        these pattern, `fault` provides support "peeking" values, performing expressions
++        on "peeked" values, if statements, and while loops.  
++        
++        #### Peek Expressions
++        Suppose we had a circuit as follows:
++        ```python
++        class BinaryOpCircuit(m.Circuit):
++            io = m.IO(I0=m.In(m.UInt[5]), I1=m.In(m.UInt[5]), O=m.Out(m.UInt[5]))
++        
++            io.O @= io.I0 + io.I1 & (io.I1 - io.I0)
++        ```
++        We can write a generic test that expects the output `O` in terms
++        of the inputs `I0` and `I1` (rather than computing the expected value in
++        Python).
++        ```python
++        tester = fault.Tester(BinaryOpCircuit)
++        for _ in range(5):
++            tester.poke(tester._circuit.I0, hwtypes.BitVector.random(5))
++            tester.poke(tester._circuit.I1, hwtypes.BitVector.random(5))
++            tester.eval()
++            expected = tester.circuit.I0 + tester.circuit.I1
++            expected &= tester.circuit.I1 - tester.circuit.I0
++            tester.circuit.O.expect(expected)
++        ```
++        This is a useful pattern for writing reuseable test components (e.g.  composign
++        the output checking logic with various input stimuli generators).
++        
++        #### Control Structures
++        The `tester._while(<test>)` action accepts a Peek value or expression as the test condition for a loop and returns a child tester that allows the user to add actions to the body of the loop.  Here's a simple example that loops until a done signal is asserted, printing some debug information in the loop body:
++        ```python
++        # Wait for loop to complete
++        loop = tester._while(dut.n_done)
++        debug_print(loop, dut)
++        loop.step()
++        loop.step()
++        
++        # check final state
++        tester.circuit.count.expect(expected_num_cycles - 1)
++        ```
++        Notice that you can also add actions after the loop to check expected behavior
++        after the loop has completed.
++        
++        The `tester._if(<test>)` action behaves similarly by accepting a test peek value or expression and conditionally executes actions depending on the
++        result of the expression.  Here is a simple example:
++        ```python
++        if_tester = tester._if(tester.circuit.O == 0)
++        if_tester.circuit.I = 1
++        else_tester = if_tester._else()
++        else_tester.circuit.I = 0
++        tester.eval()
++        ```
++        
++        ### What Python values can I use to poke/expect ports?
++        Here are the supported Python values for poking the following port types:
++        * `m.Bit` - `bool` (`True`/`False`) or `int` (`0`/`1`) or `hwtypes.Bit`
++        * `m.Bits[N]` - `hwtypes.BitVector[N]`, `int` (where the number of bits used to
++          express it is equal to `N`)
++        * `m.SInt[N]` - `hwtypes.SIntVector[N]`, `int` (where the number of bits used to
++          express it is equal to `N`)
++        * `m.UInt[N]` - `hwtypes.UIntVector[N]`, `int` (where the number of bits used to
++          express it is equal to `N`)
++        * `m.Array[N, T]` - `list` (where the length of the list is equal to `N` and
++          the elements recursively conform to the supported types of values for `T`).
++          For example, suppose I have a port `I` of type `m.Array[3, m.Bits[3]]`. 
++          I can poke it as follows:
++          ```python
++          val = [random.randint(0, (1 << 4) - 1) for _ in range(3)]
++          tester.poke(circ.I, val)
++          ```
++          You can also poke it by element as follows:
++          ```python
++          for i in range(3):
++              val = random.randint(0, (1 << 4) - 1)
++              tester.poke(circ.I[i], val)
++              tester.eval()
++              tester.expect(circ.O[i], val)
++          ```
++        * `m.Tuple(a=m.Bits[4], b=m.Bits[4])` - `tuple` (where the length of the tuple is equal to the number of fields), `dict` (where there is a one-to-one mapping between key/value pairs to the tuple fields).  Example:
++          ```python
++          tester.circuit.I = (4, 2)
++          tester.eval()
++          tester.circuit.O.expect((4, 2))
++          tester.circuit.I = {"a": 4, "b": 2}
++          tester.eval()
++          tester.circuit.O.expect({"a": 4, "b": 2})
++          ```
++        
++        ### How do I generate waveforms with fault?
++        
++        Fault supports generating `.vcd` dumps when using the `verilator` and
++        `system-verilog/ncsim` target.
++        
++        For the `verilator` target, use the `flags` keyword argument to pass the
++        `--trace` flag.  For example,
++        
++            tester.compile_and_run("verilator", flags=["-Wno-fatal", "--trace"])
++        
++        The `--trace` flag must be passed through to verilator so it generates code
++        that supports waveform dumping. The test harness generated by fault will
++        include the required logic for invoking `tracer->dump(main_time)` for every
++        call to `eval` and `step`.  `main_time` is incremented for every call to step.
++        The output `.vcd` file will be saved in the file `logs/{circuit_name}` where
++        `circuit_name` is the name of the ciruit passed to `Tester`.  The `logs`
++        directory will be placed in the same directory as the generated harness, which
++        is controlled by the `directory` keyword argument (by default this is
++        `"build/"`).
++        
++        For the `system-verilog` target, enable this feature using the
++        `compile_and_run` parameter `dump_waveform=True`.  By default, the waveform
++        file will be named `waveforms.vcd` for `ncsim` and `waveforms.vpd` for `vcs`.
++        The name of the file can be changed using the parameter
++        `waveform_file="<file_name>"`.  
++        
++        The `vcs` simulator also supports dumping `fsdb` by using the argument
++        `waveform_type="fsdb"`.  For this to work, you'll need to also use the `flags`
++        argument using the path defined in your verdi manual.  For example,
++        `$VERDI_HOME/doc/linking_dumping.pdf`.  
++        
++        Here is an example using an older version of verdi (using the VERDIHOME
++        environment variable):
++        ```python
++        verdi_home = os.environ["VERDIHOME"]
++        # You may need to change the 'vcs_latest' and 'LINUX64' parts of the path
++        # depending on your verdi version, please consult
++        # $VERDI_HOME/doc/linking_dumping.pdf
++        flags = ['-P', 
++                 f' {verdi_home}/share/PLI/vcs_latest/LINUX64/novas.tab',
++                 f' {verdi_home}/share/PLI/vcs_latest/LINUX64/pli.a']
++        tester.compile_and_run(target="system-verilog", simulator="vcs",
++                               waveform_type="fsdb", dump_waveforms=True, flags=flags)
++        ```
++        
++        Here's an example for a newer version of verdi
++        ```python
++        verdi_home = os.environ["VERDI_HOME"]
++        flags = ['-P',
++                 f' {verdi_home}/share/PLI/VCS/linux64/novas.tab',
++                 f' {verdi_home}/share/PLI/VCS/linux64/pli.a']
++        tester.compile_and_run(target="system-verilog", simulator="vcs",
++                               waveform_type="fsdb", dump_waveforms=True, flags=flags)
++        ```
++        
++        To configure fsdb dumping, use the `fsdb_dumpvars_args` parameter of the
++        compile_and_run command to pass a string to the `$fsdbDumpvars()` function.
++        
++        For example:
++        ```python
++        tester.compile_and_run(target="system-verilog", simulator="vcs",
++                               waveform_type="fsdb", dump_waveforms=True,
++                               fsdb_dumpvars_args='0, "dut"')
++        ```
++        
++        will produce:
++        ```verilog
++          $fsdbDumpvars(0, "dut");
++        ```
++        
++        inside the generated test bench.
++        
++        ### How do I pass through flags to the simulator?
++        The `verilator` and `system-verilog` target support the parameter `flags` which
++        accepts a list of flags (strings) that will be passed through to the simulator
++        command (`verilator` for verilator, `irun` for ncsim, `vcs` for vcs, and
++        `iverilog` for iverilog).
++        
++        ### Can I include a message to print when an expect fails?
++        Use the `msg` argument to the expect action. You can either pass a standalone
++        string, e.g.
++        ```python
++        tester.circuit.O.expect(0, msg="my error message")
++        ```
++        
++        or you can pass a printf/$display style message using a tuple.  The first argument
++        should be the format string, the subsequent arguments are the format values,
++        e.g.
++        ```python
++        tester.circuit.O.expect(0, msg=("MY_MESSAGE: got %x, expected 0!",
++                                        tester.circuit.O))
++        ```
++        
++        ### Can I display or print values from my testbench?
++        Yes, you can use the `tester.print` API which accepts a format string and a
++        variable number of arguments.  Here's an example:
++        ```python
++        tester = fault.Tester(circ, circ.CLK)
++        tester.poke(circ.I, 0)
++        tester.eval()
++        tester.expect(circ.O, 0)
++        tester.poke(circ.CLK, 0)
++        tester.step()
++        tester.print("%08x\n", circ.O)
++        ```
++        
++        
++        ### Can I just generate a test bench without running it?
++        Yes, here's an example:
++        ```python
++        # compile the tester
++        tester.compile("verilator")
++        # generate the test bench file (returns the name of the file)
++        tb_file = tester.generate_test_bench("verilator")
++        ```
++        
++        or for system verilog
++        ```python
++        tester.compile("system-verilog", simulator="ncsim")
++        tb_file = tester.generate_test_bench("system-verilog")
++        ```
++        
++Platform: UNKNOWN
++Requires-Python: >=3.6
++Description-Content-Type: text/markdown
+diff -ruN fault-fixture_additions/fault.egg-info/requires.txt ../fixture_tool/fault-fixture_additions/fault.egg-info/requires.txt
+--- fault-fixture_additions/fault.egg-info/requires.txt	1969-12-31 19:00:00.000000000 -0500
++++ ../fixture_tool/fault-fixture_additions/fault.egg-info/requires.txt	2022-05-17 14:38:04.272520000 -0400
+@@ -0,0 +1,11 @@
++astor
++coreir
++cosa
++z3-solver
++hwtypes
++magma-lang>=2.0.73
++pyyaml
++scipy
++numpy
++DeCiDa
++pysv
+diff -ruN fault-fixture_additions/fault.egg-info/SOURCES.txt ../fixture_tool/fault-fixture_additions/fault.egg-info/SOURCES.txt
+--- fault-fixture_additions/fault.egg-info/SOURCES.txt	1969-12-31 19:00:00.000000000 -0500
++++ ../fixture_tool/fault-fixture_additions/fault.egg-info/SOURCES.txt	2022-05-17 14:38:04.296524000 -0400
+@@ -0,0 +1,70 @@
++README.md
++setup.cfg
++setup.py
++fault/__init__.py
++fault/action_generators.py
++fault/actions.py
++fault/array.py
++fault/assert_immediate.py
++fault/assert_utils.py
++fault/background_poke.py
++fault/circuit_utils.py
++fault/codegen.py
++fault/common.py
++fault/config.py
++fault/domain_read.py
++fault/expression.py
++fault/fault_errors.py
++fault/file.py
++fault/functional_tester.py
++fault/infix.py
++fault/logging.py
++fault/magma_simulator_target.py
++fault/magma_utils.py
++fault/ms_types.py
++fault/netlister.py
++fault/pono_target.py
++fault/power_tester.py
++fault/property.py
++fault/pwl.py
++fault/pysv.py
++fault/random.py
++fault/result_parse.py
++fault/select_path.py
++fault/spice.py
++fault/spice_target.py
++fault/subprocess_run.py
++fault/sva.py
++fault/system_verilog_target.py
++fault/target.py
++fault/test_vector_generator.py
++fault/test_vectors.py
++fault/tester_samples.py
++fault/user_cfg.py
++fault/util.py
++fault/utils.py
++fault/value.py
++fault/value_utils.py
++fault/vector_builder.py
++fault/verilator_target.py
++fault/verilator_utils.py
++fault/verilog_target.py
++fault/verilog_utils.py
++fault/verilogams.py
++fault/verilogams_target.py
++fault/wrapped_internal_port.py
++fault/wrapper.py
++fault.egg-info/PKG-INFO
++fault.egg-info/SOURCES.txt
++fault.egg-info/dependency_links.txt
++fault.egg-info/requires.txt
++fault.egg-info/top_level.txt
++fault/tester/__init__.py
++fault/tester/base.py
++fault/tester/control.py
++fault/tester/interactive_tester.py
++fault/tester/sequence_tester.py
++fault/tester/staged_tester.py
++fault/tester/symbolic_tester.py
++fault/tester/synchronous.py
++fault/tester/utils.py
+\ No newline at end of file
+diff -ruN fault-fixture_additions/fault.egg-info/top_level.txt ../fixture_tool/fault-fixture_additions/fault.egg-info/top_level.txt
+--- fault-fixture_additions/fault.egg-info/top_level.txt	1969-12-31 19:00:00.000000000 -0500
++++ ../fixture_tool/fault-fixture_additions/fault.egg-info/top_level.txt	2022-05-17 14:38:04.273520000 -0400
+@@ -0,0 +1 @@
++fault

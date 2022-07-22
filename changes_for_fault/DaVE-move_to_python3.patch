@@ -1,0 +1,280 @@
+diff -ruN DaVE-move_to_python3/dave/common/misc.py ../fixture_tool/DaVE-move_to_python3/dave/common/misc.py
+--- DaVE-move_to_python3/dave/common/misc.py	2021-05-07 14:39:55.000000000 -0400
++++ ../fixture_tool/DaVE-move_to_python3/dave/common/misc.py	2022-05-25 19:29:38.360752000 -0400
+@@ -370,7 +370,7 @@
+   val=OrderedDict()
+   val.update(default)
+   f = get_abspath(filename)
+-  val.update(yaml.load(open(f,'r')))
++  val.update(yaml.safe_load(open(f,'r')))
+   for k in list(default.keys()):
+     if not val[k]: val.update({k:default[k]})
+   return val
+Binary files DaVE-move_to_python3/dave/common/__pycache__/davelogger.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/common/__pycache__/davelogger.cpython-36.pyc differ
+Binary files DaVE-move_to_python3/dave/common/__pycache__/davemsg.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/common/__pycache__/davemsg.cpython-36.pyc differ
+Binary files DaVE-move_to_python3/dave/common/__pycache__/empyinterface.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/common/__pycache__/empyinterface.cpython-36.pyc differ
+Binary files DaVE-move_to_python3/dave/common/__pycache__/__init__.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/common/__pycache__/__init__.cpython-36.pyc differ
+Binary files DaVE-move_to_python3/dave/common/__pycache__/misc.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/common/__pycache__/misc.cpython-36.pyc differ
+Binary files DaVE-move_to_python3/dave/common/__pycache__/primitive.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/common/__pycache__/primitive.cpython-36.pyc differ
+diff -ruN DaVE-move_to_python3/dave/mgenero/api_mgenero.py ../fixture_tool/DaVE-move_to_python3/dave/mgenero/api_mgenero.py
+--- DaVE-move_to_python3/dave/mgenero/api_mgenero.py	2021-05-07 14:39:55.000000000 -0400
++++ ../fixture_tool/DaVE-move_to_python3/dave/mgenero/api_mgenero.py	2022-07-08 17:02:45.214545000 -0400
+@@ -65,7 +65,8 @@
+   vlog_3 = 'variable_map = {v_map}\n'.format(v_map = variable_map)
+   vlog = '$${\n' + vlog_1 + vlog_2 + vlog_3 + '}$$\n'
+   for i, t in enumerate(param_map.keys()):
+-    vlog += _annotate_verilog_statement(t, param_map[t], i)
++    temp = _annotate_verilog_statement(t, param_map[t], i)
++    vlog += temp
+   return vlog
+ 
+ def _annotate_verilog_statement(testname, param_map_value, case_index):
+diff -ruN DaVE-move_to_python3/dave/mgenero/model_header.py ../fixture_tool/DaVE-move_to_python3/dave/mgenero/model_header.py
+--- DaVE-move_to_python3/dave/mgenero/model_header.py	2021-05-07 14:39:55.000000000 -0400
++++ ../fixture_tool/DaVE-move_to_python3/dave/mgenero/model_header.py	2022-07-08 17:01:12.242286000 -0400
+@@ -90,9 +90,17 @@
+     _terms = get_terms(testname, dv, mode) # terms from linear regression
+     _coefs = [get_lm_coef(testname, dv, iv, mode) for iv in _terms]
+   
++    #print('t, c')
++    #print(_terms)
++    #print(_coefs)
++    #print()
+     def get_unit_terms(term):
+       ''' extact variables. For example, ctl1*ctl2 will produce [ctl1,ctl2] '''
+-      return [f for f in term.split('*') if len(f) >0 and f[0].isalpha()]
++      return [term]
++      try:
++        return [f for f in term.split('*') if len(f) >0 and f[0].isalpha()]
++      except:
++        return [term]
+   
+     _port = sorted(list(set(flatten_list([get_unit_terms(t) for t in _terms]))-set(['offset']))) # all the unit independent variables from linear regression results
+     _varl = [replace_lm_variable_name(t) for t in _port]
+@@ -101,8 +109,8 @@
+     for i,v in enumerate(_port):
+       equation = re.sub(r'\\b%s\\b' % v, _varl[i], equation)
+     return equation
+-  except:
+-    return default
++  except Exception as e:
++    return str(e) + 'Issue with generating something for ' + str(_terms)
+ 
+ 
+ }}@
+Binary files DaVE-move_to_python3/dave/mgenero/__pycache__/flowcontrol.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/mgenero/__pycache__/flowcontrol.cpython-36.pyc differ
+Binary files DaVE-move_to_python3/dave/mgenero/__pycache__/__init__.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/mgenero/__pycache__/__init__.cpython-36.pyc differ
+Binary files DaVE-move_to_python3/dave/mgenero/__pycache__/interface.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/mgenero/__pycache__/interface.cpython-36.pyc differ
+Binary files DaVE-move_to_python3/dave/mgenero/__pycache__/mgenero.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/mgenero/__pycache__/mgenero.cpython-36.pyc differ
+Binary files DaVE-move_to_python3/dave/mgenero/__pycache__/model_header.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/mgenero/__pycache__/model_header.cpython-36.pyc differ
+Binary files DaVE-move_to_python3/dave/mgenero/__pycache__/templateinterpreter.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/mgenero/__pycache__/templateinterpreter.cpython-36.pyc differ
+Binary files DaVE-move_to_python3/dave/mgenero/__pycache__/userconfig.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/mgenero/__pycache__/userconfig.cpython-36.pyc differ
+diff -ruN DaVE-move_to_python3/dave/mprobo/modelparameter.py ../fixture_tool/DaVE-move_to_python3/dave/mprobo/modelparameter.py
+--- DaVE-move_to_python3/dave/mprobo/modelparameter.py	2021-05-07 14:39:55.000000000 -0400
++++ ../fixture_tool/DaVE-move_to_python3/dave/mprobo/modelparameter.py	2022-05-25 19:30:15.111730000 -0400
+@@ -37,7 +37,7 @@
+   def load_model_parameters(self, lm_file):
+     ''' load model parameters in YAML '''
+     with open(os.path.abspath(lm_file), 'r') as f:
+-      self._param = yaml.load(f)
++      self._param = yaml.safe_load(f)
+ 
+   def get_param(self):
+     return self._param
+Binary files DaVE-move_to_python3/dave/mprobo/__pycache__/amschkschema.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/mprobo/__pycache__/amschkschema.cpython-36.pyc differ
+Binary files DaVE-move_to_python3/dave/mprobo/__pycache__/configobjwrapper.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/mprobo/__pycache__/configobjwrapper.cpython-36.pyc differ
+Binary files DaVE-move_to_python3/dave/mprobo/__pycache__/environ.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/mprobo/__pycache__/environ.cpython-36.pyc differ
+Binary files DaVE-move_to_python3/dave/mprobo/__pycache__/__init__.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/mprobo/__pycache__/__init__.cpython-36.pyc differ
+Binary files DaVE-move_to_python3/dave/mprobo/__pycache__/linearregression.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/mprobo/__pycache__/linearregression.cpython-36.pyc differ
+Binary files DaVE-move_to_python3/dave/mprobo/__pycache__/mchkmsg.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/mprobo/__pycache__/mchkmsg.cpython-36.pyc differ
+Binary files DaVE-move_to_python3/dave/mprobo/__pycache__/modelparameter.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/mprobo/__pycache__/modelparameter.cpython-36.pyc differ
+Binary files DaVE-move_to_python3/dave/mprobo/__pycache__/mproboenv.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/mprobo/__pycache__/mproboenv.cpython-36.pyc differ
+Binary files DaVE-move_to_python3/dave/mprobo/__pycache__/testconfig.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/mprobo/__pycache__/testconfig.cpython-36.pyc differ
+Binary files DaVE-move_to_python3/dave/mprobo/__pycache__/verilogparser.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/mprobo/__pycache__/verilogparser.cpython-36.pyc differ
+Binary files DaVE-move_to_python3/dave/mprobo/__pycache__/wire.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/mprobo/__pycache__/wire.cpython-36.pyc differ
+Binary files DaVE-move_to_python3/dave/__pycache__/__init__.cpython-36.pyc and ../fixture_tool/DaVE-move_to_python3/dave/__pycache__/__init__.cpython-36.pyc differ
+diff -ruN DaVE-move_to_python3/DaVE_StanfordVLSI.egg-info/dependency_links.txt ../fixture_tool/DaVE-move_to_python3/DaVE_StanfordVLSI.egg-info/dependency_links.txt
+--- DaVE-move_to_python3/DaVE_StanfordVLSI.egg-info/dependency_links.txt	1969-12-31 19:00:00.000000000 -0500
++++ ../fixture_tool/DaVE-move_to_python3/DaVE_StanfordVLSI.egg-info/dependency_links.txt	2022-05-25 19:23:26.071752000 -0400
+@@ -0,0 +1 @@
++
+diff -ruN DaVE-move_to_python3/DaVE_StanfordVLSI.egg-info/PKG-INFO ../fixture_tool/DaVE-move_to_python3/DaVE_StanfordVLSI.egg-info/PKG-INFO
+--- DaVE-move_to_python3/DaVE_StanfordVLSI.egg-info/PKG-INFO	1969-12-31 19:00:00.000000000 -0500
++++ ../fixture_tool/DaVE-move_to_python3/DaVE_StanfordVLSI.egg-info/PKG-INFO	2022-05-25 19:23:26.069758000 -0400
+@@ -0,0 +1,43 @@
++Metadata-Version: 2.1
++Name: DaVE-StanfordVLSI
++Version: 0.0.1
++Summary: Tools for analog circuit modeling, validation, and generation.
++Home-page: https://github.com/StanfordVLSI/DaVE
++Author: Stanford VLSI
++Author-email: dstanley@Stanford.edu
++License: UNKNOWN
++Description: # DaVE
++        
++        ## Overview
++        Today it is difficult to validate a System-on-Chip which contains analog components (is mixed signal). The problem is that the analog and digital subsystems are usually strongly intertwined so they must be validated as a system, but the validation approaches for analog and digital blocks are completely different. We address this problem by creating high-level functional models of analog components, which is compatible with top-level digital system validation, and then provide a method of formal checking to ensure that these functional models match the operation of the transistor level implementations of these blocks.
++         
++        We provide a set of methodologies and tools for this analog functional modeling, the core part for enabling our Digital Analog Design. Our modeling methodology consists of three core technologies:
++         
++        * mLingua: modeling language in SystemVerilog
++        * mProbo: model checker
++        * mGenero: model generator
++        
++        ## mLingua: Event-Driven Piecewise Linear Modeling in SystemVerilog
++        Real number modeling of analog circuits has become more common as a part of MS-SoC validation. However, such analog models are not accepted as a de facto standard for MS-SoC validation since the models are still believed to be an approximation of their transistor implementations. We address this problem by creating fast, high-fidelity analog functional models completely written in native SystemVerilog language. We leverage a PWL waveform approximation to represent analog signals.
++         
++        This modeling work is further improved by providing a way to dynamically schedule the events for approximating the signal waveform to PWL segments with a well controlled error bound. This dynamic scheduling of events eliminates the need to manually find the largest time step that gives acceptable accuracy, and improves simulation performance.   
++        
++        ## mProbo: Analog Model Equivalence Checking
++        Creating an analog functional model does not completely solve the validation problem. The models are often provided without checking if their functional behavior matches that of the corresponding circuit implementations, which leads to mixed-signal design errors. Digital designers control system validation and they trust analog models because they believe the model is the specification. Thus, although the chip validation with the models has passed, the real chip could fail because of inconsistencies between analog circuits and their models. The cause of these errors is usually not a subtle analog issue such as nonlinearity and noise — these are found through circuit simulations. Rather, the problems are often trivial wiring mistakes: inconsistencies between circuits and models at the I/O boundary, which include missing connections, mislabeled pins, signal inversion, bus-order reversal, and bus-encoding mismatch. For example, the polarity of a signal might be inverted, e.g., active low vs. active high for the reset signal, and a bus might be connected via different encoding styles, e.g., big-endian vs. little-endian. Worse yet, these errors are often repeated, which is extremely wasteful. We need a functional equivalence checking between an analog circuit and its model to ensure the analog model matches the circuit.
++         
++        The formal checking of the analog blocks is enabled by observing that the result surface of an analog block is a smooth function of its analog inputs -- that is what makes it an analog block. This means it is not difficult to "explore" the design space of an analog block. We use this insight to create an equivalence checker between two analog descriptions: a SPICE netlist and its Verilog model. Our AMS equivalence checker exploits the linear intent of analog circuits. In addition, analog test vector generation along with the intent of I/O ports in AMS designs is automated.
++        
++        ## mGenero: Analog Functional Model Generation/Validation
++        Our model generation framework provides a way to generate and validate analog functional models in SystemVerilog from templates. A template-based model generation is not a new idea, but our framework can generate multiple models having different number of pins from a single template. 
++        
++        ## Quick start
++        Running model validation and generation needs Python packages. As for the package installation, please visit the project homepage (http://vlsiweb.stanford.edu/projects/digitalanalog/).
++        
++        For a quick start, read and follow the instuction in the GET_STARTED file.
++        
++        Please read LICENSE file before starting to use.
++        
++Platform: UNKNOWN
++Classifier: Programming Language :: Python :: 3
++Requires-Python: >=3.6
++Description-Content-Type: text/markdown
+diff -ruN DaVE-move_to_python3/DaVE_StanfordVLSI.egg-info/requires.txt ../fixture_tool/DaVE-move_to_python3/DaVE_StanfordVLSI.egg-info/requires.txt
+--- DaVE-move_to_python3/DaVE_StanfordVLSI.egg-info/requires.txt	1969-12-31 19:00:00.000000000 -0500
++++ ../fixture_tool/DaVE-move_to_python3/DaVE_StanfordVLSI.egg-info/requires.txt	2022-05-25 19:23:26.072759000 -0400
+@@ -0,0 +1,4 @@
++BitVector
++configobj
++empy
++statsmodels
+diff -ruN DaVE-move_to_python3/DaVE_StanfordVLSI.egg-info/SOURCES.txt ../fixture_tool/DaVE-move_to_python3/DaVE_StanfordVLSI.egg-info/SOURCES.txt
+--- DaVE-move_to_python3/DaVE_StanfordVLSI.egg-info/SOURCES.txt	1969-12-31 19:00:00.000000000 -0500
++++ ../fixture_tool/DaVE-move_to_python3/DaVE_StanfordVLSI.egg-info/SOURCES.txt	2022-05-25 19:23:26.099753000 -0400
+@@ -0,0 +1,71 @@
++README.md
++setup.py
++DaVE_StanfordVLSI.egg-info/PKG-INFO
++DaVE_StanfordVLSI.egg-info/SOURCES.txt
++DaVE_StanfordVLSI.egg-info/dependency_links.txt
++DaVE_StanfordVLSI.egg-info/requires.txt
++DaVE_StanfordVLSI.egg-info/top_level.txt
++dave/__init__.py
++dave/common/__init__.py
++dave/common/checkeval.py
++dave/common/davelogger.py
++dave/common/davemsg.py
++dave/common/empyinterface.py
++dave/common/misc.py
++dave/common/netstat.py
++dave/common/primitive.py
++dave/mgenero/__init__.py
++dave/mgenero/api_mgenero.py
++dave/mgenero/flowcontrol.py
++dave/mgenero/interface.py
++dave/mgenero/mgenero.py
++dave/mgenero/model_header.py
++dave/mgenero/templateinterpreter.py
++dave/mgenero/userconfig.py
++dave/mlingua/__init__.py
++dave/mlingua/acsimulation.py
++dave/mlingua/checkeval.py
++dave/mlingua/dctxfcurve.py
++dave/mlingua/filter_template.py
++dave/mlingua/interupthandler.py
++dave/mlingua/lookuptable.py
++dave/mlingua/lutmd.py
++dave/mlingua/lutmd_template.py
++dave/mlingua/misc.py
++dave/mlingua/pwlbasisfunction.py
++dave/mlingua/pwlgenerator.py
++dave/mlingua/pwlmisc.py
++dave/mlingua/pwlvector.py
++dave/mlingua/txf2tran.py
++dave/mlingua/txf_template.py
++dave/mlingua/vloggenerator.py
++dave/mlingua/wavefunctiongenerator.py
++dave/mprobo/__init__.py
++dave/mprobo/amschkschema.py
++dave/mprobo/checker.py
++dave/mprobo/configobjwrapper.py
++dave/mprobo/environ.py
++dave/mprobo/htmlamschk.py
++dave/mprobo/launcher.py
++dave/mprobo/linearregression.py
++dave/mprobo/mchecker_exception.py
++dave/mprobo/mchkmsg.py
++dave/mprobo/modalanalysis.py
++dave/mprobo/modelparameter.py
++dave/mprobo/mproboenv.py
++dave/mprobo/mprobogui.py
++dave/mprobo/oatable.py
++dave/mprobo/port.py
++dave/mprobo/reportgen.py
++dave/mprobo/runchecker.py
++dave/mprobo/server.py
++dave/mprobo/simulation.py
++dave/mprobo/simulatorconfig.py
++dave/mprobo/simulatorinterface.py
++dave/mprobo/testbench.py
++dave/mprobo/testbench_template.py
++dave/mprobo/testconfig.py
++dave/mprobo/testunit.py
++dave/mprobo/vectorgenerator.py
++dave/mprobo/verilogparser.py
++dave/mprobo/wire.py
+\ No newline at end of file
+diff -ruN DaVE-move_to_python3/DaVE_StanfordVLSI.egg-info/top_level.txt ../fixture_tool/DaVE-move_to_python3/DaVE_StanfordVLSI.egg-info/top_level.txt
+--- DaVE-move_to_python3/DaVE_StanfordVLSI.egg-info/top_level.txt	1969-12-31 19:00:00.000000000 -0500
++++ ../fixture_tool/DaVE-move_to_python3/DaVE_StanfordVLSI.egg-info/top_level.txt	2022-05-25 19:23:26.073757000 -0400
+@@ -0,0 +1 @@
++dave
+diff -ruN DaVE-move_to_python3/mLingua/samples/prim/pwl_filter_real_prime.v ../fixture_tool/DaVE-move_to_python3/mLingua/samples/prim/pwl_filter_real_prime.v
+--- DaVE-move_to_python3/mLingua/samples/prim/pwl_filter_real_prime.v	2021-05-07 14:39:55.000000000 -0400
++++ ../fixture_tool/DaVE-move_to_python3/mLingua/samples/prim/pwl_filter_real_prime.v	2022-06-23 16:59:15.916673000 -0400
+@@ -227,7 +227,9 @@
+       //return abs(-(-2*p1**3*(-in.a*p1**2*sin(p2*t) - in.a*p2**2*sin(p2*t) + in.b*p1*sin(p2*t) + in.b*p2*cos(p2*t) + p1**2*yo0*sin(p2*t) + p1*yo1*sin(p2*t) + p2**2*yo0*sin(p2*t) - p2*yo1*cos(p2*t))/(p2*(p1**2 + p2**2)) + p1**2*(-in.a*p1**2*cos(p2*t) - in.a*p2**2*cos(p2*t) + in.b*p1*cos(p2*t) - in.b*p2*sin(p2*t) + p1**2*yo0*cos(p2*t) + p1*yo1*cos(p2*t) + p2**2*yo0*cos(p2*t) + p2*yo1*sin(p2*t))/(p1**2 + p2**2) - p1**2*(in.a*p1**2*cos(p2*t) + in.a*p2**2*cos(p2*t) - in.b*p1*cos(p2*t) + in.b*p2*sin(p2*t) - p1**2*yo0*cos(p2*t) - p1*yo1*cos(p2*t) - p2**2*yo0*cos(p2*t) - p2*yo1*sin(p2*t))/(p1**2 + p2**2) - 2*p1*p2*(-in.a*p1**2*sin(p2*t) - in.a*p2**2*sin(p2*t) + in.b*p1*sin(p2*t) + in.b*p2*cos(p2*t) + p1**2*yo0*sin(p2*t) + p1*yo1*sin(p2*t) + p2**2*yo0*sin(p2*t) - p2*yo1*cos(p2*t))/(p1**2 + p2**2) + p2**2*(-in.a*p1**2*cos(p2*t) - in.a*p2**2*cos(p2*t) + in.b*p1*cos(p2*t) - in.b*p2*sin(p2*t) + p1**2*yo0*cos(p2*t) + p1*yo1*cos(p2*t) + p2**2*yo0*cos(p2*t) + p2*yo1*sin(p2*t))/(p1**2 + p2**2) - p2**2*(in.a*p1**2*cos(p2*t) + in.a*p2**2*cos(p2*t) - in.b*p1*cos(p2*t) + in.b*p2*sin(p2*t) - p1**2*yo0*cos(p2*t) - p1*yo1*cos(p2*t) - p2**2*yo0*cos(p2*t) - p2*yo1*sin(p2*t))/(p1**2 + p2**2))*exp(-p1*t)/2);
+       return abs((2*p1**3*(abs(-in.a*p1**2) + abs(in.a*p2**2) + abs(in.b*p1) + abs(in.b*p2) + abs(p1**2*yo0) + abs(p1*yo1) + abs(p2**2*yo0) + abs(p2*yo1))/(p2*(p1**2 + p2**2)) + p1**2*(abs(-in.a*p1**2) + abs(in.a*p2**2) + abs(in.b*p1) + abs(in.b*p2) + abs(p1**2*yo0) + abs(p1*yo1) + abs(p2**2*yo0) + abs(p2*yo1))/(p1**2 + p2**2) + p1**2*(abs(in.a*p1**2) + abs(in.a*p2**2) + abs(in.b*p1) + abs(in.b*p2) + abs(p1**2*yo0) + abs(p1*yo1) + abs(p2**2*yo0) + abs(p2*yo1))/(p1**2 + p2**2) + 2*p1*p2*(abs(in.a*p1**2) + abs(in.a*p2**2) + abs(in.b*p1) + abs(in.b*p2) + abs(p1**2*yo0) + abs(p1*yo1) + abs(p2**2*yo0) + abs(p2*yo1))/(p1**2 + p2**2) + p2**2*(abs(in.a*p1**2) + abs(in.a*p2**2) + abs(in.b*p1) + abs(in.b*p2) + abs(p1**2*yo0) + abs(p1*yo1) + abs(p2**2*yo0) + abs(p2*yo1))/(p1**2 + p2**2) + p2**2*(abs(in.a*p1**2) + abs(in.a*p2**2) + abs(in.b*p1) + abs(in.b*p2) + abs(p1**2*yo0) + abs(p1*yo1) + abs(p2**2*yo0) + abs(p2*yo1))/(p1**2 + p2**2))*exp(-p1*t)/2);
+     else if (filter_type==2) // p2z1
+-      return abs(-(-2*p1**2*(in.a*p1**2*sin(p2*t)/z1 - in.a*p1*sin(p2*t) + in.a*p2**2*sin(p2*t)/z1 - in.a*p2*cos(p2*t) + in.b*p1**2*sin(p2*t)/(p1**2 + p2**2) + 2*in.b*p1*p2*cos(p2*t)/(p1**2 + p2**2) - in.b*p1*sin(p2*t)/z1 - in.b*p2**2*sin(p2*t)/(p1**2 + p2**2) - in.b*p2*cos(p2*t)/z1 - p1**2*xi0*sin(p2*t)/z1 + p1*yo0*sin(p2*t) - p2**2*xi0*sin(p2*t)/z1 + p2*yo0*cos(p2*t) + yo1*sin(p2*t))/p2 - 2*p1*(-in.a*p1**2*cos(p2*t)/z1 + in.a*p1*cos(p2*t) - in.a*p2**2*cos(p2*t)/z1 - in.a*p2*sin(p2*t) - in.b*p1**2*cos(p2*t)/(p1**2 + p2**2) + 2*in.b*p1*p2*sin(p2*t)/(p1**2 + p2**2) + in.b*p1*cos(p2*t)/z1 + in.b*p2**2*cos(p2*t)/(p1**2 + p2**2) - in.b*p2*sin(p2*t)/z1 + p1**2*xi0*cos(p2*t)/z1 - p1*yo0*cos(p2*t) + p2**2*xi0*cos(p2*t)/z1 + p2*yo0*sin(p2*t) - yo1*cos(p2*t)) + 2*p1*(in.a*p1**2*cos(p2*t)/z1 - in.a*p1*cos(p2*t) + in.a*p2**2*cos(p2*t)/z1 + in.a*p2*sin(p2*t) + in.b*p1**2*cos(p2*t)/(p1**2 + p2**2) - 2*in.b*p1*p2*sin(p2*t)/(p1**2 + p2**2) - in.b*p1*cos(p2*t)/z1 - in.b*p2**2*cos(p2*t)/(p1**2 + p2**2) + in.b*p2*sin(p2*t)/z1 - p1**2*xi0*cos(p2*t)/z1 + p1*yo0*cos(p2*t) - p2**2*xi0*cos(p2*t)/z1 - p2*yo0*sin(p2*t) + yo1*cos(p2*t)) + 2*p2*(in.a*p1**2*sin(p2*t)/z1 - in.a*p1*sin(p2*t) + in.a*p2**2*sin(p2*t)/z1 - in.a*p2*cos(p2*t) + in.b*p1**2*sin(p2*t)/(p1**2 + p2**2) + 2*in.b*p1*p2*cos(p2*t)/(p1**2 + p2**2) - in.b*p1*sin(p2*t)/z1 - in.b*p2**2*sin(p2*t)/(p1**2 + p2**2) - in.b*p2*cos(p2*t)/z1 - p1**2*xi0*sin(p2*t)/z1 + p1*yo0*sin(p2*t) - p2**2*xi0*sin(p2*t)/z1 + p2*yo0*cos(p2*t) + yo1*sin(p2*t)))*exp(-p1*t)/2);
++      //return abs(-(-2*p1**2*(in.a*p1**2*sin(p2*t)/z1 - in.a*p1*sin(p2*t) + in.a*p2**2*sin(p2*t)/z1 - in.a*p2*cos(p2*t) + in.b*p1**2*sin(p2*t)/(p1**2 + p2**2) + 2*in.b*p1*p2*cos(p2*t)/(p1**2 + p2**2) - in.b*p1*sin(p2*t)/z1 - in.b*p2**2*sin(p2*t)/(p1**2 + p2**2) - in.b*p2*cos(p2*t)/z1 - p1**2*xi0*sin(p2*t)/z1 + p1*yo0*sin(p2*t) - p2**2*xi0*sin(p2*t)/z1 + p2*yo0*cos(p2*t) + yo1*sin(p2*t))/p2 - 2*p1*(-in.a*p1**2*cos(p2*t)/z1 + in.a*p1*cos(p2*t) - in.a*p2**2*cos(p2*t)/z1 - in.a*p2*sin(p2*t) - in.b*p1**2*cos(p2*t)/(p1**2 + p2**2) + 2*in.b*p1*p2*sin(p2*t)/(p1**2 + p2**2) + in.b*p1*cos(p2*t)/z1 + in.b*p2**2*cos(p2*t)/(p1**2 + p2**2) - in.b*p2*sin(p2*t)/z1 + p1**2*xi0*cos(p2*t)/z1 - p1*yo0*cos(p2*t) + p2**2*xi0*cos(p2*t)/z1 + p2*yo0*sin(p2*t) - yo1*cos(p2*t)) + 2*p1*(in.a*p1**2*cos(p2*t)/z1 - in.a*p1*cos(p2*t) + in.a*p2**2*cos(p2*t)/z1 + in.a*p2*sin(p2*t) + in.b*p1**2*cos(p2*t)/(p1**2 + p2**2) - 2*in.b*p1*p2*sin(p2*t)/(p1**2 + p2**2) - in.b*p1*cos(p2*t)/z1 - in.b*p2**2*cos(p2*t)/(p1**2 + p2**2) + in.b*p2*sin(p2*t)/z1 - p1**2*xi0*cos(p2*t)/z1 + p1*yo0*cos(p2*t) - p2**2*xi0*cos(p2*t)/z1 - p2*yo0*sin(p2*t) + yo1*cos(p2*t)) + 2*p2*(in.a*p1**2*sin(p2*t)/z1 - in.a*p1*sin(p2*t) + in.a*p2**2*sin(p2*t)/z1 - in.a*p2*cos(p2*t) + in.b*p1**2*sin(p2*t)/(p1**2 + p2**2) + 2*in.b*p1*p2*cos(p2*t)/(p1**2 + p2**2) - in.b*p1*sin(p2*t)/z1 - in.b*p2**2*sin(p2*t)/(p1**2 + p2**2) - in.b*p2*cos(p2*t)/z1 - p1**2*xi0*sin(p2*t)/z1 + p1*yo0*sin(p2*t) - p2**2*xi0*sin(p2*t)/z1 + p2*yo0*cos(p2*t) + yo1*sin(p2*t)))*exp(-p1*t)/2);
++      // TODO this does not take sloped input into account
++      return abs(in.a - out_cur) * sqrt(((p2**2+p1*(p1-z1))/(p2*z1))**2 + 1) * (p1**2+p2**2);
+     else
+       return 0;
+ end
+@@ -245,6 +247,7 @@
+   abs_f2max = f2max_filter_prime(t);
+   calcT = sqrt(8.0*etol/abs_f2max);
+   return min(`DT_MAX,max(TU,min(1.0,calcT)));
++  //return min(2e-9,max(TU,min(1.0,calcT)));
+ end
+ endfunction
+ 
+diff -ruN DaVE-move_to_python3/samples/mLingua/prim/pwl_filter_real_prime.v ../fixture_tool/DaVE-move_to_python3/samples/mLingua/prim/pwl_filter_real_prime.v
+--- DaVE-move_to_python3/samples/mLingua/prim/pwl_filter_real_prime.v	2021-05-07 14:39:55.000000000 -0400
++++ ../fixture_tool/DaVE-move_to_python3/samples/mLingua/prim/pwl_filter_real_prime.v	2022-06-23 16:59:15.916673000 -0400
+@@ -227,7 +227,9 @@
+       //return abs(-(-2*p1**3*(-in.a*p1**2*sin(p2*t) - in.a*p2**2*sin(p2*t) + in.b*p1*sin(p2*t) + in.b*p2*cos(p2*t) + p1**2*yo0*sin(p2*t) + p1*yo1*sin(p2*t) + p2**2*yo0*sin(p2*t) - p2*yo1*cos(p2*t))/(p2*(p1**2 + p2**2)) + p1**2*(-in.a*p1**2*cos(p2*t) - in.a*p2**2*cos(p2*t) + in.b*p1*cos(p2*t) - in.b*p2*sin(p2*t) + p1**2*yo0*cos(p2*t) + p1*yo1*cos(p2*t) + p2**2*yo0*cos(p2*t) + p2*yo1*sin(p2*t))/(p1**2 + p2**2) - p1**2*(in.a*p1**2*cos(p2*t) + in.a*p2**2*cos(p2*t) - in.b*p1*cos(p2*t) + in.b*p2*sin(p2*t) - p1**2*yo0*cos(p2*t) - p1*yo1*cos(p2*t) - p2**2*yo0*cos(p2*t) - p2*yo1*sin(p2*t))/(p1**2 + p2**2) - 2*p1*p2*(-in.a*p1**2*sin(p2*t) - in.a*p2**2*sin(p2*t) + in.b*p1*sin(p2*t) + in.b*p2*cos(p2*t) + p1**2*yo0*sin(p2*t) + p1*yo1*sin(p2*t) + p2**2*yo0*sin(p2*t) - p2*yo1*cos(p2*t))/(p1**2 + p2**2) + p2**2*(-in.a*p1**2*cos(p2*t) - in.a*p2**2*cos(p2*t) + in.b*p1*cos(p2*t) - in.b*p2*sin(p2*t) + p1**2*yo0*cos(p2*t) + p1*yo1*cos(p2*t) + p2**2*yo0*cos(p2*t) + p2*yo1*sin(p2*t))/(p1**2 + p2**2) - p2**2*(in.a*p1**2*cos(p2*t) + in.a*p2**2*cos(p2*t) - in.b*p1*cos(p2*t) + in.b*p2*sin(p2*t) - p1**2*yo0*cos(p2*t) - p1*yo1*cos(p2*t) - p2**2*yo0*cos(p2*t) - p2*yo1*sin(p2*t))/(p1**2 + p2**2))*exp(-p1*t)/2);
+       return abs((2*p1**3*(abs(-in.a*p1**2) + abs(in.a*p2**2) + abs(in.b*p1) + abs(in.b*p2) + abs(p1**2*yo0) + abs(p1*yo1) + abs(p2**2*yo0) + abs(p2*yo1))/(p2*(p1**2 + p2**2)) + p1**2*(abs(-in.a*p1**2) + abs(in.a*p2**2) + abs(in.b*p1) + abs(in.b*p2) + abs(p1**2*yo0) + abs(p1*yo1) + abs(p2**2*yo0) + abs(p2*yo1))/(p1**2 + p2**2) + p1**2*(abs(in.a*p1**2) + abs(in.a*p2**2) + abs(in.b*p1) + abs(in.b*p2) + abs(p1**2*yo0) + abs(p1*yo1) + abs(p2**2*yo0) + abs(p2*yo1))/(p1**2 + p2**2) + 2*p1*p2*(abs(in.a*p1**2) + abs(in.a*p2**2) + abs(in.b*p1) + abs(in.b*p2) + abs(p1**2*yo0) + abs(p1*yo1) + abs(p2**2*yo0) + abs(p2*yo1))/(p1**2 + p2**2) + p2**2*(abs(in.a*p1**2) + abs(in.a*p2**2) + abs(in.b*p1) + abs(in.b*p2) + abs(p1**2*yo0) + abs(p1*yo1) + abs(p2**2*yo0) + abs(p2*yo1))/(p1**2 + p2**2) + p2**2*(abs(in.a*p1**2) + abs(in.a*p2**2) + abs(in.b*p1) + abs(in.b*p2) + abs(p1**2*yo0) + abs(p1*yo1) + abs(p2**2*yo0) + abs(p2*yo1))/(p1**2 + p2**2))*exp(-p1*t)/2);
+     else if (filter_type==2) // p2z1
+-      return abs(-(-2*p1**2*(in.a*p1**2*sin(p2*t)/z1 - in.a*p1*sin(p2*t) + in.a*p2**2*sin(p2*t)/z1 - in.a*p2*cos(p2*t) + in.b*p1**2*sin(p2*t)/(p1**2 + p2**2) + 2*in.b*p1*p2*cos(p2*t)/(p1**2 + p2**2) - in.b*p1*sin(p2*t)/z1 - in.b*p2**2*sin(p2*t)/(p1**2 + p2**2) - in.b*p2*cos(p2*t)/z1 - p1**2*xi0*sin(p2*t)/z1 + p1*yo0*sin(p2*t) - p2**2*xi0*sin(p2*t)/z1 + p2*yo0*cos(p2*t) + yo1*sin(p2*t))/p2 - 2*p1*(-in.a*p1**2*cos(p2*t)/z1 + in.a*p1*cos(p2*t) - in.a*p2**2*cos(p2*t)/z1 - in.a*p2*sin(p2*t) - in.b*p1**2*cos(p2*t)/(p1**2 + p2**2) + 2*in.b*p1*p2*sin(p2*t)/(p1**2 + p2**2) + in.b*p1*cos(p2*t)/z1 + in.b*p2**2*cos(p2*t)/(p1**2 + p2**2) - in.b*p2*sin(p2*t)/z1 + p1**2*xi0*cos(p2*t)/z1 - p1*yo0*cos(p2*t) + p2**2*xi0*cos(p2*t)/z1 + p2*yo0*sin(p2*t) - yo1*cos(p2*t)) + 2*p1*(in.a*p1**2*cos(p2*t)/z1 - in.a*p1*cos(p2*t) + in.a*p2**2*cos(p2*t)/z1 + in.a*p2*sin(p2*t) + in.b*p1**2*cos(p2*t)/(p1**2 + p2**2) - 2*in.b*p1*p2*sin(p2*t)/(p1**2 + p2**2) - in.b*p1*cos(p2*t)/z1 - in.b*p2**2*cos(p2*t)/(p1**2 + p2**2) + in.b*p2*sin(p2*t)/z1 - p1**2*xi0*cos(p2*t)/z1 + p1*yo0*cos(p2*t) - p2**2*xi0*cos(p2*t)/z1 - p2*yo0*sin(p2*t) + yo1*cos(p2*t)) + 2*p2*(in.a*p1**2*sin(p2*t)/z1 - in.a*p1*sin(p2*t) + in.a*p2**2*sin(p2*t)/z1 - in.a*p2*cos(p2*t) + in.b*p1**2*sin(p2*t)/(p1**2 + p2**2) + 2*in.b*p1*p2*cos(p2*t)/(p1**2 + p2**2) - in.b*p1*sin(p2*t)/z1 - in.b*p2**2*sin(p2*t)/(p1**2 + p2**2) - in.b*p2*cos(p2*t)/z1 - p1**2*xi0*sin(p2*t)/z1 + p1*yo0*sin(p2*t) - p2**2*xi0*sin(p2*t)/z1 + p2*yo0*cos(p2*t) + yo1*sin(p2*t)))*exp(-p1*t)/2);
++      //return abs(-(-2*p1**2*(in.a*p1**2*sin(p2*t)/z1 - in.a*p1*sin(p2*t) + in.a*p2**2*sin(p2*t)/z1 - in.a*p2*cos(p2*t) + in.b*p1**2*sin(p2*t)/(p1**2 + p2**2) + 2*in.b*p1*p2*cos(p2*t)/(p1**2 + p2**2) - in.b*p1*sin(p2*t)/z1 - in.b*p2**2*sin(p2*t)/(p1**2 + p2**2) - in.b*p2*cos(p2*t)/z1 - p1**2*xi0*sin(p2*t)/z1 + p1*yo0*sin(p2*t) - p2**2*xi0*sin(p2*t)/z1 + p2*yo0*cos(p2*t) + yo1*sin(p2*t))/p2 - 2*p1*(-in.a*p1**2*cos(p2*t)/z1 + in.a*p1*cos(p2*t) - in.a*p2**2*cos(p2*t)/z1 - in.a*p2*sin(p2*t) - in.b*p1**2*cos(p2*t)/(p1**2 + p2**2) + 2*in.b*p1*p2*sin(p2*t)/(p1**2 + p2**2) + in.b*p1*cos(p2*t)/z1 + in.b*p2**2*cos(p2*t)/(p1**2 + p2**2) - in.b*p2*sin(p2*t)/z1 + p1**2*xi0*cos(p2*t)/z1 - p1*yo0*cos(p2*t) + p2**2*xi0*cos(p2*t)/z1 + p2*yo0*sin(p2*t) - yo1*cos(p2*t)) + 2*p1*(in.a*p1**2*cos(p2*t)/z1 - in.a*p1*cos(p2*t) + in.a*p2**2*cos(p2*t)/z1 + in.a*p2*sin(p2*t) + in.b*p1**2*cos(p2*t)/(p1**2 + p2**2) - 2*in.b*p1*p2*sin(p2*t)/(p1**2 + p2**2) - in.b*p1*cos(p2*t)/z1 - in.b*p2**2*cos(p2*t)/(p1**2 + p2**2) + in.b*p2*sin(p2*t)/z1 - p1**2*xi0*cos(p2*t)/z1 + p1*yo0*cos(p2*t) - p2**2*xi0*cos(p2*t)/z1 - p2*yo0*sin(p2*t) + yo1*cos(p2*t)) + 2*p2*(in.a*p1**2*sin(p2*t)/z1 - in.a*p1*sin(p2*t) + in.a*p2**2*sin(p2*t)/z1 - in.a*p2*cos(p2*t) + in.b*p1**2*sin(p2*t)/(p1**2 + p2**2) + 2*in.b*p1*p2*cos(p2*t)/(p1**2 + p2**2) - in.b*p1*sin(p2*t)/z1 - in.b*p2**2*sin(p2*t)/(p1**2 + p2**2) - in.b*p2*cos(p2*t)/z1 - p1**2*xi0*sin(p2*t)/z1 + p1*yo0*sin(p2*t) - p2**2*xi0*sin(p2*t)/z1 + p2*yo0*cos(p2*t) + yo1*sin(p2*t)))*exp(-p1*t)/2);
++      // TODO this does not take sloped input into account
++      return abs(in.a - out_cur) * sqrt(((p2**2+p1*(p1-z1))/(p2*z1))**2 + 1) * (p1**2+p2**2);
+     else
+       return 0;
+ end
+@@ -245,6 +247,7 @@
+   abs_f2max = f2max_filter_prime(t);
+   calcT = sqrt(8.0*etol/abs_f2max);
+   return min(`DT_MAX,max(TU,min(1.0,calcT)));
++  //return min(2e-9,max(TU,min(1.0,calcT)));
+ end
+ endfunction
+ 

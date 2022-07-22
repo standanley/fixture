@@ -1,0 +1,1 @@
+The tool requires some minor feature additions / bug fixe sin fault in order to run correctly. Relevant patch files are here, but they're not perfect, so I plan to go through these changes by hand and add them to the actual repositories.
