@@ -1,0 +1,35 @@
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="interactive_config.css" />
+</head>
+<h1>Fixture Interactive Config Generator</h1>
+<p>
+  Just fill out the form and then download the config file that is generated.
+  Please refer to the instructions
+  <a href="https://github.com/standanley/fixture/wiki/Config-File">here</a>.
+</p>
+
+<div class="main">
+  <div class="container">
+    <form onkeydown="return event.key != 'Enter';">
+      <label for="circuit-filepath">Circuit filepath:</label>
+      <input
+        type="text"
+        id="circuit-filepath"
+        onchange="updateFilepath(this)"
+      />
+
+      <div id="pins-container"></div>
+
+      <button type="button" onclick="addPin()">Add pin</button>
+    </form>
+  </div>
+  <div class="container">
+    <p class="preview-title">Config Preview:</p>
+    <pre id="config-preview">N/A</pre>
+  </div>
+</div>
+
+<button type="button" onclick="downloadConfig()">Download config</button>
+
+<script src="interactive_config.js"></script>
