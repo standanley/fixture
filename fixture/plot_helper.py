@@ -388,6 +388,7 @@ class PlotHelper:
                                                 {regression_name(opt): xs})
 
             print('TODO fix plotting of optional outputs')
+            return
             for parameter, fit in list(self.regression_results.items())[:2]:
                 # prediction just based on  parameter = (Ax + By + C)
                 model_prediction = self.get_column(parameter, lhs_pred=True, overrides=model_data)

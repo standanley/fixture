@@ -2,6 +2,9 @@ import csv
 import os
 import pandas
 import yaml
+from yaml.representer import Representer
+from collections import defaultdict
+yaml.add_representer(defaultdict, Representer.represent_dict)
 
 
 class Checkpoint:
@@ -112,15 +115,42 @@ class Checkpoint:
     def save_regression_results(self, test, rr):
         # TODO doesn't work with multiple modes
         self.data[test]['regression_results'] = rr
+        # remove references from rr because yaml doesn't handle them well
+        rr_clean = {}
+        for lhs, rhs in rr.items():
+            rhs_clean = {}
+            for param, expression in rhs.items():
+                expression_clean = {}
+                for thing, coef in expression.items():
+                    if not isinstance(thing, str):
+                        thing_clean = str(thing)
+                        expression_clean[thing_clean] = coef
+                    else:
+                        expression_clean[thing] = coef
+                rhs_clean[param] = expression_clean
+            rr_clean[lhs] = rhs_clean
+
         f = self._get_save_file(test, 'regression_results.yaml')
-        yaml.dump(rr, f)
+        yaml.dump(rr_clean, f)
         f.close()
         print(rr)
 
     def load_regression_results(self, test):
-        if self.data[test]['regression_results'] is None:
-            f = self._get_save_file(test, 'regression_results.yaml')
+        if True or self.data[test]['regression_results'] is None:
+            f = self._get_load_file(test, 'regression_results.yaml')
             rr = yaml.safe_load(f)
+
+            # edit rr in place to replace things with Signal objects
+            for lhs, rhs in rr.items():
+                for param, expression in rhs.items():
+                    for thing in list(expression.keys()):
+                        try:
+                            thing_obj = test.signals.from_str(thing)
+                            expression[thing_obj] = expression[thing]
+                            del expression[thing]
+                        except KeyError:
+                            pass
+
             f.close()
             self.data[test]['regression_results'] = rr
         rr = self.data[test]['regression_results']

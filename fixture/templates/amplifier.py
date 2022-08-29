@@ -34,8 +34,8 @@ class AmplifierTemplate(TemplateMaster):
         def testbench(self, tester, values):
             debug_time = 500e-9
             #self.debug(tester, self.signals.input, debug_time)
-            self.debug(tester, self.signals.output[0], debug_time)
-            self.debug(tester, self.signals.input[0], debug_time)
+            #self.debug(tester, self.signals.output[0], debug_time)
+            #self.debug(tester, self.signals.input[0], debug_time)
             #self.debug(tester, self.signals.input[0], debug_time)
             #self.debug(tester, self.signals.input[1], debug_time)
             #self.debug(tester, self.signals.from_spice_name('cm_adj<0>').spice_pin, debug_time)
@@ -212,6 +212,10 @@ class AmplifierTemplate(TemplateMaster):
         parameter_algebra = {
             **{f'numerator{i}': {f'const_numerator{i}': '1'} for i in range(1, NZ+1)},
             **{f'denominator{i}': {f'const_denominator{i}': '1'} for i in range(1, NP+1)},
+        }
+        vector_mapping = {
+            **{f'numerator{i}': ['output'] for i in range(1, NZ+1)},
+            **{f'denominator{i}': ['output'] for i in range(1, NP + 1)}
         }
         required_info = {
             'approx_settling_time': 'Approximate time it takes for amp to settle within 99% (s)'

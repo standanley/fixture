@@ -32,6 +32,18 @@ class SignalIn():
     def friendly_name(self):
         return self.template_name if self.spice_name is None else self.spice_name
 
+
+    def __getstate__(self):
+        d = self.__dict__.copy()
+        if d['spice_pin'] is not None:
+            d['spice_pin'] = d['spice_name']
+        return d
+
+    def __setstate__(self, state):
+        # TODO don't have access to dut?
+        self.__dict__ = state
+
+
 class CenteredSignalIn:
     def __init__(self, ref):
         self.ref = ref
@@ -66,6 +78,17 @@ class SignalOut():
 
     def friendly_name(self):
         return self.template_name if self.spice_name is None else self.spice_name
+
+    def __getstate__(self):
+        d = self.__dict__.copy()
+        if d['spice_pin'] is not None:
+            d['spice_pin'] = d['spice_name']
+        return d
+
+    def __setstate__(self, state):
+        # TODO don't have access to dut?
+        self.__dict__ = state
+
 
 def create_signal(pin_dict, c_name=None, c_pin=None, t_name=None):
     type_ = pin_dict.get('datatype', 'analog')
@@ -319,6 +342,25 @@ class SignalManager:
             a = self.signals_by_circuit_name[bus_name]
             s_or_ss = a[tuple(indices)]
             return s_or_ss
+
+    def from_str(self, name):
+        # TODO this is based on assumptions about the various __str__ methods
+        if name[0] != '<' or name[-1] != '>':
+            raise KeyError(name)
+        name = name[1:-1]
+        tokens = name.split(' / ')
+        if len(tokens) == 2:
+            t_name, c_name = tokens
+        else:
+            t_name, c_name, indices = tokens
+
+        if t_name != 'None':
+            return self.from_template_name(t_name)
+        elif c_name != 'None':
+            return self.from_circuit_name(c_name)
+        else:
+            assert False, 'looking for signal without name'
+
 
     def inputs(self):
         for s in self.signals:

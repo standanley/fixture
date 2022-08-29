@@ -48,7 +48,7 @@ class TemplateMaster():
 
         assert hasattr(self, 'tests')
         # replace test classes with instance
-        self.tests = [T(self) for T in self.tests_all]
+        self.tests = [T(self) for T in self.tests]
 
         for test in self.tests:
             test.signals = self.signals.copy()
@@ -384,6 +384,8 @@ class TemplateMaster():
                     del pa_vec[lhs]
                     eqs = [(lhs, rhs)]
                     for vectored_output in vector_mapping_sig[lhs]:
+                        if not isinstance(vectored_output, SignalArray):
+                            continue
                         new_eqs = []
                         for vec_i, component in enumerate(vectored_output):
                             for lhs_j, rhs_j in eqs:
@@ -677,6 +679,9 @@ class TemplateMaster():
                     rr = dict(regression.results)
 
                     checkpoint.save_regression_results(test, rr)
+                    # TODO just a load test
+                    rr = checkpoint.load_regression_results(test)
+                    print(rr)
                 else:
                     rr = {}
 
