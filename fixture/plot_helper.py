@@ -338,8 +338,9 @@ class PlotHelper:
         def regression_name(s):
             return Regression.clean_string(Regression.regression_name(s))
 
-        print(self)
         N = 101
+
+        # create nominal_data_dict
         nominal_data_dict = {}
         for ta in self.test.signals.optional_true_analog():
             assert isinstance(ta.value, tuple) and len(ta.value) == 2
@@ -362,83 +363,97 @@ class PlotHelper:
             print(model_data)
 
             print('TODO fix plotting of optional outputs')
-            for lhs, rhs in list(self.regression_results.items())[:2]:
-                for parameter, fit in rhs.items():
-                    if parameter == 'default_factory':
-                        # unfortunately comes up as a key in a defaultdict
-                        continue
-                    parameter_fit = self.get_column(parameter, overrides=model_data)
-                    parameter_measured = self.get_column(parameter, overrides={}, param_meas=True)
-                    opt_measured_dec = (self.data[Regression.regression_name(opt)] if Regression.regression_name(opt) in self.data
-                                        else opt.get_decimal_value(self.data[[regression_name(x) for x in opt]].T))
-                    plt.figure()
-                    plt.scatter(opt_measured_dec, parameter_measured, marker='o', s=4)
-                    plt.scatter(model_data_dec, parameter_fit, marker='+', s=4)
-                    plt.legend(['measured', 'modeled'])
-                    plt.xlabel(opt.friendly_name())
-                    plt.ylabel(str(parameter))
-                    plt.title(f'{parameter} vs. {opt.friendly_name()}, adjusted for nominal')
-                    plt.grid()
-                    self._save_current_plot(f'{parameter}_vs_{opt.friendly_name()}_adjfornominal')
+            #for lhs, rhs in list(self.regression_results.items())[:2]:
+            #    for parameter, fit in rhs.items():
+            #        if parameter == 'default_factory':
+            #            # unfortunately comes up as a key in a defaultdict
+            #            continue
+            #        parameter_fit = self.get_column(parameter, overrides=model_data)
+            #        parameter_measured = self.get_column(parameter, overrides={}, param_meas=True)
+            #        opt_measured_dec = (self.data[Regression.regression_name(opt)] if Regression.regression_name(opt) in self.data
+            #                            else opt.get_decimal_value(self.data[[regression_name(x) for x in opt]].T))
+            #        plt.figure()
+            #        plt.scatter(opt_measured_dec, parameter_measured, marker='o', s=4)
+            #        plt.scatter(model_data_dec, parameter_fit, marker='+', s=4)
+            #        plt.legend(['measured', 'modeled'])
+            #        plt.xlabel(opt.friendly_name())
+            #        plt.ylabel(str(parameter))
+            #        plt.title(f'{parameter} vs. {opt.friendly_name()}, adjusted for nominal')
+            #        plt.grid()
+            #        self._save_current_plot(f'{parameter}_vs_{opt.friendly_name()}_adjfornominal')
 
         for opt in self.test.signals.optional_true_analog():
             assert isinstance(opt.value, tuple) and len(opt.value) == 2
             xs = np.linspace(opt.value[0], opt.value[1], N)
             model_data = self.modify_data(nominal_data,
-                                                {regression_name(opt): xs})
+                                                {opt: xs})
+
+            print()
 
             print('TODO fix plotting of optional outputs')
+            # I started to fix this, but remembered that it will probably
+            # change with the new nonlinearity stuff
             return
-            for parameter, fit in list(self.regression_results.items())[:2]:
-                # prediction just based on  parameter = (Ax + By + C)
-                model_prediction = self.get_column(parameter, lhs_pred=True, overrides=model_data)
-                #model_prediction = PlotHelper.eval_parameter(
-                #    model_data, regression_results, parameter)
+            for s in self.test.signals.auto_measure():
+                # goal is to plot s vs opt, removing other influences
 
-                # prediction based on measured data
-                # OUT = (Ax + By + C) * IN + (Dx + Ey + F)
-                # lhs_measured = (goal) * multiplicand_measured + other_terms
-                # goal = (lhs_measured - other_terms) / multiplicand_measured
-                M = data.shape[0]
-                other_terms = np.zeros(M)
-                pas = [(k, v) for k, v in test.parameter_algebra.items()
-                       if parameter in v]
-                # TODO fix this
-                if len(pas) == 0:
-                    print(f'Could not find pa for {parameter}')
-                    continue
-                assert len(pas) > 0, f'Missing parameter algebra for {parameter}?'
-                assert len(pas) == 1, f'multiple parameter algebras for {parameter}?'
-                pa = pas[0]
-                for p, coef in pa[1].items():
-                    if p != parameter:
-                        p_measured = PlotHelper.eval_parameter(data, regression_results, p)
-                        coef_measured = PlotHelper.eval_factor(data, coef)
-                        other_terms += p_measured * coef_measured
+                assert False
+                s_data = self.get_column(s, overrides=model_data)
+                opt_data = model_data[opt]
 
-                opt_measured = PlotHelper.eval_factor(data, regression_name(opt))
-                lhs_measured = PlotHelper.eval_factor(data, pa[0])
-                multiplicand_measured = PlotHelper.eval_factor(data, pa[1][parameter])
-                parameter_measured = (lhs_measured - other_terms) / multiplicand_measured
 
-                # TODO remove influence of other optional pins
-                # (Ax + Bynom + C) = (Ax + By + C) - B(y - ynom)
-                adjustment = np.zeros(M)
 
-                for s in test.signals.optional_true_analog() + ba_bits:
-                    if s != opt:
-                        y = PlotHelper.eval_factor(data, regression_name(s))
-                        # TODO I think there's a better way to get ynom
-                        ynom = PlotHelper.eval_factor(model_data, regression_name(s))[0]
-                        # We can't use spice name here because optional signals
-                        # don't necessarily correspond to pins (sampler jitter)
-                        # BUT we can't use regression_name() because it replaces
-                        # <> with __, which is bad here
-                        name_spice_preferred = (s.spice_name
-                            if s.spice_name is not None else s.template_name)
-                        B = regression_results[parameter][name_spice_preferred]
-                        adjustment += B * (y - ynom)
-                parameter_measured_adjusted = parameter_measured - adjustment
+            #    parameter = s.spice_name
+            #    fit = self.regression_results[parameter]
+            #    # prediction just based on  parameter = (Ax + By + C)
+            #    model_prediction = self.get_column(parameter, lhs_pred=True, overrides=model_data)
+            #    #model_prediction = PlotHelper.eval_parameter(
+            #    #    model_data, regression_results, parameter)
+
+            #    # prediction based on measured data
+            #    # OUT = (Ax + By + C) * IN + (Dx + Ey + F)
+            #    # lhs_measured = (goal) * multiplicand_measured + other_terms
+            #    # goal = (lhs_measured - other_terms) / multiplicand_measured
+            #    M = data.shape[0]
+            #    other_terms = np.zeros(M)
+            #    pas = [(k, v) for k, v in test.parameter_algebra.items()
+            #           if parameter in v]
+            #    # TODO fix this
+            #    if len(pas) == 0:
+            #        print(f'Could not find pa for {parameter}')
+            #        continue
+            #    assert len(pas) > 0, f'Missing parameter algebra for {parameter}?'
+            #    assert len(pas) == 1, f'multiple parameter algebras for {parameter}?'
+            #    pa = pas[0]
+            #    for p, coef in pa[1].items():
+            #        if p != parameter:
+            #            p_measured = PlotHelper.eval_parameter(data, regression_results, p)
+            #            coef_measured = PlotHelper.eval_factor(data, coef)
+            #            other_terms += p_measured * coef_measured
+
+            #    opt_measured = PlotHelper.eval_factor(data, regression_name(opt))
+            #    lhs_measured = PlotHelper.eval_factor(data, pa[0])
+            #    multiplicand_measured = PlotHelper.eval_factor(data, pa[1][parameter])
+            #    parameter_measured = (lhs_measured - other_terms) / multiplicand_measured
+
+            #    # TODO remove influence of other optional pins
+            #    # (Ax + Bynom + C) = (Ax + By + C) - B(y - ynom)
+            #    adjustment = np.zeros(M)
+
+            #    for s in test.signals.optional_true_analog() + ba_bits:
+            #        if s != opt:
+            #            y = PlotHelper.eval_factor(data, regression_name(s))
+            #            # TODO I think there's a better way to get ynom
+            #            ynom = PlotHelper.eval_factor(model_data, regression_name(s))[0]
+            #            # We can't use spice name here because optional signals
+            #            # don't necessarily correspond to pins (sampler jitter)
+            #            # BUT we can't use regression_name() because it replaces
+            #            # <> with __, which is bad here
+            #            name_spice_preferred = (s.spice_name
+            #                if s.spice_name is not None else s.template_name)
+            #            B = regression_results[parameter][name_spice_preferred]
+            #            adjustment += B * (y - ynom)
+            #    parameter_measured_adjusted = parameter_measured - adjustment
 
 
                 #plt.figure(plt.gcf().number+1)

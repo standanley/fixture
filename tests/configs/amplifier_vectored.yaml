@@ -1,6 +1,18 @@
 name: myamp
 filepath: ../spice/myamp_differential.sp
 template: AmplifierTemplate
+
+checkpoint_controller: 
+    DCTest:
+        choose_inputs: True
+        run_sim: False
+        run_analysis: True
+        run_post_process: True
+        run_regression: True
+        run_post_regression: save
+
+
+
 pin:
     vdd:
         direction: input

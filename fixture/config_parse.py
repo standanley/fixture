@@ -236,7 +236,7 @@ def parse_config(circuit_config_dict):
             elif state_t == 0 and state_c == 0:
                 # we should be at the end of the array
                 assert not isinstance(c_a, np.ndarray), 'internal error in config_parse?, should have extended c indices to match array'
-                print('mapping', t_indices_used, c_a)
+                #print('mapping', t_indices_used, c_a)
                 t_name = get_t_name(t_indices_used)
                 c_a[2] = t_name
                 t_array_entries.append((t_indices_used, t_name))

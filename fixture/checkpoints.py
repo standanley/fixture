@@ -24,8 +24,7 @@ class Checkpoint:
 
     def convert_df_columns(self, test, df):
         str_to_signal = {str(s): s for s in test.signals.flat() + list(test.signals)}
-        test = df.rename(str_to_signal, axis='columns', inplace=True)
-        print(test)
+        df.rename(str_to_signal, axis='columns', inplace=True)
 
     def _get_save_file(self, test, filename):
         # DON'T FORGET TO CLOSE IT
@@ -133,7 +132,6 @@ class Checkpoint:
         f = self._get_save_file(test, 'regression_results.yaml')
         yaml.dump(rr_clean, f)
         f.close()
-        print(rr)
 
     def load_regression_results(self, test):
         if True or self.data[test]['regression_results'] is None:
