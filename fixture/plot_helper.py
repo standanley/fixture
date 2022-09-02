@@ -214,12 +214,12 @@ class PlotHelper:
                 plt.figure()
                 plt.plot(x, y_meas, '*')
                 plt.plot(x_nonan, y_pred, 'x')
-                plt.xlabel(input.friendly_name())
+                plt.xlabel(self.friendly_name(input))
                 plt.ylabel(lhs)
                 plt.grid()
                 plt.legend(['Measured', 'Predicted'])
-                plt.title(f'{lhs} vs. {input.friendly_name()}')
-                self._save_current_plot(f'{lhs}_vs_{input.friendly_name()}')
+                plt.title(f'{lhs} vs. {self.friendly_name(input)}')
+                self._save_current_plot(f'{lhs}_vs_{self.friendly_name(input)}')
                 #plt.show()
 
                 nom_dict = {}
@@ -247,13 +247,13 @@ class PlotHelper:
                     plt.figure()
                     plt.scatter(x_adj, y_meas_adj, marker='*', s=20)
                     plt.scatter(x_adj, y_pred_adj, marker='x', s=20)
-                    plt.xlabel(input.friendly_name())
+                    plt.xlabel(self.friendly_name(input))
                     plt.ylabel(lhs)
                     plt.grid()
                     plt.legend(['Measured', 'Predicted'])
-                    plt.title(f'{lhs} vs. {input.friendly_name()}, corrected for nominal {[opt.friendly_name() for opt in optional]}')
+                    plt.title(f'{lhs} vs. {self.friendly_name(input)}, corrected for nominal {[self.friendly_name(opt) for opt in optional]}')
                     #self._save_current_plot(f'{lhs}_vs_{input}_nom_{[str(opt) for opt in optional]}')
-                    self._save_current_plot(f'{lhs}_vs_{input.friendly_name()}_nom_opt')
+                    self._save_current_plot(f'{lhs}_vs_{self.friendly_name(input)}_nom_opt')
                     #plt.show()
 
 
@@ -280,12 +280,12 @@ class PlotHelper:
                 plt.contour(gridx, gridy, contour_data_meas, levels=meas_breaks, colors='black', linestyles='solid')
                 plt.plot(*(points.T), 'x')
                 plt.contour(gridx, gridy, contour_data_pred, levels=meas_breaks, colors='black', linestyles='dashed')
-                plt.xlabel(input1.friendly_name())
-                plt.ylabel(input2.friendly_name())
+                plt.xlabel(self.friendly_name(input1))
+                plt.ylabel(self.friendly_name(input2))
                 plt.title(lhs)
                 plt.grid()
                 self._save_current_plot(
-                    f'{lhs}_vs_{input1.friendly_name()}_and_{input2.friendly_name()}')
+                    f'{lhs}_vs_{self.friendly_name(input1)}_and_{self.friendly_name(input2)}')
                 #plt.show()
 
 
@@ -332,6 +332,11 @@ class PlotHelper:
             new_dict[new_name] = value
         return new_dict #pandas.DataFrame(new_dict)
 
+    @staticmethod
+    def friendly_name(s):
+        if isinstance(s, SignalIn):
+            return s.friendly_name()
+        return s
 
     def plot_optional_effects(self):
 
@@ -376,11 +381,11 @@ class PlotHelper:
             #        plt.scatter(opt_measured_dec, parameter_measured, marker='o', s=4)
             #        plt.scatter(model_data_dec, parameter_fit, marker='+', s=4)
             #        plt.legend(['measured', 'modeled'])
-            #        plt.xlabel(opt.friendly_name())
+            #        plt.xlabel(self.friendly_name(opt))
             #        plt.ylabel(str(parameter))
-            #        plt.title(f'{parameter} vs. {opt.friendly_name()}, adjusted for nominal')
+            #        plt.title(f'{parameter} vs. {self.friendly_name(opt)}, adjusted for nominal')
             #        plt.grid()
-            #        self._save_current_plot(f'{parameter}_vs_{opt.friendly_name()}_adjfornominal')
+            #        self._save_current_plot(f'{parameter}_vs_{self.friendly_name(opt)}_adjfornominal')
 
         for opt in self.test.signals.optional_true_analog():
             assert isinstance(opt.value, tuple) and len(opt.value) == 2
@@ -460,9 +465,9 @@ class PlotHelper:
                 plt.figure()
                 plt.plot(xs, model_prediction, '--')
                 plt.plot(opt_measured, parameter_measured_adjusted, 'o')
-                plt.xlabel(opt.friendly_name())
+                plt.xlabel(self.friendly_name(opt))
                 plt.ylabel(parameter)
-                self._save_current_plot(f'{parameter}_vs_{opt.friendly_name()}')
+                self._save_current_plot(f'{parameter}_vs_{self.friendly_name(opt)}')
                 plt.grid()
                 #plt.show()
 

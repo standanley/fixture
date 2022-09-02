@@ -13,6 +13,7 @@ pin:
     input<15:0>:
         direction: input
         datatype: binary_analog
+        bus_type: thermometer
     outputn:
         direction: output
         datatype: real

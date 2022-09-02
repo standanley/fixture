@@ -13,6 +13,7 @@ pin:
     input<1:0>:
         direction: input
         datatype: binary_analog
+        bus_type: binary
     outputn:
         direction: output
         datatype: real

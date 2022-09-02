@@ -1,7 +1,8 @@
 name: myphaseblender
 filepath: ../spice/myphaseblender.sp
 #filepath: ../spice/myphaseblender3.sp
-template: PhaseBlenderTemplate
+#template: PhaseBlenderTemplate
+template: PhaseBlenderTemplate_C
 pin:
     vdd:
         direction: input
@@ -25,6 +26,7 @@ pin:
     sel<2:0>:
         direction: input
         datatype: binary_analog
+        bus_type: binary
     #za:
     #    direction: output
     #    datatype: real

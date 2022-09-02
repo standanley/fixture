@@ -1,7 +1,10 @@
-#from dragonphy import *
-import math
+try:
+    from dragonphy import Channel
+except ModuleNotFoundError:
+    # Will be okay as long as they don't try to use ChannelUtil
+    pass
 
-#from dragonphy import Channel
+import math
 import numpy as np
 from scipy import linalg
 import matplotlib.pyplot as plt
@@ -32,6 +35,11 @@ class ChannelUtil:
             print('sample_freq', sample_freq)
             print('num_bits', num_bits)
 
+        # check that dragonphy was installed
+        try:
+            test = Channel
+        except NameError:
+            raise ModuleNotFoundError('must install module "dragonphy" to use channel model')
 
         # Load the S4P into a channel model
         chan = Channel(channel_type='s4p', sampl_rate=sample_freq, resp_depth=200000, s4p=file_path, zs=50, zl=50)

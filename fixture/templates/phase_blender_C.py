@@ -115,7 +115,7 @@ class PhaseBlenderTemplate_C(TemplateMaster):
 
         def post_process(self, results):
             # We don't need to do any post-process phase unwrapping! yay
-            return results
+            return {}#results
 
         def post_regression(self, results, data):
             return {}
