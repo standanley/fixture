@@ -5,7 +5,7 @@ from functools import reduce
 
 #import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.use('Agg')
+#matplotlib.use('Agg')
 plt = matplotlib.pyplot
 import scipy
 import statsmodels.formula.api as smf
@@ -135,8 +135,9 @@ class PlotHelper:
 
     @classmethod
     def save_current_plot(cls, name):
-        #plt.grid()
+        plt.grid()
         #plt.show()
+
         os.makedirs('plots', exist_ok=True)
         plt.savefig('./plots/' + cls.clean_filename(name), dpi=cls.dpi)
         # I've had lots of problems with seeing the results of earlier plots

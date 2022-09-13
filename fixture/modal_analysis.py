@@ -1,11 +1,8 @@
 import numpy as np
 import scipy.optimize
 
-#import matplotlib.pyplot as plt
-import matplotlib
-matplotlib.use('Agg')
-plt = matplotlib.pyplot
 from fixture import PlotHelper
+from fixture.plot_helper import plt
 PLOT_COUNTER = 0
 
 

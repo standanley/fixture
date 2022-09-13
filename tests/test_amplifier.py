@@ -16,6 +16,7 @@ tests = [
     ('configs/amplifier_diff_to_single_two_stage.yaml', None),
     ('configs/tia1.yaml', None),
     ('configs/parameterized_amp_amplifier.yaml', None),
+    ('configs/tia3.yaml', None),
 
 ]
 
@@ -30,5 +31,5 @@ def test_by_config(test):
     fixture.run(circuit_fname)
 
 if __name__ == '__main__':
-    test_by_config(tests[4])
+    test_by_config(tests[5])
 

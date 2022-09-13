@@ -369,9 +369,11 @@ class TemplateMaster():
 
         def debug_plot(self):
             #import matplotlib.pyplot as plt
-            import matplotlib
-            matplotlib.use('Agg')
-            plt = matplotlib.pyplot
+            #import matplotlib
+            #matplotlib.use('Agg')
+            #plt = matplotlib.pyplot
+
+            from fixture.plot_helper import plt
 
             plt.figure()
             leg = []

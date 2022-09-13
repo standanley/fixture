@@ -310,9 +310,7 @@ class Sampler:
 
 
 def visualize(samples):
-    import matplotlib
-    matplotlib.use('Agg')
-    plt = matplotlib.pyplot
+    from fixture.plot_helper import plt
 
     #print('\n'.join(str(x) for x in samples))
     import matplotlib.pyplot as plt

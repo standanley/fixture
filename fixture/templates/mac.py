@@ -110,9 +110,7 @@ class MACTemplate(TemplateMaster):
             # TODO not updated to new post_regressino style
             plot = False
             if plot:
-                import matplotlib as mpl
-                mpl.use('Agg')
-                import matplotlib.pyplot as plt
+                from fixture.plot_helper import plt
 
             def get_regression_name(p):
                 signal = self.template.signals.from_spice_name(str(p))
