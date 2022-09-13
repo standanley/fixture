@@ -1,0 +1,63 @@
+.main {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.container {
+  flex-basis: 50%;
+  border: solid 1px lightgrey;
+  padding: 8px;
+}
+
+#config-preview {
+  padding: 8px;
+  background-color: lightcyan;
+}
+
+#pins-container {
+  margin: 8px 0;
+}
+
+.pin {
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  border-top: solid 1px lightgrey;
+  border-bottom: solid 1px lightgrey;
+  padding: 8px 0;
+}
+
+.pin-delete-btn {
+  margin-top: 4px;
+  align-self: flex-end;
+  background: none;
+  border: solid 1px grey;
+  border-radius: 2px;
+  color: red;
+}
+.pin-field {
+  margin-top: 8px;
+  border-width: 1px;
+}
+
+.pin-input-vals {
+  display: flex;
+  gap: 8px;
+}
+
+.preview-title {
+  margin: 0;
+}
+
+.input-number {
+  width: 40px;
+}
+
+.input-number__label {
+  text-transform: capitalize;
+}
+
+button {
+  cursor: pointer;
+}
