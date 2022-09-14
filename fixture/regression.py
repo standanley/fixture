@@ -13,6 +13,8 @@ from ast import literal_eval
 from fixture.signals import SignalArray, SignalIn, CenteredSignalIn
 import operator
 
+from fixture.optional_fit import *
+
 
 class Regression:
     # statsmodels gets confused if you try to use '1' to mean a column of 
@@ -283,6 +285,28 @@ class Regression:
             df_row_mask = ~ regression_data[lhs_clean].isnull()
             # TODO when I blank out entries in the data spreadsheet they appear as nan, but those rows aren't filtered. Is that bad?
             df_filtered = regression_data[df_row_mask]
+
+
+            # -------- temp for nonlinear testing ---------
+            ibias = test.signals.from_circuit_name('ibias')
+            #exp = AnalogExpression(self.regression_name(ibias))
+            #exp = get_analog_expression(ibias)
+            exp = AnalogExpression(ibias)
+            exps = [exp]
+
+            #def rhs_expr(param_values, input_values):
+            #    # just linear case for now
+            #    return sum(param_values*input_values)
+            # --------------------
+
+
+            param_algebra_expr = LinearExpression(input_signals)
+
+            def predict(dataframe, coefs):
+                # use rhs to build the thing
+
+                for exp in exps:
+                    TODO
 
             formula = self.make_formula(lhs_clean, [x[0] for x in rhs_info])
             stats_model = smf.ols(formula, df_filtered)
