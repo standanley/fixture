@@ -297,16 +297,42 @@ class Regression:
             #def rhs_expr(param_values, input_values):
             #    # just linear case for now
             #    return sum(param_values*input_values)
+
+            def make_optional_expression():
+                exp = AnalogExpression(ibias)
+                const = ConstExpression()
+                param = HeirarchicalExpression(SumExpression(2), [exp, const])
+                return param
+
             # --------------------
 
 
-            param_algebra_expr = LinearExpression(input_signals)
 
-            def predict(dataframe, coefs):
-                # use rhs to build the thing
+            # build up parameter algebra expression
+            optional_exprs = []
+            param_names = []
+            for thing in rhs:
+                param = make_optional_expression()
+                optional_exprs.append(param)
+                param_names.append(thing)
 
-                for exp in exps:
-                    TODO
+            total_expr_inputs = []
+            for name in param_names:
+                old_expr = rhs[name]
+                assert len(old_expr) == 1, 'TODO'
+                total_expr_inputs.append(old_expr[0])
+            algebra = LinearExpression(total_expr_inputs)
+            total_expr = HeirarchicalExpression(algebra, optional_exprs)
+
+            input_names = [self.regression_name(s) for s in total_expr.input_signals]
+            expr_fit_data = [df_filtered[input_name] for input_name in input_names]
+            expr_fit_data = np.array(expr_fit_data)
+            lhs_data = df_filtered[lhs_clean]
+
+            # do the regression!
+            print('Starting parameter fit')
+            coefs_fit = total_expr.fit(expr_fit_data, lhs_data)
+
 
             formula = self.make_formula(lhs_clean, [x[0] for x in rhs_info])
             stats_model = smf.ols(formula, df_filtered)
