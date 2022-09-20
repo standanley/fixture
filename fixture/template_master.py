@@ -523,10 +523,12 @@ class TemplateMaster():
                     #PlotHelper.plot_optional_effects(test, regression.regression_dataframe, regression.results)
                     mode_prefix = '' if mode == tuple() else f'mode_{mode}_'
                     ph = PlotHelper(test,
-                                    regression.regression_dataframe,
+                                    None, #regression.regression_dataframe,
                                     test.parameter_algebra_vectored,
-                                    regression.results,
-                                    mode_prefix)
+                                    None, #regression.results,
+                                    mode_prefix,
+                                    regression.expr_dataframe,
+                                    regression.results_expr)
                     ph.plot_regression()
                     ph.plot_optional_effects()
 

@@ -19,12 +19,14 @@ from scipy.interpolate import griddata
 class PlotHelper:
     dpi = 300
 
-    def __init__(self, test, data, parameter_algebra, regression_results, mode_prefix):
+    def __init__(self, test, data, parameter_algebra, regression_results, mode_prefix, expr_dataframe, expr_fit):
         self.test = test
         self.data = data
         self.parameter_algebra = parameter_algebra
         self.regression_results = regression_results
         self.mode_prefix = mode_prefix
+        self.expr_dataframe = expr_dataframe
+        self.expr_fit = expr_fit
 
     def get_column(self, target, overrides=None, lhs_pred=False, param_meas=False):
         '''
@@ -48,8 +50,8 @@ class PlotHelper:
         # clean up some inputs
         if overrides is None:
             overrides = {}
-        if isinstance(target, (SignalIn, SignalOut)):
-            target = Regression.regression_name(target)
+        #if isinstance(target, (SignalIn, SignalOut)):
+        #    target = Regression.regression_name(target)
 
         # easy cases
         if target in overrides:
@@ -58,16 +60,20 @@ class PlotHelper:
         overrides_str = {Regression.regression_name(s): v for s, v in overrides.items()}
         if target in overrides_str:
             return overrides_str[target]
-        if isinstance(target, tuple):
-            return reduce(operator.mul,
-                          [self.get_column(elem, overrides) for elem in target],
-                          1)
+        #if isinstance(target, tuple):
+        #    print('TODO remove tuple case')
+        #    return reduce(operator.mul,
+        #                  [self.get_column(elem, overrides) for elem in target],
+        #                  1)
         if isinstance(target, SignalArray) and target.info['datatype'] == 'binary_analog':
-            regression_name = Regression.regression_name(target)
+            # TODO should have something like Sample.get_plot_value in the future
+            #regression_name = Regression.regression_name(target)
             # TODO issues if regression_name(b) is in overrides?
-            if regression_name in self.data and all(b not in overrides for b in target):
-                # no need to build the decimal version here if it's already in the data
-                return self.data[regression_name]
+            #if regression_name in self.data and all(b not in overrides for b in target):
+            #    # no need to build the decimal version here if it's already in the data
+            #    return self.data[regression_name]
+            if target in self.expr_dataframe:
+                return self.expr_dataframe[target]
             # I think we only get here if the user manually enters the bits but not decimal in the spreadsheet
             elements = [self.get_column(b, overrides) for b in target]
             result = target.get_decimal_value(elements)
@@ -78,8 +84,12 @@ class PlotHelper:
             if not lhs_pred:
                 # Case 1) lhs
                 if overrides == {}:
-                    return self.data[Regression.regression_name(target)]
+                    #return self.data[Regression.regression_name(target)]
+                    return self.expr_dataframe[target]
                 else:
+                    # we want to adjust this lhs based on overrides
+                    # Basically, we see how much the overrides change the rhs,
+                    # and apply that change to the lhs
                     adjustment = (self.get_column(target, lhs_pred=True, overrides=overrides)
                                   - self.get_column(target, lhs_pred=True))
                     result = self.get_column(target) + adjustment
@@ -87,11 +97,14 @@ class PlotHelper:
 
             else:
                 # Case 5) lhs_pred
-                rhs = self.parameter_algebra[target]
-                pred = reduce(operator.add,
-                              [self.get_column(param, overrides) * self.get_column(factors)
-                               for param, factors in rhs.items()])
-                return pred
+                #rhs = self.parameter_algebra[target]
+                #pred = reduce(operator.add,
+                #              [self.get_column(param, overrides) * self.get_column(factors)
+                #               for param, factors in rhs.items()])
+                #return pred
+                rhs_expr = self.expr_fit[target]
+                val = rhs_expr.eval(self.expr_dataframe)
+                return val
 
         #params = {p: t
         #          for rhs in self.parameter_algebra.values()
@@ -100,11 +113,15 @@ class PlotHelper:
             if target in rhs:
                 if not param_meas:
                     # Case 4) param
-                    fit = self.regression_results[lhs][target]
-                    param = reduce(operator.add,
-                                  [self.get_column(param_comp, overrides) * coef
-                                   for param_comp, coef in fit.items()])
-                    return param
+                    rhs_expr = self.expr_fit[lhs]
+                    target_expr = rhs_expr.search(target)
+                    assert target_expr is not None, f'Could not find name "{target}" in rhs expression "{rhs_expr.name}"'
+                    val = target_expr.eval(self.expr_dataframe)
+                    #fit = self.regression_results[lhs][target]
+                    #param = reduce(operator.add,
+                    #              [self.get_column(param_comp, overrides) * coef
+                    #               for param_comp, coef in fit.items()])
+                    return val
                 else:
                     # Case 6: gain = (out - offset) / in
 
@@ -120,9 +137,12 @@ class PlotHelper:
         # without access to signals, we can't check if it's case 3, so we just
         # assume target will be in data and go with it
 
-        target = Regression.regression_name(target)
-        assert target in self.data, f"Can't find target {target}, assumed this was Case 2 or 3"
-        return self.data[target]
+        #target = Regression.regression_name(target)
+        #assert target in self.data, f"Can't find target {target}, assumed this was Case 2 or 3"
+        #return self.data[target]
+        assert target in self.expr_dataframe, f"Can't find target {target}, assumed this was Case 2 or 3"
+        return self.expr_dataframe[target]
+
 
 
     @classmethod
@@ -223,25 +243,41 @@ class PlotHelper:
                 self._save_current_plot(f'{lhs}_vs_{self.friendly_name(input)}')
                 #plt.show()
 
+
+                # do this plot again, but correcting for influences from
+                # optional inputs
                 nom_dict = {}
                 for opt in optional:
                     if opt == input:
+                        # TODO what is this case for?
                         continue
 
+                    # Put nominal values if nominal dict
+                    # TODO nominal should be a property of the signal in the future
                     # could be in df as decimal, binary, or both (or neither, I guess)
-                    regression_name = Regression.regression_name(opt)
-                    if regression_name in self.data:
-                        nominal = np.average(self.data[regression_name])
+                    #regression_name = Regression.regression_name(opt)
+                    #if regression_name in self.data:
+                    if opt in self.expr_dataframe:
+                        # should get analog, and also digital in the dataframe
+                        # as a whole
+                        nominal = np.average(self.expr_dataframe[opt])
+                        if isinstance(opt, SignalArray):
+                            nominal = round(nominal)
                         nom_dict[opt] = nominal
-
-                    opt_flat = opt.flat if isinstance(opt, SignalArray) else [opt]
-                    for opt_single in opt_flat:
-                        regression_name = Regression.regression_name(opt_single)
-                        if regression_name in self.data:
-                            nominal = np.average(self.data[regression_name])
+                    elif isinstance(opt, SignalArray):
+                        # only if the entire SignalArray was not in the
+                        # dataframe do we fall back to this individual-bit thing
+                        opt_flat = opt.flat
+                        for opt_single in opt_flat:
+                            assert opt_single in self.expr_dataframe, f'Cannot find signal {opt} in dataframe'
+                            nominal = np.average(self.expr_dataframe[opt])
                             nom_dict[opt_single] = nominal
-                if len(nom_dict) != 0:
+                    else:
+                        assert False, f'Do not know how to deal with nominal for {opt}'
 
+
+                # If there was something that can be pinned nominal, do the plot
+                if len(nom_dict) != 0:
                     x_adj = self.get_column(input, overrides=nom_dict)
                     y_meas_adj = self.get_column(lhs, overrides=nom_dict)
                     y_pred_adj = self.get_column(lhs, overrides=nom_dict, lhs_pred=True)
@@ -366,7 +402,7 @@ class PlotHelper:
             sweep_data = {b: xs for b, xs in zip(opt, codes.T)}
             model_data = self.modify_data(nominal_data, sweep_data)
             model_data_dec = opt.get_decimal_value(codes.T)
-            print(model_data)
+            #print(model_data)
 
             print('TODO fix plotting of optional outputs')
             #for lhs, rhs in list(self.regression_results.items())[:2]:

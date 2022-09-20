@@ -92,6 +92,23 @@ class Regression:
 
         return terms
 
+
+    @classmethod
+    def get_optional_pin_expression2(cls, template, param_name):
+        '''
+        Given the magma circuit template, look at the optional pins and create a
+        (string) R expression for how the analog pins affect something
+        '''
+
+        # TODO option for interaction terms, etc.
+
+        opt_signals = template.signals.optional_expr()
+        opt_signals_flat = [s for x in opt_signals for s in (x if isinstance(x, SignalArray) else [x])]
+
+        expr = get_optional_expression_from_signals(opt_signals, param_name)
+        return expr
+
+
     @staticmethod
     def clean_string(s):
         # discrepency between the way spice and magma do braces
@@ -245,6 +262,7 @@ class Regression:
         }
         '''
         results = {lhs: defaultdict(dict) for lhs in pa}
+        results_expr = {}
         results_models = {}
         regression_dicts = []
         for lhs, rhs in pa.items():
@@ -288,21 +306,21 @@ class Regression:
 
 
             # -------- temp for nonlinear testing ---------
-            ibias = test.signals.from_circuit_name('ibias')
+            #ibias = test.signals.from_circuit_name('ibias')
             #exp = AnalogExpression(self.regression_name(ibias))
             #exp = get_analog_expression(ibias)
-            exp = AnalogExpression(ibias)
-            exps = [exp]
+            #exp = AnalogExpression(ibias)
+            #exps = [exp]
 
             #def rhs_expr(param_values, input_values):
             #    # just linear case for now
             #    return sum(param_values*input_values)
 
-            def make_optional_expression():
-                exp = AnalogExpression(ibias)
-                const = ConstExpression()
-                param = HeirarchicalExpression(SumExpression(2), [exp, const])
-                return param
+            #def make_optional_expression():
+            #    exp = AnalogExpression(ibias)
+            #    const = ConstExpression()
+            #    param = HeirarchicalExpression(SumExpression(2), [exp, const])
+            #    return param
 
             # --------------------
 
@@ -312,7 +330,8 @@ class Regression:
             optional_exprs = []
             param_names = []
             for thing in rhs:
-                param = make_optional_expression()
+                #param = make_optional_expression()
+                param = self.get_optional_pin_expression2(template, thing)
                 optional_exprs.append(param)
                 param_names.append(thing)
 
@@ -321,8 +340,8 @@ class Regression:
                 old_expr = rhs[name]
                 assert len(old_expr) == 1, 'TODO'
                 total_expr_inputs.append(old_expr[0])
-            algebra = LinearExpression(total_expr_inputs)
-            total_expr = HeirarchicalExpression(algebra, optional_exprs)
+            algebra = LinearExpression(total_expr_inputs, f'{lhs_clean}_combiner')
+            total_expr = HeirarchicalExpression(algebra, optional_exprs, lhs_clean)
 
             input_names = [self.regression_name(s) for s in total_expr.input_signals]
             expr_fit_data = [df_filtered[input_name] for input_name in input_names]
@@ -332,6 +351,8 @@ class Regression:
             # do the regression!
             print('Starting parameter fit')
             coefs_fit = total_expr.fit(expr_fit_data, lhs_data)
+            total_expr.coefs_fit = coefs_fit
+            results_expr[lhs] = total_expr
 
 
             formula = self.make_formula(lhs_clean, [x[0] for x in rhs_info])
@@ -365,6 +386,9 @@ class Regression:
         self.regression_dataframe = df_combined
         self.results = results
         self.results_models = results_models
+
+        self.expr_dataframe = data
+        self.results_expr = results_expr
 
 
     def make_formula(self, lhs_clean, rhs_names):
