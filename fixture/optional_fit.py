@@ -1,64 +1,9 @@
 from abc import ABC, abstractmethod
-
-from pandas import DataFrame
 from scipy.optimize import minimize
 import numpy as np
+import pandas
 
 from fixture.signals import SignalArray, SignalIn
-
-
-class SampleManager:
-    def __init__(self, num_params, optional_groups, test_inputs):
-        self.optional_groups = optional_groups
-        self.test_inputs
-        parent_coefs = []
-
-
-    def sweep_one(self, group):
-        # group is the one optional group to sweep, while holding others nominal
-        # I ran into the issue of how to break this into independent axes
-        # I think the solution is to do one orthogonal sample for all the
-        # optional group, and then individual orthogonal samples for the
-        # test inputs
-        # It's possible that I should do all the things in one go and then
-        # condense the optional things into groups, but that's difficult when
-        # the optional group has multiple dimensions
-        TODO
-
-class SampleTODO(ABC):
-    @abstractmethod
-    def get(self, target):
-        # target_samples are between 0 and 1
-        # they should be translated to the appropriate space for this input
-        pass
-
-    @abstractmethod
-    def get_nominal(self):
-        # return 1 sample at the nominal value
-        pass
-
-    @abstractmethod
-    def get_plot_value(self, samples):
-        # given a value of the optional input(s), return the value you would
-        # want on a plot axis. Usually this is an identity function, but for
-        # arrays of bits it would convert to a decimal value
-        pass
-
-
-
-
-
-class SamplerAnalog(SampleTODO):
-    def __init__(self, limits):
-        assert len(limits) == 2, 'Fit requires an input range'
-        self.limits = limits
-
-    def random_samples(self, target_samples):
-        pass
-
-
-# --------------------------------------
-
 
 
 class Expression:
@@ -114,8 +59,10 @@ class Expression:
         x0 = np.zeros(self.NUM_COEFFICIENTS)
 
         # ------ TEMP --------
-        #x0[6] = 3000
-        tol = 1e-8
+        x0[6] = 1
+        x0[14] = 1
+        x0[22] = 1
+        tol = 1e-5
 
         #import cProfile
         #def to_profile():
@@ -125,31 +72,57 @@ class Expression:
         start = time.time()
         print('TODO stop skipping fit')
         if self.name == 'out_diff':
-            x_opt = np.array([-1.23059139e+03, -6.83196691e+02, -2.24022907e+02, -1.90805353e+02,
-       -5.96662666e+01, -4.48716108e+01,  2.83153509e+03, -7.72680027e+01,
-       -1.08935382e+02,  2.02334246e+02, -2.11149160e+02,  1.86133922e+02,
-       -1.19705815e+02,  1.01592209e+02,  1.79559599e-04,  9.59793043e-05,
-       -4.33567171e-05,  9.57645151e-05, -9.48833088e-05, -9.26496371e-05,
-       -1.40574902e-04])
+            #x_opt = np.array([-1.23059139e+03, -6.83196691e+02, -2.24022907e+02, -1.90805353e+02,
+            #   -5.96662666e+01, -4.48716108e+01,  2.83153509e+03, -7.72680027e+01,
+            #   -1.08935382e+02,  2.02334246e+02, -2.11149160e+02,  1.86133922e+02,
+            #   -1.19705815e+02,  1.01592209e+02,  1.79559599e-04,  9.59793043e-05,
+            #   -4.33567171e-05,  9.57645151e-05, -9.48833088e-05, -9.26496371e-05,
+            #   -1.40574902e-04])
+            # essentially null out cm and const terms
+            #x0[14] = 1e6
+            #x0[22] = 1e6
+
+            #for i in range(6):
+            #    resistance = 2**i * 1e3
+            #    x0[i] = 1/resistance
+            ## last one should be zero, but I'm afraid of divide by zero issues
+            #x0[6] = 1e-7
+
+
+            #x_opt = x0
+            result = minimize(error, x0, method='Powell', options={
+                #'gtol': tol
+                'ftol': 0,
+                #'fatol': 0,
+                'maxfev': 10**5,
+                'disp': True
+            })
+            x_opt = result.x
+
         elif self.name == 'out_cm':
-            x_opt = np.array([-2.19233927e+01,  2.61691713e+02,  1.38773168e+01,  1.57116746e+02,
-        4.38110640e+02,  3.03643386e+01,  1.84852178e+02,  6.07208190e+02,
-        6.80619246e+02,  7.28624576e+02,  6.60212312e+02,  6.29206962e+02,
-        7.36672174e+02,  1.23052961e+03, -1.14858118e-03, -6.52762370e-04,
-       -1.56835717e-03, -1.03905303e-03, -8.61215014e-04, -1.03753759e-03,
-        2.40262615e+00])
+            #x_opt = np.array([-2.19233927e+01,  2.61691713e+02,  1.38773168e+01,  1.57116746e+02,
+            #    4.38110640e+02,  3.03643386e+01,  1.84852178e+02,  6.07208190e+02,
+            #    6.80619246e+02,  7.28624576e+02,  6.60212312e+02,  6.29206962e+02,
+            #    7.36672174e+02,  1.23052961e+03, -1.14858118e-03, -6.52762370e-04,
+            #   -1.56835717e-03, -1.03905303e-03, -8.61215014e-04, -1.03753759e-03,
+            #    2.40262615e+00])
+            x_opt = np.array(x0)
         else:
             result = minimize(error, x0, options={
                 'gtol': tol
             })
             x_opt = result.x
+
         print('minimization took', time.time() - start)
         self.x_opt = x_opt
+        print(self.name)
+        print(x_opt)
+        print()
         return x_opt
 
     def eval(self, data):
         # for use after fitting has been done
-        assert isinstance(data, (dict, DataFrame))
+        assert isinstance(data, (dict, pandas.DataFrame))
         assert self.x_opt is not None
         print()
         input_data = [data[input] for input in self.input_signals]
@@ -191,8 +164,8 @@ class LinearExpression(Expression):
     def __init__(self, inputs, name):
         self.name = name
         self.input_signals = inputs
-        # coefficients to NOT include any constant offset, but that is added
-        # separately as an input to predict()
+        # coefficients do NOT include any constant offset, because that is
+        # handled separately by the tool
         self.NUM_COEFFICIENTS = len(inputs)
 
     def predict(self, opt_values, coefs):
@@ -294,10 +267,30 @@ class SumExpression(Expression):
         assert len(opt_values) == 0
         return sum(coefs)
 
+
+class ReciprocalExpression(Expression):
+    __doc__ = '''The constructor takes in a list of inputs. A coefficient will 
+                 be assigned to each one, plus a constant, and all that is 
+                 put on the bottom of the fraction. '''
+
+    def __init__(self, inputs, name):
+        self.name = name
+        self.input_signals = inputs
+        self.NUM_COEFFICIENTS = len(inputs) + 1
+
+    def predict(self, opt_values, coefs):
+        # opt_values are essentially input_values
+        assert len(opt_values) == len(self.input_signals)
+        assert len(coefs) == len(opt_values) + 1
+        denominator = sum(o * c for o, c in zip(opt_values, coefs[:-1])) + coefs[-1]
+        return 1/denominator
+
+
 def get_optional_expression_from_signal(s, name):
     if isinstance(s, SignalArray):
         print('TODO fix SignalArray behavior')
-        return LinearExpression(list(s), name)
+        #return LinearExpression(list(s), name)
+        return ReciprocalExpression(list(s), name)
 
     else:
         assert isinstance(s, SignalIn)

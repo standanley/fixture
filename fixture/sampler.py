@@ -1,11 +1,177 @@
 import math
 import itertools
 import random
+import pandas
+import numpy as np
+from abc import abstractmethod
 
-from fixture import PlotHelper
+from fixture.plot_helper import PlotHelper
+#from fixture.optional_fit import SampleManager
+import fixture.optional_fit
 from fixture.signals import SignalIn, SignalArray
 
+
+class SampleManager:
+    SWEEP_ID_TAG = 'sweep_id'
+    GROUP_ID_TAG = 'swept_group'
+    def __init__(self, optional_groups, test_inputs):
+        self.optional_groups = optional_groups
+        self.test_inputs = [SamplerAnalog(ti) for ti in test_inputs]
+        self.data = pandas.DataFrame()
+
+    def sweep_one(self, group, N_test, N_optional):
+        # group is the one optional group to sweep, while holding others nominal
+        # Choose N_optional values for the optional group, and then for each
+        # one sweep N_test different test inputs
+        Sampler = fixture.sampler.Sampler
+        TEST_DIMS = len(self.test_inputs)
+        new_data = {}
+
+        opt_samples_unscaled = Sampler.get_orthogonal_samples(group.NUM_DIMS, N_optional)
+        get_vectorized = np.vectorize(group.get, signature='(N)->()')
+        opt_samples = get_vectorized(np.array(opt_samples_unscaled))
+
+        '''
+        This code works, but the approach is not good - when N_test is small
+        you often get really bad coverage of the space just by chance. This
+        is especially true when TEST_DIMS > 1 so the orthogonal sampling is 
+        less effective
+        # rather than do separate test samples for each opt_sample, I want to
+        # do them all at once so they are better distributed, and then instead
+        # of using those opt-sample values we snap them to a near one
+        # from the actual list of opt_sample values
+        test_sample_guide = np.array(Sampler.get_orthogonal_samples(
+            TEST_DIMS+1,
+            N_test*N_optional)
+        )
+        test_sample_order = test_sample_guide[:, 0].argsort()
+        test_samples_flat = test_sample_guide[:, 1:][test_sample_order]
+        test_samples = test_samples_flat.reshape((N_optional, N_test, TEST_DIMS))
+        '''
+        test_samples_unscaled = np.zeros((N_optional, N_test, TEST_DIMS))
+        for i in range(N_optional):
+            samples_this_opt = Sampler.get_orthogonal_samples(TEST_DIMS, N_test)
+            test_samples_unscaled[i] = samples_this_opt
+
+        for ti in self.test_inputs:
+            assert ti.NUM_DIMS == 1, 'TODO sample coupled test inputs'
+        def scale_test_sample(sample):
+            assert len(sample) == len(self.test_inputs)
+            return np.array([ti.get([s]) for ti, s in zip(self.test_inputs, sample)])
+        scale_test_sample_vec = np.vectorize(scale_test_sample,
+                                             signature='(n)->(n)')
+        test_samples = scale_test_sample_vec(test_samples_unscaled)
+
+        test_samples_flat = test_samples.reshape((N_optional*N_test, TEST_DIMS))
+        for i, ti in enumerate(self.test_inputs):
+            new_data[ti] = test_samples_flat[:, i]
+
+        # plot useful for when TEST_DIMS is 2
+        #from fixture.plot_helper import plt
+        #for i in range(N_optional):
+        #    test_set = test_samples[i]
+        #    plt.scatter(test_set[:,0], test_set[:,1])
+        #plt.grid()
+        #plt.show()
+
+        group_data = []
+        sweep_ids = []
+        group_ids = []
+        for i in range(N_optional):
+            group_data += [opt_samples[i]] * N_test
+            sweep_ids += [i] * N_test
+            group_ids += [group] * N_test
+        new_data[group] = group_data
+        new_data[self.SWEEP_ID_TAG] = sweep_ids
+        new_data[self.GROUP_ID_TAG] = group_ids
+        for opt_group in self.optional_groups:
+            if opt_group != group:
+                nominal = opt_group.get_nominal()
+                assert isinstance(nominal, (float, int)), 'TODO get_nominal might return a dict or something'
+                new_data[opt_group] = opt_group.get_nominal()
+
+        self.data = pandas.concat([self.data, pandas.DataFrame(new_data)])
+        print()
+
+
+class SampleStyle:
+    NUM_DIMS = 1
+
+    @abstractmethod
+    def get(self, target):
+        # target_samples are between 0 and 1
+        # they should be translated to the appropriate space for this input
+        pass
+
+    @abstractmethod
+    def get_nominal(self):
+        # return 1 sample at the nominal value
+        pass
+
+    @abstractmethod
+    def get_plot_value(self, sample):
+        # given a value of the optional input(s), return the value you would
+        # want on a plot axis. Usually this is an identity function, but for
+        # arrays of bits it would convert to a decimal value
+        pass
+
+    #@abstractmethod
+    #def get_dim_names(self, sample):
+    #    # return a user-friendly name for each sample dimension
+    #    # in most cases this is just the signal.friendly_name()
+    #    pass
+
+
+
+class SamplerAnalog(SampleStyle):
+    def __init__(self, signal):
+        assert len(signal.value) == 2
+        self.limits = signal.value
+        # TODO get nominal from config
+        self.nominal = sum(self.limits) / 2
+        self.name = signal.friendly_name()
+
+    def get(self, target):
+        assert len(target) == self.NUM_DIMS
+        return self.limits[0] + target[0]*(self.limits[1] - self.limits[0])
+
+    def get_nominal(self):
+        return self.nominal
+
+    def get_plot_value(self, sample):
+        return sample
+
+    def __str__(self):
+        return f'SamplerAnalog({self.name})'
+
+
+class SamplerTEMP(SampleStyle):
+    def __init__(self, name, limits, nominal):
+        assert len(limits) == 2, 'Sampling analog requires an input range'
+        self.limits = limits
+        self.nominal = nominal
+        self.name = name
+
+    def get(self, target):
+        assert len(target) == self.NUM_DIMS
+        return self.limits[0] + target[0]*(self.limits[1] - self.limits[0])
+
+    def get_nominal(self):
+        return self.nominal
+
+    def get_plot_value(self, sample):
+        return sample
+
+    #def get_dim_names(self, sample):
+    #    return [self.name]
+
+    def __str__(self):
+        return f'SamplerAnalog({self.name})'
+
+
 class Sampler:
+    seed = 4
+
     @classmethod
     def rand(cls):
         return random.random()
@@ -14,6 +180,17 @@ class Sampler:
     def get_samples(cls, dims, N):
         # return a dictionary where keys are SignalIn (each SignalArray in dims
         # will be broken out) and values are length N lists of scaled samples
+
+        # ----------------
+        # TEMPORARY to test features of SampleManager
+        temp1 = SamplerTEMP('adj1', (5, 10), 7)
+        temp2 = SamplerTEMP('adj2', (-1, 1), 0.42)
+        sm = SampleManager([temp1, temp2], dims[:2])
+        sm.sweep_one(temp1, 4, 8)
+        sm.sweep_one(temp2, 4, 3)
+
+        # -------------
+
 
         samples = cls.get_orthogonal_samples(len(dims), N)
 
@@ -71,13 +248,17 @@ class Sampler:
         return samples_dict
 
     @classmethod
-    def get_orthogonal_samples(cls, D, N, seed=4):
+    def get_orthogonal_samples(cls, D, N, seed=None):
         '''
         :param D: Number of true analog dimensions
         :param N: Number of samples
         :return: NxD array of samples, every entry between 0 and 1
         Does Latin Hypercube Sampling and Orthogonal sampling
         '''
+        # TODO is it okay practice to edit a class property like this?
+        if seed is None:
+            seed = cls.seed
+            cls.seed += 1
         random.seed(seed)
 
         points = []

@@ -305,27 +305,6 @@ class Regression:
             df_filtered = regression_data[df_row_mask]
 
 
-            # -------- temp for nonlinear testing ---------
-            #ibias = test.signals.from_circuit_name('ibias')
-            #exp = AnalogExpression(self.regression_name(ibias))
-            #exp = get_analog_expression(ibias)
-            #exp = AnalogExpression(ibias)
-            #exps = [exp]
-
-            #def rhs_expr(param_values, input_values):
-            #    # just linear case for now
-            #    return sum(param_values*input_values)
-
-            #def make_optional_expression():
-            #    exp = AnalogExpression(ibias)
-            #    const = ConstExpression()
-            #    param = HeirarchicalExpression(SumExpression(2), [exp, const])
-            #    return param
-
-            # --------------------
-
-
-
             # build up parameter algebra expression
             optional_exprs = []
             param_names = []
@@ -382,7 +361,7 @@ class Regression:
                     data_combined[header] = column
         df_combined = pandas.DataFrame(data_combined)
 
-        # TODO dump res to a yaml file
+        # TODO fix checkpoint and then delete these 3 things
         self.regression_dataframe = df_combined
         self.results = results
         self.results_models = results_models
