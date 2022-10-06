@@ -24,7 +24,13 @@ class Testbench():
         self.tester = tester
         self.dut = tester.circuit.circuit
         self.test = test
-        self.test_vectors = test_vectors
+        self.test_vectors_all = test_vectors
+        # TODO at this point, test_vectors.keys() has several things that we
+        # want to ignore, but I don't know how to sort them out.
+        # In particular, should we poke a whole SignalArray if its
+        # individual bits are not in test_vectors?
+        self.test_vectors = pandas.DataFrame({s: vs for s, vs in test_vectors.items()
+                             if isinstance(s, SignalIn)})
         self.do_optional_out = do_optional_out
 
     @staticmethod
@@ -142,7 +148,7 @@ class Testbench():
             #for v_optional, v_test in zip(self.optional_vectors, self.test_vectors):
             #    reads = self.run_test_vector(v_test, v_optional)
             #    self.result_processing_list.append((digital_mode, v_test, v_optional, reads))
-            for i in range(self.test.num_samples):
+            for i in range(self.test_vectors.shape[0]):
                 reads = self.run_test_point(i)
                 self.result_processing_list.append((digital_mode, i, reads))
 
@@ -277,15 +283,20 @@ class Testbench():
 
         results_analysis_vec = self.condense_results_analysis(results_analysis)
         num_modes = len(set(results_other['mode_id']))
-        results_test_vectors = {k: np.concatenate([v]*num_modes) for k, v in self.test_vectors.items()}
+        # careful - when v is a Series, each value is associated with an index,
+        # and they will double up when you try to concatenate copies
+        results_test_vectors = {k: pandas.concat([v]*num_modes, ignore_index=True)
+                                for k, v in self.test_vectors_all.items()}
 
-        # add additional rows to results_test_vectors to include the decimal value of binary buses
-        for s in self.test.signals.random_qa():
-            # possible to not be an array if bits are declared separately I think...
-            if isinstance(s, SignalArray):
-                results_binary = [results_test_vectors[b] for b in s]
-                results_decimal = s.get_decimal_value(results_binary)
-                results_test_vectors[s] = results_decimal
+        # TODO I don't think this block is necessary because that info was
+        #  already in self.test_vectors_all
+        ## add additional rows to results_test_vectors to include the decimal value of binary buses
+        #for s in self.test.signals.random_qa():
+        #    # possible to not be an array if bits are declared separately I think...
+        #    if isinstance(s, SignalArray):
+        #        results_binary = [results_test_vectors[b] for b in s]
+        #        results_decimal = s.get_decimal_value(results_binary)
+        #        results_test_vectors[s] = results_decimal
 
 
 

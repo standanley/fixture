@@ -15,8 +15,9 @@ class SampleManager:
     SWEEP_ID_TAG = 'sweep_id'
     GROUP_ID_TAG = 'swept_group'
     def __init__(self, optional_groups, test_inputs):
-        self.optional_groups = optional_groups
-        self.test_inputs = [SamplerAnalog(ti) for ti in test_inputs]
+        # TODO how to get optional groups?
+        self.optional_groups = [get_sampler_for_signal(s) for s in optional_groups]
+        self.test_inputs = [get_sampler_for_signal(ti) for ti in test_inputs]
         self.data = pandas.DataFrame()
 
     def sweep_one(self, group, N_test, N_optional):
@@ -24,12 +25,20 @@ class SampleManager:
         # Choose N_optional values for the optional group, and then for each
         # one sweep N_test different test inputs
         Sampler = fixture.sampler.Sampler
-        TEST_DIMS = len(self.test_inputs)
+        TEST_DIMS = sum(ti.NUM_DIMS for ti in self.test_inputs)
         new_data = {}
 
         opt_samples_unscaled = Sampler.get_orthogonal_samples(group.NUM_DIMS, N_optional)
-        get_vectorized = np.vectorize(group.get, signature='(N)->()')
-        opt_samples = get_vectorized(np.array(opt_samples_unscaled))
+        opt_keys = group.get_nominal().keys()
+        opt_samples = {k: [] for k in opt_keys}
+        for opt_sample_unscaled in opt_samples_unscaled:
+            opt_sample_scaled = group.get(opt_sample_unscaled)
+            # make sure the keys match
+            assert set(opt_samples) == set(opt_sample_scaled), f'Internal error, maybe keys for {group} get_nominal() dont match the ones for get()'
+            for k in opt_sample_scaled:
+                opt_samples[k].append(opt_sample_scaled[k])
+        #get_vectorized = np.vectorize(group.get, signature='(N)->()')
+        #opt_samples = get_vectorized(np.array(opt_samples_unscaled))
 
         '''
         This code works, but the approach is not good - when N_test is small
@@ -48,23 +57,21 @@ class SampleManager:
         test_samples_flat = test_sample_guide[:, 1:][test_sample_order]
         test_samples = test_samples_flat.reshape((N_optional, N_test, TEST_DIMS))
         '''
-        test_samples_unscaled = np.zeros((N_optional, N_test, TEST_DIMS))
+
+        # TODO nominal doesn't necessarily make sense for test inputs
+        test_keys = [k for ti in self.test_inputs for k in ti.get_nominal()]
+        for k in test_keys:
+            new_data[k] = []
         for i in range(N_optional):
             samples_this_opt = Sampler.get_orthogonal_samples(TEST_DIMS, N_test)
-            test_samples_unscaled[i] = samples_this_opt
-
-        for ti in self.test_inputs:
-            assert ti.NUM_DIMS == 1, 'TODO sample coupled test inputs'
-        def scale_test_sample(sample):
-            assert len(sample) == len(self.test_inputs)
-            return np.array([ti.get([s]) for ti, s in zip(self.test_inputs, sample)])
-        scale_test_sample_vec = np.vectorize(scale_test_sample,
-                                             signature='(n)->(n)')
-        test_samples = scale_test_sample_vec(test_samples_unscaled)
-
-        test_samples_flat = test_samples.reshape((N_optional*N_test, TEST_DIMS))
-        for i, ti in enumerate(self.test_inputs):
-            new_data[ti] = test_samples_flat[:, i]
+            for j in range(N_test):
+                target_count = 0
+                for ti in self.test_inputs:
+                    targets = samples_this_opt[j][target_count : target_count + ti.NUM_DIMS]
+                    target_count += ti.NUM_DIMS
+                    sample = ti.get(targets)
+                    for k in sample:
+                        new_data[k].append(sample[k])
 
         # plot useful for when TEST_DIMS is 2
         #from fixture.plot_helper import plt
@@ -74,24 +81,27 @@ class SampleManager:
         #plt.grid()
         #plt.show()
 
-        group_data = []
-        sweep_ids = []
         group_ids = []
+        sweep_ids = []
+        group_data = {k: [] for k in opt_samples}
         for i in range(N_optional):
-            group_data += [opt_samples[i]] * N_test
-            sweep_ids += [i] * N_test
             group_ids += [group] * N_test
-        new_data[group] = group_data
-        new_data[self.SWEEP_ID_TAG] = sweep_ids
+            sweep_ids += [i] * N_test
+            #group_data += [opt_samples[i]] * N_test
+            for k in opt_samples:
+                group_data[k] += [opt_samples[k][i]]*N_test
         new_data[self.GROUP_ID_TAG] = group_ids
+        new_data[self.SWEEP_ID_TAG] = sweep_ids
+        #new_data[group] = group_data
+        for k in group_data:
+            new_data[k] = group_data[k]
         for opt_group in self.optional_groups:
             if opt_group != group:
                 nominal = opt_group.get_nominal()
-                assert isinstance(nominal, (float, int)), 'TODO get_nominal might return a dict or something'
-                new_data[opt_group] = opt_group.get_nominal()
+                for k in nominal:
+                    new_data[k] = [nominal[k]] * (N_test * N_optional)
 
-        self.data = pandas.concat([self.data, pandas.DataFrame(new_data)])
-        print()
+        self.data = pandas.concat([self.data, pandas.DataFrame(new_data)], ignore_index=True)
 
 
 class SampleStyle:
@@ -101,11 +111,13 @@ class SampleStyle:
     def get(self, target):
         # target_samples are between 0 and 1
         # they should be translated to the appropriate space for this input
+        # return a dict of {signal: value}
         pass
 
     @abstractmethod
     def get_nominal(self):
         # return 1 sample at the nominal value
+        # return a dict of {signal: value}
         pass
 
     @abstractmethod
@@ -126,6 +138,7 @@ class SampleStyle:
 class SamplerAnalog(SampleStyle):
     def __init__(self, signal):
         assert len(signal.value) == 2
+        self.signal = signal
         self.limits = signal.value
         # TODO get nominal from config
         self.nominal = sum(self.limits) / 2
@@ -133,17 +146,64 @@ class SamplerAnalog(SampleStyle):
 
     def get(self, target):
         assert len(target) == self.NUM_DIMS
-        return self.limits[0] + target[0]*(self.limits[1] - self.limits[0])
+        v = self.limits[0] + target[0]*(self.limits[1] - self.limits[0])
+        return {self.signal: v}
 
     def get_nominal(self):
-        return self.nominal
+        return {self.signal: self.nominal}
 
     def get_plot_value(self, sample):
         return sample
 
     def __str__(self):
-        return f'SamplerAnalog({self.name})'
+        #return f'SamplerAnalog({self.name})'
+        return self.name
 
+
+class SamplerBinary(SampleStyle):
+    def __init__(self, signal):
+        assert isinstance(signal, SignalArray)
+        assert signal.info['datatype'] == 'binary_analog'
+        assert signal.info['bus_type'] == 'binary'
+        self.signal = signal
+        self.first_one = signal.info.get('first_one', 'low')
+        assert self.first_one in ['low', 'high']
+        self.num_bits = len(list(signal))
+        self.range_inclusive = signal.value
+        if self.range_inclusive is None:
+            self.range_inclusive = (0, 2**self.num_bits-1)
+        self.name = signal.friendly_name()
+
+    def get_bits(self, v):
+        # take the decimal value and return a dict with decimal and bits
+        # kinda ugly to get a variable value into a format specifier
+        b = f'{{:0{self.num_bits}b}}'.format(v)
+        bits = [0 if c == '0' else 1 for c in b]
+        if self.first_one == 'low':
+            bits = bits[::-1]
+
+        ans = {self.signal: v}
+        assert len(list(self.signal)) == len(bits)
+        for sig, bit in zip(self.signal, bits):
+            ans[sig] = bit
+        return ans
+
+    def get(self, target):
+        N = self.range_inclusive[1] - self.range_inclusive[0] + 1
+        minimum = self.range_inclusive[0]
+        v = minimum + int(target[0] * N)
+        return self.get_bits(v)
+
+
+    def get_nominal(self):
+        v = int(sum(self.range_inclusive)/2)
+        return self.get_bits(v)
+
+    def get_plot_value(self, sample):
+        assert False, 'TODO'
+
+    def __str__(self):
+        return self.name
 
 class SamplerTEMP(SampleStyle):
     def __init__(self, name, limits, nominal):
@@ -160,13 +220,27 @@ class SamplerTEMP(SampleStyle):
         return self.nominal
 
     def get_plot_value(self, sample):
-        return sample
+        return {self.name: sample}
 
     #def get_dim_names(self, sample):
     #    return [self.name]
 
     def __str__(self):
         return f'SamplerAnalog({self.name})'
+
+
+def get_sampler_for_signal(signal):
+    # TODO should this be done in the config?
+    assert isinstance(signal, (SignalIn, SignalArray))
+    assert signal.get_random, 'Can only sample random signals'
+
+    if isinstance(signal, SignalArray):
+        #assert False, 'TODO'
+        #return SamplerTEMP(signal.friendly_name(), (0, 63), 32)
+        return SamplerBinary(signal)
+    else:
+        assert len(signal.value) == 2, 'Can only sample signal with range'
+        return SamplerAnalog(signal)
 
 
 class Sampler:
@@ -177,20 +251,24 @@ class Sampler:
         return random.random()
 
     @classmethod
-    def get_samples(cls, dims, N):
+    def get_samples(cls, test):
         # return a dictionary where keys are SignalIn (each SignalArray in dims
         # will be broken out) and values are length N lists of scaled samples
 
+        dims = test.signals.random()
+        N = test.num_samples
+
         # ----------------
         # TEMPORARY to test features of SampleManager
-        temp1 = SamplerTEMP('adj1', (5, 10), 7)
-        temp2 = SamplerTEMP('adj2', (-1, 1), 0.42)
-        sm = SampleManager([temp1, temp2], dims[:2])
-        sm.sweep_one(temp1, 4, 8)
-        sm.sweep_one(temp2, 4, 3)
+        optional_signals = [s for s in test.signals.random() if s not in test.input_signals]
+        sm = SampleManager(optional_signals, list(test.input_signals))
+        for group in sm.optional_groups:
+            sm.sweep_one(group, 12, 16)
+        test.sample_groups = sm.optional_groups + sm.test_inputs
 
         # -------------
 
+        return sm.data
 
         samples = cls.get_orthogonal_samples(len(dims), N)
 
@@ -447,20 +525,21 @@ class Sampler:
         return data
 
     @classmethod
-    def convert_qa_binary(cls, samples, num_bits, first_one, range_inclusive=None):
+    def convert_qa_binary(cls, samples, num_bits, first_one,
+                          range_inclusive=None):
         assert first_one in ['low', 'high']
         data = []
         if range_inclusive is not None:
             N = range_inclusive[1] - range_inclusive[0] + 1
             minimum = range_inclusive[0]
         else:
-            N = 2**num_bits
+            N = 2 ** num_bits
             minimum = 0
         for x in samples:
             v = minimum + int(x * N)
             # kinda ugly to get a variable value into a format specifier
             b = f'{{:0{num_bits}b}}'.format(v)
-            #b = bin(v)[2:]
+            # b = bin(v)[2:]
             bits = [0 if c == '0' else 1 for c in b]
             if first_one == 'low':
                 bits = bits[::-1]

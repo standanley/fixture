@@ -1,12 +1,23 @@
 name: myamp
 filepath: ../spice/tia3.sp
 template: DifferentialAmpTemplate
+
+checkpoint_controller:
+    GainTest:
+        choose_inputs: True
+        run_sim: True
+        run_analysis: True
+        run_post_process: True
+        run_regression: True
+        run_post_regression: save
+
 pin:
     vdd:
         direction: input
         datatype: analog
-        value: 3.0
-        #value: (2.7, 3.3)
+        # this amp breaks completely when vdd>3.2 or so
+        #value: 3.0
+        value: (2.7, 3.1)
     #vss:
     #    direction: input
     #    datatype: real
@@ -56,6 +67,8 @@ extras:
     approx_settling_time: 100e-6
     limits_diff: (-3e-6, 3e-6)
     limits_cm: (-1e-6, 1e-6)
+    #limits_diff: (-3e-0, 3e-0)
+    #limits_cm: (1.5, 1.6)
 
 #test_config_file: ngspice_dynamics.yaml
 #test_config_file: ngspice_small_tstep.yaml

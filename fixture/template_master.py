@@ -53,16 +53,21 @@ class TemplateMaster():
         for test in self.tests:
             test.signals = self.signals.copy()
             test_dimensions = test.input_domain()
+            # TODO not sure this is the best way to do input signals
+            #test.input_signals = SignalManager([], {})
+            test.input_signals = []
             # TODO I don't like editing signal.get_random as it might be used in other tests
             for s in test_dimensions:
                 if isinstance(s, fixture.signals.SignalIn):
                     s.get_random = True
                     if s not in test.signals and s not in test.signals.flat():
+                        test.input_signals.append(s)
                         test.signals.add(s)
                 elif isinstance(s, fixture.signals.SignalArray):
                     for sig in s.flatten():
                         sig.get_random = True
                     if s not in test.signals:
+                        test.input_signals.append(s)
                         test.signals.add(s)
                 else:
                     assert False, 'input_domain must return SignalIn objects'
@@ -473,9 +478,7 @@ class TemplateMaster():
         for test, controller in checkpoint_controller.items():
 
             if controller['choose_inputs']:
-                test_vectors = fixture.Sampler.get_samples(
-                    test.signals.random(),
-                    getattr(test, 'num_samples', 10))
+                test_vectors = fixture.Sampler.get_samples(test)
                 checkpoint.save_input_vectors(test, test_vectors)
 
             # analysis requires a fault testbench even if we skip the actual

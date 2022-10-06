@@ -300,10 +300,14 @@ class Regression:
             regression_data = pandas.DataFrame(regression_data_dict)
 
 
-            df_row_mask = ~ regression_data[lhs_clean].isnull()
-            # TODO when I blank out entries in the data spreadsheet they appear as nan, but those rows aren't filtered. Is that bad?
-            df_filtered = regression_data[df_row_mask]
+            #df_row_mask = ~ regression_data[lhs_clean].isnull()
+            ## TODO when I blank out entries in the data spreadsheet they appear as nan, but those rows aren't filtered. Is that bad?
+            #df_filtered = regression_data[df_row_mask]
 
+            # TODO how to handle rows with nan? I copied this from old code
+            df_row_mask = ~ data[lhs_clean].isnull()
+            # TODO when I blank out entries in the data spreadsheet they appear as nan, but those rows aren't filtered. Is that bad?
+            df_filtered = data[df_row_mask]
 
             # build up parameter algebra expression
             optional_exprs = []
@@ -322,18 +326,19 @@ class Regression:
             algebra = LinearExpression(total_expr_inputs, f'{lhs_clean}_combiner')
             total_expr = HeirarchicalExpression(algebra, optional_exprs, lhs_clean)
 
-            input_names = [self.regression_name(s) for s in total_expr.input_signals]
-            expr_fit_data = [df_filtered[input_name] for input_name in input_names]
-            expr_fit_data = np.array(expr_fit_data)
+            #input_names = [self.regression_name(s) for s in total_expr.input_signals]
+            #expr_fit_data = [df_filtered[input_name] for input_name in input_names]
+            #expr_fit_data = np.array(expr_fit_data)
             lhs_data = df_filtered[lhs_clean]
 
             # do the regression!
             print('Starting parameter fit')
-            coefs_fit = total_expr.fit(expr_fit_data, lhs_data)
+            coefs_fit = total_expr.fit_by_group(df_filtered, lhs_data)
             total_expr.coefs_fit = coefs_fit
             results_expr[lhs] = total_expr
 
-
+            '''
+            # old, linear way of doing it
             formula = self.make_formula(lhs_clean, [x[0] for x in rhs_info])
             stats_model = smf.ols(formula, df_filtered)
             stat_results = stats_model.fit()
@@ -365,6 +370,7 @@ class Regression:
         self.regression_dataframe = df_combined
         self.results = results
         self.results_models = results_models
+        '''
 
         self.expr_dataframe = data
         self.results_expr = results_expr

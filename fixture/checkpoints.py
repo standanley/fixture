@@ -4,6 +4,9 @@ import pandas
 import yaml
 from yaml.representer import Representer
 from collections import defaultdict
+
+from fixture.sampler import SampleManager
+
 yaml.add_representer(defaultdict, Representer.represent_dict)
 
 
@@ -23,8 +26,24 @@ class Checkpoint:
             self.data[test] = test_data
 
     def convert_df_columns(self, test, df):
-        str_to_signal = {str(s): s for s in test.signals.flat() + list(test.signals)}
+        # signals in column names
+        str_to_signal = {str(s): s for s in
+                         test.signals.flat()
+                         + list(test.signals)
+                         #+ list(test.input_signals)
+                         }
         df.rename(str_to_signal, axis='columns', inplace=True)
+
+        # sample groups in group_sweep column
+        tag = SampleManager.GROUP_ID_TAG
+        if tag in df.columns:
+            str_to_sample_group = {str(sg): sg for sg in
+                                   test.sample_groups}
+            def restore_sg(sg_str):
+                return str_to_sample_group.get(sg_str, sg_str)
+            #assert (not any(sg_str in str_to_signal
+            #               for sg_str in str_to_sample_group)), 'Name collision'
+            df[tag] = df[tag].map(restore_sg)
 
     def _get_save_file(self, test, filename):
         # DON'T FORGET TO CLOSE IT
