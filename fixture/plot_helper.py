@@ -318,7 +318,8 @@ class PlotHelper:
         ba_bits = [bit for ba_bus in ba_buses for bit in ba_bus]
         for ba in ba_bits:
             nominal_data_dict[ba] = 0.5
-        nominal_data_dict[Regression.one_literal] = 1
+        nominal_data_dict[fixture.regression.Regression.one_literal] = 1
+        
         nominal_data = nominal_data_dict
 
         for opt in self.test.signals.optional_quantized_analog():

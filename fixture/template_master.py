@@ -531,7 +531,7 @@ class TemplateMaster():
                                     regression.expr_dataframe,
                                     regression.results_expr)
                     ph.plot_regression()
-                    ph.plot_optional_effects()
+                    #ph.plot_optional_effects()
 
                     rr = dict(regression.results)
 

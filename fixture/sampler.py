@@ -103,6 +103,10 @@ class SampleManager:
 
         self.data = pandas.concat([self.data, pandas.DataFrame(new_data)], ignore_index=True)
 
+    def sample_all(self, N):
+        NUM_DIMS = None
+        print('TODO sample_all')
+        pass
 
 class SampleStyle:
     NUM_DIMS = 1
@@ -132,6 +136,16 @@ class SampleStyle:
     #    # return a user-friendly name for each sample dimension
     #    # in most cases this is just the signal.friendly_name()
     #    pass
+
+    def get_many(self, targets):
+        # sort of vectorizing self.get(), but instead of returning a list of
+        # dictionaries we collate into a dictionary of lists instead
+        # Recall that self.get() takes a list, so targets should be 2-dimensional
+        ans = {k: [] for k in self.get_nominal()}
+        for t in targets:
+            for k, v in self.get(t).items():
+                ans[k].append(v)
+        return ans
 
 
 
@@ -192,6 +206,9 @@ class SamplerBinary(SampleStyle):
         N = self.range_inclusive[1] - self.range_inclusive[0] + 1
         minimum = self.range_inclusive[0]
         v = minimum + int(target[0] * N)
+        if v == minimum + N:
+            # happens when target is exactly 1
+            v -= 1
         return self.get_bits(v)
 
 
@@ -264,6 +281,7 @@ class Sampler:
         sm = SampleManager(optional_signals, list(test.input_signals))
         for group in sm.optional_groups:
             sm.sweep_one(group, 12, 16)
+        sm.sample_all(100)
         test.sample_groups = sm.optional_groups + sm.test_inputs
 
         # -------------

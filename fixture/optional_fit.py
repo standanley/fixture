@@ -2,13 +2,16 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 
 from scipy.optimize import minimize
+from scipy.stats import linregress
 import numpy as np
 import pandas
 
+import fixture
 from fixture.sampler import SampleManager
 from fixture.signals import SignalArray, SignalIn
+from fixture.plot_helper import plt, PlotHelper
 
-PLOT = False
+PLOT = True
 
 class Expression:
     x_init = None
@@ -48,9 +51,20 @@ class Expression:
         # calculate the linear influence of the optional inputs
         pass
 
+    def predict_from_dict(self, opt_dict, coefs):
+        # Similar to predict, but takes the optional inputs as a dictionary or
+        # dataframe. This one is more convenient, but the minimizer can get
+        # better performance by using predict directly
+        opt_values = [opt_dict[s] for s in self.input_signals]
+        opt_values = np.array(opt_values)
+        ans = []
+        for value_vector in opt_values.T:
+            ans.append(self.predict(value_vector, coefs))
+        return ans
+
     def fit(self, optional_data, result_data):
         # return a best-fit of the coefficients, i.e. minimize
-        # predict(optional_data, coefficientss) - result_data
+        # predict(optional_data, coefficients) - result_data
         # return a tuple of (coefficients, offset)
         my_data = optional_data[self.input_signals]
         assert my_data.shape == (len(result_data), len(self.input_signals))
@@ -90,7 +104,7 @@ class Expression:
         start = time.time()
         print('Minimizing', self.name)
         print('TODO stop skipping fit')
-        if False or self.name == 'out_diff':
+        if False and self.name == 'out_diff':
             #x_opt = np.array([-1.23059139e+03, -6.83196691e+02, -2.24022907e+02, -1.90805353e+02,
             #   -5.96662666e+01, -4.48716108e+01,  2.83153509e+03, -7.72680027e+01,
             #   -1.08935382e+02,  2.02334246e+02, -2.11149160e+02,  1.86133922e+02,
@@ -127,7 +141,7 @@ class Expression:
              -3.67756854e+09, -1.54204027e+03,  2.79275488e-05]
 
 
-        elif False or self.name == 'out_cm':
+        elif False and self.name == 'out_cm':
             #x_opt = np.array([-2.19233927e+01,  2.61691713e+02,  1.38773168e+01,  1.57116746e+02,
             #    4.38110640e+02,  3.03643386e+01,  1.84852178e+02,  6.07208190e+02,
             #    6.80619246e+02,  7.28624576e+02,  6.60212312e+02,  6.29206962e+02,
@@ -136,6 +150,7 @@ class Expression:
             #    2.40262615e+00])
             x_opt = np.array(x0)
         else:
+            print('TEST doing acutal minimization')
             result = minimize(error, x0, method='Nelder-Mead', options={
                 'fatol': 0,
                 'maxfev': 10**3
@@ -151,6 +166,17 @@ class Expression:
 
         if False:
             from fixture.plot_helper import plt
+
+            # TODO this is a temporary plot
+            predict_vec = np.vectorize(self.predict, signature='(n),(m)->()')
+            predictions = predict_vec(my_data, x0)
+            x_label = my_data.columns[0]
+            plt.title('TEMP looking at x_init')
+            plt.scatter(my_data[x_label], result_data)
+            plt.scatter(my_data[x_label], predictions)
+            plt.grid()
+            plt.show()
+
             predict_vec = np.vectorize(self.predict, signature='(n),(m)->()')
             predictions = predict_vec(my_data, x_opt)
             x_label = my_data.columns[0]
@@ -234,13 +260,18 @@ class HeirarchicalExpression(Expression):
         # don't add num parent coefficients because those are the child expressions
         self.NUM_COEFFICIENTS = num_child_coefficients
 
-    #def fit(self, optional_data, result_data, swept_group=None):
-    #    # can we detect when we have the data to fit children individually?
-    #    # I think we actually need the whole result dataframe so we can read
-    #    # the tags instead of trying to figure out what's changing
-    #    for child in self.child_expressions:
-    #        pass
-    #    assert False, 'todo'
+    def fit(self, optional_data, result_data):
+        if (len(self.child_expressions) == 2
+            and isinstance(self.parent_expression, SumExpression)
+            and isinstance(self.child_expressions[1], ConstExpression)):
+            # if a child has a special fit method, we should use it
+            if hasattr(self.child_expressions[0], 'get_x_init'):
+                coefs_all = self.child_expressions[0].get_x_init(optional_data, result_data)
+                self.child_expressions[0].x_init = coefs_all[:-1]
+                self.child_expressions[1].x_init = coefs_all[-1:]
+                self.x_init = coefs_all
+
+        return super().fit(optional_data, result_data)
 
     def fit_by_group(self, optional_data, result_data):
         groups = {sg for sg in optional_data[SampleManager.GROUP_ID_TAG]
@@ -270,6 +301,7 @@ class HeirarchicalExpression(Expression):
                 self.parent_expression.fit(point_data, point_data_res)
                 group_results.append(self.parent_expression.x_opt)
 
+                # TODO in general this plot xaxis is not right
                 xaxis = self.parent_expression.input_signals[0]
                 plot_xs.append(point_data[xaxis])
                 plot_ys.append(point_data_res)
@@ -280,7 +312,6 @@ class HeirarchicalExpression(Expression):
 
             if PLOT:
                 # plotting initial small plots
-                from fixture.plot_helper import plt
                 print('New figure for ', sg)
                 plt.figure()
                 for xs, ys, preds in zip(plot_xs, plot_ys, plot_predictions):
@@ -291,7 +322,7 @@ class HeirarchicalExpression(Expression):
                 plt.xlabel(f'{xaxis}')
                 plt.ylabel(f'f{self.parent_expression.name}')
                 plt.grid()
-                plt.show()
+                PlotHelper.save_current_plot(f'Fits for {self.name} from Sweeping {sg}')
 
             # Next we find expressions for each param, using values from earlier
             # each row in example_data corresponds to one point in the sweep
@@ -330,19 +361,32 @@ class HeirarchicalExpression(Expression):
 
                 if PLOT:
                     # plotting secondary fits, from using fit params as goals
-                    from fixture.plot_helper import plt
                     plt.figure()
-                    predict_data = [example_data[s] for s in temp_expression.input_signals]
-                    predictions = temp_expression.predict(predict_data, temp_expression.x_opt)
                     # TODO this may not work with future sg types
                     xaxis = sg.signal
                     xs = example_data[xaxis]
+                    xs_sampler = fixture.sampler.get_sampler_for_signal(xaxis)
+                    data_smooth = xs_sampler.get_many([x] for x in np.linspace(0, 1, 100))
+                    predictions = temp_expression.predict_from_dict(data_smooth, temp_expression.x_opt)
+                    xs_smooth = data_smooth[xaxis]
+
                     plt.plot(xs, child_results, '*')
-                    plt.plot(xs, predictions, '--')
+                    plt.plot(xs_smooth, predictions, 'x--')
                     plt.xlabel(f'{xaxis}')
                     plt.ylabel(f'{child.name}')
                     plt.grid()
-                    #plt.show()
+                    PlotHelper.save_current_plot(f'Initial fit for {child.name} to {self.name} vs {sg}')
+
+                    # TEMP for checking x_init
+                    if temp_expression.x_init is not None:
+                        predictions = temp_expression.predict_from_dict(data_smooth, temp_expression.x_init)
+                        plt.plot(xs, child_results, '*')
+                        plt.plot(xs_smooth, predictions, 'x--')
+                        plt.xlabel(f'{xaxis}')
+                        plt.ylabel(f'{child.name}')
+                        plt.grid()
+                        PlotHelper.save_current_plot(f'Debug x_init for {child.name} to {self.name} vs {sg}')
+                    print()
 
 
                 for grandchild in temp_expression.child_expressions:
@@ -361,6 +405,19 @@ class HeirarchicalExpression(Expression):
 
         # now we are ready
         self.fit(optional_data, result_data)
+
+        if PLOT:
+            predict_data = [optional_data[col] for col in self.input_signals]
+            predictions = self.predict(predict_data, self.x_opt)
+            # TODO fix this xaxis
+            xaxis = self.parent_expression.input_signals[0]
+            xs = optional_data[xaxis]
+            plt.figure()
+            plt.plot(xs, result_data, '*')
+            plt.plot(xs, predictions, '--')
+            plt.grid()
+            plt.xlabel(f'{xaxis}')
+            plt.ylabel(f'{self.name}')
         print()
 
     def predict(self, opt_values, coefs):
@@ -439,23 +496,81 @@ class SumExpression(Expression):
 
 
 class ReciprocalExpression(Expression):
-    __doc__ = '''The constructor takes in a list of inputs. A coefficient will 
-                 be assigned to each one, plus a constant, and all that is 
-                 put on the bottom of the fraction. '''
+    __doc__ = '''
+The constructor takes in a list of inputs. This is intended to model the
+resistance of a bank of resistors. 
+1/(ctrl[0]/R0 + ctrl[1]/R1 + ... + 1/Rnom)
+Issue is that this expression is difficult to zero out for parameters that don't
+depend on R. An alternative is:
+Rnom/(ctrl[0]/X0 + ctrl[1]/X1 + ... + 1)
+Issue with that one is that it's difficult if the crtl=0 resistance is 0.
+We end up going with this weird version:
+G/(ctrl[0] + ctrl[1]/X1 + ... + Y)
+I still consider this a work-in-progress. I think it makes sense if you 
+interpret G as a sort of "global conductance multiplier" for each bit
+1/(ctrl[0]/Rnom + ctrl[1]/(Rnom*X1) + ctrl[2]/(Rnom*X2) + ... + Y/Rnom)
+Computationally, we pull Rnom on the top to avoid precision weirdness
+Note that Y is on the top of that last term because Y=0 is common, Y=inf is not
+For ctrl[5:0], coefs = [Rnom, X1, X2, X3, X4, X5, Y]
+
+'''
 
     def __init__(self, inputs, name):
         self.name = name
         self.input_signals = inputs
         self.NUM_COEFFICIENTS = len(inputs) + 1
         self.x_init = np.ones(self.NUM_COEFFICIENTS)
-        self.x_init[0] = 2000
+
+        ## TODO get rid of this
+        #self.x_init[0] = 1500
+        #self.x_init[1] = 2
+        #self.x_init[2] = 4
+        #self.x_init[3] = 8
+        #self.x_init[4] = 8
+        #self.x_init[5] = 8
+        #self.x_init[6] = 0
+
 
     def predict(self, opt_values, coefs):
         # opt_values are essentially input_values
         assert len(opt_values) == len(self.input_signals)
         assert len(coefs) == len(opt_values) + 1
-        denominator = sum(o / c for o, c in zip(opt_values, coefs[1:])) + 1
+        denominator = opt_values[0] + sum(o / c for o, c in zip(opt_values[1:], coefs[1:-1])) + coefs[-1]
         return coefs[0] / denominator
+
+    def get_x_init(self, optional_data, result_data):
+        # we want to get a rough fit before we go to the solver
+        # we can guess that the bits are thermometer or binary up/down
+        # If we know the ratios between bits, we can do linear regression
+        def quick_fit(xs, ys):
+            result = linregress(xs, ys)
+            return result.rvalue**2, result.slope, result.intercept
+        bits = [optional_data[s] for s in self.input_signals]
+        denom_coefss = []
+        therm = [1 for i in range(1, self.NUM_COEFFICIENTS-1)] + [0]
+        denom_coefss.append(therm)
+        binary_inc = [2**i for i in range(1, self.NUM_COEFFICIENTS-1)] + [1e-3]
+        denom_coefss.append(binary_inc)
+        binary_dec = [(1/2)**i for i in range(1, self.NUM_COEFFICIENTS-1)] + [1e-3]
+        denom_coefss.append(binary_dec)
+
+        # r2_value, slope, intercept, denom_coefs
+        # r2_value is first so we can use comparison to find the highest
+        fit = (0.0, 0, 0, None)
+        for denom_coefs in denom_coefss:
+            denom = sum(b/c for b, c in zip(bits, [1]+denom_coefs[:-1])) + denom_coefs[-1]
+            xs = 1/denom
+            result = quick_fit(xs, result_data)
+            fit = max(fit, (*result, denom_coefs))
+        r2_value, slope, intercept, denom_coefs = fit
+
+        coefs = [slope] + denom_coefs + [intercept]
+        return coefs
+
+
+
+
+        print()
 
 
 def get_optional_expression_from_signal(s, name):
@@ -526,11 +641,11 @@ def test_optimizers(error_fun, N_COEFS):
         print('round', i, 'guess', x0)
         start = time.time()
 
-        result = minimize(error_fun, x0, method='Nelder-Mead', options={
+        result = minimize(error_fun, x0, method='Powell', options={
             #'gtol': 0,
-            #'ftol': 0,
-            'fatol': 0,
-            'maxfev': 10 ** 3,
+            'ftol': 0, # Powell
+            #'fatol': 0, # Nelder-Mead
+            'maxfev': 5*10 ** 3,
             'disp': True
         })
         x_opt = result.x
