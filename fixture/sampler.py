@@ -272,76 +272,14 @@ class Sampler:
         # return a dictionary where keys are SignalIn (each SignalArray in dims
         # will be broken out) and values are length N lists of scaled samples
 
-        dims = test.signals.random()
-        N = test.num_samples
-
-        # ----------------
-        # TEMPORARY to test features of SampleManager
         optional_signals = [s for s in test.signals.random() if s not in test.input_signals]
         sm = SampleManager(optional_signals, list(test.input_signals))
         for group in sm.optional_groups:
-            sm.sweep_one(group, 12, 16)
+            sm.sweep_one(group, 4, 54)
         sm.sample_all(100)
         test.sample_groups = sm.optional_groups + sm.test_inputs
-
-        # -------------
-
         return sm.data
 
-        samples = cls.get_orthogonal_samples(len(dims), N)
-
-        #visualize([(x[1], x[2]) for x in samples])
-
-        samples_dict = {}
-        for i, dim in enumerate(dims):
-            if isinstance(dim, SignalArray):
-                bus_type = dim.info.get('bus_type', 'any')
-
-                if bus_type == 'any':
-                    # We actually choose numbers of bits to turn on according
-                    # to evenly distributed thermometer codes, BUT don't turn
-                    # them on in order like we do for thermometer
-                    assert len(dim.shape) == 1
-                    samples_this_dim = [samples[j][i] for j in range(N)]
-                    data = cls.convert_qa_therm_random(samples_this_dim, dim.shape[0])
-                    for j, s in enumerate(dim):
-                        samples_this_bit = [data[k][j] for k in range(N)]
-                        samples_dict[s] = samples_this_bit
-
-                elif bus_type == 'thermometer':
-                    assert len(dim.shape) == 1
-                    samples_this_dim = [samples[j][i] for j in range(N)]
-                    data = cls.convert_qa_therm(samples_this_dim, dim.shape[0])
-                    for j, s in enumerate(dim):
-                        samples_this_bit = [data[k][j] for k in range(N)]
-                        samples_dict[s] = samples_this_bit
-
-                elif bus_type == 'binary' or bus_type == 'signed_magnitude' or 'binary_exact':
-                    # TODO could probably make this a little better
-                    # For now, do nothing special, although we could try to
-                    # balance the number of 1s and 0s on a particular bit, etc.
-                    samples_this_dim = [samples[j][i] for j in range(N)]
-                    # TODO we might want to require first_one instead of choosing a default
-                    # if we choose wrong it won't have good coverage of the input space
-                    first_one = dim.info.get('first_one', 'high')
-                    data = cls.convert_qa_binary(samples_this_dim, dim.shape[0], first_one, dim.value)
-                    for j, s in enumerate(dim):
-                        samples_this_bit = [data[k][j] for k in range(N)]
-                        samples_dict[s] = samples_this_bit
-
-                else:
-                    assert False, f'Unknown bus type {bus_type}'
-            else:
-                assert isinstance(dim, SignalIn)
-                assert dim.type_ in ['analog', 'real']
-                assert isinstance(dim.value, tuple) and len(dim.value) == 2
-                lims = dim.value
-                xs = []
-                for j in range(N):
-                    xs.append(lims[0] + samples[j][i]*(lims[1]-lims[0]))
-                samples_dict[dim] = xs
-
-        return samples_dict
 
     @classmethod
     def get_orthogonal_samples(cls, D, N, seed=None):
