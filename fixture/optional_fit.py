@@ -242,6 +242,19 @@ class LinearExpression(Expression):
         assert len(coefs) == len(opt_values)
         return sum(o*c for o, c in zip(opt_values, coefs))
 
+    #def get_x_init(self, optional_data, result_data):
+    #    # don't use nonlinear optimizer if you are linear!
+    #    abc
+    def fit(self, optional_data, result_data):
+        print('using linear regression')
+        # we want to get a rough fit before we go to the solver
+        # we can guess that the bits are thermometer or binary up/down
+        # If we know the ratios between bits, we can do linear regression
+        opt_values = np.array([optional_data[s] for s in self.input_signals])
+        result = np.linalg.pinv(opt_values.T) @ result_data
+        self.x_opt = result
+        return self.x_opt
+
 
 class HeirarchicalExpression(Expression):
     def __init__(self, parent_expression, child_expressions, name):
@@ -277,6 +290,49 @@ class HeirarchicalExpression(Expression):
         groups = {sg for sg in optional_data[SampleManager.GROUP_ID_TAG]
                   if sg is not None}
         groups = sorted(groups, key=lambda sg: sg.name)
+
+        # first thing is to figure out which sweep groups to use for which
+        # fit expressions
+        fits_for_sweeps = defaultdict(list)
+        for i in range(len(self.child_expressions)):
+            child = self.child_expressions[i]
+            relevant_grandchildren = []
+            for grandchild in child.child_expressions:
+                if isinstance(grandchild, ConstExpression):
+                    # TODO might remove all ConstExpressions in the future
+                    continue
+                # which sweep is best for grandchild.input_signals
+                # first, search for an exact match
+                def break_buses(ss):
+                    # break sample groups that are buses into their bits
+                    sg_signals = []
+                    for s in ss:
+                        if isinstance(s, SignalArray):
+                            assert len(s.array.shape) == 1, 'TODO nested buses'
+                            sg_signals += list(s)
+                        else:
+                            sg_signals.append(s)
+                    return sg_signals
+                perfect_match_found = False
+                for sg in groups:
+                    if (set(break_buses(grandchild.input_signals))
+                            == set(break_buses(sg.signals))):
+                        # perfect match, use this sweep group
+                        fits_for_sweeps[sg].append(grandchild)
+                        perfect_match_found = True
+
+                # TODO this will include all partial matches, but in reality
+                #  I think we should rank them and include only the best
+                if not perfect_match_found:
+                    # no perfect match found
+                    # partial match is when the sweep group has extra things
+                    for sg in groups:
+                        if all(s in break_buses(sg.signals)
+                               for s in break_buses(grandchild.input_signals)):
+                            # all the things in the fit expr were swept
+                            fits_for_sweeps[sg].append(grandchild)
+
+
         result_fits = defaultdict(list)
         for sg in groups:
             # group_data is everything during the sweep of sg
@@ -322,7 +378,7 @@ class HeirarchicalExpression(Expression):
                 plt.xlabel(f'{xaxis}')
                 plt.ylabel(f'f{self.parent_expression.name}')
                 plt.grid()
-                PlotHelper.save_current_plot(f'Fits for {self.name} from Sweeping {sg}')
+                PlotHelper.save_current_plot(f'Fits for {self.name} from Sweeping {sg.name}')
 
             # Next we find expressions for each param, using values from earlier
             # each row in example_data corresponds to one point in the sweep
@@ -340,56 +396,66 @@ class HeirarchicalExpression(Expression):
                 assert isinstance(child.parent_expression, SumExpression)
                 assert isinstance(child.child_expressions[-1], ConstExpression)
 
-                # now we look through child's children and determine which
+                ## now we look through child's children and determine which
                 # one(s) are actually affected by changing sg
                 # TODO sg.signal doen't always exist?
                 # TODO what about when sg has multiple signals?
                 # TODO what about when child.input_signals has multiple signals?
-                relevant_grandchildren = []
+                #relevant_grandchildren = []
                 for grandchild in child.child_expressions:
-                    if sg.signal in grandchild.input_signals:
-                        relevant_grandchildren.append(grandchild)
-                    elif (isinstance(sg.signal, SignalArray)
-                          and all(s in grandchild.input_signals for s in sg.signal)):
-                        relevant_grandchildren.append(grandchild)
-                relevant_grandchildren.append(child.child_expressions[-1])
-                temp_expression = HeirarchicalExpression(
-                    SumExpression(len(relevant_grandchildren), 'temp_sum'),
-                    relevant_grandchildren,
-                    'temp_expr')
-                temp_expression.fit(example_data, child_results)
+                    # TODO delete old strategy
+                    #if any(s in grandchild.input_signals for s in sg.signals):
+                    #    relevant_grandchildren.append(grandchild)
+                    #elif (isinstance(sg.signal, SignalArray)
+                    #      and all(s in grandchild.input_signals for s in sg.signal)):
+                    #    relevant_grandchildren.append(grandchild)
+                    if grandchild not in fits_for_sweeps[sg]:
+                        continue
+                    expression_list = [grandchild]
+                    # add constant
+                    expression_list.append(child.child_expressions[-1])
+                    temp_expression = HeirarchicalExpression(
+                        SumExpression(len(expression_list), 'temp_sum'),
+                        expression_list,
+                        'temp_expr')
+                    temp_expression.fit(example_data, child_results)
 
-                if PLOT:
-                    # plotting secondary fits, from using fit params as goals
-                    plt.figure()
-                    # TODO this may not work with future sg types
-                    xaxis = sg.signal
-                    xs = example_data[xaxis]
-                    xs_sampler = fixture.sampler.get_sampler_for_signal(xaxis)
-                    data_smooth = xs_sampler.get_many([x] for x in np.linspace(0, 1, 100))
-                    predictions = temp_expression.predict_from_dict(data_smooth, temp_expression.x_opt)
-                    xs_smooth = data_smooth[xaxis]
+                    if PLOT:
+                        # plotting secondary fits, from using fit params as goals
+                        plt.figure()
+                        # TODO this may not work with future sg types
+                        xaxis = sg.signals[-1]
+                        xs = example_data[xaxis]
+                        #xs_sampler = fixture.sampler.get_sampler_for_signal(xaxis)
+                        x_targets = np.linspace(0, 1, 100).reshape((100,1))
+                        targets = np.concatenate((x_targets, 0.5*np.ones((100, sg.NUM_DIMS-1))), 1)
+                        data_smooth = pandas.DataFrame(sg.get_many(targets))
+                        data_smooth = data_smooth.sort_values(by=[xaxis])
+                        predictions = temp_expression.predict_from_dict(data_smooth, temp_expression.x_opt)
+                        xs_smooth = data_smooth[xaxis]
 
-                    plt.plot(xs, child_results, '*')
-                    plt.plot(xs_smooth, predictions, 'x--')
-                    plt.xlabel(f'{xaxis}')
-                    plt.ylabel(f'{child.name}')
-                    plt.grid()
-                    PlotHelper.save_current_plot(f'Initial fit for {child.name} to {self.name} vs {sg}')
-
-                    # TEMP for checking x_init
-                    if temp_expression.x_init is not None:
-                        predictions = temp_expression.predict_from_dict(data_smooth, temp_expression.x_init)
-                        plt.plot(xs, child_results, '*')
+                        xs_order = np.argsort(xs)
+                        plt.plot(np.array(xs)[xs_order], child_results[xs_order], '*')
                         plt.plot(xs_smooth, predictions, 'x--')
                         plt.xlabel(f'{xaxis}')
                         plt.ylabel(f'{child.name}')
                         plt.grid()
-                        PlotHelper.save_current_plot(f'Debug x_init for {child.name} to {self.name} vs {sg}')
-                    print()
+                        PlotHelper.save_current_plot(f'Initial fit for {grandchild.name} to {self.name} vs {sg}')
+
+                        # TEMP for checking x_init
+                        if temp_expression.x_init is not None:
+                            predictions = temp_expression.predict_from_dict(data_smooth, temp_expression.x_init)
+                            #plt.plot(xs, child_results, '*')
+                            plt.plot(np.array(xs)[xs_order],
+                                     child_results[xs_order], '*')
+                            plt.plot(xs_smooth, predictions, 'x--')
+                            plt.xlabel(f'{xaxis}')
+                            plt.ylabel(f'{child.name}')
+                            plt.grid()
+                            PlotHelper.save_current_plot(f'Debug x_init for {grandchild.name} to {self.name} vs {sg}')
+                        print()
 
 
-                for grandchild in temp_expression.child_expressions:
                     result_fits[grandchild].append(grandchild.x_opt)
 
         # I think that result_fits should have one entry per optional input

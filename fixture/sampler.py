@@ -16,7 +16,19 @@ class SampleManager:
     GROUP_ID_TAG = 'swept_group'
     def __init__(self, optional_groups, test_inputs):
         # TODO how to get optional groups?
+
         self.optional_groups = [get_sampler_for_signal(s) for s in optional_groups]
+        rfadj, cfadj = self.optional_groups[0], self.optional_groups[1]
+        def constraint_fun(samples):
+            x = rfadj
+            y = cfadj
+            r = rfadj.get_plot_value(samples)
+            c = cfadj.get_plot_value(samples)
+            return abs(r*c - 900) < 100
+
+        self.optional_groups = [self.optional_groups[2],
+                                SamplerConstrainted([rfadj, cfadj], constraint_fun)]
+
         self.test_inputs = [get_sampler_for_signal(ti) for ti in test_inputs]
         self.data = pandas.DataFrame()
 
@@ -111,6 +123,8 @@ class SampleManager:
 class SampleStyle:
     NUM_DIMS = 1
 
+    # MUST have a name and a signals list as well
+
     @abstractmethod
     def get(self, target):
         # target_samples are between 0 and 1
@@ -148,11 +162,14 @@ class SampleStyle:
         return ans
 
 
+    def __str__(self):
+        return self.name
 
 class SamplerAnalog(SampleStyle):
     def __init__(self, signal):
         assert len(signal.value) == 2
         self.signal = signal
+        self.signals = [self.signal]
         self.limits = signal.value
         # TODO get nominal from config
         self.nominal = sum(self.limits) / 2
@@ -167,11 +184,54 @@ class SamplerAnalog(SampleStyle):
         return {self.signal: self.nominal}
 
     def get_plot_value(self, sample):
-        return sample
+        return sample[self.signal]
 
-    def __str__(self):
-        #return f'SamplerAnalog({self.name})'
-        return self.name
+
+class SamplerConstrainted(SampleStyle):
+    def __init__(self, samplers, constraint_fun):
+        #self.signals = signals
+        self.samplers = samplers
+        self.signals = [s for sampler in samplers for s in sampler.signals]
+        self.NUM_DIMS = sum(s.NUM_DIMS for s in self.samplers)
+        self.constraint_fun = constraint_fun
+        self.constraint_met_count = 0
+        self.constraint_failed_count = 0
+        self.name = '_'.join(sampler.name for sampler in self.samplers)
+
+    def get(self, target):
+        assert len(target) == self.NUM_DIMS
+        MIN_SUCCESS_RATE = 1/1e5
+        samples = None
+        while (self.constraint_met_count + 1) / (self.constraint_met_count + self.constraint_failed_count+1) > MIN_SUCCESS_RATE:
+            samples = {}
+            i = 0
+            for sampler in self.samplers:
+                ss = sampler.get(target[i:i+sampler.NUM_DIMS])
+                i += sampler.NUM_DIMS
+                samples.update(ss)
+
+            if self.constraint_fun(samples):
+                # got it!
+                self.constraint_met_count += 1
+                break
+            else:
+                self.constraint_failed_count += 1
+                target = [random.random() for _ in target]
+        else:
+            num = self.constraint_met_count
+            den = self.constraint_met_count+self.constraint_failed_count
+            raise ValueError(f'Issues with rejection sampling, only {num}/{den} successful, latest failure: {samples}')
+
+        return samples
+
+    def get_nominal(self):
+        samples = {}
+        i = 0
+        for sampler in self.samplers:
+            ss = sampler.get_nominal()
+            i += sampler.NUM_DIMS
+            samples.update(ss)
+        return samples
 
 
 class SamplerBinary(SampleStyle):
@@ -180,6 +240,7 @@ class SamplerBinary(SampleStyle):
         assert signal.info['datatype'] == 'binary_analog'
         assert signal.info['bus_type'] == 'binary'
         self.signal = signal
+        self.signals = [self.signal]
         self.first_one = signal.info.get('first_one', 'low')
         assert self.first_one in ['low', 'high']
         self.num_bits = len(list(signal))
@@ -217,16 +278,16 @@ class SamplerBinary(SampleStyle):
         return self.get_bits(v)
 
     def get_plot_value(self, sample):
-        assert False, 'TODO'
+        # TODO I'm not sure whether the signal is the proper place for this?
+        return self.signal.get_decimal_value(sample)
 
-    def __str__(self):
-        return self.name
 
 class SamplerTEMP(SampleStyle):
     def __init__(self, name, limits, nominal):
         assert len(limits) == 2, 'Sampling analog requires an input range'
         self.limits = limits
         self.nominal = nominal
+        self.signals = None
         self.name = name
 
     def get(self, target):

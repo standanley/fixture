@@ -393,7 +393,7 @@ class SignalManager:
                         assert bit.type_ != 'binary analog', f'mixed qa/not in {x}'
                         if getattr(bit, 'get_random', None):
                             ans.add(bit)
-        return list(ans)
+        return list(sorted(ans, key=lambda s: s.friendly_name()))
 
 
     def random_qa(self):
@@ -501,7 +501,8 @@ class SignalArray:
     def get_decimal_value(self, data):
         assert self.info['datatype'] == 'binary_analog'
         if isinstance(data, dict):
-            assert False, 'TODO'
+            data = [data[s] for s in self.array]
+            data = np.array(data)
         else:
             data = np.array(data)
 
