@@ -14,8 +14,8 @@ from fixture.plot_helper import plt, PlotHelper
 PLOT = True
 
 class Expression:
-    x_init = None
     x_opt = None
+    last_coef_is_offset = False
 
     def __init__(self, name):
         # TODO when I override this, instead of calling super(), I've just been
@@ -33,6 +33,7 @@ class Expression:
         # TODO see note on input_signals
         self._NUM_COEFFICIENTS = value
 
+
     @property
     @abstractmethod
     def input_signals(self):
@@ -44,6 +45,18 @@ class Expression:
         # TODO this is to allow the value to be set in __init__ ...
         # There may be a better way to implement these abstract properties
         self._input_signals = value
+
+    #@property
+    #def x_init(self):
+    #    # A starting point for nonlinear fitting
+    #    # I think if you have a custom fit() method this may never be used
+    #    return np.ones(self.NUM_COEFFICIENTS)
+    #@x_init.setter
+    #def x_init(self, value):
+    #    # TODO I think from now these custom getters and setters are replaced
+    #    #  (for this instance) since we overwrote x_init, but I guess that's fine
+    #    self.x_init = value
+    x_init = None
 
     @abstractmethod
     def predict(self, opt_values, coefs):
@@ -78,17 +91,20 @@ class Expression:
 
         #test_optimizers(error, self.NUM_COEFFICIENTS)
 
-        def get_x_init(exp):
-            if isinstance(exp, HeirarchicalExpression):
-                return np.concatenate([get_x_init(e)
-                                 for e in exp.child_expressions])
-            else:
-                if exp.x_init is None:
-                    return np.ones(exp.NUM_COEFFICIENTS)
-                else:
-                    assert len(exp.x_init) == exp.NUM_COEFFICIENTS
-                    return exp.x_init
-        x0 = get_x_init(self)
+        #def get_x_init(exp):
+        #    if isinstance(exp, HeirarchicalExpression):
+        #        return np.concatenate([get_x_init(e)
+        #                         for e in exp.child_expressions])
+        #    else:
+        #        if exp.x_init is None:
+        #            return np.ones(exp.NUM_COEFFICIENTS)
+        #        else:
+        #            assert len(exp.x_init) == exp.NUM_COEFFICIENTS
+        #            return exp.x_init
+        #x0 = get_x_init(self)
+        x0 = self.x_init
+        if x0 is None:
+            x0 = np.ones(self.NUM_COEFFICIENTS)
 
         ## ------ TEMP --------
         #x0[6] = 1
@@ -150,6 +166,7 @@ class Expression:
             #    2.40262615e+00])
             x_opt = np.array(x0)
         else:
+            assert x0 is not None
             print('TEST doing acutal minimization')
             result = minimize(error, x0, method='Nelder-Mead', options={
                 'fatol': 0,
@@ -204,7 +221,8 @@ class Expression:
 
 
 class AnalogExpression(Expression):
-    NUM_COEFFICIENTS = 1
+    NUM_COEFFICIENTS = 2
+    last_coef_is_offset = True
 
     def __init__(self, opt_signal, name):
         self.name = name
@@ -212,28 +230,62 @@ class AnalogExpression(Expression):
 
     def predict(self, opt_values, coefficients):
         assert len(opt_values) == len(self.input_signals)
-        assert len(coefficients) == 1
-        return opt_values[0] * coefficients[0]
+        assert len(coefficients) == 2
+        return opt_values[0] * coefficients[0] + coefficients[1]
 
 
 class ConstExpression(Expression):
     NUM_COEFFICIENTS = 1
     input_signals = []
+    last_coef_is_offset = True
 
     def predict(self, opt_values, coefficients):
         assert len(opt_values) == 0
         assert len(coefficients) == 1
         return coefficients[0]
 
+class AffineExpression(Expression):
+    __doc__ = '''The constructor takes in a list of inputs. A coefficient will 
+                 be assigned to each one. There is a constant at the end. '''
+    last_coef_is_offset = True
+
+    def __init__(self, inputs, name):
+        assert False, 'AffineExpression is still a work in progress'
+        self.name = name
+        self.input_signals = inputs
+        self.NUM_COEFFICIENTS = len(inputs) + 1
+
+    def predict(self, opt_values, coefs):
+        # opt_values are essentially input_values
+        assert len(opt_values) == len(self.input_signals)
+        assert len(coefs) == len(opt_values)
+        return sum(o*c for o, c in zip(opt_values, coefs[:-1])) + coefs[-1]
+
+    #def get_x_init(self, optional_data, result_data):
+    #    # don't use nonlinear optimizer if you are linear!
+    #    abc
+    def fit(self, optional_data, result_data):
+        print('using linear regression')
+        # we want to get a rough fit before we go to the solver
+        # we can guess that the bits are thermometer or binary up/down
+        # If we know the ratios between bits, we can do linear regression
+        opt_values = np.array([optional_data[s] for s in self.input_signals])
+        result = np.linalg.pinv(opt_values.T) @ result_data
+        self.x_opt = result
+        assert False, 'offset?'
+        return self.x_opt
+
 
 class LinearExpression(Expression):
     __doc__ = '''The constructor takes in a list of inputs. A coefficient will 
-                 be assigned to each one. There is no constant added. '''
+                 be assigned to each one. There is NO constant at the end. '''
+    last_coef_is_offset = False
+
     def __init__(self, inputs, name):
         self.name = name
         self.input_signals = inputs
-        # coefficients do NOT include any constant offset, because that is
-        # handled separately by the tool
+        # coefficients do NOT include any constant offset, because often the
+        # last input is already a constant
         self.NUM_COEFFICIENTS = len(inputs)
 
     def predict(self, opt_values, coefs):
@@ -262,7 +314,11 @@ class HeirarchicalExpression(Expression):
         # a child expression
         # child_expression_names should match the parent inputs
         self.name = name
-        assert parent_expression.NUM_COEFFICIENTS == len(child_expressions)
+        self.manage_offsets = isinstance(parent_expression, SumExpression)
+
+
+
+        assert parent_expression.NUM_COEFFICIENTS == (len(child_expressions) + (1 if self.manage_offsets else 0))
         self.parent_expression = parent_expression
         self.child_expressions = child_expressions
 
@@ -271,22 +327,38 @@ class HeirarchicalExpression(Expression):
 
         num_child_coefficients = sum(ce.NUM_COEFFICIENTS for ce in child_expressions)
         # don't add num parent coefficients because those are the child expressions
-        self.NUM_COEFFICIENTS = num_child_coefficients
+        if self.manage_offsets:
+            # we do something special here by consolidating child offsets
+            num_children_offsets = 0
+            for child in self.child_expressions:
+                if child.last_coef_is_offset:
+                    num_children_offsets += 1
+            self.num_redundant_offsets = num_children_offsets-1 if num_children_offsets > 0 else 0
+            self.NUM_COEFFICIENTS = num_child_coefficients - self.num_redundant_offsets
+        else:
+            self.num_redundant_offsets = 0
+            self.NUM_COEFFICIENTS = num_child_coefficients
 
-    def fit(self, optional_data, result_data):
-        if (len(self.child_expressions) == 2
-            and isinstance(self.parent_expression, SumExpression)
-            and isinstance(self.child_expressions[1], ConstExpression)):
-            # if a child has a special fit method, we should use it
-            if hasattr(self.child_expressions[0], 'get_x_init'):
-                coefs_all = self.child_expressions[0].get_x_init(optional_data, result_data)
-                self.child_expressions[0].x_init = coefs_all[:-1]
-                self.child_expressions[1].x_init = coefs_all[-1:]
-                self.x_init = coefs_all
+    ## anywhere this was used in the past should be replaced by using fit
+    ## directly on the child
+    #def fit(self, optional_data, result_data):
+    #    if (len(self.child_expressions) == 2
+    #        and isinstance(self.parent_expression, SumExpression)
+    #        and isinstance(self.child_expressions[1], ConstExpression)):
+    #        # if a child has a special fit method, we should use it
+    #        if hasattr(self.child_expressions[0], 'get_x_init'):
+    #            assert False, "I am trying to get rid of get_x_init"
+    #            coefs_all = self.child_expressions[0].get_x_init(optional_data, result_data)
+    #            self.child_expressions[0].x_init = coefs_all[:-1]
+    #            self.child_expressions[1].x_init = coefs_all[-1:]
+    #            self.x_init = coefs_all
 
-        return super().fit(optional_data, result_data)
+    #    return super().fit(optional_data, result_data)
 
     def fit_by_group(self, optional_data, result_data):
+        # relies on a specific structure of heirarchy and specific sweep groups
+        # in optional_data in order to fit children and grandchildren one
+        # piece at a time
         groups = {sg for sg in optional_data[SampleManager.GROUP_ID_TAG]
                   if sg is not None}
         groups = sorted(groups, key=lambda sg: sg.name)
@@ -296,10 +368,12 @@ class HeirarchicalExpression(Expression):
         fits_for_sweeps = defaultdict(list)
         for i in range(len(self.child_expressions)):
             child = self.child_expressions[i]
-            relevant_grandchildren = []
             for grandchild in child.child_expressions:
                 if isinstance(grandchild, ConstExpression):
                     # TODO might remove all ConstExpressions in the future
+                    # TODO once this is working, remove this whole if statement
+                    #  so that users can use ConstExpression
+                    assert False, 'should not be using this for now'
                     continue
                 # which sweep is best for grandchild.input_signals
                 # first, search for an exact match
@@ -332,7 +406,7 @@ class HeirarchicalExpression(Expression):
                             # all the things in the fit expr were swept
                             fits_for_sweeps[sg].append(grandchild)
 
-
+        # now we loop through each SampleGroup
         result_fits = defaultdict(list)
         for sg in groups:
             # group_data is everything during the sweep of sg
@@ -394,11 +468,12 @@ class HeirarchicalExpression(Expression):
                 # heirarchy for the child, so it has to be in a specific form
                 assert isinstance(child, HeirarchicalExpression)
                 assert isinstance(child.parent_expression, SumExpression)
-                assert isinstance(child.child_expressions[-1], ConstExpression)
+                # No longer need this last one since children have offsets now
+                #assert isinstance(child.child_expressions[-1], ConstExpression)
 
                 ## now we look through child's children and determine which
                 # one(s) are actually affected by changing sg
-                # TODO sg.signal doen't always exist?
+                # TODO sg.signal doesn't always exist?
                 # TODO what about when sg has multiple signals?
                 # TODO what about when child.input_signals has multiple signals?
                 #relevant_grandchildren = []
@@ -411,14 +486,17 @@ class HeirarchicalExpression(Expression):
                     #    relevant_grandchildren.append(grandchild)
                     if grandchild not in fits_for_sweeps[sg]:
                         continue
-                    expression_list = [grandchild]
-                    # add constant
-                    expression_list.append(child.child_expressions[-1])
-                    temp_expression = HeirarchicalExpression(
-                        SumExpression(len(expression_list), 'temp_sum'),
-                        expression_list,
-                        'temp_expr')
-                    temp_expression.fit(example_data, child_results)
+
+                    # No longer need to create a dummy expression to add const
+                    #expression_list = [grandchild]
+                    ## add constant
+                    #expression_list.append(child.child_expressions[-1])
+                    #temp_expression = HeirarchicalExpression(
+                    #    SumExpression(len(expression_list), 'temp_sum'),
+                    #    expression_list,
+                    #    'temp_expr')
+                    #temp_expression.fit(example_data, child_results)
+                    grandchild.fit(example_data, child_results)
 
                     if PLOT:
                         # plotting secondary fits, from using fit params as goals
@@ -431,7 +509,7 @@ class HeirarchicalExpression(Expression):
                         targets = np.concatenate((x_targets, 0.5*np.ones((100, sg.NUM_DIMS-1))), 1)
                         data_smooth = pandas.DataFrame(sg.get_many(targets))
                         data_smooth = data_smooth.sort_values(by=[xaxis])
-                        predictions = temp_expression.predict_from_dict(data_smooth, temp_expression.x_opt)
+                        predictions = grandchild.predict_from_dict(data_smooth, grandchild.x_opt)
                         xs_smooth = data_smooth[xaxis]
 
                         xs_order = np.argsort(xs)
@@ -443,8 +521,8 @@ class HeirarchicalExpression(Expression):
                         PlotHelper.save_current_plot(f'Initial fit for {grandchild.name} to {self.name} vs {sg}')
 
                         # TEMP for checking x_init
-                        if temp_expression.x_init is not None:
-                            predictions = temp_expression.predict_from_dict(data_smooth, temp_expression.x_init)
+                        if grandchild.x_init is not None:
+                            predictions = grandchild.predict_from_dict(data_smooth, grandchild.x_init)
                             #plt.plot(xs, child_results, '*')
                             plt.plot(np.array(xs)[xs_order],
                                      child_results[xs_order], '*')
@@ -465,6 +543,7 @@ class HeirarchicalExpression(Expression):
         # TODO I'm not sure it's wise to directly edit grandchild.x_init,
         #  but I think since the objects won't be used to fit again it's
         #  probably okay
+        # TODO redundant offsets?
         for grandchild, fits in result_fits.items():
             x_init = sum(fits) / len(fits)
             grandchild.x_init = x_init
@@ -495,11 +574,27 @@ class HeirarchicalExpression(Expression):
         for ce in self.child_expressions:
             input_indices_ce = [self.input_signals.index(s) for s in ce.input_signals]
             input_values_ce = [opt_values[i] for i in input_indices_ce]
-            coefs_ce = coefs[coef_count : coef_count + ce.NUM_COEFFICIENTS]
-            coef_count += ce.NUM_COEFFICIENTS
+
+            # take the next slice of coefs for ce, but if ce has a redundant
+            # offset then we should just pass it a zero for that offset instead
+            # num_child_coefficients is the number of our coefficients to slice
+            # out for this child, so it does NOT include the offset
+            redundant_offset = self.manage_offsets and ce.last_coef_is_offset
+            num_child_coefficients = ce.NUM_COEFFICIENTS
+            if redundant_offset:
+                num_child_coefficients -= 1
+            coefs_ce = coefs[coef_count : coef_count + num_child_coefficients]
+            coef_count += num_child_coefficients
+            if redundant_offset:
+                coefs_ce = np.concatenate((coefs_ce, [0]))
 
             parent_coef = ce.predict(input_values_ce, coefs_ce)
             parent_coefs.append(parent_coef)
+
+        if self.manage_offsets:
+            # should be 1 left over for the aggregate offset
+            parent_coefs.append(coefs[coef_count])
+            coef_count += 1
 
         assert coef_count == len(coefs)
 
@@ -519,11 +614,43 @@ class HeirarchicalExpression(Expression):
         self._x_opt = x_opt
         x_opt_count = 0
         for ce in self.child_expressions:
-            x_opt_ce = x_opt[x_opt_count : x_opt_count + ce.NUM_COEFFICIENTS]
-            x_opt_count += ce.NUM_COEFFICIENTS
+            slice_length = ce.NUM_COEFFICIENTS
+            if self.manage_offsets and ce.last_coef_is_offset:
+                slice_length -= 1
+            x_opt_ce = x_opt[x_opt_count : x_opt_count + slice_length]
+            if self.manage_offsets and ce.last_coef_is_offset:
+                # TODO maybe choose offset so influence at nominal is zero
+                x_opt_ce = np.concatenate((x_opt_ce, [0]))
+            x_opt_count += slice_length
             ce.x_opt = x_opt_ce
 
+        if self.manage_offsets:
+            # don't do anything with managed offset x_opt[-1]
+            x_opt_count += 1
+
         assert x_opt_count == len(x_opt)
+
+    @property
+    def x_init(self):
+        # we need to aggregate x_init from children, taking care with
+        # redundant offsets
+        x_init = []
+        aggregate_offset = 0
+        for ce in self.child_expressions:
+            ce_x_init = ce.x_init if ce.x_init is not None else np.ones(ce.NUM_COEFFICIENTS)
+            if self.manage_offsets and ce.last_coef_is_offset:
+                x_init = np.concatenate((x_init, ce_x_init[:-1]))
+                aggregate_offset += ce_x_init[-1]
+            else:
+                x_init = np.concatenate((x_init, ce_x_init))
+
+        if self.manage_offsets:
+            x_init = np.concatenate((x_init, [aggregate_offset]))
+
+        return x_init
+    @x_init.setter
+    def x_init(self, x_init):
+        raise NotImplementedError('Cannot set heirarchical x_init directly')
 
     def _search(self, target_name):
         # return a list of child expressions with the target name
@@ -578,13 +705,15 @@ interpret G as a sort of "global conductance multiplier" for each bit
 Computationally, we pull Rnom on the top to avoid precision weirdness
 Note that Y is on the top of that last term because Y=0 is common, Y=inf is not
 For ctrl[5:0], coefs = [Rnom, X1, X2, X3, X4, X5, Y]
-
+Also, there is a additional additive offset at the end
+For ctrl[5:0], coefs = [Rnom, X1, X2, X3, X4, X5, Y, offset]
 '''
+    last_coef_is_offset = True
 
     def __init__(self, inputs, name):
         self.name = name
         self.input_signals = inputs
-        self.NUM_COEFFICIENTS = len(inputs) + 1
+        self.NUM_COEFFICIENTS = len(inputs) + 2
         self.x_init = np.ones(self.NUM_COEFFICIENTS)
 
         ## TODO get rid of this
@@ -600,24 +729,27 @@ For ctrl[5:0], coefs = [Rnom, X1, X2, X3, X4, X5, Y]
     def predict(self, opt_values, coefs):
         # opt_values are essentially input_values
         assert len(opt_values) == len(self.input_signals)
-        assert len(coefs) == len(opt_values) + 1
-        denominator = opt_values[0] + sum(o / c for o, c in zip(opt_values[1:], coefs[1:-1])) + coefs[-1]
-        return coefs[0] / denominator
+        assert len(coefs) == len(opt_values) + 2
+        denominator = opt_values[0] + sum(o / c for o, c in zip(opt_values[1:], coefs[1:-2])) + coefs[-2]
+        return coefs[0] / denominator + coefs[-1]
 
     def get_x_init(self, optional_data, result_data):
         # we want to get a rough fit before we go to the solver
         # we can guess that the bits are thermometer or binary up/down
         # If we know the ratios between bits, we can do linear regression
+        assert False, 'trying to phase this out, right?'
+
+    def fit(self, optional_data, result_data):
         def quick_fit(xs, ys):
             result = linregress(xs, ys)
             return result.rvalue**2, result.slope, result.intercept
         bits = [optional_data[s] for s in self.input_signals]
         denom_coefss = []
-        therm = [1 for i in range(1, self.NUM_COEFFICIENTS-1)] + [0]
+        therm = [1 for i in range(1, len(bits))] + [0]
         denom_coefss.append(therm)
-        binary_inc = [2**i for i in range(1, self.NUM_COEFFICIENTS-1)] + [1e-3]
+        binary_inc = [2**i for i in range(1, len(bits))] + [1e-3]
         denom_coefss.append(binary_inc)
-        binary_dec = [(1/2)**i for i in range(1, self.NUM_COEFFICIENTS-1)] + [1e-3]
+        binary_dec = [(1/2)**i for i in range(1, len(bits))] + [1e-3]
         denom_coefss.append(binary_dec)
 
         # r2_value, slope, intercept, denom_coefs
@@ -631,12 +763,8 @@ For ctrl[5:0], coefs = [Rnom, X1, X2, X3, X4, X5, Y]
         r2_value, slope, intercept, denom_coefs = fit
 
         coefs = [slope] + denom_coefs + [intercept]
-        return coefs
-
-
-
-
-        print()
+        self.x_init = coefs
+        return super().fit(optional_data, result_data)
 
 
 def get_optional_expression_from_signal(s, name):
@@ -658,8 +786,10 @@ def get_optional_expression_from_signals(s_list, name):
     for s in s_list:
         child_name = f'{name}_{s.friendly_name()}'
         individual.append(get_optional_expression_from_signal(s, child_name))
-    individual.append(ConstExpression(f'{name}_const'))
-    combiner = SumExpression(len(individual), f'{name}_summer')
+    # TODO delete old ConstExpression
+    #individual.append(ConstExpression(f'{name}_const'))
+    # +1 is for a nominal offset
+    combiner = SumExpression(len(individual)+1, f'{name}_summer')
     total = HeirarchicalExpression(combiner, individual, name)
     return total
 
