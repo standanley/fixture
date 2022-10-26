@@ -13,7 +13,12 @@ from fixture.plot_helper import plt, PlotHelper
 
 PLOT = True
 
-class Expression:
+class Expression(ABC):
+    # TODO I would like for these to be abstract properties, but also they are
+    #  not required until the end of __init__, so I don't think abc can do that
+    input_signals = None
+    NUM_COEFFICIENTS = None
+
     x_opt = None
     last_coef_is_offset = False
 
@@ -22,40 +27,30 @@ class Expression:
         # rewriting this one line to set the name. Is that bad practice? probably
         self.name = name
 
-    @property
-    @abstractmethod
-    def NUM_COEFFICIENTS(self):
-        # a constant property that is the number of coefs to fit
-        # Remember that the constant offset is separate from this count
-        return self._NUM_COEFFICIENTS
-    @NUM_COEFFICIENTS.setter
-    def NUM_COEFFICIENTS(self, value):
-        # TODO see note on input_signals
-        self._NUM_COEFFICIENTS = value
+    #@property
+    #@abstractmethod
+    #def NUM_COEFFICIENTS(self):
+    #    # a constant property that is the number of coefs to fit
+    #    # Remember that the constant offset is separate from this count
+    #    return self._NUM_COEFFICIENTS
+    #@NUM_COEFFICIENTS.setter
+    #def NUM_COEFFICIENTS(self, value):
+    #    # TODO see note on input_signals
+    #    self._NUM_COEFFICIENTS = value
 
-
-    @property
-    @abstractmethod
-    def input_signals(self):
-        # a list of signals whose values this expression depends on. Those
-        # values will be passed, in the same order, to predict() and fit()
-        return self._input_signals
-    @input_signals.setter
-    def input_signals(self, value):
-        # TODO this is to allow the value to be set in __init__ ...
-        # There may be a better way to implement these abstract properties
-        self._input_signals = value
 
     #@property
-    #def x_init(self):
-    #    # A starting point for nonlinear fitting
-    #    # I think if you have a custom fit() method this may never be used
-    #    return np.ones(self.NUM_COEFFICIENTS)
-    #@x_init.setter
-    #def x_init(self, value):
-    #    # TODO I think from now these custom getters and setters are replaced
-    #    #  (for this instance) since we overwrote x_init, but I guess that's fine
-    #    self.x_init = value
+    #@abstractmethod
+    #def input_signals(self):
+    #    # a list of signals whose values this expression depends on. Those
+    #    # values will be passed, in the same order, to predict() and fit()
+    #    return self._input_signals
+    #@input_signals.setter
+    #def input_signals(self, value):
+    #    # TODO this is to allow the value to be set in __init__ ...
+    #    # There may be a better way to implement these abstract properties
+    #    self._input_signals = value
+
     x_init = None
 
     @abstractmethod
@@ -89,28 +84,9 @@ class Expression:
             e = sum(errors**2)
             return (e/len(result_data))**.5
 
-        #test_optimizers(error, self.NUM_COEFFICIENTS)
-
-        #def get_x_init(exp):
-        #    if isinstance(exp, HeirarchicalExpression):
-        #        return np.concatenate([get_x_init(e)
-        #                         for e in exp.child_expressions])
-        #    else:
-        #        if exp.x_init is None:
-        #            return np.ones(exp.NUM_COEFFICIENTS)
-        #        else:
-        #            assert len(exp.x_init) == exp.NUM_COEFFICIENTS
-        #            return exp.x_init
-        #x0 = get_x_init(self)
         x0 = self.x_init
         if x0 is None:
             x0 = np.ones(self.NUM_COEFFICIENTS)
-
-        ## ------ TEMP --------
-        #x0[6] = 1
-        #x0[14] = 1
-        #x0[22] = 1
-        #tol = 1e-5
 
         #import cProfile
         #def to_profile():
@@ -119,60 +95,12 @@ class Expression:
         import time
         start = time.time()
         print('Minimizing', self.name)
-        print('TODO stop skipping fit')
-        if False and self.name == 'out_diff':
-            #x_opt = np.array([-1.23059139e+03, -6.83196691e+02, -2.24022907e+02, -1.90805353e+02,
-            #   -5.96662666e+01, -4.48716108e+01,  2.83153509e+03, -7.72680027e+01,
-            #   -1.08935382e+02,  2.02334246e+02, -2.11149160e+02,  1.86133922e+02,
-            #   -1.19705815e+02,  1.01592209e+02,  1.79559599e-04,  9.59793043e-05,
-            #   -4.33567171e-05,  9.57645151e-05, -9.48833088e-05, -9.26496371e-05,
-            #   -1.40574902e-04])
-            # essentially null out cm and const terms
-            #x0[14] = 1e6
-            #x0[22] = 1e6
-
-            #for i in range(6):
-            #    resistance = 2**i * 1e3
-            #    x0[i] = 1/resistance
-            ## last one should be zero, but I'm afraid of divide by zero issues
-            #x0[6] = 1e-7
-
-
-            ##x_opt = x0
-            #result = minimize(error, x0, method='Powell', options={
-            #    #'gtol': tol
-            #    'ftol': 0,
-            #    #'fatol': 0,
-            #    'maxfev': 10**5,
-            #    'disp': True
-            #})
-            #x_opt = result.x
-
-            x_opt = [3.42726842e+00,  5.80524094e+10, -6.14534676e-01,  1.86709610e+01,
-             5.80263269e+10, -1.92858523e+01, -6.17462353e-01,  1.23284944e+00,
-             1.16065944e+03, -3.15479966e+02,  5.83937701e+10,  4.83059492e+10,
-             5.80241228e+10,  5.80241513e+10,  5.80241280e+10,  1.73775268e+11,
-             5.80241276e+10,  9.15012886e+02, -8.88170382e-06,  4.28260112e+08,
-             -5.73351504e+20,  8.45809400e+10,  9.77142526e+09, -8.92088758e+10,
-             -3.67756854e+09, -1.54204027e+03,  2.79275488e-05]
-
-
-        elif False and self.name == 'out_cm':
-            #x_opt = np.array([-2.19233927e+01,  2.61691713e+02,  1.38773168e+01,  1.57116746e+02,
-            #    4.38110640e+02,  3.03643386e+01,  1.84852178e+02,  6.07208190e+02,
-            #    6.80619246e+02,  7.28624576e+02,  6.60212312e+02,  6.29206962e+02,
-            #    7.36672174e+02,  1.23052961e+03, -1.14858118e-03, -6.52762370e-04,
-            #   -1.56835717e-03, -1.03905303e-03, -8.61215014e-04, -1.03753759e-03,
-            #    2.40262615e+00])
-            x_opt = np.array(x0)
-        else:
-            assert x0 is not None
-            print('TEST doing acutal minimization')
-            result = minimize(error, x0, method='Nelder-Mead', options={
-                'fatol': 0,
-                'maxfev': 10**3
-            })
-            x_opt = result.x
+        assert x0 is not None
+        result = minimize(error, x0, method='Nelder-Mead', options={
+            'fatol': 0,
+            'maxfev': 10**3
+        })
+        x_opt = result.x
 
         print('minimization took', time.time() - start, 'error', error(x_opt))
         self.x_opt = x_opt
@@ -215,8 +143,10 @@ class Expression:
         return result
 
     @abstractmethod
-    def verilog(self, opt_names, coef_names):
-        # return a string that is a verilog implementation of predict()
+    def verilog(self, lhs, opt_names, coef_names):
+        # return a list of strings
+        # each string is a line of verilog
+        # together, they should implement lhs = predict(opt_names, coef_names)
         pass
 
 
@@ -233,6 +163,10 @@ class AnalogExpression(Expression):
         assert len(coefficients) == 2
         return opt_values[0] * coefficients[0] + coefficients[1]
 
+    def verilog(self, lhs, opt_names, coef_names):
+        assert len(opt_names) == 1
+        assert len(coef_names) == 2
+        return [f'{lhs} = {coef_names[0]}*{opt_names[0]} + {coef_names[1]};']
 
 class ConstExpression(Expression):
     NUM_COEFFICIENTS = 1
@@ -243,6 +177,12 @@ class ConstExpression(Expression):
         assert len(opt_values) == 0
         assert len(coefficients) == 1
         return coefficients[0]
+
+    def verilog(self, lhs, opt_names, coef_names):
+        assert len(opt_names) == 0
+        assert len(coef_names) == 1
+        return [f'{lhs} = {coef_names[0]};']
+
 
 class AffineExpression(Expression):
     __doc__ = '''The constructor takes in a list of inputs. A coefficient will 
@@ -261,9 +201,6 @@ class AffineExpression(Expression):
         assert len(coefs) == len(opt_values)
         return sum(o*c for o, c in zip(opt_values, coefs[:-1])) + coefs[-1]
 
-    #def get_x_init(self, optional_data, result_data):
-    #    # don't use nonlinear optimizer if you are linear!
-    #    abc
     def fit(self, optional_data, result_data):
         print('using linear regression')
         # we want to get a rough fit before we go to the solver
@@ -275,6 +212,8 @@ class AffineExpression(Expression):
         assert False, 'offset?'
         return self.x_opt
 
+    def verilog(self, lhs, opt_names, coef_names):
+        assert False, 'todo'
 
 class LinearExpression(Expression):
     __doc__ = '''The constructor takes in a list of inputs. A coefficient will 
@@ -294,11 +233,7 @@ class LinearExpression(Expression):
         assert len(coefs) == len(opt_values)
         return sum(o*c for o, c in zip(opt_values, coefs))
 
-    #def get_x_init(self, optional_data, result_data):
-    #    # don't use nonlinear optimizer if you are linear!
-    #    abc
     def fit(self, optional_data, result_data):
-        print('using linear regression')
         # we want to get a rough fit before we go to the solver
         # we can guess that the bits are thermometer or binary up/down
         # If we know the ratios between bits, we can do linear regression
@@ -307,6 +242,11 @@ class LinearExpression(Expression):
         self.x_opt = result
         return self.x_opt
 
+    def verilog(self, lhs, opt_names, coef_names):
+        assert len(opt_names) == self.NUM_COEFFICIENTS
+        assert len(coef_names) == self.NUM_COEFFICIENTS
+        ans = ' + '.join(f'{cn}*{on}' for on, cn in zip(opt_names, coef_names))
+        return [f'{lhs} = {ans};']
 
 class HeirarchicalExpression(Expression):
     def __init__(self, parent_expression, child_expressions, name):
@@ -339,21 +279,6 @@ class HeirarchicalExpression(Expression):
             self.num_redundant_offsets = 0
             self.NUM_COEFFICIENTS = num_child_coefficients
 
-    ## anywhere this was used in the past should be replaced by using fit
-    ## directly on the child
-    #def fit(self, optional_data, result_data):
-    #    if (len(self.child_expressions) == 2
-    #        and isinstance(self.parent_expression, SumExpression)
-    #        and isinstance(self.child_expressions[1], ConstExpression)):
-    #        # if a child has a special fit method, we should use it
-    #        if hasattr(self.child_expressions[0], 'get_x_init'):
-    #            assert False, "I am trying to get rid of get_x_init"
-    #            coefs_all = self.child_expressions[0].get_x_init(optional_data, result_data)
-    #            self.child_expressions[0].x_init = coefs_all[:-1]
-    #            self.child_expressions[1].x_init = coefs_all[-1:]
-    #            self.x_init = coefs_all
-
-    #    return super().fit(optional_data, result_data)
 
     def fit_by_group(self, optional_data, result_data):
         # relies on a specific structure of heirarchy and specific sweep groups
@@ -369,12 +294,6 @@ class HeirarchicalExpression(Expression):
         for i in range(len(self.child_expressions)):
             child = self.child_expressions[i]
             for grandchild in child.child_expressions:
-                if isinstance(grandchild, ConstExpression):
-                    # TODO might remove all ConstExpressions in the future
-                    # TODO once this is working, remove this whole if statement
-                    #  so that users can use ConstExpression
-                    assert False, 'should not be using this for now'
-                    continue
                 # which sweep is best for grandchild.input_signals
                 # first, search for an exact match
                 def break_buses(ss):
@@ -478,24 +397,8 @@ class HeirarchicalExpression(Expression):
                 # TODO what about when child.input_signals has multiple signals?
                 #relevant_grandchildren = []
                 for grandchild in child.child_expressions:
-                    # TODO delete old strategy
-                    #if any(s in grandchild.input_signals for s in sg.signals):
-                    #    relevant_grandchildren.append(grandchild)
-                    #elif (isinstance(sg.signal, SignalArray)
-                    #      and all(s in grandchild.input_signals for s in sg.signal)):
-                    #    relevant_grandchildren.append(grandchild)
                     if grandchild not in fits_for_sweeps[sg]:
                         continue
-
-                    # No longer need to create a dummy expression to add const
-                    #expression_list = [grandchild]
-                    ## add constant
-                    #expression_list.append(child.child_expressions[-1])
-                    #temp_expression = HeirarchicalExpression(
-                    #    SumExpression(len(expression_list), 'temp_sum'),
-                    #    expression_list,
-                    #    'temp_expr')
-                    #temp_expression.fit(example_data, child_results)
                     grandchild.fit(example_data, child_results)
 
                     if PLOT:
@@ -676,6 +579,14 @@ class HeirarchicalExpression(Expression):
         else:
             return matches[0]
 
+
+    def verilog(self, lhs, opt_names, coef_names):
+        assert False, 'todo'
+        assert len(opt_names) == self.NUM_COEFFICIENTS
+        assert len(coef_names) == self.NUM_COEFFICIENTS
+        ans = ' + '.join(f'{cn}*{on}' for on, cn in zip(opt_names, coef_names))
+        return f'{lhs} = {ans};'
+
 class SumExpression(Expression):
     input_signals = []
 
@@ -686,6 +597,12 @@ class SumExpression(Expression):
     def predict(self, opt_values, coefs):
         assert len(opt_values) == 0
         return sum(coefs)
+
+    def verilog(self, lhs, opt_names, coef_names):
+        assert len(opt_names) == 0
+        assert len(coef_names) == self.NUM_COEFFICIENTS
+        ans = ' + '.join(f'{on}' for on in opt_names)
+        return [f'{lhs} = {ans};']
 
 
 class ReciprocalExpression(Expression):
@@ -766,6 +683,14 @@ For ctrl[5:0], coefs = [Rnom, X1, X2, X3, X4, X5, Y, offset]
         self.x_init = coefs
         return super().fit(optional_data, result_data)
 
+    def verilog(self, lhs, opt_names, coef_names):
+        assert len(opt_names) == self.NUM_COEFFICIENTS
+        assert len(coef_names) == self.NUM_COEFFICIENTS
+        bit_weights = ['1'] + list(coef_names[1:-2])
+        denom = ' + '.join(f'{on}/{cn}' for on, cn in zip(opt_names, bit_weights))
+        denom += f' + {coef_names[-2]}'
+        ans = f'{coef_names[0]} / ({denom}) + {coef_names[-1]}'
+        return [f'{lhs} = {ans};']
 
 def get_optional_expression_from_signal(s, name):
     if isinstance(s, SignalArray):
@@ -786,9 +711,6 @@ def get_optional_expression_from_signals(s_list, name):
     for s in s_list:
         child_name = f'{name}_{s.friendly_name()}'
         individual.append(get_optional_expression_from_signal(s, child_name))
-    # TODO delete old ConstExpression
-    #individual.append(ConstExpression(f'{name}_const'))
-    # +1 is for a nominal offset
     combiner = SumExpression(len(individual)+1, f'{name}_summer')
     total = HeirarchicalExpression(combiner, individual, name)
     return total
