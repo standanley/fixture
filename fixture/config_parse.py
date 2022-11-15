@@ -310,6 +310,7 @@ def parse_config(circuit_config_dict):
         if isinstance(c_info, np.ndarray):
             s_ndarray = my_create_signal_vec(c_info)
             bus_info = extract_bus_info(c_info)
+            # TODO nested buses
             s_array = SignalArray(s_ndarray, bus_info, spice_name=cn)
             signals.append(s_array)
         else:

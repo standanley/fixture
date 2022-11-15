@@ -116,8 +116,18 @@ class PlotHelper:
 
     @classmethod
     def clean_filename(cls, orig):
-        clean = orig.replace('/', '_over_')
-        return clean
+        # prepend plots/
+        # clean spaces
+        # create necessary directories
+
+        #clean = orig.replace('/', '_over_')
+        clean = orig.replace(' ', '_')
+        final = os.path.join('.', 'plots', clean)
+        directory = os.path.dirname(final)
+        if directory != '' and not os.path.exists(directory):
+            print(f'Creating plot directory: {directory}')
+            os.makedirs(directory)
+        return final
 
     def _save_current_plot(self, name):
         self.save_current_plot(self.mode_prefix + name)
@@ -127,8 +137,7 @@ class PlotHelper:
         plt.grid()
         #plt.show()
 
-        os.makedirs('plots', exist_ok=True)
-        plt.savefig('./plots/' + cls.clean_filename(name), dpi=cls.dpi)
+        plt.savefig(cls.clean_filename(name), dpi=cls.dpi)
         # I've had lots of problems with seeing the results of earlier plots
         # on new plots, and this might be the solution?
         # I think the issue is when a plot is created outside plot_helper,

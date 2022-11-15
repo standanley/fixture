@@ -13,7 +13,7 @@ from ast import literal_eval
 from fixture.signals import SignalArray, SignalIn, CenteredSignalIn
 import operator
 
-from fixture.optional_fit import *
+from fixture.optional_fit import get_optional_expression_from_signals, LinearExpression, HeirarchicalExpression
 
 
 class Regression:
@@ -326,6 +326,9 @@ class Regression:
             algebra = LinearExpression(total_expr_inputs, f'{lhs_clean}_combiner')
             total_expr = HeirarchicalExpression(algebra, optional_exprs, lhs_clean)
 
+            verilog_const_names = [f'c[{i}]' for i in range(total_expr.NUM_COEFFICIENTS)]
+            verilog = total_expr.verilog(lhs_clean, verilog_const_names)
+
             #input_names = [self.regression_name(s) for s in total_expr.input_signals]
             #expr_fit_data = [df_filtered[input_name] for input_name in input_names]
             #expr_fit_data = np.array(expr_fit_data)
@@ -334,7 +337,12 @@ class Regression:
             # do the regression!
             print('Starting parameter fit')
             coefs_fit = total_expr.fit_by_group(df_filtered, lhs_data)
-            total_expr.coefs_fit = coefs_fit
+            #total_expr.coefs_fit = coefs_fit
+            for line in verilog:
+                print(line)
+            for n, v in zip(verilog_const_names, total_expr.x_opt):
+                print(f'{n} = {v};')
+            print()
             results_expr[lhs] = total_expr
 
             '''

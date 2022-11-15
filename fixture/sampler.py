@@ -171,8 +171,14 @@ class SamplerAnalog(SampleStyle):
         self.signal = signal
         self.signals = [self.signal]
         self.limits = signal.value
-        # TODO get nominal from config
-        self.nominal = sum(self.limits) / 2
+        # Not sure what we need to do if this assertion fails; I think we would
+        # have guessed the nominal already if we could
+        if signal.nominal is None:
+            # I think this only happens when s is a template input
+            assert len(signal.value) == 2
+            self.nominal = sum(signal.value) / 2
+        else:
+            self.nominal = signal.nominal
         self.name = signal.friendly_name()
 
     def get(self, target):
@@ -252,6 +258,12 @@ class SamplerBinary(SampleStyle):
     def get_bits(self, v):
         # take the decimal value and return a dict with decimal and bits
         # kinda ugly to get a variable value into a format specifier
+
+        # TODO I'm pretty sure we can use
+        #  self.signal.get_decimal_value
+        #  but I might need to do a little work to build the dict
+
+
         b = f'{{:0{self.num_bits}b}}'.format(v)
         bits = [0 if c == '0' else 1 for c in b]
         if self.first_one == 'low':
@@ -274,8 +286,7 @@ class SamplerBinary(SampleStyle):
 
 
     def get_nominal(self):
-        v = int(sum(self.range_inclusive)/2)
-        return self.get_bits(v)
+        return self.get_bits(self.signal.nominal)
 
     def get_plot_value(self, sample):
         # TODO I'm not sure whether the signal is the proper place for this?
@@ -336,7 +347,7 @@ class Sampler:
         optional_signals = [s for s in test.signals.random() if s not in test.input_signals]
         sm = SampleManager(optional_signals, list(test.input_signals))
         for group in sm.optional_groups:
-            sm.sweep_one(group, 4, 54)
+            sm.sweep_one(group, 5, 150)
         sm.sample_all(100)
         test.sample_groups = sm.optional_groups + sm.test_inputs
         return sm.data

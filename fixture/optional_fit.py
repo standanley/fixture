@@ -6,7 +6,8 @@ from scipy.stats import linregress
 import numpy as np
 import pandas
 
-import fixture
+#import fixture
+import fixture.regression
 from fixture.sampler import SampleManager
 from fixture.signals import SignalArray, SignalIn
 from fixture.plot_helper import plt, PlotHelper
@@ -143,11 +144,21 @@ class Expression(ABC):
         return result
 
     @abstractmethod
-    def verilog(self, lhs, opt_names, coef_names):
+    def verilog(self, lhs, coef_names):
         # return a list of strings
         # each string is a line of verilog
-        # together, they should implement lhs = predict(opt_names, coef_names)
+        # together, they should implement:
+        # lhs = predict(self.input_signals, coef_names)
         pass
+
+    @staticmethod
+    def friendly_name(s):
+        if isinstance(s, str):
+            return s
+        elif isinstance(s, (SignalIn, SignalArray)):
+            return s.friendly_name()
+        else:
+            raise ValueError(f'Cannot find friendly name for {s}')
 
 
 class AnalogExpression(Expression):
@@ -163,7 +174,8 @@ class AnalogExpression(Expression):
         assert len(coefficients) == 2
         return opt_values[0] * coefficients[0] + coefficients[1]
 
-    def verilog(self, lhs, opt_names, coef_names):
+    def verilog(self, lhs, coef_names):
+        opt_names = [self.friendly_name(s) for s in self.input_signals]
         assert len(opt_names) == 1
         assert len(coef_names) == 2
         return [f'{lhs} = {coef_names[0]}*{opt_names[0]} + {coef_names[1]};']
@@ -178,7 +190,9 @@ class ConstExpression(Expression):
         assert len(coefficients) == 1
         return coefficients[0]
 
-    def verilog(self, lhs, opt_names, coef_names):
+    def verilog(self, lhs, coef_names):
+        opt_names = [self.friendly_name(s) for s in self.input_signals]
+
         assert len(opt_names) == 0
         assert len(coef_names) == 1
         return [f'{lhs} = {coef_names[0]};']
@@ -212,7 +226,8 @@ class AffineExpression(Expression):
         assert False, 'offset?'
         return self.x_opt
 
-    def verilog(self, lhs, opt_names, coef_names):
+    def verilog(self, lhs, coef_names):
+        opt_names = [self.friendly_name(s) for s in self.input_signals]
         assert False, 'todo'
 
 class LinearExpression(Expression):
@@ -242,7 +257,8 @@ class LinearExpression(Expression):
         self.x_opt = result
         return self.x_opt
 
-    def verilog(self, lhs, opt_names, coef_names):
+    def verilog(self, lhs, coef_names):
+        opt_names = [self.friendly_name(s) for s in self.input_signals]
         assert len(opt_names) == self.NUM_COEFFICIENTS
         assert len(coef_names) == self.NUM_COEFFICIENTS
         ans = ' + '.join(f'{cn}*{on}' for on, cn in zip(opt_names, coef_names))
@@ -338,7 +354,7 @@ class HeirarchicalExpression(Expression):
             group_results = []
             # example rows are one row from each sweep point
             example_rows = []
-            plot_xs = []
+            plot_xss = []
             plot_ys = []
             plot_predictions = []
             for si in sweep_ids:
@@ -351,8 +367,8 @@ class HeirarchicalExpression(Expression):
                 group_results.append(self.parent_expression.x_opt)
 
                 # TODO in general this plot xaxis is not right
-                xaxis = self.parent_expression.input_signals[0]
-                plot_xs.append(point_data[xaxis])
+                #xaxis = self.parent_expression.input_signals[1]
+                plot_xss.append(point_data)
                 plot_ys.append(point_data_res)
                 predict_data = [point_data[input] for input in self.parent_expression.input_signals]
                 predictions = self.parent_expression.predict(predict_data, self.parent_expression.x_opt)
@@ -361,17 +377,42 @@ class HeirarchicalExpression(Expression):
 
             if PLOT:
                 # plotting initial small plots
-                print('New figure for ', sg)
-                plt.figure()
-                for xs, ys, preds in zip(plot_xs, plot_ys, plot_predictions):
-                    plt.plot(xs, ys, '*')
-                    plt.plot(xs, preds, '--')
-                plt.legend([f'id{i}' for i in sweep_ids])
-                plt.title(f'Results from sweeping {sg}')
-                plt.xlabel(f'{xaxis}')
-                plt.ylabel(f'f{self.parent_expression.name}')
-                plt.grid()
-                PlotHelper.save_current_plot(f'Fits for {self.name} from Sweeping {sg.name}')
+                for xaxis in self.parent_expression.input_signals:
+                    if xaxis == fixture.regression.Regression.one_literal:
+                        # TODO if this is the only xaxis, should we not skip?
+                        continue
+
+                    print('New figure for ', sg)
+                    plt.figure()
+                    colors = []
+                    orders = []
+                    for xss, ys, preds in zip(plot_xss, plot_ys, plot_predictions):
+                        xs = xss[xaxis]
+                        order = np.argsort(xs)
+                        orders.append(order)
+                        temp = plt.plot(np.array(xs)[order], np.array(ys)[order], '*')[0]
+                        colors.append(temp.get_color())
+
+                    for xss, preds, c, order in zip(plot_xss,
+                                             plot_predictions, colors, orders):
+                        xs = xss[xaxis]
+                        plt.plot(np.array(xs)[order], np.array(preds)[order], '--', color=c)
+
+                    legend = []
+                    for xss in plot_xss:
+                        vals = []
+                        for s in sg.signals:
+                            v = list(xss[s])[0]
+                            v_str = str(v) if isinstance(v, int) else f'{v:.4g}'
+                            vals.append(f'{s.friendly_name()}={v_str}')
+                        legend.append(', '.join(vals))
+
+                    plt.legend(legend)
+                    plt.title(f'Results from sweeping {sg}')
+                    plt.xlabel(f'{xaxis}')
+                    plt.ylabel(f'f{self.parent_expression.name}')
+                    plt.grid()
+                    PlotHelper.save_current_plot(f'{self.name}/Fits for {self.name} vs {xaxis.friendly_name()} from Sweeping {sg.name}')
 
             # Next we find expressions for each param, using values from earlier
             # each row in example_data corresponds to one point in the sweep
@@ -421,7 +462,7 @@ class HeirarchicalExpression(Expression):
                         plt.xlabel(f'{xaxis}')
                         plt.ylabel(f'{child.name}')
                         plt.grid()
-                        PlotHelper.save_current_plot(f'Initial fit for {grandchild.name} to {self.name} vs {sg}')
+                        PlotHelper.save_current_plot(f'{self.name}/Initial fit for {grandchild.name} to {self.name} vs {sg}')
 
                         # TEMP for checking x_init
                         if grandchild.x_init is not None:
@@ -433,7 +474,7 @@ class HeirarchicalExpression(Expression):
                             plt.xlabel(f'{xaxis}')
                             plt.ylabel(f'{child.name}')
                             plt.grid()
-                            PlotHelper.save_current_plot(f'Debug x_init for {grandchild.name} to {self.name} vs {sg}')
+                            PlotHelper.save_current_plot(f'{self.name}/Debug x_init for {grandchild.name} to {self.name} vs {sg}')
                         print()
 
 
@@ -538,17 +579,28 @@ class HeirarchicalExpression(Expression):
         # we need to aggregate x_init from children, taking care with
         # redundant offsets
         x_init = []
+        # aggregate offset is a correction for the individual offsets being 0
+        # nominal_offset is our gess for the actual nominal offset
         aggregate_offset = 0
+        nominal_offset = []
         for ce in self.child_expressions:
             ce_x_init = ce.x_init if ce.x_init is not None else np.ones(ce.NUM_COEFFICIENTS)
             if self.manage_offsets and ce.last_coef_is_offset:
                 x_init = np.concatenate((x_init, ce_x_init[:-1]))
-                aggregate_offset += ce_x_init[-1]
+
+                # TODO we are assuming right now that predict will put in 0
+                #  for the managed offsets, but in the future that will be
+                #  -pred(nom) instead
+                ce_inputs_nom = [s.nominal for s in ce.input_signals]
+                nominal_offset.append(ce.predict(ce_inputs_nom, ce_x_init))
+                aggregate_offset += nominal_offset[-1] - ce_x_init[-1]
             else:
                 x_init = np.concatenate((x_init, ce_x_init))
 
         if self.manage_offsets:
-            x_init = np.concatenate((x_init, [aggregate_offset]))
+            final_nominal = sum(nominal_offset) / len(nominal_offset)
+            final_offset = final_nominal - aggregate_offset
+            x_init = np.concatenate((x_init, [final_offset]))
 
         return x_init
     @x_init.setter
@@ -580,12 +632,37 @@ class HeirarchicalExpression(Expression):
             return matches[0]
 
 
-    def verilog(self, lhs, opt_names, coef_names):
-        assert False, 'todo'
-        assert len(opt_names) == self.NUM_COEFFICIENTS
+    def verilog(self, lhs, coef_names):
         assert len(coef_names) == self.NUM_COEFFICIENTS
-        ans = ' + '.join(f'{cn}*{on}' for on, cn in zip(opt_names, coef_names))
-        return f'{lhs} = {ans};'
+        def name(expr):
+            # seems like expr.name is already qualified with self.name
+            return f'{expr.name}'
+        name_nominal = f'{self.name}_nominal'
+        lines = []
+
+        # all the child expressions
+        coef_count = 0
+        for ce in self.child_expressions:
+            slice_len = ce.NUM_COEFFICIENTS
+            if self.manage_offsets and ce.last_coef_is_offset:
+                slice_len -= 1
+            child_coefs = coef_names[coef_count : coef_count + slice_len]
+            if self.manage_offsets and ce.last_coef_is_offset:
+                child_coefs = list(child_coefs) + [0]
+            coef_count += slice_len
+
+            lines += ce.verilog(name(ce), child_coefs)
+        if self.manage_offsets:
+            lines.append(f'{name_nominal} = {coef_names[coef_count]};')
+            coef_count += 1
+        assert coef_count == len(coef_names)
+
+        parent_coef_names = [name(ce) for ce in self.child_expressions]
+        if self.manage_offsets:
+            parent_coef_names.append(name_nominal)
+        assert len(parent_coef_names) == self.parent_expression.NUM_COEFFICIENTS
+        lines += self.parent_expression.verilog(lhs, parent_coef_names)
+        return lines
 
 class SumExpression(Expression):
     input_signals = []
@@ -598,10 +675,11 @@ class SumExpression(Expression):
         assert len(opt_values) == 0
         return sum(coefs)
 
-    def verilog(self, lhs, opt_names, coef_names):
+    def verilog(self, lhs, coef_names):
+        opt_names = [self.friendly_name(s) for s in self.input_signals]
         assert len(opt_names) == 0
         assert len(coef_names) == self.NUM_COEFFICIENTS
-        ans = ' + '.join(f'{on}' for on in opt_names)
+        ans = ' + '.join(f'{cn}' for cn in coef_names)
         return [f'{lhs} = {ans};']
 
 
@@ -683,8 +761,9 @@ For ctrl[5:0], coefs = [Rnom, X1, X2, X3, X4, X5, Y, offset]
         self.x_init = coefs
         return super().fit(optional_data, result_data)
 
-    def verilog(self, lhs, opt_names, coef_names):
-        assert len(opt_names) == self.NUM_COEFFICIENTS
+    def verilog(self, lhs, coef_names):
+        opt_names = [self.friendly_name(s) for s in self.input_signals]
+        assert len(opt_names) == self.NUM_COEFFICIENTS - 2
         assert len(coef_names) == self.NUM_COEFFICIENTS
         bit_weights = ['1'] + list(coef_names[1:-2])
         denom = ' + '.join(f'{on}/{cn}' for on, cn in zip(opt_names, bit_weights))
@@ -710,6 +789,8 @@ def get_optional_expression_from_signals(s_list, name):
     individual = []
     for s in s_list:
         child_name = f'{name}_{s.friendly_name()}'
+        #if 'cfadj' in child_name:
+        #    continue
         individual.append(get_optional_expression_from_signal(s, child_name))
     combiner = SumExpression(len(individual)+1, f'{name}_summer')
     total = HeirarchicalExpression(combiner, individual, name)

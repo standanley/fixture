@@ -6,6 +6,7 @@ from functools import reduce
 class SignalIn():
     def __init__(self,
                  value,
+                 nominal,
                  type_,
                  get_random,
                  auto_set,
@@ -17,6 +18,7 @@ class SignalIn():
             ):
         # TODO: do we need bus info?
         self.value = value
+        self.nominal = nominal
         self.type_ = type_
         self.get_random = get_random
         self.auto_set = auto_set
@@ -111,12 +113,33 @@ def create_signal(pin_dict, c_name=None, c_pin=None, t_name=None):
                                   not is_proxy_component
                                   and template_name is None and (
                                   (type(value) == tuple) or (type_ == 'binary_analog' and value == None)))
+        def guess_nominal(value, type_):
+            if value is None:
+                return None
+            elif isinstance(value, numbers.Number):
+                return value
+            elif len(value) == 1:
+                return value[0]
+            elif len(value) == 2 and type_ == 'analog':
+                assert len(value) == 2
+                return sum(value) / 2
+            elif len(value) == 2 and type_ == 'binary_analog':
+                assert len(value) == 2
+                #return int(sum(value) // 2)
+                # this is likely a single bit of a bus, and the nominal will be
+                # set when the bus is put together
+                return None
+            else:
+                assert ValueError(f'Cannot guess nominal value for <{c_name}/{t_name}>')
+
+        nominal = pin_dict.get('nominal', guess_nominal(value, type_))
         auto_set = pin_dict.get('auto_set',
                                 get_random or type(value) == int or type(value) == float)
         optional_expr = get_random
 
         s = SignalIn(
             value,
+            nominal,
             type_,
             get_random,
             auto_set,
@@ -142,6 +165,7 @@ def create_input_domain_signal(name, value, spice_pin=None,
                                optional_expr=False):
     return SignalIn(
         value,
+        None,
         'analog',
         type(value) == tuple,
         spice_pin is not None,
@@ -476,8 +500,7 @@ class SignalManager:
 
 
 class SignalArray:
-    attributes_from_children = ['value',
-                                'type_',
+    attributes_from_children = ['type_',
                                 'get_random',
                                 'auto_set',
                                 'spice_name',
@@ -494,6 +517,30 @@ class SignalArray:
         self.spice_name = spice_name
         self.is_vectored_input = is_vectored_input
         self.representation = None
+
+        # TODO nested buses
+        def guess_value():
+            low = self.get_decimal_value([0]*len(self.array))
+            high = self.get_decimal_value([1]*len(self.array))
+            return (low, high)
+        self.value = self.info.get('value', guess_value())
+        self.nominal = self.info.get('nominal')
+        if self.nominal is None and self.value is not None:
+            # we can guess the nominal
+            if isinstance(self.value, int):
+                self.nominal = self.value
+            elif len(self.value) == 1:
+                self.nominal = self.value[0]
+            elif len(self.value) == 2:
+                self.nominal = sum(self.value) // 2
+            else:
+                raise ValueError(f'Could not guess nominal for <{self.template_name}/{self.spice_name}>')
+        if self.nominal is not None:
+            # distribute to children
+            binary = self.get_binary_value(self.nominal)
+            for b, s in zip(binary, self.array):
+                s.nominal = b
+
 
     def map(self, fun):
         return np.vectorize(fun)(self.array)
@@ -538,7 +585,8 @@ class SignalArray:
 
     def get_binary_value(self, decimal):
         assert self.info['datatype'] in ['binary_analog', 'bit']
-        assert isinstance(decimal, int)
+        # need to allow int and np.int64
+        assert isinstance(decimal, numbers.Integral)
 
         if self.info['bus_type'] == 'binary':
             first_one = self.info.get('first_one', None)
