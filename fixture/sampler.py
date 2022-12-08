@@ -26,8 +26,8 @@ class SampleManager:
             c = cfadj.get_plot_value(samples)
             return abs(r*c - 900) < 100
 
-        self.optional_groups = [self.optional_groups[2],
-                                SamplerConstrainted([rfadj, cfadj], constraint_fun)]
+        #self.optional_groups = [self.optional_groups[2],
+        #                        SamplerConstrainted([rfadj, cfadj], constraint_fun)]
 
         self.test_inputs = [get_sampler_for_signal(ti) for ti in test_inputs]
         self.data = pandas.DataFrame()
@@ -347,7 +347,7 @@ class Sampler:
         optional_signals = [s for s in test.signals.random() if s not in test.input_signals]
         sm = SampleManager(optional_signals, list(test.input_signals))
         for group in sm.optional_groups:
-            sm.sweep_one(group, 5, 150)
+            sm.sweep_one(group, 5, 20)
         sm.sample_all(100)
         test.sample_groups = sm.optional_groups + sm.test_inputs
         return sm.data

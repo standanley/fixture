@@ -37,7 +37,7 @@ def run(circuit_config_filename):
 
 def _run(circuit_config_dict):
 
-    UserCircuit, template_name, signal_manager, test_config_dict, extras = config_parse.parse_config(circuit_config_dict)
+    UserCircuit, template_name, signal_manager, test_config_dict, optional_input_info, extras = config_parse.parse_config(circuit_config_dict)
     tester = fault.Tester(UserCircuit)
     TemplateClass = getattr(templates, template_name)
 
@@ -46,13 +46,16 @@ def _run(circuit_config_dict):
 
 
     t = TemplateClass(UserCircuit, simulator, signal_manager, extras)
+    #TODO this might be a good place to build up nonlinear expressions
+    config_parse.parse_optional_input_info(optional_input_info, t.tests)
+
     checkpoint = Checkpoint(t, 'checkpoint_folder')
 
     # TODO figure out UI for saving and loading
     #checkpoint.save(t, 'pickletest4.json')
     #t = checkpoint.load('pickletest4.json')
 
-    # TODO maybe reorganize heirarchy for better checkpoints?
+    # TODO maybe reorganize hierarchy for better checkpoints?
     #params = {} # extras?
     #for Test in t.tests:
     #    test = Test(params)

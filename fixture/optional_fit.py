@@ -66,6 +66,8 @@ class Expression(ABC):
         # better performance by using predict directly
         opt_values = [opt_dict[s] for s in self.input_signals]
         opt_values = np.array(opt_values)
+        # reshape only does something if len(self.input_signals)==0
+        opt_values = opt_values.reshape((-1, opt_dict.shape[0]))
         ans = []
         for value_vector in opt_values.T:
             ans.append(self.predict(value_vector, coefs))
@@ -159,6 +161,9 @@ class Expression(ABC):
             return s.friendly_name()
         else:
             raise ValueError(f'Cannot find friendly name for {s}')
+
+    def __str__(self):
+        return self.name
 
 
 class AnalogExpression(Expression):
@@ -555,51 +560,62 @@ class HeirarchicalExpression(Expression):
     @x_opt.setter
     def x_opt(self, x_opt):
         # set self.opt for self and all the children
-        self._x_opt = x_opt
+        managed_offset_acc = 0
         x_opt_count = 0
+        x_opt_len = len(x_opt)
         for ce in self.child_expressions:
             slice_length = ce.NUM_COEFFICIENTS
             if self.manage_offsets and ce.last_coef_is_offset:
                 slice_length -= 1
             x_opt_ce = x_opt[x_opt_count : x_opt_count + slice_length]
-            if self.manage_offsets and ce.last_coef_is_offset:
-                # TODO maybe choose offset so influence at nominal is zero
-                x_opt_ce = np.concatenate((x_opt_ce, [0]))
             x_opt_count += slice_length
+            if self.manage_offsets and ce.last_coef_is_offset:
+                ce_inputs_nom = [s.nominal for s in ce.input_signals]
+                x_opt_ce_zero = np.concatenate((x_opt_ce, [0]))
+                offset_nom = -1 * ce.predict(ce_inputs_nom, x_opt_ce_zero)
+                managed_offset_acc += offset_nom
+                x_opt_ce = np.concatenate((x_opt_ce, [offset_nom]))
+                x_opt = np.insert(x_opt, x_opt_count, offset_nom)
             ce.x_opt = x_opt_ce
 
         if self.manage_offsets:
-            # don't do anything with managed offset x_opt[-1]
+            # managed offset x_opt[-1] doesn't go into any ce.x_opt
+            # but it does get edited to account for offsets already given to ces
             x_opt_count += 1
+            x_opt[-1] -= managed_offset_acc
 
-        assert x_opt_count == len(x_opt)
+        assert x_opt_count == x_opt_len
+
+        # we do this at the end because it can get edited with managed offsets
+        self._x_opt = x_opt
 
     @property
     def x_init(self):
         # we need to aggregate x_init from children, taking care with
-        # redundant offsets
+        # redundant offsets. Returns a single aggregate offset, assuming the
+        # children are each passed zero for their redundant offsets
         x_init = []
         # aggregate offset is a correction for the individual offsets being 0
-        # nominal_offset is our gess for the actual nominal offset
+        # nominal_offsets is our guess for the actual nominal offset
         aggregate_offset = 0
-        nominal_offset = []
+        nominal_offsets = []
         for ce in self.child_expressions:
             ce_x_init = ce.x_init if ce.x_init is not None else np.ones(ce.NUM_COEFFICIENTS)
             if self.manage_offsets and ce.last_coef_is_offset:
                 x_init = np.concatenate((x_init, ce_x_init[:-1]))
 
-                # TODO we are assuming right now that predict will put in 0
-                #  for the managed offsets, but in the future that will be
-                #  -pred(nom) instead
+                # when we shrink x_init to have only 1 offset, no redundant ones,
+                # we assume that children will be passed 0 for their redundant
+                # offsets
                 ce_inputs_nom = [s.nominal for s in ce.input_signals]
-                nominal_offset.append(ce.predict(ce_inputs_nom, ce_x_init))
-                aggregate_offset += nominal_offset[-1] - ce_x_init[-1]
+                nominal_offsets.append(ce.predict(ce_inputs_nom, ce_x_init))
+                aggregate_offset += nominal_offsets[-1] - ce_x_init[-1]
             else:
                 x_init = np.concatenate((x_init, ce_x_init))
 
         if self.manage_offsets:
-            final_nominal = sum(nominal_offset) / len(nominal_offset)
-            final_offset = final_nominal - aggregate_offset
+            nominal_offset = sum(nominal_offsets) / len(nominal_offsets)
+            final_offset = nominal_offset - aggregate_offset
             x_init = np.concatenate((x_init, [final_offset]))
 
         return x_init
@@ -780,11 +796,16 @@ def get_optional_expression_from_signal(s, name):
     else:
         assert isinstance(s, SignalIn)
         assert s.type_ == 'analog', 'TODO'
-        assert len(s.value) == 2
+        assert isinstance(s.value, (list, tuple)), f'Trying to model as a function of {s}, but it has pinned value {s.value} instead of a range'
+        assert len(s.value) == 2, f'Trying to model as a function of {s}, but it has value {s.value} instead of a range'
         return AnalogExpression(s, name)
 
 
 def get_optional_expression_from_signals(s_list, name):
+    '''
+    If s_list is empty, this is a constant.
+    If s_list is not empty, it's a sum of expressions for each signal
+    '''
     assert isinstance(name, str)
     individual = []
     for s in s_list:
@@ -792,6 +813,8 @@ def get_optional_expression_from_signals(s_list, name):
         #if 'cfadj' in child_name:
         #    continue
         individual.append(get_optional_expression_from_signal(s, child_name))
+    if len(individual) == 0:
+        individual.append(ConstExpression(f'{name}_const'))
     combiner = SumExpression(len(individual)+1, f'{name}_summer')
     total = HeirarchicalExpression(combiner, individual, name)
     return total

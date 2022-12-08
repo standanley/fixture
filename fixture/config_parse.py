@@ -2,6 +2,8 @@ import os
 import yaml
 import fixture.cfg_cleaner as cfg_cleaner
 from fixture import Representation
+from fixture.optional_fit import get_optional_expression_from_signals, \
+    LinearExpression, HeirarchicalExpression
 from fixture.signals import create_signal, parse_bus, parse_name, \
     SignalArray, SignalManager, SignalOut, SignalIn
 import magma
@@ -390,8 +392,83 @@ def parse_config(circuit_config_dict):
     #sm.signals_by_template_name['in_single'] = test
     #del sm.signals_by_circuit_name['my_in']
 
+    optional_input_info = circuit_config_dict.get('optional_input_info', {})
 
-    return UserCircuit, template_class_name, sm, test_config_dict, extras
+
+    return UserCircuit, template_class_name, sm, test_config_dict, optional_input_info, extras
 
 
+def parse_optional_input_info(optional_input_info, tests):
+    # TODO this can't be in the main parse_config because it needs to wait
+    # until after the template has expanded parameter_algebra
+    # TODO I think we should pass in the list of tests so we can look through
+    # the parameter_algebra_vectored for each one
+
+    # we only make this list of params for an error message
+    params = []
+
+    # we create a copy and then delete entries as we use them to find unused
+    info_copy = optional_input_info.copy()
+    for test in tests:
+        parameter_algebra_expr = {}
+        for lhs, rhs in test.parameter_algebra_vectored.items():
+            rhs_new = {}
+            for param, multiplier in rhs.items():
+                params.append(param)
+                #params[param] = (test, lhs)
+                # get optional expression for param
+                signals = None
+                if param in info_copy:
+                    # todo
+                    signals_str = info_copy[param]
+                    del info_copy[param]
+                    assert isinstance(signals_str,
+                                      list), f'Optional input dependencies for {param} should be list, not {effects}'
+                    signals = [test.signals.from_circuit_name(s_str)
+                               for s_str in signals_str]
+                else:
+                    # default expr
+                    signals_with_arrays = test.signals.optional_expr()
+                    signals = [s for x in signals_with_arrays for s in (
+                        x if isinstance(x, SignalArray) else [x])]
+                    print(f'Using default effect model for {param}, which includes {signals}')
+
+                exp = get_optional_expression_from_signals(signals, param)
+                rhs_new[exp] = multiplier
+            parameter_algebra_expr[lhs] = rhs_new
+        test.parameter_algebra_expr = parameter_algebra_expr
+
+
+    if len(info_copy) > 0:
+        raise KeyError(
+            f'Specified optional effect(s) for {list(info_copy.keys())}, but recognized params are {params}')
+
+    # now combine the expressions from each parameter into big expressions
+    for test in tests:
+        parameter_algebra_final = {}
+        for lhs, rhs in test.parameter_algebra_expr.items():
+            combined_expression_inputs = []
+            combined_expression_children = []
+            for param_expr, multiplier in rhs.items():
+                assert len(multiplier) == 1, 'TODO deal with non-simple parameter algebra'
+                combined_expression_inputs.append(multiplier[0])
+                combined_expression_children.append(param_expr)
+            combined_expression_algebra = LinearExpression(combined_expression_inputs, f'{lhs}_combiner')
+            combined_expression = HeirarchicalExpression(combined_expression_algebra, combined_expression_children, lhs)
+            parameter_algebra_final[lhs] = combined_expression
+        test.parameter_algebra_final = parameter_algebra_final
+
+    '''
+    This has been refactored into the block above
+    total_expr_inputs = []
+    for name in param_names:
+        old_expr = rhs[name]
+        assert len(old_expr) == 1, 'TODO'
+        total_expr_inputs.append(old_expr[0])
+    algebra = LinearExpression(total_expr_inputs, f'{lhs_clean}_combiner')
+    total_expr = HeirarchicalExpression(algebra, optional_exprs, lhs_clean)
+    '''
+
+    # we have done our job by creating test.parameter_algebra_final
+    return
 

@@ -409,8 +409,10 @@ class SignalManager:
                     ans.add(x)
             elif isinstance(x, SignalArray):
                 if x.type_ == 'binary_analog':
-                    assert x.get_random == True, 'qa that is not random?'
-                    ans.add(x)
+                    # it's weird, but the user could pin a bus to a value
+                    #assert x.get_random == True, 'qa that is not random?'
+                    if x.get_random:
+                        ans.add(x)
                 else:
                     # we can't include it as one SA, but we should check bits
                     for bit in x.flatten():

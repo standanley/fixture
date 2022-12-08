@@ -102,6 +102,7 @@ class Regression:
 
         # TODO option for interaction terms, etc.
 
+        assert False, 'This logic was moved to config_parse.parse_optional_config_info'
         opt_signals = template.signals.optional_expr()
         opt_signals_flat = [s for x in opt_signals for s in (x if isinstance(x, SignalArray) else [x])]
 
@@ -232,20 +233,25 @@ class Regression:
 
 
         center_mapping = {}
-        for lhs, rhs in pa.items():
-            for param, term in rhs.items():
-                for factor in term:
-                    if isinstance(factor, CenteredSignalIn):
-                        # create a column for this centered thing
-                        if factor.ref in center_mapping:
-                            continue
-                        orig_column = data[factor.ref]
-                        nom = sum(factor.ref.value) / 2
-                        new_column = orig_column - nom
-                        #new_name = self.regression_name(factor)
-                        #data[factor] = new_column
-                        data.insert(len(data.columns), factor, new_column)
-                        center_mapping[factor.ref] = factor
+        for lhs, rhs in test.parameter_algebra_final.items():
+            for s in rhs.input_signals:
+                if isinstance(s, CenteredSignalIn):
+                    assert False, 'todo'
+
+        #for lhs, rhs in pa.items():
+            #for param, term in rhs.items():
+            #    for factor in term:
+            #        if isinstance(factor, CenteredSignalIn):
+            #            # create a column for this centered thing
+            #            if factor.ref in center_mapping:
+            #                continue
+            #            orig_column = data[factor.ref]
+            #            nom = sum(factor.ref.value) / 2
+            #            new_column = orig_column - nom
+            #            #new_name = self.regression_name(factor)
+            #            #data[factor] = new_column
+            #            data.insert(len(data.columns), factor, new_column)
+            #            center_mapping[factor.ref] = factor
 
 
         self.consts = {}
@@ -261,74 +267,79 @@ class Regression:
              }
         }
         '''
-        results = {lhs: defaultdict(dict) for lhs in pa}
         results_expr = {}
-        results_models = {}
-        regression_dicts = []
-        for lhs, rhs in pa.items():
-            lhs_clean = self.clean_string(lhs)
-            regression_data_dict = {lhs_clean: data[lhs]}
-            self.info_mapping = {}
+        #results = {lhs: defaultdict(dict) for lhs in pa}
+        #results_models = {}
+        #regression_dicts = []
+        #for lhs, rhs in pa.items():
+        #    lhs_clean = self.clean_string(lhs)
+        #    regression_data_dict = {lhs_clean: data[lhs]}
+        #    self.info_mapping = {}
 
-            optional_pin_expr = self.get_optional_pin_expression(template)
-            rhs_info = self.get_terms(rhs, optional_pin_expr)
-            for name, term, param, opt in rhs_info:
-                assert name not in self.info_mapping, f'Duplicate term: {name}'
-                self.info_mapping[name] = (term, param, opt)
-                try:
-                    column = reduce(operator.mul,
-                                    [data[x] for x in term],
-                                    data[self.one_literal])
-                except KeyError as e:
-                    missing = str(e.args[0])
-                    keys = [str(k) for k in data]
-                    raise KeyError(f'Could not find {missing} in data, available keys are {keys}')
-                regression_data_dict[name] = column
+        #    optional_pin_expr = self.get_optional_pin_expression(template)
+        #    rhs_info = self.get_terms(rhs, optional_pin_expr)
+        #    for name, term, param, opt in rhs_info:
+        #        assert name not in self.info_mapping, f'Duplicate term: {name}'
+        #        self.info_mapping[name] = (term, param, opt)
+        #        try:
+        #            column = reduce(operator.mul,
+        #                            [data[x] for x in term],
+        #                            data[self.one_literal])
+        #        except KeyError as e:
+        #            missing = str(e.args[0])
+        #            keys = [str(k) for k in data]
+        #            raise KeyError(f'Could not find {missing} in data, available keys are {keys}')
+        #        regression_data_dict[name] = column
 
-                # also put term elements into the dict, useful for plotting
-                if len(term) > 1:
-                    for term_element in term:
-                        element_name = self.regression_name(term_element)
-                        regression_data_dict[element_name] = data[term_element]
+        #        # also put term elements into the dict, useful for plotting
+        #        if len(term) > 1:
+        #            for term_element in term:
+        #                element_name = self.regression_name(term_element)
+        #                regression_data_dict[element_name] = data[term_element]
 
-                # also put centered elements into the dict; useful for plotting
-                for orig in center_mapping:
-                    regression_data_dict[self.regression_name(orig)] = data[orig]
+        #        # also put centered elements into the dict; useful for plotting
+        #        for orig in center_mapping:
+        #            regression_data_dict[self.regression_name(orig)] = data[orig]
 
-            # TODO if every instance of 'vdd' is in a product term, should we
-            # still add 'vdd' to the dataframe by itself?
-            regression_data = pandas.DataFrame(regression_data_dict)
+        #    # TODO if every instance of 'vdd' is in a product term, should we
+        #    # still add 'vdd' to the dataframe by itself?
+        #    regression_data = pandas.DataFrame(regression_data_dict)
 
+
+        #    # TODO I stole the filtering code from this spot
+
+        #    ## build up parameter algebra expression
+        #    #optional_exprs = []
+        #    #param_names = []
+        #    #for thing in rhs:
+        #    #    #param = make_optional_expression()
+        #    #    param = self.get_optional_pin_expression2(template, thing)
+        #    #    optional_exprs.append(param)
+        #    #    param_names.append(thing)
+        #    print('TODO next for loop must be combined with this; scope of df_filtered is messed up now')
+
+        for lhs, rhs in test.parameter_algebra_final.items():
 
             #df_row_mask = ~ regression_data[lhs_clean].isnull()
             ## TODO when I blank out entries in the data spreadsheet they appear as nan, but those rows aren't filtered. Is that bad?
             #df_filtered = regression_data[df_row_mask]
 
             # TODO how to handle rows with nan? I copied this from old code
+            lhs_clean = self.clean_string(lhs)
             df_row_mask = ~ data[lhs_clean].isnull()
             # TODO when I blank out entries in the data spreadsheet they appear as nan, but those rows aren't filtered. Is that bad?
             df_filtered = data[df_row_mask]
 
-            # build up parameter algebra expression
-            optional_exprs = []
-            param_names = []
-            for thing in rhs:
-                #param = make_optional_expression()
-                param = self.get_optional_pin_expression2(template, thing)
-                optional_exprs.append(param)
-                param_names.append(thing)
 
-            total_expr_inputs = []
-            for name in param_names:
-                old_expr = rhs[name]
-                assert len(old_expr) == 1, 'TODO'
-                total_expr_inputs.append(old_expr[0])
-            algebra = LinearExpression(total_expr_inputs, f'{lhs_clean}_combiner')
-            total_expr = HeirarchicalExpression(algebra, optional_exprs, lhs_clean)
+            # TODO just stole some code from here for config_parse
+            total_expr = rhs
 
             verilog_const_names = [f'c[{i}]' for i in range(total_expr.NUM_COEFFICIENTS)]
             verilog = total_expr.verilog(lhs_clean, verilog_const_names)
 
+            # TODO these next 3 lines were commented out and I'm not sure why
+            #  I was using lhs_data in place of expr_fit_data
+            #  Update: I think it's because fit does this lookup internally
             #input_names = [self.regression_name(s) for s in total_expr.input_signals]
             #expr_fit_data = [df_filtered[input_name] for input_name in input_names]
             #expr_fit_data = np.array(expr_fit_data)
@@ -344,41 +355,6 @@ class Regression:
                 print(f'{n} = {v};')
             print()
             results_expr[lhs] = total_expr
-
-            '''
-            # old, linear way of doing it
-            formula = self.make_formula(lhs_clean, [x[0] for x in rhs_info])
-            stats_model = smf.ols(formula, df_filtered)
-            stat_results = stats_model.fit()
-            results_entry = results[lhs]
-            for name, coef in stat_results.params.items():
-                term, param, opt = self.info_mapping[name]
-                assert opt not in results_entry[param], f'Parameter {lhs}->{param}->{opt} found in multiple parameter algebra formulas'
-                results_entry[param][opt] = coef
-
-            results_models[lhs] = stat_results
-
-            # TODO need to double-check that this still handles NaNs correctly
-            regression_dicts.append(regression_data)
-
-
-        # combine the individual dataframes into a big one
-        # when they have the same column heading, assert that the data is equal
-        data_combined = {}
-        for df in regression_dicts:
-            for header, column in df.items():
-                if header in data_combined:
-                    # duplicate
-                    assert all(column == data_combined[header]), 'Mismatched data'
-                else:
-                    data_combined[header] = column
-        df_combined = pandas.DataFrame(data_combined)
-
-        # TODO fix checkpoint and then delete these 3 things
-        self.regression_dataframe = df_combined
-        self.results = results
-        self.results_models = results_models
-        '''
 
         self.expr_dataframe = data
         self.results_expr = results_expr

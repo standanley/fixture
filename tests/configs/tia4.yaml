@@ -35,8 +35,8 @@ pin:
         direction: input
         datatype: analog
         electricaltype: current
-        #value: (2e-6, 10e-6)
-        value: 6e-6
+        value: (2e-6, 10e-6)
+        #value: 6e-6
     #rfadj<5>:
     #    direction: input
     #    datatype: real
@@ -47,13 +47,16 @@ pin:
         bus_type: binary
         first_one: high
         value: (10, 63)
+        #value: 24
 
     cfadj<5:0>:
         direction: input
         datatype: binary_analog
         bus_type: binary
         first_one: low
-        #value: (10, 63)
+        #value: (0, 63)
+        value: (20, 40)
+        #value: 32
 
     outp:
         direction: output
@@ -69,12 +72,19 @@ template_pins:
     outn: outn
 
 extras:
-    #approx_settling_time: 2e-9
     approx_settling_time: 100e-6
     limits_diff: (-3e-6, 3e-6)
     limits_cm: (-1e-6, 1e-6)
     #limits_diff: (-3e-0, 3e-0)
     #limits_cm: (1.5, 1.6)
+
+optional_input_info:
+    gain: [ibias, rfadj]
+    offset: []
+    gain_from_cm: []
+    gain_to_cm: []
+    cm_gain: []
+    cm_offset: [ibias, vdd, rfadj]
 
 #test_config_file: ngspice_dynamics.yaml
 #test_config_file: ngspice_small_tstep.yaml
