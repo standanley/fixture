@@ -429,8 +429,9 @@ def parse_optional_input_info(optional_input_info, tests):
                 else:
                     # default expr
                     signals_with_arrays = test.signals.optional_expr()
-                    signals = [s for x in signals_with_arrays for s in (
-                        x if isinstance(x, SignalArray) else [x])]
+                    #signals = [s for x in signals_with_arrays for s in (
+                    #    x if isinstance(x, SignalArray) else [x])]
+                    signals = signals_with_arrays
                     print(f'Using default effect model for {param}, which includes {signals}')
 
                 exp = get_optional_expression_from_signals(signals, param)

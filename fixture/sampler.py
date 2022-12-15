@@ -18,13 +18,13 @@ class SampleManager:
         # TODO how to get optional groups?
 
         self.optional_groups = [get_sampler_for_signal(s) for s in optional_groups]
-        rfadj, cfadj = self.optional_groups[0], self.optional_groups[1]
-        def constraint_fun(samples):
-            x = rfadj
-            y = cfadj
-            r = rfadj.get_plot_value(samples)
-            c = cfadj.get_plot_value(samples)
-            return abs(r*c - 900) < 100
+        #rfadj, cfadj = self.optional_groups[0], self.optional_groups[1]
+        #def constraint_fun(samples):
+        #    x = rfadj
+        #    y = cfadj
+        #    r = rfadj.get_plot_value(samples)
+        #    c = cfadj.get_plot_value(samples)
+        #    return abs(r*c - 900) < 100
 
         #self.optional_groups = [self.optional_groups[2],
         #                        SamplerConstrainted([rfadj, cfadj], constraint_fun)]

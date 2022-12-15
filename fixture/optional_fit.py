@@ -765,12 +765,13 @@ For ctrl[5:0], coefs = [Rnom, X1, X2, X3, X4, X5, Y, offset]
 
         # r2_value, slope, intercept, denom_coefs
         # r2_value is first so we can use comparison to find the highest
-        fit = (0.0, 0, 0, None)
+        fits = []
         for denom_coefs in denom_coefss:
             denom = sum(b/c for b, c in zip(bits, [1]+denom_coefs[:-1])) + denom_coefs[-1]
             xs = 1/denom
             result = quick_fit(xs, result_data)
-            fit = max(fit, (*result, denom_coefs))
+            fits.append((*result, denom_coefs))
+        fit = max(fits, key=lambda info: info[0])
         r2_value, slope, intercept, denom_coefs = fit
 
         coefs = [slope] + denom_coefs + [intercept]

@@ -57,13 +57,14 @@ class Representation:
             s = SignalArray(
                 #np.zeros(len(params['components']), dtype=object),
                 np.array([PlaceholderSignal()]*len(params['components'])),
-                {},
+                {'value': None},
                 template_name=t_name,
                 spice_name=c_name
             )
         elif params['style'] == 'linear_combination_in':
             s = SignalIn(
                 params.get('value', None),
+                'will_complete_in_finish_init',
                 'will_complete_in_finish_init',
                 'will_complete_in_finish_init',
                 'will_complete_in_finish_init',
@@ -143,6 +144,9 @@ class Representation:
                 self.parent_signal.get_random = ref_signal.get_random
                 self.parent_signal.auto_set = ref_signal.auto_set
                 self.parent_signal.optional_expr = ref_signal.optional_expr
+                val = self.parent_signal.value
+                nominal = val[0] if val is not None and len(val) == 1 else None
+                self.parent_signal.nominal = nominal
             elif self.style == 'linear_combination_out':
                 assert isinstance(ref_signal, SignalOut)
                 self.parent_signal.type_ = ref_signal.type_

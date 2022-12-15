@@ -25,6 +25,7 @@ class SignalIn():
         self.spice_name = spice_name
         self.spice_pin = spice_pin
         self.template_name = template_name
+        # optional_expr should just be bool, not the actual expression
         self.optional_expr = optional_expr
         self.representation = representation
 
@@ -448,7 +449,10 @@ class SignalManager:
         return ans
 
     def optional_expr(self):
-        ans = [x for x in self.signals if getattr(x, 'optional_expr', None)]
+        # TODO delete the commented line
+        #ans = [x for x in self.signals if getattr(x, 'optional_expr', None)]
+        ans = [x for x in self.signals
+               if isinstance(x, (SignalIn, SignalArray)) and x.optional_expr]
         for x in ans:
             assert x.type_ in ['analog', 'binary_analog']
         return ans
@@ -525,7 +529,9 @@ class SignalArray:
             low = self.get_decimal_value([0]*len(self.array))
             high = self.get_decimal_value([1]*len(self.array))
             return (low, high)
-        self.value = self.info.get('value', guess_value())
+        # can't use get here because we don't want to fun guess_value if not necessary
+        #self.value = self.info.get('value', guess_value())
+        self.value = self.info['value'] if 'value' in self.info else guess_value()
         self.nominal = self.info.get('nominal')
         if self.nominal is None and self.value is not None:
             # we can guess the nominal
