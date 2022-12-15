@@ -11,6 +11,9 @@ jobs:
         with:
           python-version: "3.7"
 
+      - name: Check out fixture
+        uses: actions/checkout@v3
+
       - name: Installation with ubuntu
         run: |
           sudo apt-get install ngspice
