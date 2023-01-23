@@ -32,12 +32,13 @@ class SampleManager:
         self.test_inputs = [get_sampler_for_signal(ti) for ti in test_inputs]
         self.data = pandas.DataFrame()
 
-    def sweep_one(self, group, N_test, N_optional):
+    @classmethod
+    def sweep_one(cls, test_groups, opt_groups, group, N_test, N_optional):
         # group is the one optional group to sweep, while holding others nominal
         # Choose N_optional values for the optional group, and then for each
         # one sweep N_test different test inputs
         Sampler = fixture.sampler.Sampler
-        TEST_DIMS = sum(ti.NUM_DIMS for ti in self.test_inputs)
+        TEST_DIMS = sum(ti.NUM_DIMS for ti in test_groups)
         new_data = {}
 
         opt_samples_unscaled = Sampler.get_orthogonal_samples(group.NUM_DIMS, N_optional)
@@ -71,14 +72,14 @@ class SampleManager:
         '''
 
         # TODO nominal doesn't necessarily make sense for test inputs
-        test_keys = [k for ti in self.test_inputs for k in ti.get_nominal()]
+        test_keys = [k for ti in test_groups for k in ti.get_nominal()]
         for k in test_keys:
             new_data[k] = []
         for i in range(N_optional):
             samples_this_opt = Sampler.get_orthogonal_samples(TEST_DIMS, N_test)
             for j in range(N_test):
                 target_count = 0
-                for ti in self.test_inputs:
+                for ti in test_groups:
                     targets = samples_this_opt[j][target_count : target_count + ti.NUM_DIMS]
                     target_count += ti.NUM_DIMS
                     sample = ti.get(targets)
@@ -102,20 +103,22 @@ class SampleManager:
             #group_data += [opt_samples[i]] * N_test
             for k in opt_samples:
                 group_data[k] += [opt_samples[k][i]]*N_test
-        new_data[self.GROUP_ID_TAG] = group_ids
-        new_data[self.SWEEP_ID_TAG] = sweep_ids
+        new_data[cls.GROUP_ID_TAG] = group_ids
+        new_data[cls.SWEEP_ID_TAG] = sweep_ids
         #new_data[group] = group_data
         for k in group_data:
             new_data[k] = group_data[k]
-        for opt_group in self.optional_groups:
+        for opt_group in opt_groups:
             if opt_group != group:
                 nominal = opt_group.get_nominal()
                 for k in nominal:
                     new_data[k] = [nominal[k]] * (N_test * N_optional)
 
-        self.data = pandas.concat([self.data, pandas.DataFrame(new_data)], ignore_index=True)
+        #self.data = pandas.concat([self.data, pandas.DataFrame(new_data)], ignore_index=True)
+        return pandas.DataFrame(new_data)
 
-    def sample_all(self, N):
+    @classmethod
+    def sample_all(self, N, groups_opt, groups_test):
         NUM_DIMS = None
         print('TODO sample_all')
         pass
@@ -344,13 +347,23 @@ class Sampler:
         # return a dictionary where keys are SignalIn (each SignalArray in dims
         # will be broken out) and values are length N lists of scaled samples
 
-        optional_signals = [s for s in test.signals.random() if s not in test.input_signals]
-        sm = SampleManager(optional_signals, list(test.input_signals))
-        for group in sm.optional_groups:
-            sm.sweep_one(group, 5, 20)
-        sm.sample_all(100)
-        test.sample_groups = sm.optional_groups + sm.test_inputs
-        return sm.data
+        # TODO I'm not sure SampleManager does anything useful. Besides its
+        #  sweep_one method, it's just a holder for two lists
+        #optional_signals = [s for s in test.signals.random() if s not in test.input_signals]
+        #sm = SampleManager(optional_signals, list(test.input_signals))
+        data = pandas.DataFrame()
+        sm = SampleManager
+        for group in test.sample_groups_opt:
+            #if not any(s in test.input_signals for s in group.signals):
+            new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 5, 20)
+            data = pandas.concat((data, new_data), ignore_index=True)
+        todo = sm.sample_all(100, test.sample_groups_test, test.sample_groups_opt)
+        #print('TODO this is a bad place to set sample_groups; there are issues when we skip this step in the checkpoints')
+
+        #print('TODO should set them in Test __init__, in separate entries for sample_groups_test and sample_groups_opt')
+        #assert False, 'read print statements above'
+        #test.sample_groups = sm.optional_groups + sm.test_inputs
+        return data
 
 
     @classmethod

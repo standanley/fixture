@@ -356,7 +356,8 @@ class Regression:
             print()
             results_expr[lhs] = total_expr
 
-        self.expr_dataframe = data
+        # We don't edit data, so there's no reason to re-save it here
+        #self.expr_dataframe = data
         self.results_expr = results_expr
 
 

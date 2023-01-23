@@ -82,13 +82,24 @@ def _run(circuit_config_dict):
 
     params_by_mode = t.go(checkpoint, checkpoint_controller)
 
-    for mode, results in params_by_mode.items():
-        print('For mode', mode)
-        print('category\tparam\tterm\tcoef')
-        for category, result_batch in results.items():
-            for param, d in result_batch.items():
-                for partial_term_optional, coef in d.items():
-                    print('%s\t%s\t%s\t%.3e' % (category, param, partial_term_optional, coef))
+    # No need to print like this now because it prints the verilog representation
+    #for mode, results in params_by_mode.items():
+    #    print('For mode', mode)
+    #    print('category\tparam\tterm\tcoef')
+    #    for category, result_batch in results.items():
+    #        for param, d in result_batch.items():
+    #            for partial_term_optional, coef in d.items():
+    #                print('%s\t%s\t%s\t%.3e' % (category, param, partial_term_optional, coef))
+    for test in t.tests:
+        print(f'Results for {test}:')
+        for lhs, rhs in test.parameter_algebra_final.items():
+            print(f'\tModel for {lhs}:')
+            coef_names = [f'c{i}' for i in range(rhs.NUM_COEFFICIENTS)]
+            for line in rhs.verilog(lhs, coef_names):
+                print(f'\t\t{line}')
+            for name, val in zip(coef_names, rhs.x_opt):
+                print(f'\t\t{name} = {val};')
+            print()
 
     if 'mgenero' in circuit_config_dict:
         mgenero_config_dir = circuit_config_dict['mgenero']

@@ -1,7 +1,7 @@
 import fault
 from abc import ABC, abstractmethod
 import fixture
-from fixture import Tester, Regression
+from fixture import Tester, Regression, sampler
 from fixture.signals import SignalManager, SignalArray, SignalOut, SignalIn, CenteredSignalIn
 from fixture.plot_helper import PlotHelper
 
@@ -50,29 +50,6 @@ class TemplateMaster():
         # replace test classes with instance
         self.tests = [T(self) for T in self.tests]
 
-        for test in self.tests:
-            test.signals = self.signals.copy()
-            test_dimensions = test.input_domain()
-            # TODO not sure this is the best way to do input signals
-            #test.input_signals = SignalManager([], {})
-            test.input_signals = []
-            # TODO I don't like editing signal.get_random as it might be used in other tests
-            for s in test_dimensions:
-                if isinstance(s, fixture.signals.SignalIn):
-                    s.get_random = True
-                    if s not in test.signals and s not in test.signals.flat():
-                        test.input_signals.append(s)
-                        test.signals.add(s)
-                elif isinstance(s, fixture.signals.SignalArray):
-                    for sig in s.flatten():
-                        sig.get_random = True
-                    if s not in test.signals:
-                        test.input_signals.append(s)
-                        test.signals.add(s)
-                else:
-                    assert False, 'input_domain must return SignalIn objects'
-            test._expand_parameter_algebra2()
-
     def required_port_info(self):
         # TODO: this should give more info than just the names of the ports
         # maybe expect the template creator to override this?
@@ -106,6 +83,41 @@ class TemplateMaster():
             # TODO this assert was removed at one point, but seems necessary?
             # I think it was to allow the algebra to be added later programatically?
             assert hasattr(self, 'parameter_algebra'), f'{self} should specify parameter_algebra!'
+
+
+            self.signals = self.template.signals.copy()
+            test_dimensions = self.input_domain()
+            # TODO not sure this is the best way to do input signals
+            self.input_signals = []
+            # TODO I don't like editing signal.get_random as it might be used in other tests
+            #  I think the solution is to be more explicit about hte template
+            #  writer's choices. e.g. They can pass an existing input signal,
+            #  in which case we somehow set get_random, otherwise we leave it alone
+            for s in test_dimensions:
+                if isinstance(s, fixture.signals.SignalIn):
+                    s.get_random = True
+                    if s not in self.signals and s not in self.signals.flat():
+                        self.input_signals.append(s)
+                        self.signals.add(s)
+                elif isinstance(s, fixture.signals.SignalArray):
+                    for sig in s.flatten():
+                        sig.get_random = True
+                    if s not in self.signals:
+                        self.input_signals.append(s)
+                        self.signals.add(s)
+                else:
+                    assert False, 'input_domain must return SignalIn objects'
+
+
+            self._expand_parameter_algebra2()
+
+            random_signals = self.signals.random()
+            def make_sample_groups(ss):
+                return [sampler.get_sampler_for_signal(s) for s in ss]
+            self.sample_groups_test = make_sample_groups([s for s in random_signals
+                                                          if s in self.input_signals])
+            self.sample_groups_opt = make_sample_groups([s for s in random_signals
+                                                         if s not in self.input_signals])
 
 
         def _expand_parameter_algebra2(self):
@@ -405,74 +417,6 @@ class TemplateMaster():
         Actually do the entire analysis of the circuit
         '''
 
-        #RUN_SIMULATION = True
-        #if RUN_SIMULATION:
-        #    checkpoint_controller = {str(test):
-        #        {
-        #            'choose_inputs': True,
-        #            'run_sim': True,
-        #            'run_analysis': True,
-        #            'run_post_process': True,
-        #            'run_regression': True,
-        #            'run_post_regression': 'save'
-        #        }
-        #        for test in self.tests}
-        #else:
-        #    checkpoint_controller = {str(test):
-        #        {
-        #            'choose_inputs': False,
-        #            'run_sim': False,
-        #            'run_analysis': False,
-        #            'run_post_process': False,
-        #            'run_regression': True,
-        #            'run_post_regression': 'save'
-        #        }
-        #        for test in self.tests}
-
-        #checkpoint_controller = {
-        #    'StaticNonlinearityTest': {
-        #        'run_sim': True,
-        #        'run_regression': True,
-        #        'run_post_regression': 'save'
-        #    },
-        #    'ChannelTest': {
-        #        'run_sim': True,
-        #        'run_regression': True,
-        #        'run_post_regression': 'save'
-        #    },
-        #    'DelayTest': {
-        #        'run_sim': True,
-        #        'run_regression': True,
-        #        'run_post_regression': 'save'
-        #    },
-        #    'SineTest': {
-        #        'run_sim': True,
-        #        'run_regression': True,
-        #        'run_post_regression': 'save'
-        #    },
-        #    'ApertureTest': {
-        #        'run_sim': True,
-        #        'run_regression': True,
-        #        'run_post_regression': 'save'
-        #    },
-        #    'KickbackTest': {
-        #        'run_sim': True,
-        #        'run_regression': True,
-        #        'run_post_regression': 'save'
-        #    }
-        #}
-        #checkpoint_controller = {
-        #    'StaticNonlinearityTest': {
-        #        'run_sim': False,
-        #        'run_regression': False,
-        #        'run_post_regression': False
-        #    },
-        #    'ChannelTest': {
-        #        'run_sim': False,
-        #        'run_regression': False,
-        #        'run_post_regression': 'load'
-        #    }
-        #}
 
         params_by_mode_all = {}
         for test, controller in checkpoint_controller.items():
@@ -522,23 +466,16 @@ class TemplateMaster():
                 if controller['run_regression']:
                     regression = Regression(self, test, results)
 
-                    #PlotHelper.plot_regression(regression, test.parameter_algebra_vectored, regression.regression_dataframe)
-                    #PlotHelper.plot_optional_effects(test, regression.regression_dataframe, regression.results)
-                    mode_prefix = '' if mode == tuple() else f'mode_{mode}_'
-                    ph = PlotHelper(test,
-                                    test.parameter_algebra_vectored,
-                                    mode_prefix,
-                                    regression.expr_dataframe,
-                                    regression.results_expr)
-                    ph.plot_regression()
                     #ph.plot_optional_effects()
 
-                    rr = dict(regression.results)
+                    rr = regression.results_expr
 
                     checkpoint.save_regression_results(test, rr)
                     # TODO just a load test
                     rr = checkpoint.load_regression_results(test)
                 else:
+                    # TODO this is not working with modes
+                    #  we should load it if/when we need it, I think
                     rr = {}
 
                 #if controller['run_post_regression'] == 'load':
@@ -557,10 +494,28 @@ class TemplateMaster():
                 #    pass
                 #else:
                 #    assert False
-                temp = test.post_regression(regression.results_models, regression.regression_dataframe)
-                rr.update(temp)
+
+
+                # TODO I'm getting rid of post_regression temporarily
+                #temp = test.post_regression(regression.results_models, regression.regression_dataframe)
+                #rr.update(temp)
 
                 params_by_mode[mode] = rr
+
+
+            # TODO this is temporary
+            rr = checkpoint.load_regression_results(test)
+
+            # PlotHelper.plot_regression(regression, test.parameter_algebra_vectored, regression.regression_dataframe)
+            # PlotHelper.plot_optional_effects(test, regression.regression_dataframe, regression.results)
+            # TODO this has not been tested with modes
+            mode_prefix = '' if mode == tuple() else f'mode_{mode}_'
+            ph = PlotHelper(test,
+                            test.parameter_algebra_vectored,
+                            mode_prefix,
+                            results_each_mode,
+                            rr)
+            ph.plot_regression()
 
             # merge results from this test in results from all tests
             for mode in params_by_mode:
