@@ -272,6 +272,8 @@ class TemplateMaster():
             # center inputs
             self.center_mapping = {}
             def center(s):
+                return s
+                # TODO get rid of CenteredSignal; now handled in optional_fit
                 if (isinstance(s, SignalIn)
                         and isinstance(s.value, tuple)
                         and len(s.value) == 2):

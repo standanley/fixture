@@ -59,6 +59,9 @@ class CenteredSignalIn:
     def __str__(self):
         return f'<{str(self.template_name)} / {self.spice_name}>'
 
+    def friendly_name(self):
+        return self.template_name if self.spice_name is None else self.spice_name
+
 
 class SignalOut():
     def __init__(self,
@@ -526,6 +529,8 @@ class SignalArray:
 
         # TODO nested buses
         def guess_value():
+            if info['datatype'] == 'true_digital':
+                return None
             low = self.get_decimal_value([0]*len(self.array))
             high = self.get_decimal_value([1]*len(self.array))
             return (low, high)

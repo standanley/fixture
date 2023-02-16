@@ -3,7 +3,7 @@ filepath: ../spice/tia3.sp
 template: AmplifierTemplate
 
 checkpoint_controller:
-    GainTest:
+    DCTest:
         choose_inputs: True
         run_sim: True
         run_analysis: True

@@ -42,6 +42,7 @@ def _run(circuit_config_dict):
     TemplateClass = getattr(templates, template_name)
 
     circuit_filepath = circuit_config_dict['filepath']
+    assert os.path.exists(circuit_filepath), f'Circuit filepath "{circuit_filepath}" not found'
     simulator = Simulator(test_config_dict, circuit_filepath)
 
 
@@ -90,7 +91,7 @@ def _run(circuit_config_dict):
     #        for param, d in result_batch.items():
     #            for partial_term_optional, coef in d.items():
     #                print('%s\t%s\t%s\t%.3e' % (category, param, partial_term_optional, coef))
-    for test in t.tests:
+    for test in checkpoint_controller.keys():
         print(f'Results for {test}:')
         for lhs, rhs in test.parameter_algebra_final.items():
             print(f'\tModel for {lhs}:')

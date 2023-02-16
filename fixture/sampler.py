@@ -355,7 +355,7 @@ class Sampler:
         sm = SampleManager
         for group in test.sample_groups_opt:
             #if not any(s in test.input_signals for s in group.signals):
-            new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 5, 20)
+            new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 5, 10)
             data = pandas.concat((data, new_data), ignore_index=True)
         todo = sm.sample_all(100, test.sample_groups_test, test.sample_groups_opt)
         #print('TODO this is a bad place to set sample_groups; there are issues when we skip this step in the checkpoints')

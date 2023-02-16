@@ -236,7 +236,11 @@ class Regression:
         for lhs, rhs in test.parameter_algebra_final.items():
             for s in rhs.input_signals:
                 if isinstance(s, CenteredSignalIn):
-                    assert False, 'todo'
+                    #assert False, 'todo'
+                    'The goal is to have the verilog have an extra line creating s_variation'
+                    'Im not sure whether we have other goals as well'
+                    'Solution probably has to do with Heirarchical thing with a child that does the offset'
+                    print('not sure how to deal with Centered signal', s)
 
         #for lhs, rhs in pa.items():
             #for param, term in rhs.items():

@@ -24,6 +24,7 @@ class Testbench():
         self.tester = tester
         self.dut = tester.circuit.circuit
         self.test = test
+        assert test_vectors.shape[0] > 0, 'No test vectors passed to Testbench'
         self.test_vectors_all = test_vectors
         # TODO at this point, test_vectors.keys() has several things that we
         # want to ignore, but I don't know how to sort them out.

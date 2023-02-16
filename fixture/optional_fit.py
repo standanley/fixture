@@ -9,7 +9,7 @@ import pandas
 #import fixture
 import fixture.regression
 from fixture.sampler import SampleManager
-from fixture.signals import SignalArray, SignalIn
+from fixture.signals import SignalArray, SignalIn, CenteredSignalIn
 from fixture.plot_helper import plt, PlotHelper
 
 PLOT = True
@@ -157,7 +157,7 @@ class Expression(ABC):
     def friendly_name(s):
         if isinstance(s, str):
             return s
-        elif isinstance(s, (SignalIn, SignalArray)):
+        elif isinstance(s, (SignalIn, CenteredSignalIn, SignalArray)):
             return s.friendly_name()
         else:
             raise ValueError(f'Cannot find friendly name for {s}')
@@ -698,6 +698,83 @@ class SumExpression(Expression):
         ans = ' + '.join(f'{cn}' for cn in coef_names)
         return [f'{lhs} = {ans};']
 
+#class CenterExpression(Expression):
+#
+#    def __init__(self, s):
+#        self.input_signals = [s]
+#        self.name = f'{s.friendly_name()}_deviation'
+#        self.NUM_COEFFICIENTS = 0
+#
+#    def predict(self, opt_values, coefs):
+#        assert len(opt_values) == 1
+#        assert len(coefs) == 0
+#        return opt_values[0] - self.input_signals[0].nominal
+#
+#    def verilog(self, lhs, coef_names):
+#        opt_names = [self.friendly_name(s) for s in self.input_signals]
+#        assert len(coef_names) == 0
+#        return [f'{self.name} = {opt_names[0]} - {self.input_signals[0].nominal};']
+
+
+def center_expression_inputs(ExpressionUncentered, signals_to_center):
+    '''
+    Given an Expression class, return a modified version of the class that
+    centers the signals in signals_to_center before using them. The generated
+    Verilog will include extra lines to do this centering.
+    '''
+    assert issubclass(ExpressionUncentered, Expression)
+    name_mapping = {s: f'{s.friendly_name()}_deviation'
+                    for s in signals_to_center}
+
+    class ExpressionCentered(ExpressionUncentered):
+        def __init__(self, *args, **kwargs):
+            temp = super().__init__(*args, **kwargs)
+
+            # we precompute offsets to make predict() faster
+            offsets = [-s.nominal if s in signals_to_center else 0
+                       for s in self.input_signals]
+            self.centering_offsets = np.array(offsets)
+
+            # it's tempting to edit self.signals here so we take in
+            # s_deviation instead of s, but that confuses things when we are
+            # a child in a Heirarchical thing and the parent needs to know
+            # to pass us s rather than s_deviation
+            return temp
+
+        def predict(self, opt_values, coefs):
+            assert len(opt_values) == len(self.input_signals)
+            if isinstance(opt_values, list):
+                opt_values = np.array(opt_values)
+            return super().predict(opt_values - self.centering_offsets, coefs)
+
+        def fit(self, optional_data, result_data):
+            optional_data_centered = optional_data.copy()
+            for s in signals_to_center:
+                optional_data_centered[name_mapping[s]] = optional_data[s] - s.nominal
+            return super().fit(optional_data_centered, result_data)
+
+        def verilog(self, lhs, coef_names):
+
+            lines = []
+            for s in signals_to_center:
+                lines.append(f'{name_mapping[s]} = {s.friendly_name()} - {s.nominal};')
+
+
+            # we want to temporarily change the names of our signals so the
+            # call to ExpressionUncentered's verilog uses s_deviation
+            input_signals_uncentered = self.input_signals
+            self.input_signals = [name_mapping[s] if s in signals_to_center else s
+                                  for s in input_signals_uncentered]
+            lines += super().verilog(lhs, coef_names)
+            self.input_signals = input_signals_uncentered
+
+            return lines
+
+    return ExpressionCentered
+
+
+
+
 
 class ReciprocalExpression(Expression):
     __doc__ = '''
@@ -799,7 +876,11 @@ def get_optional_expression_from_signal(s, name):
         assert s.type_ == 'analog', 'TODO'
         assert isinstance(s.value, (list, tuple)), f'Trying to model as a function of {s}, but it has pinned value {s.value} instead of a range'
         assert len(s.value) == 2, f'Trying to model as a function of {s}, but it has value {s.value} instead of a range'
-        return AnalogExpression(s, name)
+
+        if s.nominal != 0:
+            return center_expression_inputs(AnalogExpression, [s])(s, name)
+        else:
+            return AnalogExpression(s, name)
 
 
 def get_optional_expression_from_signals(s_list, name):
