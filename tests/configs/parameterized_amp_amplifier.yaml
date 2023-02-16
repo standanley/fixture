@@ -1,0 +1,44 @@
+name: myamp_params
+filepath: ../spice/myamp_params.sp
+template: AmplifierTemplate
+pin:
+    vdd:
+        direction: input
+        datatype: real
+        value: 1.2
+    vss:
+        direction: input
+        datatype: real
+        value: 0
+    my_in:
+        direction: input
+        datatype: real
+        #value: (.2, 1.0)
+        value: (0.45, 0.7)
+    adj:
+        direction: input
+        datatype: analog
+        value: (.45, .55)
+    ba<3:0>:
+        direction: input
+        datatype: binary_analog
+        bus_type: binary
+        first_one: low
+    ctrl<1:0>:
+        direction: input
+        datatype: true_digital
+    my_out:
+        direction: output
+        datatype: real
+    vdd_internal:
+        direction: output
+        datatype: real
+
+template_pins:
+    input: my_in
+    output: my_out
+
+extras:
+    approx_settling_time: 1e-3
+
+test_config_file: ngspice.yaml
