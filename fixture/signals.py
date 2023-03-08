@@ -14,6 +14,7 @@ class SignalIn():
                  spice_pin,
                  template_name,
                  optional_expr,
+                 bus_info,
                  representation=None
             ):
         # TODO: do we need bus info?
@@ -27,6 +28,7 @@ class SignalIn():
         self.template_name = template_name
         # optional_expr should just be bool, not the actual expression
         self.optional_expr = optional_expr
+        self.bus_info = bus_info
         self.representation = representation
 
     def __str__(self):
@@ -254,8 +256,15 @@ def parse_name(name):
             indices_parsed.append(x)
         else:
             m = re.match(re_index_range_groups, index)
+            assert m is not None, f'Unexpected slice "{index}" during parsing of "{name}"'
             s, e = int(m.group(2)), int(m.group(3))
-            indices_parsed.append((s, e))
+            # Inclusive, like verilog behavior
+            if s <= e:
+                slice_ = slice(s, e+1)
+            else:
+                assert False, 'TODO unclear whether a[2:1] should become (a[2], a[1]) or (a[1], a[2]), should probably checked defined direction in sa.bus_info.brackets'
+                slice_ = slice(s, e-1, -1)
+            indices_parsed.append(slice_)
     return bus_name, tuple(indices_parsed)
 
 def expanded(name):
@@ -295,35 +304,42 @@ def expanded(name):
 
 
 class SignalManager:
-    def __init__(self, signals, signals_by_template_name):
-        if signals is None:
-            self.signals = []
-        else:
-            self.signals = signals
+    def __init__(self, signals):
+        '''
+        If there are SignalArrays, signals should not include the individual bits
+        '''
 
+        self.signals = signals
+        self.rebuild_ref_dicts()
+
+    def rebuild_ref_dicts(self):
+        temp = self.signals
+        self.signals = []
         self.signals_by_circuit_name = {}
-        for s_or_a in self.signals:
-            if isinstance(s_or_a, SignalArray):
-                for s in s_or_a.flatten():
-                    if s.spice_name is not None:
-                        self.signals_by_circuit_name[s.spice_pin] = s
+        self.signals_by_template_name = {}
+        for s in temp:
+            self.add(s)
 
-                if s_or_a.spice_name is not None:
-                    self.signals_by_circuit_name[s_or_a.spice_name] = s_or_a
-            else:
-                if s_or_a.spice_name is not None:
-                    self.signals_by_circuit_name[s_or_a.spice_name] = s_or_a
+        #self.signals_by_circuit_name = {}
+        #for s_or_a in self.signals:
+        #    if isinstance(s_or_a, SignalArray):
+        #        for s in s_or_a.flatten():
+        #            if s.spice_name is not None:
+        #                self.signals_by_circuit_name[s.spice_pin] = s
 
-        if signals_by_template_name is None:
-            self.signals_by_template_name = {}
-        else:
-            self.signals_by_template_name = signals_by_template_name
+        #        if s_or_a.spice_name is not None:
+        #            self.signals_by_circuit_name[s_or_a.spice_name] = s_or_a
+        #    else:
+        #        if s_or_a.spice_name is not None:
+        #            self.signals_by_circuit_name[s_or_a.spice_name] = s_or_a
+
+        #if signals_by_template_name is None:
+        #    self.signals_by_template_name = {}
+        #else:
+        #    self.signals_by_template_name = signals_by_template_name
 
     def add(self, signal):
-        # TODO should we allow SignalArray here?
-        assert isinstance(signal, (SignalIn, SignalOut))
-        #assert signal.spice_name is None
-        #assert signal.template_name is not None
+        assert isinstance(signal, (SignalIn, SignalOut, SignalArray))
 
         self.signals.append(signal)
         if signal.template_name is not None:
@@ -331,14 +347,22 @@ class SignalManager:
         if signal.spice_name is not None:
             self.signals_by_circuit_name[signal.spice_name] = signal
 
+    #def update(self, signal):
+    #    # if the user edits the circuit or template name (happens during config parsing)
+    #    # TODO technically I should check if this signal is still in the dicts
+    #    #  under another name, but for now this function is intended to be used
+    #    #  by adding a name, not changing it, so that's not necessary
+    #    assert signal in self.signals, f'"{signal}" already in signals; use add() instead'
+    #    self.signals.remove(signal)
+    #    self.add(signal)
+
+
 
     def copy(self):
         # the intention is for the template writer to add signals to the copy
         # without changing the original
         signals_copy = self.signals.copy()
-        by_template_copy = self.signals_by_template_name.copy()
-        # by_circuit_name will be rebuilt automatically
-        return SignalManager(signals_copy, by_template_copy)
+        return SignalManager(signals_copy)
 
     def from_template_name(self, name):
         # return a Signal or SignalArray of signals according to template name
@@ -368,8 +392,9 @@ class SignalManager:
             return self.signals_by_circuit_name[name]
         else:
             a = self.signals_by_circuit_name[bus_name]
-            s_or_ss = a[tuple(indices)]
-            return s_or_ss
+            for i in indices:
+                a = a[i]
+            return a
 
     def from_str(self, name):
         # TODO this is based on assumptions about the various __str__ methods
@@ -520,6 +545,8 @@ class SignalArray:
 
     def __init__(self, signal_array, info, template_name=None, spice_name=None,
                  is_vectored_input=False):
+        print('TODO rename info to bus_info or vice versa')
+        print('TODO get rid of SignalArray.value if it is not used')
         self.array = signal_array
         self.info = info
         self.template_name = template_name
@@ -536,18 +563,20 @@ class SignalArray:
             return (low, high)
         # can't use get here because we don't want to fun guess_value if not necessary
         #self.value = self.info.get('value', guess_value())
-        self.value = self.info['value'] if 'value' in self.info else guess_value()
-        self.nominal = self.info.get('nominal')
-        if self.nominal is None and self.value is not None:
-            # we can guess the nominal
-            if isinstance(self.value, int):
-                self.nominal = self.value
-            elif len(self.value) == 1:
-                self.nominal = self.value[0]
-            elif len(self.value) == 2:
-                self.nominal = sum(self.value) // 2
-            else:
-                raise ValueError(f'Could not guess nominal for <{self.template_name}/{self.spice_name}>')
+        #self.value = self.info['value'] if 'value' in self.info else guess_value()
+        self.value = None
+        self.nominal = None
+        #self.nominal = self.info.get('nominal')
+        #if self.nominal is None and self.value is not None:
+        #    # we can guess the nominal
+        #    if isinstance(self.value, int):
+        #        self.nominal = self.value
+        #    elif len(self.value) == 1:
+        #        self.nominal = self.value[0]
+        #    elif len(self.value) == 2:
+        #        self.nominal = sum(self.value) // 2
+        #    else:
+        #        raise ValueError(f'Could not guess nominal for <{self.template_name}/{self.spice_name}>')
         if self.nominal is not None:
             # distribute to children
             binary = self.get_binary_value(self.nominal)
@@ -615,13 +644,14 @@ class SignalArray:
             assert False, 'TODO'
 
 
-    def __getitem__(self, key):
-        slice = self.array[key]
-        if isinstance(slice, np.ndarray):
-            # TODO should slice inherit the info? For the info we currently use, no
-            return SignalArray(slice, {})
+    def __getitem__(self, item):
+        # reproduce more verilog-like behavior
+        if isinstance(item, slice):
+            print(slice)
+
+            return SignalArray(self.array[item], {})
         else:
-            return slice
+            return self.array[item]
 
     def __getattr__(self, name):
         # if you're stuck in a loop here, self probably has no .array

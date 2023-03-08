@@ -16,13 +16,18 @@ class Representation:
     #            super().__setattr__(key, value)
 
     @staticmethod
-    def get_referenced_signal_names(params):
+    def convert_and_tag_referenced_signals(params, signals):
+        def get_and_tag(name):
+            # TODO might be bad if ref_signal is SA, but also I think we are phasing out is_proxy_component
+            s = signals.from_circuit_name(name)
+            s.is_proxy_component = True
+            return s
         if params['style'] == 'pulse_width':
-            return [params['reference']]
-        elif params['style'] == 'vector':
-            return params['components']
-        elif params['style'] == 'linear_combination_in' or params['style'] == 'linear_combination_out':
-            return params['components']
+            params['reference'] = get_and_tag(params['reference'])
+        elif (params['style'] == 'linear_combination_in'
+              or params['style'] == 'linear_combination_out'
+              or params['style'] == 'vector'):
+            params['components'] = [get_and_tag(n) for n in params['components']]
         else:
             assert False, f'Unknown proxy style {params["style"]}'
 
@@ -50,13 +55,13 @@ class Representation:
             #    None,
             #    representation=rep
             #)
-            class PlaceholderSignal:
-                spice_name = None
-                template_name = None
-                representation = None
+            #class PlaceholderSignal:
+            #    spice_name = None
+            #    template_name = None
+            #    representation = None
             s = SignalArray(
                 #np.zeros(len(params['components']), dtype=object),
-                np.array([PlaceholderSignal()]*len(params['components'])),
+                np.array(params['components']),
                 {'value': None},
                 template_name=t_name,
                 spice_name=c_name
@@ -71,6 +76,7 @@ class Representation:
                 c_name,
                 None,
                 t_name,
+                'will_complete_in_finish_init',
                 'will_complete_in_finish_init',
             )
         elif params['style'] == 'linear_combination_out':

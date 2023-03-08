@@ -13,51 +13,51 @@ checkpoint_controller:
 
 
 
-pin:
+physical_pins:
     vdd:
-        direction: input
-        datatype: analog
+        direction: in
+        datatype: real
         #value: 3.0
         value: (2.7, 3.3)
-    #vss:
-    #    direction: input
-    #    datatype: real
-    #    value: 0
     inp:
-        direction: input
+        direction: in
         datatype: real
         electricaltype: current
     inn:
-        direction: input
+        direction: in
         datatype: real
         electricaltype: current
     
     ibias:
-        direction: input
-        datatype: analog
-        electricaltype: current
+        direction: in
+        datatype: current
         #value: (2e-6, 10e-6)
         value: 6e-6
     #rfadj<5>:
-    #    direction: input
+    #    direction: in
     #    datatype: real
     #    value: 3
     rfadj<5:0>:
-        direction: input
-        datatype: binary_analog
+        direction: in
+        datatype: bit
         bus_type: binary
         first_one: low
         value: (10, 63)
 
 
     outp:
-        direction: output
+        direction: out
         datatype: real
     outn:
-        direction: output
+        direction: out
         datatype: real
 
 proxy_signals:
+
+    test:
+        style: linear_combination_in
+        components: ["rfadj<2>", "rfadj<1:3>"]
+        coefficients: [42, 42]
 
     indiff:
         value: (-3e-6, 3e-6)

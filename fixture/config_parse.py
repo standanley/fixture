@@ -1,3 +1,4 @@
+import itertools
 import os
 import yaml
 import fixture.cfg_cleaner as cfg_cleaner
@@ -50,7 +51,266 @@ def range_inclusive(s, e):
     return list(range(s, e+d, d))
 
 
+def create_magma_circuit(name_, circuit_definition_filename, physical_pin_signals):
+    # TODO why do we need the file? Just to double-check, I think
+    io = []
+    for s in physical_pin_signals:
+        if isinstance(s, SignalArray):
+            # TODO is this the best way to do SA attributes?
+            # s.type_ is inheriting the type from the individual bits,
+            # which is a little confusing because the type of the sa itself
+            # should be an array
+            # TODO if we make s.type_ a magma array, we should do it in
+            #  parse_physical_pins
+            bit_type = s.type_
+            np_shape = s.shape
+            magma_shape = np_shape[0] if len(np_shape) == 1 else np_shape[::-1]
+            type_ = magma.Array[magma_shape, bit_type]
+            io += [s.spice_name, type_]
+        else:
+            io += [s.spice_name, s.type_]
 
+    class UserCircuit(magma.Circuit):
+        name = name_
+        IO = io
+
+    return UserCircuit
+
+
+def parse_physical_pins(physical_pin_dict):
+    # return a list of signals
+    datatypes = {
+        'bit': magma.Bit,
+        'real': fault.ms_types.RealType,
+        'current': fault.ms_types.CurrentType
+    }
+    directions = {
+        'in': magma.In,
+        'out': magma.Out
+    }
+    class BusInfo:
+        def __init__(self, bus_name, loc, brackets, type_):
+            self.bus_name = bus_name
+            self.loc = loc
+            self.brackets = brackets
+            self.type_ = type_
+
+    signals = []
+    bus_bits = []
+    bus_names = set()
+    # A user might want to declare a bus in two pieces for some reason,
+    # so we allow a sort of bit soup here and condense into buses later
+    for name, info in physical_pin_dict.items():
+        assert isinstance(info, dict), f'Issue with dict format for "{name}" physical pin'
+        assert 'datatype' in info, f'Missing "datatype" key for "{name}" physical pin'
+        assert info['datatype'] in datatypes, f'"datatype" for "{name}" must be one of {list(datatypes.keys())}'
+        assert 'direction' in info, f'Missing "direction" key for "{name}" physical pin'
+        assert info['direction'] in directions, f'"direction" for "{name}" must be one of {list(directions.keys())}'
+
+        datatype = datatypes[info["datatype"]]
+        direction = directions[info["direction"]]
+        dt = direction(datatype)
+
+
+        bus_name, indices_parsed, info_parsed, bits = parse_bus(name)
+        if len(indices_parsed) == 0:
+            signal = SignalIn(None, None, dt, None, None, name, None, None, None, None)
+            signals.append(signal)
+        else:
+            # array of (dict, cname, tname)
+            bus_names.add(bus_name)
+            for bit_name, bit_pos in bits:
+                type_ = info.get('type', None)
+                bi = BusInfo(bus_name, bit_pos, info_parsed, type_)
+                signal = SignalIn(None, None, dt, None, None, bit_name, None, None, None, bi)
+                bus_bits.append(signal)
+
+    # now go through each bus and collect its entries into an array
+    for bus_name in bus_names:
+        entries = [s for s in bus_bits if s.bus_info is not None and s.bus_info.bus_name == bus_name]
+        assert len(entries) > 0
+        brackets_rep = entries[0].bus_info.brackets
+        assert all(e.bus_info.brackets == brackets_rep for e in entries), f'Mismatched number of dimensions, index direction, or bracket type for bus "{bus_name}"'
+        type_rep = entries[0].bus_info.type_
+        assert all(e.bus_info.type_ == type_rep for e in entries), f'Mismatched number of dimensions, index direction, or bracket type for bus "{bus_name}"'
+
+        all_indices = np.array(list(e.bus_info.loc for e in entries))
+        indices_limits_lower = np.min(all_indices, 0)
+        for axis, lim in enumerate(indices_limits_lower):
+            assert lim == 0, f'Lower limit for axis {axis} for bus "{bus_name}" must be 0, but it is {lim}'
+
+        # like verilog, but not python, indices_limits_upper is INCLUSIVE
+        indices_limits_upper = np.max(all_indices, 0)
+        indices_limits_upper_exclusive = indices_limits_upper + 1
+        array = np.empty(indices_limits_upper_exclusive, dtype=object)
+        for e in entries:
+            loc = e.bus_info.loc
+            assert array[loc] is None, f'Duplicate definition of "{e.spice_name}"'
+            array[loc] = e
+
+        for loc in itertools.product(*list(range(b) for b in array.shape)):
+            assert array[loc] is not None, f'Missing definition for "{bus_name}" at index {loc} for bus with shape {array.shape}'
+
+        bi_total = BusInfo(bus_name, indices_limits_upper_exclusive, brackets_rep, type_rep)
+        sa = SignalArray(array, bi_total, None, bus_name)
+        signals.append(sa)
+
+    sm = SignalManager(signals)
+    return sm
+
+
+def parse_proxy_signals(proxy_signal_dict, physical_signals):
+    # create proxy signals return a list including the physical ones passed in
+    #def signal_from_circuit_name(child_name, parent_name):
+    #    ss = [s for s in signals if s.spice_name == child_name]
+    #    assert len(ss) != 0, f'No existing signal "{child_name}" found for creating proxy signal {parent_name}'
+    #    assert len(ss) < 2, f'Multiple signals with same name "{child_name}" when creating {parent_name}?'
+    #    return ss[0]
+
+    signals = physical_signals.copy()
+
+    # now create proxy signals
+    PROXY_SIGNAL_TAG = 'this_is_a_proxy_signal'
+    for name, value_dict in proxy_signal_dict.items():
+        assert name not in {s.spice_name for s in signals}, f'Duplicate name "{name}"'
+        # list is [info_dict, circuit_name, template_name]
+        # template name does not get assigned until later
+        value_dict[PROXY_SIGNAL_TAG] = True
+        # TODO mark all referenced signals as is_proxy_component
+        #signal_info_by_cname[name] = [value_dict, name, None]
+        Representation.convert_and_tag_referenced_signals(value_dict, signals)
+        r = Representation.create_signal(name, None, value_dict)
+        signals.add(r)
+    return signals
+
+def assign_template_pins(signals, template_matching):
+    # Now go through the template mapping and edit c_array to see template
+    # names, also create t_array_entries_by_name with info by template name
+    '''
+    t: c
+    t: c[0:7]
+    t: c[7:0]
+    t[0:7]: c
+    t[7:0]: c
+    t[7:0]: c[0:7]
+    In which case(s) does t[0] map to c[0]?
+    I think all cases except the last one
+    '''
+
+    # TODO there's an issue if somebody assigns a slice of a bus to a template
+    #  pin: what signal object do we return when the user asks for the template
+    #  pin? I think we should check if the slice already exists, and if not,
+    #  create a new SignalArray for that slice alone to give it the template name
+
+    t_array_entries_by_name = {}
+    template_pins = template_matching
+    for t, c in template_pins.items():
+
+
+        t_bus_name, t_indices, t_info, _ = parse_bus(t)
+        c_bus_name, c_indices, c_info, _ = parse_bus(c)
+
+
+        # TODO this is kind of a hack to write template names when the
+        #  bus already exists. If the bus doesn't exist, we are in trouble
+        #  also if the user is slicing the circuit bus right now, we are in trouble
+        #  I think the best solution is to have rebuild_ref_dicts condense template bits
+        if isinstance(signals.from_circuit_name(c), SignalArray):
+            signals.from_circuit_name(c).template_name = t_bus_name
+
+        # c_array is for the whole circuit bus, not just this entry/entries
+        #c_array = signal_info_by_cname[c_bus_name]
+        c_array = signals.from_circuit_name(c_bus_name).array
+
+        # if bus is bus[0:2][0:3] and we assign to bus[1], we want c_indices
+        # to look like [(1,), (0:3)], not just [(1,)]
+        c_shape = getattr(c_array, 'shape', [])
+        assert len(c_shape) >= len(c_indices), f'Too many indices in {c}'
+        # extend c_indices so it goes all the way to the end of c
+        c_indices += [(0, x-1) for x in c_shape[len(c_indices):]]
+
+        # get back string form given indices; use the correct braces
+        def get_t_name(t_indices_used):
+            t_info_padded = t_info.copy()
+            t_info_padded += ['[]a']*(len(t_indices_used) - len(t_info))
+
+            indices_text = [bs[0] + str(i) + bs[1] for i, bs in
+                            zip(t_indices_used, t_info_padded)]
+            return t_bus_name + ''.join(indices_text)
+
+        # match does 2 things:
+        # edit c_array to insert template names
+        # build up t_array_entries with template array entries
+        if t_bus_name not in t_array_entries_by_name:
+            t_array_entries_by_name[t_bus_name] = []
+        t_array_entries = t_array_entries_by_name[t_bus_name]
+        def match(t_indices_used, t_indices, c_a, c_indices):
+            # if the template array is 1 entry, that entry encompasses the whole circuit array
+            # if the template array is multiple entries, they must match with the circuit
+            #    entries 1 to 1 until the template entries run out of dimensions
+            #    if circuit runs out of dimensions first, that's an error
+            # Dimensions that aren't a range are kinda skipped in this mapping
+            #print('match called with', t_indices_used, t_indices, getattr(c_a, 'shape', []), c_indices)
+
+            state_t = 0 if len(t_indices) == 0 else len(t_indices[0])
+            state_c = 0 if len(c_indices) == 0 else len(c_indices[0])
+
+            if state_t == 1:
+                # descend on template single
+                # keep t index in the "used" list but don't move on c
+                match(t_indices_used + [t_indices[0][0]],
+                      t_indices[1:],
+                      c_a,
+                      c_indices)
+            elif state_c == 1:
+                # descend on circuit single
+                # not a range for c, so descend on c but don't move on t
+                match(t_indices_used,
+                      t_indices,
+                      c_a[c_indices[0][0]],
+                      c_indices[1:])
+
+            elif state_t == 0 and state_c == 0:
+                # we should be at the end of the array
+                assert not isinstance(c_a, np.ndarray), 'internal error in config_parse?, should have extended c indices to match array'
+                #print('mapping', t_indices_used, c_a)
+                t_name = get_t_name(t_indices_used)
+                c_a.template_name = t_name
+                t_array_entries.append((t_indices_used, t_name))
+
+            elif state_t == 0 and state_c == 2:
+                # Add a dimension to t so it matches c
+                # This doesn't descend yet, but will recurse to the 2,2 state
+                match(t_indices_used,
+                      t_indices + [c_indices[0]],
+                      c_a,
+                      c_indices)
+
+            elif state_t == 2 and state_c == 0:
+                assert False, 'Error matching {t}, {c}: {t} has too many dimensions'
+
+            elif state_t == 2 and state_c == 2:
+                # match indices
+                # they both have ranges; they must match
+                tr = range_inclusive(*t_indices[0])
+                cr = range_inclusive(*c_indices[0])
+                assert len(tr) == len(cr), f'Mismatched shapes for {t}, {c}'
+                for ti, ci in zip(tr, cr):
+                    match(t_indices_used + [ti],
+                          t_indices[1:],
+                          c_a[ci],
+                          c_indices[1:])
+            else:
+                assert False, 'Internal error in config parse, unknown state'
+
+        match([], t_indices, c_array, c_indices)
+
+    signals.rebuild_ref_dicts()
+    return t_array_entries_by_name
+
+
+def parse_stimulus_generation(signals, stim_dict):
+    pass
 
 def parse_config(circuit_config_dict):
 
@@ -61,6 +321,22 @@ def parse_config(circuit_config_dict):
     test_config_filename = circuit_config_dict['test_config_file']
     test_config_filename_abs = path_relative(circuit_config_dict['filename'], test_config_filename)
     test_config_dict = parse_test_cfg(test_config_filename_abs)
+
+    physical_pin_signals = parse_physical_pins(circuit_config_dict['physical_pins'])
+    UserCircuit = create_magma_circuit(
+        circuit_config_dict['filepath'],
+        circuit_config_dict['name'],
+        physical_pin_signals
+    )
+
+    signals = parse_proxy_signals(circuit_config_dict['proxy_signals'], physical_pin_signals)
+
+    template_unused = assign_template_pins(signals, circuit_config_dict['template_pins'])
+
+    sample_groups = parse_stimulus_generation(signals, circuit_config_dict['stimulus_generation'])
+
+    print(ans)
+
 
     # TODO this special case probably doesn't belong here
     if 'extras' in circuit_config_dict:
@@ -138,26 +414,6 @@ def parse_config(circuit_config_dict):
             io += [c_name, p['magma_datatype']]
 
 
-    # now create proxy signals
-    PROXY_SIGNAL_TAG = 'this_is_a_proxy_signal'
-    if 'proxy_signals' in circuit_config_dict:
-        test = circuit_config_dict.get('proxy_signals', {})
-        for name, value_dict in test.items():
-            assert name not in signal_info_by_cname, f'Duplicate name "{name}"'
-            # list is [info_dict, circuit_name, template_name]
-            # template name does not get assigned until later
-            value_dict[PROXY_SIGNAL_TAG] = True
-            # TODO mark all referenced signals as is_proxy_component
-            signal_info_by_cname[name] = [value_dict, name, None]
-            refs = Representation.get_referenced_signal_names(value_dict)
-            for ref in refs:
-                if ref in signal_info_by_cname:
-                    assert ref in signal_info_by_cname, f'Could not find signal component "{ref}"'
-                    signal_info_by_cname[ref][0]['is_proxy_component'] = True
-                else:
-                    bus_name, indices = parse_name(ref)
-                    assert bus_name in signal_info_by_cname, f'Could not find signal component "{bus_name}"'
-                    signal_info_by_cname[bus_name][indices][0]['is_proxy_component'] = True
 
     ## TODO amp vector test stuff
     #signal_info_by_cname['inp'][0]['is_proxy_component'] = True
@@ -169,106 +425,6 @@ def parse_config(circuit_config_dict):
         name = circuit_config_dict['name']
         IO = io
 
-    # Now go through the template mapping and edit c_array to see template
-    # names, also create t_array_entries_by_name with info by template name
-    '''
-    t: c
-    t: c[0:7]
-    t: c[7:0]
-    t[0:7]: c
-    t[7:0]: c
-    t[7:0]: c[0:7]
-    In which case(s) does t[0] map to c[0]?
-    I think all cases except the last one
-    '''
-
-    t_array_entries_by_name = {}
-    template_pins = circuit_config_dict['template_pins']
-    for t, c in template_pins.items():
-        t_bus_name, t_indices, t_info, _ = parse_bus(t)
-        c_bus_name, c_indices, c_info, _ = parse_bus(c)
-        # c_array is for the whole circuit bus, not just this entry/entries
-        c_array = signal_info_by_cname[c_bus_name]
-
-        # if bus is bus[0:2][0:3] and we assign to bus[1], we want c_indices
-        # to look like [(1,), (0:3)], not just [(1,)]
-        c_shape = getattr(c_array, 'shape', [])
-        assert len(c_shape) >= len(c_indices), f'Too many indices in {c}'
-        # extend c_indices so it goes all the way to the end of c
-        c_indices += [(0, x-1) for x in c_shape[len(c_indices):]]
-
-        # get back string form given indices; use the correct braces
-        def get_t_name(t_indices_used):
-            indices_text = [bs[0] + str(i) + bs[1] for i, bs in
-                       zip(t_indices_used, t_info)]
-            return t_bus_name + ''.join(indices_text)
-
-        # match does 2 things:
-        # edit c_array to insert template names
-        # build up t_array_entries with template array entries
-        if t_bus_name not in t_array_entries_by_name:
-            t_array_entries_by_name[t_bus_name] = []
-        t_array_entries = t_array_entries_by_name[t_bus_name]
-        def match(t_indices_used, t_indices, c_a, c_indices):
-            # if the template array is 1 entry, that entry encompasses the whole circuit array
-            # if the template array is multiple entries, they must match with the circuit
-            #    entries 1 to 1 until the template entries run out of dimensions
-            #    if circuit runs out of dimensions first, that's an error
-            # Dimensions that aren't a range are kinda skipped in this mapping
-            #print('match called with', t_indices_used, t_indices, getattr(c_a, 'shape', []), c_indices)
-
-            state_t = 0 if len(t_indices) == 0 else len(t_indices[0])
-            state_c = 0 if len(c_indices) == 0 else len(c_indices[0])
-
-            if state_t == 1:
-                # descend on template single
-                # keep t index in the "used" list but don't move on c
-                match(t_indices_used + [t_indices[0][0]],
-                      t_indices[1:],
-                      c_a,
-                      c_indices)
-            elif state_c == 1:
-                # descend on circuit single
-                # not a range for c, so descend on c but don't move on t
-                match(t_indices_used,
-                      t_indices,
-                      c_a[c_indices[0][0]],
-                      c_indices[1:])
-
-            elif state_t == 0 and state_c == 0:
-                # we should be at the end of the array
-                assert not isinstance(c_a, np.ndarray), 'internal error in config_parse?, should have extended c indices to match array'
-                #print('mapping', t_indices_used, c_a)
-                t_name = get_t_name(t_indices_used)
-                c_a[2] = t_name
-                t_array_entries.append((t_indices_used, t_name))
-
-            elif state_t == 0 and state_c == 2:
-                # Add a dimension to t so it matches c
-                # This doesn't descend yet, but will recurse to the 2,2 state
-                match(t_indices_used,
-                      t_indices + [c_indices[0]],
-                      c_a,
-                      c_indices)
-
-            elif state_t == 2 and state_c == 0:
-                assert False, 'Error matching {t}, {c}: {t} has too many dimensions'
-
-            elif state_t == 2 and state_c == 2:
-                # match indices
-                # they both have ranges; they must match
-                tr = range_inclusive(*t_indices[0])
-                cr = range_inclusive(*c_indices[0])
-                assert len(tr) == len(cr), f'Mismatched shapes for {t}, {c}'
-                for ti, ci in zip(tr, cr):
-                    match(t_indices_used + [ti],
-                          t_indices[1:],
-                          c_a[ci],
-                          c_indices[1:])
-            else:
-                assert False, 'Internal error in config parse, unknown state'
-
-        match([], t_indices, c_array, c_indices)
 
 
     # now actually create the signals

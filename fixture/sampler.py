@@ -196,7 +196,7 @@ class SamplerAnalog(SampleStyle):
         return sample[self.signal]
 
 
-class SamplerConstrainted(SampleStyle):
+class SamplerConstrained(SampleStyle):
     def __init__(self, samplers, constraint_fun):
         #self.signals = signals
         self.samplers = samplers
