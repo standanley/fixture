@@ -72,6 +72,7 @@ class SignalOut():
                  spice_pin,
                  template_name,
                  auto_measure,
+                 bus_info=None,
                  representation=None
                  ):
         self.type_ = type_
@@ -79,6 +80,7 @@ class SignalOut():
         self.spice_pin = spice_pin
         self.template_name = template_name
         self.auto_measure = auto_measure
+        self.bus_info = bus_info
         self.representation = representation
 
     def __str__(self):
@@ -178,7 +180,8 @@ def create_input_domain_signal(name, value, spice_pin=None,
         spice_pin,
         None if spice_pin is None else str(spice_pin),
         name,
-        optional_expr
+        optional_expr,
+        None
     )
 
 
@@ -543,12 +546,13 @@ class SignalArray:
                                 'optional_expr',
                                 ]
 
-    def __init__(self, signal_array, info, template_name=None, spice_name=None,
+    def __init__(self, signal_array, bus_info, template_name=None, spice_name=None,
                  is_vectored_input=False):
         print('TODO rename info to bus_info or vice versa')
         print('TODO get rid of SignalArray.value if it is not used')
         self.array = signal_array
-        self.info = info
+        assert bus_info is None or 'BusInfo' in str(type(bus_info)), 'TODO havent thought through all usages of bus_info yet'
+        self.bus_info = bus_info
         self.template_name = template_name
         self.spice_name = spice_name
         self.is_vectored_input = is_vectored_input
@@ -556,7 +560,7 @@ class SignalArray:
 
         # TODO nested buses
         def guess_value():
-            if info['datatype'] == 'true_digital':
+            if bus_info['datatype'] == 'true_digital':
                 return None
             low = self.get_decimal_value([0]*len(self.array))
             high = self.get_decimal_value([1]*len(self.array))
@@ -588,24 +592,24 @@ class SignalArray:
         return np.vectorize(fun)(self.array)
 
     def get_decimal_value(self, data):
-        assert self.info['datatype'] == 'binary_analog'
+        assert self.bus_info['datatype'] == 'binary_analog'
         if isinstance(data, dict):
             data = [data[s] for s in self.array]
             data = np.array(data)
         else:
             data = np.array(data)
 
-        if self.info['bus_type'] == 'binary' or self.info['bus_type'] == 'binary_exact':
+        if self.bus_info['bus_type'] == 'binary' or self.bus_info['bus_type'] == 'binary_exact':
             # TODO I don't like making the assumption here, but it should only affect plots, not functionality
-            first_one = self.info.get('first_one', 'low')
+            first_one = self.bus_info.get('first_one', 'low')
             assert first_one in ['low', 'high']
             def to_dec(seq):
                 seq_ordered = seq if first_one == 'low' else seq[::-1]
                 val = sum(2**i*x for i, x in enumerate(seq_ordered))
                 return val
-        elif self.info['bus_type'] == 'signed_magnitude':
+        elif self.bus_info['bus_type'] == 'signed_magnitude':
             # NOTE we assume the sign bit is the highest-order, i.e. not the "first_one"
-            first_one = self.info.get('first_one', 'low')
+            first_one = self.bus_info.get('first_one', 'low')
             assert first_one in ['low', 'high']
             def to_dec(seq):
                 if first_one == 'low':
@@ -626,19 +630,19 @@ class SignalArray:
             return ans
 
     def get_binary_value(self, decimal):
-        assert self.info['datatype'] in ['binary_analog', 'bit']
+        assert self.bus_info['datatype'] in ['binary_analog', 'bit']
         # need to allow int and np.int64
         assert isinstance(decimal, numbers.Integral)
 
-        if self.info['bus_type'] == 'binary':
-            first_one = self.info.get('first_one', None)
+        if self.bus_info['bus_type'] == 'binary':
+            first_one = self.bus_info.get('first_one', None)
             assert first_one in ['low', 'high'], f'{self} must set first_one to be "low" or "high"'
             ans_str = bin(decimal)[2:]
             ans = [0]*(self.shape[0] - len(ans_str)) + [int(x) for x in ans_str]
             if first_one == 'low':
                 ans = ans[::-1]
             return ans
-        elif self.info['bus_type'] == 'signed_magnitude':
+        elif self.bus_info['bus_type'] == 'signed_magnitude':
             assert False, 'TODO'
         else:
             assert False, 'TODO'
@@ -648,8 +652,10 @@ class SignalArray:
         # reproduce more verilog-like behavior
         if isinstance(item, slice):
             print(slice)
-
-            return SignalArray(self.array[item], {})
+            # TODO inherit bus_info from self, but I'm not sure how loc should
+            #  get translated, so for now I'm passing None and if anyone ever
+            #  needs to use bus_info they can figure out what is necessary
+            return SignalArray(self.array[item], None)
         else:
             return self.array[item]
 

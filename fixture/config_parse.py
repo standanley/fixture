@@ -1,10 +1,12 @@
 import itertools
+import numbers
 import os
 import yaml
 import fixture.cfg_cleaner as cfg_cleaner
-from fixture import Representation
+from fixture import Representation, templates
 from fixture.optional_fit import get_optional_expression_from_signals, \
     LinearExpression, HeirarchicalExpression
+from fixture.sampler import SamplerConst, SamplerAnalog, get_sampler_for_signal
 from fixture.signals import create_signal, parse_bus, parse_name, \
     SignalArray, SignalManager, SignalOut, SignalIn
 import magma
@@ -12,6 +14,8 @@ import fault
 import ast
 import re
 import numpy as np
+
+from fixture.simulator import Simulator
 
 
 def path_relative(path_to_config, path_from_config):
@@ -27,10 +31,7 @@ def path_relative(path_to_config, path_from_config):
 
 
 def parse_test_cfg(test_config_filename_abs):
-    with open(test_config_filename_abs) as f:
-        test_config_dict = yaml.safe_load(f)
-    if 'num_cycles' not in test_config_dict and test_config_dict['target'] != 'spice':
-        test_config_dict['num_cycles'] = 10**9 # default 1 second, will quit early if $finish is reached
+    assert False
     return test_config_dict
 
 
@@ -62,18 +63,26 @@ def create_magma_circuit(name_, circuit_definition_filename, physical_pin_signal
             # should be an array
             # TODO if we make s.type_ a magma array, we should do it in
             #  parse_physical_pins
-            bit_type = s.type_
+            bit_type = s.spice_pin
             np_shape = s.shape
             magma_shape = np_shape[0] if len(np_shape) == 1 else np_shape[::-1]
             type_ = magma.Array[magma_shape, bit_type]
             io += [s.spice_name, type_]
         else:
-            io += [s.spice_name, s.type_]
+            io += [s.spice_name, s.spice_pin]
 
     class UserCircuit(magma.Circuit):
         name = name_
         IO = io
 
+    # now edit the signals to put the actual spice pins into spice_pin
+    for s in physical_pin_signals:
+        spice_pin = getattr(UserCircuit, s.spice_name)
+        s.spice_pin = spice_pin
+        if isinstance(s, SignalArray):
+            assert len(s.array.shape) == 1, 'TODO multidimensional bus'
+            for a, b in zip(s, spice_pin):
+                a.spice_pin = b
     return UserCircuit
 
 
@@ -95,6 +104,15 @@ def parse_physical_pins(physical_pin_dict):
             self.brackets = brackets
             self.type_ = type_
 
+    def make_signal(name, dt, direction, bus_info=None):
+        if direction == 'in':
+            return SignalIn(None, None, None, None, None, name, dt,
+                                None, None, bus_info)
+        elif direction == 'out':
+            return SignalOut(None, name, dt, None, None, bus_info)
+        else:
+            assert False, f'Unknown direction "{direction}" for singal "{name}"'
+
     signals = []
     bus_bits = []
     bus_names = set()
@@ -111,18 +129,16 @@ def parse_physical_pins(physical_pin_dict):
         direction = directions[info["direction"]]
         dt = direction(datatype)
 
-
         bus_name, indices_parsed, info_parsed, bits = parse_bus(name)
         if len(indices_parsed) == 0:
-            signal = SignalIn(None, None, dt, None, None, name, None, None, None, None)
+            signal = make_signal(name, dt, info['direction'])
             signals.append(signal)
         else:
-            # array of (dict, cname, tname)
             bus_names.add(bus_name)
             for bit_name, bit_pos in bits:
                 type_ = info.get('type', None)
                 bi = BusInfo(bus_name, bit_pos, info_parsed, type_)
-                signal = SignalIn(None, None, dt, None, None, bit_name, None, None, None, bi)
+                signal = make_signal(name, dt, info['direction'], bi)
                 bus_bits.append(signal)
 
     # now go through each bus and collect its entries into an array
@@ -180,6 +196,8 @@ def parse_proxy_signals(proxy_signal_dict, physical_signals):
         #signal_info_by_cname[name] = [value_dict, name, None]
         Representation.convert_and_tag_referenced_signals(value_dict, signals)
         r = Representation.create_signal(name, None, value_dict)
+        if r.representation is not None:
+            r.representation.finish_init(signals)
         signals.add(r)
     return signals
 
@@ -310,32 +328,66 @@ def assign_template_pins(signals, template_matching):
 
 
 def parse_stimulus_generation(signals, stim_dict):
-    pass
+    def samplers_from_entry(name, info):
+        # never returns multiple, but sometimes returns zero
+        try:
+            s = signals.from_circuit_name(name)
+            s.value = info
 
-def parse_config(circuit_config_dict):
+            if s.template_name is not None:
+                # template writer has full control over this signal
+                return []
+            else:
+                # must be optional input
+                return get_sampler_for_signal(s)
+        except KeyError:
+            print('todo')
 
-    #cfg_cleaner.edit_cfg(circuit_config_dict)
+    sample_groups = []
+    for name, info_str in stim_dict.items():
+        info = ast.literal_eval(info_str)
+        sample_groups += samplers_from_entry(name, info)
+    return sample_groups
 
 
-    # load test config data
+def get_simulator(circuit_config_dict):
     test_config_filename = circuit_config_dict['test_config_file']
     test_config_filename_abs = path_relative(circuit_config_dict['filename'], test_config_filename)
-    test_config_dict = parse_test_cfg(test_config_filename_abs)
+    with open(test_config_filename_abs) as f:
+        test_config_dict = yaml.safe_load(f)
+    if 'num_cycles' not in test_config_dict and test_config_dict['target'] != 'spice':
+        test_config_dict['num_cycles'] = 10**9 # default 1 second, will quit early if $finish is reached
+
+    circuit_filepath = circuit_config_dict['filepath']
+    assert os.path.exists(circuit_filepath), f'Circuit filepath "{circuit_filepath}" not found'
+    simulator = Simulator(test_config_dict, circuit_filepath)
+    return simulator
+
+def parse_config(circuit_config_dict):
+    simulator = get_simulator(circuit_config_dict)
 
     physical_pin_signals = parse_physical_pins(circuit_config_dict['physical_pins'])
     UserCircuit = create_magma_circuit(
-        circuit_config_dict['filepath'],
         circuit_config_dict['name'],
+        circuit_config_dict['filepath'],
         physical_pin_signals
     )
 
     signals = parse_proxy_signals(circuit_config_dict['proxy_signals'], physical_pin_signals)
 
-    template_unused = assign_template_pins(signals, circuit_config_dict['template_pins'])
+    template_mapping_unused = assign_template_pins(signals, circuit_config_dict['template_pins'])
 
     sample_groups = parse_stimulus_generation(signals, circuit_config_dict['stimulus_generation'])
 
-    print(ans)
+
+    template_class_name = circuit_config_dict['template']
+    TemplateClass = getattr(templates, template_class_name)
+
+    extras = parse_extras(circuit_config_dict['extras'])
+
+    t = TemplateClass(UserCircuit, simulator, signals, sample_groups, extras)
+
+    return t
 
 
     # TODO this special case probably doesn't belong here
@@ -554,11 +606,13 @@ def parse_config(circuit_config_dict):
     return UserCircuit, template_class_name, sm, test_config_dict, optional_input_info, extras
 
 
-def parse_optional_input_info(optional_input_info, tests):
+def parse_optional_input_info(circuit_config_dict, tests):
     # TODO this can't be in the main parse_config because it needs to wait
     # until after the template has expanded parameter_algebra
     # TODO I think we should pass in the list of tests so we can look through
     # the parameter_algebra_vectored for each one
+
+    optional_input_info = circuit_config_dict.get('optional_input_info', {})
 
     # we only make this list of params for an error message
     params = []

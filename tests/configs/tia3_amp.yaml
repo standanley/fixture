@@ -18,7 +18,7 @@ physical_pins:
         direction: in
         datatype: real
         #value: 3.0
-        value: (2.7, 3.3)
+        #value: (2.7, 3.3)
     inp:
         direction: in
         datatype: real
@@ -32,7 +32,7 @@ physical_pins:
         direction: in
         datatype: current
         #value: (2e-6, 10e-6)
-        value: 6e-6
+        #value: 6e-6
     #rfadj<5>:
     #    direction: in
     #    datatype: real
@@ -60,12 +60,12 @@ proxy_signals:
         coefficients: [42, 42]
 
     indiff:
-        value: (-3e-6, 3e-6)
+        #value: (-3e-6, 3e-6)
         style: linear_combination_in
         components: [inp, inn]
         coefficients: [1, -1]
     incm:
-        value: (-1e-6, 1e-6)
+        #value: (-1e-6, 1e-6)
         style: linear_combination_in
         components: [inp, inn]
         coefficients: [0.5, 0.5]
@@ -93,6 +93,21 @@ proxy_signals:
 template_pins:
     input: input_test
     output: output_test
+
+stimulus_generation:
+    indiff: (-3e-6, 3e-6)
+    incm: (-1e-6, 1e-6)
+    vdd: (2.7, 3.3)
+    ibias: 6e-6
+
+
+
+
+
+
+
+
+
 
 extras:
     #approx_settling_time: 2e-9

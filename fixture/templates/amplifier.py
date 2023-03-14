@@ -2,6 +2,8 @@ from fixture import TemplateMaster
 from fixture import PlotHelper
 import matplotlib.pyplot as plt
 import numpy as np
+
+from fixture.sampler import SamplerTestbench
 from fixture.signals import create_input_domain_signal, SignalArray
 from fixture.template_creation_utils import extract_pzs
 
@@ -29,6 +31,9 @@ class AmplifierTemplate(TemplateMaster):
 
         def input_domain(self):
             # could also use fixture.RealIn(self.input.limits, 'my_name')
+            #return [self.signals.from_template_name('input').value]
+            #limits = self.signals.from_template_name('input').value
+            #return [SamplerTestbench('input_sampler', limits)]
             return [self.signals.from_template_name('input')]
 
         def testbench(self, tester, values):
@@ -44,6 +49,7 @@ class AmplifierTemplate(TemplateMaster):
             #self.debug(tester, self.signals.from_spice_name('cm_adj<3>').spice_pin, debug_time)
             #self.debug(tester, self.signals.from_spice_name('vbias').spice_pin, debug_time)
             input = self.signals.input
+
             tester.poke(input, values[input])
             wait_time = float(self.extras['approx_settling_time'])*2
             tester.delay(wait_time)

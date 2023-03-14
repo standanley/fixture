@@ -37,18 +37,22 @@ def run(circuit_config_filename):
 
 def _run(circuit_config_dict):
 
-    UserCircuit, template_name, signal_manager, test_config_dict, optional_input_info, extras = config_parse.parse_config(circuit_config_dict)
-    tester = fault.Tester(UserCircuit)
-    TemplateClass = getattr(templates, template_name)
+    ##UserCircuit, template_name, signal_manager, test_config_dict, optional_input_info, extras = config_parse.parse_config(circuit_config_dict)
+    #tester = fault.Tester(UserCircuit)
+    #TemplateClass = getattr(templates, template_name)
 
-    circuit_filepath = circuit_config_dict['filepath']
-    assert os.path.exists(circuit_filepath), f'Circuit filepath "{circuit_filepath}" not found'
-    simulator = Simulator(test_config_dict, circuit_filepath)
+    #circuit_filepath = circuit_config_dict['filepath']
+    #assert os.path.exists(circuit_filepath), f'Circuit filepath "{circuit_filepath}" not found'
+    #simulator = Simulator(test_config_dict, circuit_filepath)
 
 
-    t = TemplateClass(UserCircuit, simulator, signal_manager, extras)
+    #t = TemplateClass(UserCircuit, simulator, signal_manager, extras)
+
+
+
+    t = config_parse.parse_config(circuit_config_dict)
     #TODO this might be a good place to build up nonlinear expressions
-    config_parse.parse_optional_input_info(optional_input_info, t.tests)
+    config_parse.parse_optional_input_info(circuit_config_dict, t.tests)
 
     checkpoint = Checkpoint(t, 'checkpoint_folder')
 

@@ -41,7 +41,8 @@ class Representation:
                 c_name,
                 None,
                 t_name,
-                t_name is None
+                t_name is None,
+                None
             )
         elif params['style'] == 'vector':
             #s = cls.VectorSignalIn(
@@ -62,7 +63,7 @@ class Representation:
             s = SignalArray(
                 #np.zeros(len(params['components']), dtype=object),
                 np.array(params['components']),
-                {'value': None},
+                None,
                 template_name=t_name,
                 spice_name=c_name
             )
@@ -80,12 +81,14 @@ class Representation:
                 'will_complete_in_finish_init',
             )
         elif params['style'] == 'linear_combination_out':
+            # TODO I think bus_info maybe should not be None
             s = SignalOut(
                 'will_complete_in_finish_init',
                 c_name,
                 None,
                 t_name,
                 'will_complete_in_finish_init',
+                None
             )
         else:
             assert False, f'Unknown proxy style {params["style"]}'
@@ -114,7 +117,8 @@ class Representation:
                 f'{self.name}_pulse_start',
                 None,
                 None,
-                True
+                True,
+                None
             )
             # TODO do I put self.parent_signal as the parent signal for
             # the pulse_start too?
@@ -131,14 +135,15 @@ class Representation:
         elif self.style == 'rising_edge_timer':
             assert False, 'TODO'
         elif self.style == 'linear_combination_in' or self.style == 'linear_combination_out':
-            components_str = []
-            components = []
-            for component_str in self.params['components']:
-                components_str.append(component_str)
-                component = signal_manager.from_circuit_name(component_str)
-                components.append(component)
-            self.params['components_str'] = components_str
-            self.params['components'] = components
+            # with new config parse, components have already been converted
+            #components_str = []
+            #components = []
+            #for component_str in self.params['components']:
+            #    components_str.append(component_str)
+            #    component = signal_manager.from_circuit_name(component_str)
+            #    components.append(component)
+            #self.params['components_str'] = components_str
+            #self.params['components'] = components
 
             # copy signal properties from one of the components
             ref_signal = self.params['components'][0]
@@ -160,16 +165,17 @@ class Representation:
             else:
                 assert False, f'TODO make linear combination out of signal type {type(ref_signal)}'
         elif self.style == 'vector':
-            # convert component strings to actual objects
-            components_str = []
-            components = []
-            for component_str in self.params['components']:
-                components_str.append(component_str)
-                component = signal_manager.from_circuit_name(component_str)
-                components.append(component)
-            self.params['components_str'] = components_str
-            self.params['components'] = components
-            self.parent_signal.array = np.array(components)
+            # with new config parse, components have already been converted
+            ## convert component strings to actual objects
+            #components_str = []
+            #components = []
+            #for component_str in self.params['components']:
+            #    components_str.append(component_str)
+            #    component = signal_manager.from_circuit_name(component_str)
+            #    components.append(component)
+            #self.params['components_str'] = components_str
+            #self.params['components'] = components
+            #self.parent_signal.array = np.array(components)
 
             if self.parent_signal.template_name is not None:
                 for i, s in enumerate(self.parent_signal.array):

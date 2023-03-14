@@ -74,9 +74,9 @@ def dump_yaml(template, params_by_mode, mapping):
             if isinstance(term, tuple):
                 return ' * '.join(convert_term_to_verilog(x) for x in term)
             if isinstance(term, SignalArray):
-                assert term.info['datatype'] == 'binary_analog', f'Cannot make verilog for {term} if it is not binary_analog'
-                if term.info['bus_type'] == 'binary_exact':
-                    term_ordered = list(term) if term.info['first_one'] == 'low' else list(term)[::-1]
+                assert term.bus_info['datatype'] == 'binary_analog', f'Cannot make verilog for {term} if it is not binary_analog'
+                if term.bus_info['bus_type'] == 'binary_exact':
+                    term_ordered = list(term) if term.bus_info['first_one'] == 'low' else list(term)[::-1]
                     # TODO I think this should be wrapped in parentheses but they break mGenero
                     return '(' + '+'.join(f'{2**i}*'+convert_term_to_verilog(b) for i, b in enumerate(term_ordered)) + ')'
                     #return '+'.join(f'{2**i}*'+convert_term_to_verilog(b) for i, b in enumerate(term_ordered))

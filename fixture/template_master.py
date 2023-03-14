@@ -2,6 +2,7 @@ import fault
 from abc import ABC, abstractmethod
 import fixture
 from fixture import Tester, Regression, sampler
+from fixture.sampler import SampleStyle, get_sampler_for_signal
 from fixture.signals import SignalManager, SignalArray, SignalOut, SignalIn, CenteredSignalIn
 from fixture.plot_helper import PlotHelper
 
@@ -29,7 +30,7 @@ class TemplateMaster():
             except KeyError as err:
                 raise AttributeError(err)
 
-    def __init__(self, circuit, simulator, signal_manager, extras={}):
+    def __init__(self, circuit, simulator, signal_manager, sample_groups, extras={}):
         '''
         circuit: The magma circuit
         port_mapping: a dictionary of {template_name: circuit_name} for required pins
@@ -41,6 +42,7 @@ class TemplateMaster():
         self.dut = circuit
         self.extras = extras
         self.simulator = simulator
+        self.sample_groups = sample_groups
 
         # by the time the template is instantiated, a child should have added this
         assert hasattr(self, 'required_ports')
@@ -93,31 +95,26 @@ class TemplateMaster():
             #  I think the solution is to be more explicit about hte template
             #  writer's choices. e.g. They can pass an existing input signal,
             #  in which case we somehow set get_random, otherwise we leave it alone
-            for s in test_dimensions:
-                if isinstance(s, fixture.signals.SignalIn):
-                    s.get_random = True
-                    if s not in self.signals and s not in self.signals.flat():
-                        self.input_signals.append(s)
-                        self.signals.add(s)
-                elif isinstance(s, fixture.signals.SignalArray):
-                    for sig in s.flatten():
-                        sig.get_random = True
-                    if s not in self.signals:
-                        self.input_signals.append(s)
-                        self.signals.add(s)
+            self.sample_groups_test = []
+            for x in test_dimensions:
+                if isinstance(x, SampleStyle):
+                    self.sample_groups_test.append(x)
+                elif isinstance(x, (SignalIn, SignalArray)):
+                    sg = get_sampler_for_signal(x)
+                    self.sample_groups_test += sg
                 else:
-                    assert False, 'input_domain must return SignalIn objects'
-
+                    assert False, f'Return from Test.input_dimensions must be a list of SampleGroup or Signal, not list of {type(x)}'
 
             self._expand_parameter_algebra2()
 
-            random_signals = self.signals.random()
-            def make_sample_groups(ss):
-                return [sampler.get_sampler_for_signal(s) for s in ss]
-            self.sample_groups_test = make_sample_groups([s for s in random_signals
-                                                          if s in self.input_signals])
-            self.sample_groups_opt = make_sample_groups([s for s in random_signals
-                                                         if s not in self.input_signals])
+            #random_signals = self.signals.random()
+            #def make_sample_groups(ss):
+            #    return [sampler.get_sampler_for_signal(s) for s in ss]
+            #self.sample_groups_test = make_sample_groups([s for s in random_signals
+            #                                              if s in self.input_signals])
+            #self.sample_groups_opt = make_sample_groups([s for s in random_signals
+            #                                             if s not in self.input_signals])
+            self.sample_groups_opt = template.sample_groups
 
 
         def _expand_parameter_algebra2(self):

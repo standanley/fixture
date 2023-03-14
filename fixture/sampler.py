@@ -1,5 +1,6 @@
 import math
 import itertools
+import numbers
 import random
 import pandas
 import numpy as np
@@ -17,7 +18,8 @@ class SampleManager:
     def __init__(self, optional_groups, test_inputs):
         # TODO how to get optional groups?
 
-        self.optional_groups = [get_sampler_for_signal(s) for s in optional_groups]
+        self.optional_groups = []
+        assert False, [get_sampler_for_signal(s) for s in optional_groups]
         #rfadj, cfadj = self.optional_groups[0], self.optional_groups[1]
         #def constraint_fun(samples):
         #    x = rfadj
@@ -168,21 +170,41 @@ class SampleStyle:
     def __str__(self):
         return self.name
 
+class SamplerConst(SampleStyle):
+    def __init__(self, signal, value):
+        self.signal = signal
+        self.signals = [signal]
+        self.value = value
+        self.name = signal.friendly_name()
+
+    def get(self, target):
+        return self.get_nominal()
+
+    def get_nominal(self):
+        return {self.signal: self.value}
+
+    def get_plot_value(self, sample):
+        # could probably assert sample == self.value
+        return sample
+
 class SamplerAnalog(SampleStyle):
-    def __init__(self, signal):
-        assert len(signal.value) == 2
+    def __init__(self, signal, limits):
+        assert isinstance(limits, tuple), 'Internal error in config_parse?'
+        if len(limits) == 2:
+            self.limits = limits
+            self.nominal = sum(limits) / 2
+        elif len(limits) == 3:
+            a, b, c = limits
+            assert (a <= b <= c) or (c <= b <= a), f'For 3-element tuple, middle element is nominal, must be within range, for {signal.friendly_name()} = {limits}'
+            self.limits = (limits[0], limits[2])
+            self.nominal = limits[1]
+
         self.signal = signal
         self.signals = [self.signal]
-        self.limits = signal.value
-        # Not sure what we need to do if this assertion fails; I think we would
-        # have guessed the nominal already if we could
-        if signal.nominal is None:
-            # I think this only happens when s is a template input
-            assert len(signal.value) == 2
-            self.nominal = sum(signal.value) / 2
-        else:
-            self.nominal = signal.nominal
         self.name = signal.friendly_name()
+
+        # TODO this is used by the template writer when creating
+        signal.value = self.limits
 
     def get(self, target):
         assert len(target) == self.NUM_DIMS
@@ -194,6 +216,22 @@ class SamplerAnalog(SampleStyle):
 
     def get_plot_value(self, sample):
         return sample[self.signal]
+
+
+class SamplerTestbench(SamplerAnalog):
+    # TODO we might be able to get away with a str instead of an IDSignal,
+    #  but at least the error message in SamplerAnalog.init would break
+    class IDSignal:
+        def __init__(self, name):
+            self.name = name
+
+        def friendly_name(self):
+            return self.name
+
+    def __init__(self, name, limits):
+        assert isinstance(limits, tuple), f'limits for SamplerTestbench must be a tuple of length 2 or 3, not a {type(limits)}'
+        signal = self.IDSignal(name)
+        super().__init__(signal, limits)
 
 
 class SamplerConstrained(SampleStyle):
@@ -246,11 +284,11 @@ class SamplerConstrained(SampleStyle):
 class SamplerBinary(SampleStyle):
     def __init__(self, signal):
         assert isinstance(signal, SignalArray)
-        assert signal.info['datatype'] == 'binary_analog'
-        assert signal.info['bus_type'] == 'binary'
+        assert signal.bus_info['datatype'] == 'binary_analog'
+        assert signal.bus_info['bus_type'] == 'binary'
         self.signal = signal
         self.signals = [self.signal]
-        self.first_one = signal.info.get('first_one', 'low')
+        self.first_one = signal.bus_info.get('first_one', 'low')
         assert self.first_one in ['low', 'high']
         self.num_bits = len(list(signal))
         self.range_inclusive = signal.value
@@ -324,15 +362,36 @@ class SamplerTEMP(SampleStyle):
 def get_sampler_for_signal(signal):
     # TODO should this be done in the config?
     assert isinstance(signal, (SignalIn, SignalArray))
-    assert signal.get_random, 'Can only sample random signals'
+    #assert signal.get_random, 'Can only sample random signals'
 
-    if isinstance(signal, SignalArray):
-        #assert False, 'TODO'
-        #return SamplerTEMP(signal.friendly_name(), (0, 63), 32)
-        return SamplerBinary(signal)
+    if isinstance(signal, SignalIn):
+        if isinstance(signal.value, numbers.Number):
+            return [SamplerConst(signal, signal.value)]
+        elif isinstance(signal.value, tuple):
+            return [SamplerAnalog(signal, signal.value)]
+        else:
+            assert False, f'Not sure how to create sample group from value "{signal.value}" for signal {signal.friendly_name()}'
+
+    elif isinstance(signal, SignalArray):
+        if signal.bus_info is None:
+            # try individual bits?
+            ans = []
+            for bit in signal:
+                ans += get_sampler_for_signal(bit)
+            return ans
+        else:
+            return [SamplerBinary(signal)]
+
     else:
-        assert len(signal.value) == 2, 'Can only sample signal with range'
-        return SamplerAnalog(signal)
+        assert False, f'Can only create sampler from SignalIn or SignalArray, not {type(signal)}'
+
+    #if isinstance(signal, SignalArray):
+    #    #assert False, 'TODO'
+    #    #return SamplerTEMP(signal.friendly_name(), (0, 63), 32)
+    #    return SamplerBinary(signal)
+    #else:
+    #    assert len(signal.value) == 2, 'Can only sample signal with range'
+    #    return SamplerAnalog(signal, signal.value)
 
 
 class Sampler:
