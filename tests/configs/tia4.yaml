@@ -11,58 +11,56 @@ checkpoint_controller:
         run_regression: True
         run_post_regression: save
 
-pin:
+physical_pins:
     vdd:
-        direction: input
-        datatype: analog
+        direction: in
+        datatype: real 
         # this amp breaks completely when vdd>3.2 or so
         #value: 3.0
-        value: (2.7, 3.1)
+        #value: (2.7, 3.1)
     #vss:
-    #    direction: input
+    #    direction: in
     #    datatype: real
     #    value: 0
     inp:
-        direction: input
+        direction: in
         datatype: real
         electricaltype: current
     inn:
-        direction: input
+        direction: in
         datatype: real
         electricaltype: current
     
     ibias:
-        direction: input
-        datatype: analog
-        electricaltype: current
-        value: (2e-6, 10e-6)
+        direction: in
+        datatype: current
+        #electricaltype: current
+        #value: (2e-6, 10e-6)
         #value: 6e-6
-    #rfadj<5>:
-    #    direction: input
-    #    datatype: real
-    #    value: 3
+
     rfadj<5:0>:
-        direction: input
-        datatype: binary_analog
+        direction: in
+        datatype: bit
         bus_type: binary
-        first_one: high
-        value: (10, 63)
-        #value: 24
+        #first_one: high
+        #value: (10, 63)
+        ##value: 24
 
     cfadj<5:0>:
-        direction: input
-        datatype: binary_analog
+        direction: in
+        datatype: bit
         bus_type: binary
-        first_one: low
-        #value: (0, 63)
-        value: (20, 40)
-        #value: 32
+        #bus_type: binary
+        #first_one: low
+        ##value: (0, 63)
+        #value: (20, 40)
+        ##value: 32
 
     outp:
-        direction: output
+        direction: out
         datatype: real
     outn:
-        direction: output
+        direction: out
         datatype: real
 
 template_pins:
@@ -70,6 +68,12 @@ template_pins:
     outp: outp
     inn: inn
     outn: outn
+
+stimulus_generation:
+    vdd: (2.7, 3.1)
+    ibias: (2e-6, 10e-6)
+    rfadj: (10, 63)
+    cfadj: (20, 40)
 
 extras:
     approx_settling_time: 100e-6

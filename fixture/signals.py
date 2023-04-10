@@ -3,6 +3,13 @@ import numbers
 import numpy as np
 from functools import reduce
 
+class AmbiguousSliceException(Exception):
+    def __init__(self, slice_):
+        self.slice_ = slice_
+
+    def __str__(self):
+        return f'SignalArray slicing still a work in progress. Not clear what order to return things for your slice {self.slice_}'
+
 class SignalIn():
     def __init__(self,
                  value,
@@ -173,7 +180,7 @@ def create_input_domain_signal(name, value, spice_pin=None,
                                optional_expr=False):
     return SignalIn(
         value,
-        None,
+        'nominal_should_be_unused_for_template_signal',
         'analog',
         type(value) == tuple,
         spice_pin is not None,
@@ -260,6 +267,9 @@ def parse_name(name):
         else:
             m = re.match(re_index_range_groups, index)
             assert m is not None, f'Unexpected slice "{index}" during parsing of "{name}"'
+            # TODO I think the way forward is to check whether this slice's
+            #  direction agrees with the original bus declaration
+            raise AmbiguousSliceException(index)
             s, e = int(m.group(2)), int(m.group(3))
             # Inclusive, like verilog behavior
             if s <= e:
@@ -540,9 +550,9 @@ class SignalArray:
     attributes_from_children = ['type_',
                                 'get_random',
                                 'auto_set',
-                                'spice_name',
-                                'spice_pin',
-                                'template_name',
+                                #'spice_name',
+                                #'spice_pin',
+                                #'template_name',
                                 'optional_expr',
                                 ]
 
@@ -582,6 +592,8 @@ class SignalArray:
         #    else:
         #        raise ValueError(f'Could not guess nominal for <{self.template_name}/{self.spice_name}>')
         if self.nominal is not None:
+            print('TODO: unexpected case in SignalArray init')
+            #assert False, 'I think this is never used because nominal gets set while doing stimulus_generation'
             # distribute to children
             binary = self.get_binary_value(self.nominal)
             for b, s in zip(binary, self.array):
@@ -630,28 +642,37 @@ class SignalArray:
             return ans
 
     def get_binary_value(self, decimal):
-        assert self.bus_info['datatype'] in ['binary_analog', 'bit']
         # need to allow int and np.int64
         assert isinstance(decimal, numbers.Integral)
 
-        if self.bus_info['bus_type'] == 'binary':
-            first_one = self.bus_info.get('first_one', None)
+        if self.bus_info.type_ == 'binary':
+            first_one = self.bus_info.first_one
+            if first_one is None:
+                first_one = 'low'
             assert first_one in ['low', 'high'], f'{self} must set first_one to be "low" or "high"'
             ans_str = bin(decimal)[2:]
             ans = [0]*(self.shape[0] - len(ans_str)) + [int(x) for x in ans_str]
             if first_one == 'low':
                 ans = ans[::-1]
             return ans
-        elif self.bus_info['bus_type'] == 'signed_magnitude':
+        elif self.bus_info.type_ == 'signed_magnitude':
             assert False, 'TODO'
         else:
             assert False, 'TODO'
 
+    def map_over_bits(self, fun, values):
+        # TODO I think you can replace this entire function with
+        # return np.vectorize(fun)(self.array, values)
+        values = np.array(values)
+        values = np.broadcast_to(values, self.array.shape)
+        #zipped = np.stack((self.array, values), -1)
+        fun_v = np.vectorize(fun, signature='(),()->()')
+        result = fun_v(self.array, values)
+        return result
 
     def __getitem__(self, item):
         # reproduce more verilog-like behavior
         if isinstance(item, slice):
-            print(slice)
             # TODO inherit bus_info from self, but I'm not sure how loc should
             #  get translated, so for now I'm passing None and if anyone ever
             #  needs to use bus_info they can figure out what is necessary
@@ -670,8 +691,13 @@ class SignalArray:
             return getattr(self.array, name)
 
     def __setattr__(self, name, value):
-        # TODO
-        if False and name in self.attributes_from_children:
+        # TODO I wish this didn't have so many weird cases
+        if name == 'nominal' and value is not None:
+            binary = self.get_binary_value(value)
+            np.vectorize(lambda b, v: setattr(b, 'nominal', v))(self.array, binary)
+            super().__setattr__(name, value)
+
+        elif name in self.attributes_from_children:
             for child in self.array.flatten():
                 child.__setattr__(name, value)
         else:

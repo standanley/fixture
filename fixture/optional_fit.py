@@ -867,13 +867,14 @@ For ctrl[5:0], coefs = [Rnom, X1, X2, X3, X4, X5, Y, offset]
 
 def get_optional_expression_from_signal(s, name):
     if isinstance(s, SignalArray):
-        print('TODO fix SignalArray behavior')
+        print('TODO fix SignalArray behavior, right now defaulting to ReciprocalExpression')
         #return LinearExpression(list(s), name)
         return ReciprocalExpression(list(s), name)
 
     else:
         assert isinstance(s, SignalIn)
-        assert s.type_ == 'analog', 'TODO'
+        # TODO trying to phase out usage of s.type_
+        #assert s.type_ in ['real', 'current'], 'TODO'
         assert isinstance(s.value, (list, tuple)), f'Trying to model as a function of {s}, but it has pinned value {s.value} instead of a range'
         assert len(s.value) == 2, f'Trying to model as a function of {s}, but it has value {s.value} instead of a range'
 

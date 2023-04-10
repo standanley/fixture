@@ -89,7 +89,7 @@ class TemplateMaster():
             self.signals = self.template.signals.copy()
             test_dimensions = self.input_domain()
             # TODO not sure this is the best way to do input signals
-            self.input_signals = []
+            self.input_signals = None # Todo get rid of this if unused
             self.sample_groups_test = []
             for x in test_dimensions:
                 if isinstance(x, SampleStyle):
@@ -99,6 +99,12 @@ class TemplateMaster():
                     self.sample_groups_test += sg
                 else:
                     assert False, f'Return from Test.input_dimensions must be a list of SampleGroup or Signal, not list of {type(x)}'
+
+            # We want test_dimensions to end up in self.signals, for parsing
+            # parameter_algebra_vectored and possibly for other things too
+            for x in test_dimensions:
+                self.signals.add(x)
+            self.signals.rebuild_ref_dicts()
 
             self._expand_parameter_algebra2()
 

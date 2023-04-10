@@ -8,11 +8,12 @@ from fixture.optional_fit import get_optional_expression_from_signals, \
     LinearExpression, HeirarchicalExpression
 from fixture.sampler import SamplerConst, SamplerAnalog, get_sampler_for_signal
 from fixture.signals import create_signal, parse_bus, parse_name, \
-    SignalArray, SignalManager, SignalOut, SignalIn
+    SignalArray, SignalManager, SignalOut, SignalIn, AmbiguousSliceException
 import magma
 import fault
 import ast
 import numpy as np
+from numbers import Number
 
 from fixture.simulator import Simulator
 
@@ -52,13 +53,9 @@ def create_magma_circuit(name_, circuit_definition_filename, physical_pin_signal
     io = []
     for s in physical_pin_signals:
         if isinstance(s, SignalArray):
-            # TODO is this the best way to do SA attributes?
-            # s.type_ is inheriting the type from the individual bits,
-            # which is a little confusing because the type of the sa itself
-            # should be an array
-            # TODO if we make s.type_ a magma array, we should do it in
-            #  parse_physical_pins
-            bit_type = s.spice_pin
+            bits_flat = list(s.array.flat)
+            bit_type = bits_flat[0].spice_pin
+            assert all(b.spice_pin == bit_type for b in bits_flat), f'Cannot build magma array for {s} because it has mixed types inside'
             np_shape = s.shape
             magma_shape = np_shape[0] if len(np_shape) == 1 else np_shape[::-1]
             type_ = magma.Array[magma_shape, bit_type]
@@ -75,6 +72,9 @@ def create_magma_circuit(name_, circuit_definition_filename, physical_pin_signal
         spice_pin = getattr(UserCircuit, s.spice_name)
         s.spice_pin = spice_pin
         if isinstance(s, SignalArray):
+            # We will assign to child bits, and not to the parent array at all
+            # If someone asks for the parent array's spice pin, it will
+            # automatically build an array of the child pins, and that's fine
             assert len(s.array.shape) == 1, 'TODO multidimensional bus'
             for a, b in zip(s, spice_pin):
                 a.spice_pin = b
@@ -93,11 +93,12 @@ def parse_physical_pins(physical_pin_dict):
         'out': magma.Out
     }
     class BusInfo:
-        def __init__(self, bus_name, loc, brackets, type_):
+        def __init__(self, bus_name, loc, brackets, type_, fist_one):
             self.bus_name = bus_name
             self.loc = loc
             self.brackets = brackets
             self.type_ = type_
+            self.first_one = first_one
 
     def make_signal(name, dt, direction, bus_info=None):
         if direction == 'in':
@@ -106,7 +107,7 @@ def parse_physical_pins(physical_pin_dict):
         elif direction == 'out':
             return SignalOut(None, name, dt, None, None, bus_info)
         else:
-            assert False, f'Unknown direction "{direction}" for singal "{name}"'
+            assert False, f'Unknown direction "{direction}" for signal "{name}"'
 
     signals = []
     bus_bits = []
@@ -131,9 +132,10 @@ def parse_physical_pins(physical_pin_dict):
         else:
             bus_names.add(bus_name)
             for bit_name, bit_pos in bits:
-                type_ = info.get('type', None)
-                bi = BusInfo(bus_name, bit_pos, info_parsed, type_)
-                signal = make_signal(name, dt, info['direction'], bi)
+                type_ = info.get('bus_type', None)
+                first_one = info.get('first_one', None)
+                bi = BusInfo(bus_name, bit_pos, info_parsed, type_, first_one)
+                signal = make_signal(bit_name, dt, info['direction'], bi)
                 bus_bits.append(signal)
 
     # now go through each bus and collect its entries into an array
@@ -144,6 +146,8 @@ def parse_physical_pins(physical_pin_dict):
         assert all(e.bus_info.brackets == brackets_rep for e in entries), f'Mismatched number of dimensions, index direction, or bracket type for bus "{bus_name}"'
         type_rep = entries[0].bus_info.type_
         assert all(e.bus_info.type_ == type_rep for e in entries), f'Mismatched number of dimensions, index direction, or bracket type for bus "{bus_name}"'
+        first_one_rep = entries[0].bus_info.first_one
+        assert all(e.bus_info.first_one == first_one_rep for e in entries), f'Mismatched number of dimensions, index direction, or bracket type for bus "{bus_name}"'
 
         all_indices = np.array(list(e.bus_info.loc for e in entries))
         indices_limits_lower = np.min(all_indices, 0)
@@ -162,7 +166,7 @@ def parse_physical_pins(physical_pin_dict):
         for loc in itertools.product(*list(range(b) for b in array.shape)):
             assert array[loc] is not None, f'Missing definition for "{bus_name}" at index {loc} for bus with shape {array.shape}'
 
-        bi_total = BusInfo(bus_name, indices_limits_upper_exclusive, brackets_rep, type_rep)
+        bi_total = BusInfo(bus_name, indices_limits_upper_exclusive, brackets_rep, type_rep, first_one_rep)
         sa = SignalArray(array, bi_total, None, bus_name)
         signals.append(sa)
 
@@ -226,8 +230,11 @@ def assign_template_pins(signals, template_matching):
             signals.from_circuit_name(c).template_name = t_bus_name
 
         # c_array is for the whole circuit bus, not just this entry/entries
+        # if it's not a bus, then c_array should  be the object
         #c_array = signal_info_by_cname[c_bus_name]
-        c_array = signals.from_circuit_name(c_bus_name).array
+        #c_array = getattr(signals.from_circuit_name(c_bus_name), 'array', None)
+        c_entire_object = signals.from_circuit_name(c_bus_name)
+        c_array = getattr(c_entire_object, 'array', c_entire_object)
 
         # if bus is bus[0:2][0:3] and we assign to bus[1], we want c_indices
         # to look like [(1,), (0:3)], not just [(1,)]
@@ -319,18 +326,41 @@ def assign_template_pins(signals, template_matching):
 def parse_stimulus_generation(signals, stim_dict):
     def samplers_from_entry(name, info):
         # never returns multiple, but sometimes returns zero
+
         try:
             s = signals.from_circuit_name(name)
-            s.value = info
+        except AmbiguousSliceException:
+            assert False, f'Right now we do not support stimulus generation on a slice of a bus. If you want the whole bus, do not include any indices in stimulus generation. Bad key was {name}'
 
-            if s.template_name is not None:
-                # template writer has full control over this signal
-                return []
-            else:
-                # must be optional input
-                return get_sampler_for_signal(s)
-        except KeyError:
-            print('todo')
+        if isinstance(info, Number):
+            s.value = None
+            s.nominal = info
+        if len(info) == 1:
+            s.value = None
+            s.nominal = info[0]
+        if len(info) == 2:
+            s.value = info
+            nominal = sum(info) / 2
+            if isinstance(s, SignalArray):
+                # I could imagine a SignalArray bus_type that allows noninteger
+                #  values, but I'm not gonna worry about that now
+                nominal = int(nominal)
+            s.nominal = nominal
+        elif len(info) == 3:
+            a, b, c = info
+            assert (a <= b <= c) or (c <= b <= a), f'For 3-element tuple, middle element is nominal, must be within range, for {signal.friendly_name()} = {limits}'
+            s.value = (min(a, c), max(a, c))
+            s.nominal = b
+        else:
+            assert False, f'Not sure how to interpret stimulus generation info {info} for key {name}'
+
+
+        if s.template_name is not None:
+            # template writer has full control over this signal
+            return []
+        else:
+            # must be optional input
+            return get_sampler_for_signal(s)
 
     sample_groups = []
     for name, info_str in stim_dict.items():
@@ -355,6 +385,7 @@ def get_simulator(circuit_config_dict):
 def parse_config(circuit_config_dict):
     simulator = get_simulator(circuit_config_dict)
 
+    assert 'physical_pins' in circuit_config_dict, "Must list physical pinout under key 'physical_pins'"
     physical_pin_signals = parse_physical_pins(circuit_config_dict['physical_pins'])
     UserCircuit = create_magma_circuit(
         circuit_config_dict['name'],
@@ -362,10 +393,14 @@ def parse_config(circuit_config_dict):
         physical_pin_signals
     )
 
-    signals = parse_proxy_signals(circuit_config_dict['proxy_signals'], physical_pin_signals)
+    signals = parse_proxy_signals(
+        circuit_config_dict.get('proxy_signals', {}),
+        physical_pin_signals)
 
+    assert 'template_pins' in circuit_config_dict, "Must include mapping from template to circuit names with key 'template_pins'"
     template_mapping_unused = assign_template_pins(signals, circuit_config_dict['template_pins'])
 
+    assert 'stimulus_generation' in circuit_config_dict, "Must include information for stimulus generation under key 'stimulus_generation'"
     sample_groups = parse_stimulus_generation(signals, circuit_config_dict['stimulus_generation'])
 
 
@@ -382,8 +417,8 @@ def parse_config(circuit_config_dict):
 def parse_optional_input_info(circuit_config_dict, tests):
     # TODO this can't be in the main parse_config because it needs to wait
     # until after the template has expanded parameter_algebra
-    # TODO I think we should pass in the list of tests so we can look through
-    # the parameter_algebra_vectored for each one
+
+    print('TODO ask user about optional expressions')
 
     optional_input_info = circuit_config_dict.get('optional_input_info', {})
 

@@ -183,18 +183,13 @@ class SamplerConst(SampleStyle):
         return sample
 
 class SamplerAnalog(SampleStyle):
-    def __init__(self, signal, limits):
+    def __init__(self, signal, limits, nominal):
+        assert nominal is not None, 'Nominal must be defined before SamplerAnalog'
         assert isinstance(limits, tuple), 'Internal error in config_parse?'
-        if len(limits) == 2:
-            self.limits = limits
-            self.nominal = sum(limits) / 2
-        elif len(limits) == 3:
-            a, b, c = limits
-            assert (a <= b <= c) or (c <= b <= a), f'For 3-element tuple, middle element is nominal, must be within range, for {signal.friendly_name()} = {limits}'
-            self.limits = (limits[0], limits[2])
-            self.nominal = limits[1]
-
+        assert len(limits) == 2, 'Bad limits in SamplerAnalog'
         self.signal = signal
+        self.limits = limits
+        self.nominal = nominal
         self.signals = [self.signal]
         self.name = signal.friendly_name()
 
@@ -279,11 +274,14 @@ class SamplerConstrained(SampleStyle):
 class SamplerBinary(SampleStyle):
     def __init__(self, signal):
         assert isinstance(signal, SignalArray)
-        assert signal.bus_info['datatype'] == 'binary_analog'
-        assert signal.bus_info['bus_type'] == 'binary'
+        #assert signal.bus_info['datatype'] == 'binary_analog'
+        assert signal.bus_info.type_ == 'binary', f'Cannot create binary sampler for signal {signal}'
         self.signal = signal
         self.signals = [self.signal]
-        self.first_one = signal.bus_info.get('first_one', 'low')
+        self.first_one = signal.bus_info.first_one
+        if self.first_one is None:
+
+            self.first_one = 'low'
         assert self.first_one in ['low', 'high']
         self.num_bits = len(list(signal))
         self.range_inclusive = signal.value
@@ -363,7 +361,7 @@ def get_sampler_for_signal(signal):
         if isinstance(signal.value, numbers.Number):
             return [SamplerConst(signal, signal.value)]
         elif isinstance(signal.value, tuple):
-            return [SamplerAnalog(signal, signal.value)]
+            return [SamplerAnalog(signal, signal.value, signal.nominal)]
         else:
             assert False, f'Not sure how to create sample group from value "{signal.value}" for signal {signal.friendly_name()}'
 
@@ -375,7 +373,14 @@ def get_sampler_for_signal(signal):
                 ans += get_sampler_for_signal(bit)
             return ans
         else:
-            return [SamplerBinary(signal)]
+            if signal.bus_info.type_ is None:
+                assert False, f'To generate stimulus for {signal.friendly_name()} you must define its bus_type in the physical_pin section '
+            elif signal.bus_info.type_ == 'binary':
+                return [SamplerBinary(signal)]
+            elif signal.bus_info.type_ == 'thermometer':
+                assert False, 'todo'
+            else:
+                assert False, f'Cannot create Sampler for bus type {signal.bus_info.type_} from signal {signal}'
 
     else:
         assert False, f'Can only create sampler from SignalIn or SignalArray, not {type(signal)}'
