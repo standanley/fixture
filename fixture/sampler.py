@@ -52,8 +52,6 @@ class SampleManager:
             assert set(opt_samples) == set(opt_sample_scaled), f'Internal error, maybe keys for {group} get_nominal() dont match the ones for get()'
             for k in opt_sample_scaled:
                 opt_samples[k].append(opt_sample_scaled[k])
-        #get_vectorized = np.vectorize(group.get, signature='(N)->()')
-        #opt_samples = get_vectorized(np.array(opt_samples_unscaled))
 
         '''
         This code works, but the approach is not good - when N_test is small
@@ -102,12 +100,10 @@ class SampleManager:
         for i in range(N_optional):
             group_ids += [group] * N_test
             sweep_ids += [i] * N_test
-            #group_data += [opt_samples[i]] * N_test
             for k in opt_samples:
                 group_data[k] += [opt_samples[k][i]]*N_test
         new_data[cls.GROUP_ID_TAG] = group_ids
         new_data[cls.SWEEP_ID_TAG] = sweep_ids
-        #new_data[group] = group_data
         for k in group_data:
             new_data[k] = group_data[k]
         for opt_group in opt_groups:
@@ -116,7 +112,6 @@ class SampleManager:
                 for k in nominal:
                     new_data[k] = [nominal[k]] * (N_test * N_optional)
 
-        #self.data = pandas.concat([self.data, pandas.DataFrame(new_data)], ignore_index=True)
         return pandas.DataFrame(new_data)
 
     @classmethod
@@ -408,8 +403,6 @@ class Sampler:
 
         # TODO I'm not sure SampleManager does anything useful. Besides its
         #  sweep_one method, it's just a holder for two lists
-        #optional_signals = [s for s in test.signals.random() if s not in test.input_signals]
-        #sm = SampleManager(optional_signals, list(test.input_signals))
         data = pandas.DataFrame()
         sm = SampleManager
         for group in test.sample_groups_opt:
@@ -417,11 +410,6 @@ class Sampler:
             new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 5, 10)
             data = pandas.concat((data, new_data), ignore_index=True)
         todo = sm.sample_all(100, test.sample_groups_test, test.sample_groups_opt)
-        #print('TODO this is a bad place to set sample_groups; there are issues when we skip this step in the checkpoints')
-
-        #print('TODO should set them in Test __init__, in separate entries for sample_groups_test and sample_groups_opt')
-        #assert False, 'read print statements above'
-        #test.sample_groups = sm.optional_groups + sm.test_inputs
         return data
 
 

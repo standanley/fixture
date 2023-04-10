@@ -77,7 +77,6 @@ class TemplateMaster():
 
         def __init__(self, template):
             self.template = template
-            #self.dut = template.dut
             self.ports = template.ports
             self.extras = template.extras
             self.debug_dict = {}
@@ -91,10 +90,6 @@ class TemplateMaster():
             test_dimensions = self.input_domain()
             # TODO not sure this is the best way to do input signals
             self.input_signals = []
-            # TODO I don't like editing signal.get_random as it might be used in other tests
-            #  I think the solution is to be more explicit about hte template
-            #  writer's choices. e.g. They can pass an existing input signal,
-            #  in which case we somehow set get_random, otherwise we leave it alone
             self.sample_groups_test = []
             for x in test_dimensions:
                 if isinstance(x, SampleStyle):
@@ -107,13 +102,6 @@ class TemplateMaster():
 
             self._expand_parameter_algebra2()
 
-            #random_signals = self.signals.random()
-            #def make_sample_groups(ss):
-            #    return [sampler.get_sampler_for_signal(s) for s in ss]
-            #self.sample_groups_test = make_sample_groups([s for s in random_signals
-            #                                              if s in self.input_signals])
-            #self.sample_groups_opt = make_sample_groups([s for s in random_signals
-            #                                             if s not in self.input_signals])
             self.sample_groups_opt = template.sample_groups
 
 
@@ -266,33 +254,6 @@ class TemplateMaster():
                     for new_lhs, new_rhs in eqs:
                         pa_vec[new_lhs] = new_rhs
 
-            # center inputs
-            self.center_mapping = {}
-            def center(s):
-                return s
-                # TODO get rid of CenteredSignal; now handled in optional_fit
-                if (isinstance(s, SignalIn)
-                        and isinstance(s.value, tuple)
-                        and len(s.value) == 2):
-                    if s in self.center_mapping:
-                        # already have a ref for this
-                        return self.center_mapping[s]
-                    nom = sum(s.value) / 2
-                    if nom == 0:
-                        # no need to center
-                        return s
-
-                    # we need to create a new CenteredSignalIn
-                    csi = CenteredSignalIn(s)
-                    self.center_mapping[s] = csi
-                    return csi
-
-                else:
-                    return s
-            for lhs, rhs in pa_vec.items():
-                for param in rhs:
-                    expr = rhs[param]
-                    rhs[param] = tuple(center(s) for s in expr)
 
 
             # optional outputs
@@ -300,12 +261,6 @@ class TemplateMaster():
                 pa_vec[s.spice_name] = {f'{s.spice_name}_meas': (Regression.one_literal,)}
 
             self.parameter_algebra_vectored = pa_vec
-
-        #def make_parameter_algebra_objects(self):
-        #    # edit self.parameter_algebra_vectored to replace strings with
-        #    # signals
-        #    for lhs, rhs in self.parameter_algebra_vectored:
-        #        for param, component_str:
 
 
         @abstractmethod
@@ -345,29 +300,6 @@ class TemplateMaster():
             '''
             return {}
 
-        #def debug(self, tester, port, duration):
-        #    '''
-        #    This method will be overridden when the @debug decorator from
-        #    template_creation_utils is added. Unfortunately this means this
-        #    input signature has to match
-        #    '''
-        #    if isinstance(port, SignalOut):
-        #        if port.representation is not None:
-        #            port = port.representation['signal']
-        #    elif isinstance(port, SignalArray):
-        #        for signal in port:
-        #            self.debug(tester, signal, duration)
-        #        return
-        #        #else:
-        #        #    port = port.spice_name
-        #    #elif isinstance(port, SignalIn):
-        #    #    port = port.spice_name
-        #    #port_name = str(self.template.signals.from_circuit_pin(port))
-        #    port_name = port.spice_name
-        #    if port_name not in self.debug_dict:
-        #        r = tester.get_value(port, params={'style': 'block',
-        #                                           'duration': duration})
-        #        self.debug_dict[port_name] = r
         def debug(self, tester, signal, duration):
             '''
             This method will be overridden when the @debug decorator from
@@ -384,11 +316,6 @@ class TemplateMaster():
                 self.debug_dict[signal] = r
 
         def debug_plot(self):
-            #import matplotlib.pyplot as plt
-            #import matplotlib
-            #matplotlib.use('Agg')
-            #plt = matplotlib.pyplot
-
             from fixture.plot_helper import plt
 
             plt.figure()
@@ -465,6 +392,7 @@ class TemplateMaster():
                 if controller['run_regression']:
                     regression = Regression(self, test, results)
 
+                    print('TODO: plot optional effects - here or later?')
                     #ph.plot_optional_effects()
 
                     rr = regression.results_expr
@@ -476,23 +404,6 @@ class TemplateMaster():
                     # TODO this is not working with modes
                     #  we should load it if/when we need it, I think
                     rr = {}
-
-                #if controller['run_post_regression'] == 'load':
-                #    with open(f'{test}_{mode}_post_regression.pickle', 'rb') as f:
-                #        import pickle
-                #        data_in = pickle.load(f)
-                #        test.post_regression(*data_in)
-                #elif controller['run_post_regression'] == 'save':
-                #    with open(f'{test}_{mode}_post_regression.pickle', 'wb') as f:
-                #        import pickle
-                #        pickle.dump((regression.results, regression.regression_dataframe), f)
-                #    # TODO this should really be handled in create_testbench
-                #    temp = test.post_regression(regression.results, regression.regression_dataframe)
-                #    rr.update(temp)
-                #elif controller['run_post_regression'] == False:
-                #    pass
-                #else:
-                #    assert False
 
 
                 # TODO I'm getting rid of post_regression temporarily

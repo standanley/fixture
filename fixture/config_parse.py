@@ -12,7 +12,6 @@ from fixture.signals import create_signal, parse_bus, parse_name, \
 import magma
 import fault
 import ast
-import re
 import numpy as np
 
 from fixture.simulator import Simulator
@@ -29,10 +28,6 @@ def path_relative(path_to_config, path_from_config):
     res = os.path.join(folder, path_from_config)
     return res
 
-
-def parse_test_cfg(test_config_filename_abs):
-    assert False
-    return test_config_dict
 
 
 def parse_extras(extras):
@@ -177,12 +172,6 @@ def parse_physical_pins(physical_pin_dict):
 
 def parse_proxy_signals(proxy_signal_dict, physical_signals):
     # create proxy signals return a list including the physical ones passed in
-    #def signal_from_circuit_name(child_name, parent_name):
-    #    ss = [s for s in signals if s.spice_name == child_name]
-    #    assert len(ss) != 0, f'No existing signal "{child_name}" found for creating proxy signal {parent_name}'
-    #    assert len(ss) < 2, f'Multiple signals with same name "{child_name}" when creating {parent_name}?'
-    #    return ss[0]
-
     signals = physical_signals.copy()
 
     # now create proxy signals
@@ -390,222 +379,6 @@ def parse_config(circuit_config_dict):
     return t
 
 
-    # TODO this special case probably doesn't belong here
-    if 'extras' in circuit_config_dict:
-        if 'channel_info' in circuit_config_dict['extras']:
-            channel_file_relative = circuit_config_dict['extras']['channel_info']['file_path']
-            channel_file_abs = path_relative(circuit_config_dict['filename'], channel_file_relative)
-            circuit_config_dict['extras']['channel_info']['file_path'] = channel_file_abs
-
-    # go through pin definitions and create list of
-    # [pin_info, circuit_name, template_name]
-    # We don't create signals yet because we don't have template names and
-    # create_signal has some checks involving that
-    # Also put magma datatype into pin dict
-    io = []
-    signal_info_by_cname = {}
-    pins = circuit_config_dict['pin']
-    pin_params = ['datatype', 'direction', 'value', 'electricaltype', 'bus_type', 'first_one', 'break_binary_for_bits']
-    digital_types = ['bit', 'binary_analog', 'true_digital']
-    analog_types = ['real', 'analog']
-    for name, p in pins.items():
-        for pin_param in p.keys():
-            assert pin_param in pin_params, f'Unknown pin descriptor {pin_param} for pin {name}'
-        type_string = p['datatype']
-        electrical_string = p.get('electricaltype', 'voltage')
-        if type_string in digital_types:
-            dt = magma.Bit
-        elif type_string in analog_types:
-            if electrical_string == 'current':
-                dt = fault.ms_types.CurrentType
-            else:
-                dt = fault.ms_types.RealType
-        else:
-            assert False, f'datatype for {name} must be in {digital_types+analog_types}, not "{type_string}"'
-
-        direction = p['direction']
-        if direction == 'input':
-            dt = magma.In(dt)
-        elif direction == 'output':
-            dt = magma.Out(dt)
-        else:
-            assert False, f'Direction for {name} must be "input" or "output", not "{direction}"'
-        p['magma_datatype'] = dt
-
-        bus_name, indices_parsed, info_parsed, bits = parse_bus(name)
-        if len(indices_parsed) == 0:
-            # dict, cname, tname
-            signal_info_by_cname[name] = [p, name, None]
-        else:
-            # array of (dict, cname, tname)
-            indices_limits = [max(i_range)+1 for i_range in indices_parsed]
-            if bus_name in signal_info_by_cname:
-                assert False, 'TODO'
-            else:
-                a = np.zeros(indices_limits, dtype=object)
-                for bit_name, location in bits:
-                    a[location] = [p, bit_name, None]
-                signal_info_by_cname[bus_name] = a
-    # still missing 2 things to create signals:
-    # magma objects and template names
-
-    # Now create the magma stuff
-    for c_name, signal_info in signal_info_by_cname.items():
-        if isinstance(signal_info, np.ndarray):
-            dtypes = [info[0]['magma_datatype'] for info in signal_info.flatten()
-                      if info is not None and 'magma_datatype' in info[0]]
-            assert len(dtypes) > 0, f'Missing datatype for {c_name}'
-            assert all(dtypes[0] == dt for dt in dtypes[1:]), f'Mismatched datatypes for {c_name}'
-            np_shape = signal_info.shape
-            magma_shape = np_shape[0] if len(np_shape) == 1 else np_shape[::-1]
-            dt_array = magma.Array[magma_shape, dtypes[0]]
-            io += [c_name, dt_array]
-        else:
-            p, c_name2, _ = signal_info
-            assert c_name == c_name2, 'internal error in config_parse'
-            io += [c_name, p['magma_datatype']]
-
-
-
-    ## TODO amp vector test stuff
-    #signal_info_by_cname['inp'][0]['is_proxy_component'] = True
-    #signal_info_by_cname['inn'][0]['is_proxy_component'] = True
-
-    #checkpoint = Checkpoint()
-    #UserCircuit = checkpoint.create_circuit(circuit_config_dict['name'], io)
-    class UserCircuit(magma.Circuit):
-        name = circuit_config_dict['name']
-        IO = io
-
-
-
-    # now actually create the signals
-    def my_create_signal(c_info):
-        pin_dict, c_name, t_name = c_info
-        # yes, this isn't the best place to edit the pin_dict, but it's okay
-        if 'value' in pin_dict:
-            value = ast.literal_eval(str(pin_dict.get('value', None)))
-            pin_dict['value'] = value
-        if PROXY_SIGNAL_TAG in pin_dict:
-            return Representation.create_signal(c_name, t_name, pin_dict)
-        else:
-            # TODO this needs to split the cname into parts
-            bus_name, indices = parse_name(c_name)
-            c_pin = getattr(UserCircuit, bus_name)
-            for i in indices:
-                assert isinstance(i, int), 'internal error in config_parse'
-                c_pin = c_pin[i]
-            return create_signal(pin_dict, c_name, c_pin, t_name)
-    my_create_signal_vec = np.vectorize(my_create_signal)
-
-    def extract_bus_info(c_info):
-        info = {}
-        acceptable = {'bus_type': ['any', 'thermometer', 'binary', 'one_hot'],
-                      'first_one': ['low', 'high']}
-        for pin_dict, c_name, _ in c_info.flatten():
-            for k, v in pin_dict.items():
-                # TODO these assertions are not what we actually want
-                #assert k in acceptable, f'Unrecognized bus_info {k}, must be one of {list(acceptable.keys())}'
-                #assert v in acceptable[k], f'Unrecognized option for bus_info {k}: {v}, must be one of {acceptable[k]}'
-                # we have some bus info
-                if k in info:
-                    # must match
-                    assert info[k] == v, f'Mismatched bus info in {c_name}'
-                else:
-                    info[k] = v
-        return info
-
-    signals = []
-    for cn, c_info in signal_info_by_cname.items():
-        if isinstance(c_info, np.ndarray):
-            s_ndarray = my_create_signal_vec(c_info)
-            bus_info = extract_bus_info(c_info)
-            # TODO nested buses
-            s_array = SignalArray(s_ndarray, bus_info, spice_name=cn)
-            signals.append(s_array)
-        else:
-            s = my_create_signal(c_info)
-            signals.append(s)
-
-
-    # now put the signals into the template arrays
-    # first create ndarrays of the correct size (this is kinda hard)
-    signals_by_template_name = {}
-    for t_bus_name, t_array_entries in t_array_entries_by_name.items():
-        t_array_indices = list(zip(*t_array_entries))[0]
-        t_array_limits = [max(indices)+1 for indices in zip(*t_array_indices)]
-        signals_by_template_name[t_bus_name] = np.zeros(t_array_limits, dtype=object)
-
-    # go through signals and place them in the right spots
-    all_signals = ({*signals} |
-                   {s for a in signals if isinstance(a, SignalArray) for s in a })
-    #signals_flat = [s for s_or_a in signals for s in
-    #                (s_or_a.flatten() if isinstance(s_or_a, SignalArray)
-    #                 else [s_or_a])]
-    for s in all_signals:
-        if s.template_name is not None:
-            t_bus_name, t_indices = parse_name(s.template_name)
-            if len(t_indices) == 0:
-                signals_by_template_name[s.template_name] = s
-            else:
-                a = signals_by_template_name[t_bus_name]
-                a[t_indices] = s
-
-    # and turn the ndarrays into SignalArrays
-    for t_name, s_or_a in signals_by_template_name.items():
-        if isinstance(s_or_a, np.ndarray):
-            # TODO is there a way that this would need associated info?
-            sa = SignalArray(s_or_a, {}, template_name=t_name)
-            signals_by_template_name[t_name] = sa
-
-
-    ## TODO TEMP FOR SAMPLER TEST
-    #from fixture.signals import SignalOut
-    #out_wrapper = SignalOut('real', None, None, 'out<0>')
-    #old_out_0 = signals_by_template_name['out'][0]
-    #out_wrapper.representation = {
-    #    'reference': old_out_0,
-    #    'signal': old_out_0
-    #}
-    #signals_by_template_name['out'].array[0] = out_wrapper
-    ##signals[9].array[0] = out_wrapper
-    #signals.append(out_wrapper)
-
-
-
-    # now we just pack all our info into the signal manager
-    sm = SignalManager(signals, signals_by_template_name)
-    # TODO this is a bad spot to initialize proxy things I think
-    # TODO I think we really do want to check entire arrays and their components
-    for s in all_signals:
-        if s.representation is not None:
-            r = s.representation
-            r.finish_init(sm)
-            #r['reference'] = sm.from_circuit_name(r['reference'])
-
-    template_class_name = circuit_config_dict['template']
-    extras = parse_extras(circuit_config_dict['extras'])
-
-    ## TODO ADDITIONAL SAMPLER TEST STUFF
-    #clk_value = extras['clks'][old_out_0.spice_name]
-    #del extras['clks'][old_out_0.spice_name]
-    #extras['clks'][out_wrapper] = clk_value
-
-    ## TODO VECTORED INPUT TEST STUFF
-    #inp = SignalIn((0, 0.8), 'real', True, False, 'inp_spice', None, None, '')
-    #inn = SignalIn((0, 0.8), 'real', True, False, 'inn_spice', None, None, '')
-    #vector = np.array([inp, inn])
-    #test = SignalArray(vector, {}, 'in_single', None, True)
-    #sm.signals[2] = test
-    #sm.signals_by_template_name['in_single'] = test
-    #del sm.signals_by_circuit_name['my_in']
-
-    optional_input_info = circuit_config_dict.get('optional_input_info', {})
-
-
-    return UserCircuit, template_class_name, sm, test_config_dict, optional_input_info, extras
-
-
 def parse_optional_input_info(circuit_config_dict, tests):
     # TODO this can't be in the main parse_config because it needs to wait
     # until after the template has expanded parameter_algebra
@@ -668,17 +441,6 @@ def parse_optional_input_info(circuit_config_dict, tests):
             combined_expression = HeirarchicalExpression(combined_expression_algebra, combined_expression_children, lhs)
             parameter_algebra_final[lhs] = combined_expression
         test.parameter_algebra_final = parameter_algebra_final
-
-    '''
-    This has been refactored into the block above
-    total_expr_inputs = []
-    for name in param_names:
-        old_expr = rhs[name]
-        assert len(old_expr) == 1, 'TODO'
-        total_expr_inputs.append(old_expr[0])
-    algebra = LinearExpression(total_expr_inputs, f'{lhs_clean}_combiner')
-    total_expr = HeirarchicalExpression(algebra, optional_exprs, lhs_clean)
-    '''
 
     # we have done our job by creating test.parameter_algebra_final
     return
