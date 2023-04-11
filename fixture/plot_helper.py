@@ -139,10 +139,11 @@ class PlotHelper:
 
         plt.savefig(cls.clean_filename(name), dpi=cls.dpi)
         # I've had lots of problems with seeing the results of earlier plots
-        # on new plots, and this might be the solution?
+        # on new plots, and plt.clf might be the solution?
         # I think the issue is when a plot is created outside plot_helper,
         # then future plot_helper things are done on top of it
-        plt.clf()
+        #plt.clf()
+        plt.close()
 
     #@classmethod(parameter_algebra, data, )
 

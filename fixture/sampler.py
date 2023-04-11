@@ -278,11 +278,11 @@ class SamplerBinary(SampleStyle):
         assert signal.bus_info.type_ == 'binary', f'Cannot create binary sampler for signal {signal}'
         self.signal = signal
         self.signals = [self.signal]
-        self.first_one = signal.bus_info.first_one
-        if self.first_one is None:
+        #self.first_one = signal.bus_info.first_one
+        #if self.first_one is None:
 
-            self.first_one = 'low'
-        assert self.first_one in ['low', 'high']
+        #    self.first_one = 'low'
+        #assert self.first_one in ['low', 'high']
         self.num_bits = len(list(signal))
         self.range_inclusive = signal.value
         if self.range_inclusive is None:
@@ -297,17 +297,21 @@ class SamplerBinary(SampleStyle):
         #  self.signal.get_decimal_value
         #  but I might need to do a little work to build the dict
 
-
-        b = f'{{:0{self.num_bits}b}}'.format(v)
-        bits = [0 if c == '0' else 1 for c in b]
-        if self.first_one == 'low':
-            bits = bits[::-1]
-
-        ans = {self.signal: v}
-        assert len(list(self.signal)) == len(bits)
-        for sig, bit in zip(self.signal, bits):
-            ans[sig] = bit
+        bits = self.signal.get_binary_value(v)
+        ans = {s: b for s, b in zip(list(self.signal), bits)}
+        ans[self.signal] = v
         return ans
+
+        #b = f'{{:0{self.num_bits}b}}'.format(v)
+        #bits = [0 if c == '0' else 1 for c in b]
+        #if self.first_one == 'low':
+        #    bits = bits[::-1]
+
+        #ans = {self.signal: v}
+        #assert len(list(self.signal)) == len(bits)
+        #for sig, bit in zip(self.signal, bits):
+        #    ans[sig] = bit
+        #return ans
 
     def get(self, target):
         N = self.range_inclusive[1] - self.range_inclusive[0] + 1
@@ -412,7 +416,7 @@ class Sampler:
         sm = SampleManager
         for group in test.sample_groups_opt:
             #if not any(s in test.input_signals for s in group.signals):
-            new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 5, 10)
+            new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 5, 30)
             data = pandas.concat((data, new_data), ignore_index=True)
         todo = sm.sample_all(100, test.sample_groups_test, test.sample_groups_opt)
         return data

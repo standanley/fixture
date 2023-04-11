@@ -7,7 +7,7 @@ from fixture import Representation, templates
 from fixture.optional_fit import get_optional_expression_from_signals, \
     LinearExpression, HeirarchicalExpression
 from fixture.sampler import SamplerConst, SamplerAnalog, get_sampler_for_signal
-from fixture.signals import create_signal, parse_bus, parse_name, \
+from fixture.signals import parse_bus, parse_name, \
     SignalArray, SignalManager, SignalOut, SignalIn, AmbiguousSliceException
 import magma
 import fault
@@ -93,7 +93,7 @@ def parse_physical_pins(physical_pin_dict):
         'out': magma.Out
     }
     class BusInfo:
-        def __init__(self, bus_name, loc, brackets, type_, fist_one):
+        def __init__(self, bus_name, loc, brackets, type_, first_one):
             self.bus_name = bus_name
             self.loc = loc
             self.brackets = brackets
@@ -335,10 +335,14 @@ def parse_stimulus_generation(signals, stim_dict):
         if isinstance(info, Number):
             s.value = None
             s.nominal = info
-        if len(info) == 1:
+            s.auto_set = True
+            return []
+        elif len(info) == 1:
             s.value = None
             s.nominal = info[0]
-        if len(info) == 2:
+            s.auto_set = True
+            return []
+        elif len(info) == 2:
             s.value = info
             nominal = sum(info) / 2
             if isinstance(s, SignalArray):
@@ -357,14 +361,16 @@ def parse_stimulus_generation(signals, stim_dict):
 
         if s.template_name is not None:
             # template writer has full control over this signal
+            s.auto_set = False
             return []
         else:
             # must be optional input
+            s.auto_set = True
             return get_sampler_for_signal(s)
 
     sample_groups = []
     for name, info_str in stim_dict.items():
-        info = ast.literal_eval(info_str)
+        info = ast.literal_eval(info_str) if isinstance(info_str, str) else info_str
         sample_groups += samplers_from_entry(name, info)
     return sample_groups
 

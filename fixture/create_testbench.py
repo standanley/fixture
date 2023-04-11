@@ -1,4 +1,5 @@
 from collections import defaultdict
+from numbers import Number
 
 import pandas
 
@@ -42,11 +43,16 @@ class Testbench():
 
     def set_pinned_inputs(self):
         for s in self.test.signals:
-            if isinstance(s, SignalIn) and s.auto_set:
-                if not s.get_random:
-                    assert isinstance(s.value, float) or isinstance(s.value, int), f'Unknown pin value for {s}'
-                    self.tester.poke(s.spice_pin, s.value)
-            if isinstance(s, SignalArray) and s.auto_set and not s.get_random:
+            if not s in (SignalIn, SignalArray):
+                continue
+            if not s.auto_set:
+                continue
+            if not isinstance(s.value, Number):
+                continue
+
+            if isinstance(s, SignalIn):
+                self.tester.poke(s.spice_pin, s.value)
+            elif isinstance(s, SignalArray):
                 bin_value = s.get_binary_value(s.value)
                 for bit, val in zip(s, bin_value):
                     self.tester.poke(bit.spice_pin, val)
