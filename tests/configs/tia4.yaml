@@ -24,17 +24,14 @@ physical_pins:
     #    value: 0
     inp:
         direction: in
-        datatype: real
-        electricaltype: current
+        datatype: current
     inn:
         direction: in
-        datatype: real
-        electricaltype: current
+        datatype: current 
     
     ibias:
         direction: in
         datatype: current
-        #electricaltype: current
         #value: (2e-6, 10e-6)
         #value: 6e-6
 
@@ -42,19 +39,19 @@ physical_pins:
         direction: in
         datatype: bit
         bus_type: binary
-        #first_one: high
+        first_one: high
         #value: (10, 63)
         ##value: 24
 
-    cfadj<5:0>:
-        direction: in
-        datatype: bit
-        bus_type: binary
-        #bus_type: binary
-        #first_one: low
-        ##value: (0, 63)
-        #value: (20, 40)
-        ##value: 32
+    #cfadj<5:0>:
+    #    direction: in
+    #    datatype: bit
+    #    bus_type: binary
+    #    #bus_type: binary
+    #    #first_one: low
+    #    ##value: (0, 63)
+    #    #value: (20, 40)
+    #    ##value: 32
 
     outp:
         direction: out
@@ -70,10 +67,13 @@ template_pins:
     outn: outn
 
 stimulus_generation:
-    vdd: (2.7, 3.1)
+    vdd: 3.0
     ibias: (2e-6, 10e-6)
+    #ibias: 6e-6
     rfadj: (10, 63)
-    cfadj: (20, 40)
+    #rfadj: 30
+    ##cfadj: (20, 40)
+    #cfadj: 30
 
 extras:
     approx_settling_time: 100e-6
@@ -84,11 +84,12 @@ extras:
 
 optional_input_info:
     gain: [ibias, rfadj]
-    offset: []
-    gain_from_cm: []
-    gain_to_cm: []
-    cm_gain: []
-    cm_offset: [ibias, vdd, rfadj]
+    #offset: [ibias]
+    #gain_from_cm: []
+    gain_to_cm: [ibias]
+    cm_gain: [ibias]
+    ##cm_offset: [ibias, vdd, rfadj]
+    cm_offset: [ibias, rfadj]
 
 #test_config_file: ngspice_dynamics.yaml
 #test_config_file: ngspice_small_tstep.yaml

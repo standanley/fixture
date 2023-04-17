@@ -333,12 +333,12 @@ def parse_stimulus_generation(signals, stim_dict):
             assert False, f'Right now we do not support stimulus generation on a slice of a bus. If you want the whole bus, do not include any indices in stimulus generation. Bad key was {name}'
 
         if isinstance(info, Number):
-            s.value = None
+            s.value = info
             s.nominal = info
             s.auto_set = True
             return []
         elif len(info) == 1:
-            s.value = None
+            s.value = info
             s.nominal = info[0]
             s.auto_set = True
             return []
@@ -447,7 +447,7 @@ def parse_optional_input_info(circuit_config_dict, tests):
                     signals_str = info_copy[param]
                     del info_copy[param]
                     assert isinstance(signals_str,
-                                      list), f'Optional input dependencies for {param} should be list, not {effects}'
+                                      list), f'Optional input dependencies for {param} should be list, not {signals_str}'
                     signals = [test.signals.from_circuit_name(s_str)
                                for s_str in signals_str]
                 else:

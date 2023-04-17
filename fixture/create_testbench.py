@@ -43,7 +43,7 @@ class Testbench():
 
     def set_pinned_inputs(self):
         for s in self.test.signals:
-            if not s in (SignalIn, SignalArray):
+            if not isinstance(s, (SignalIn, SignalArray)):
                 continue
             if not s.auto_set:
                 continue

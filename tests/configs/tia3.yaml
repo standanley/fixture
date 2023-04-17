@@ -15,8 +15,6 @@ physical_pins:
     vdd:
         direction: in
         datatype: real
-        value: 3.0
-        #value: (2.7, 3.3)
     #vss:
     #    direction: in
     #    datatype: real
@@ -34,8 +32,6 @@ physical_pins:
         direction: in
         datatype: real
         electricaltype: current
-        #value: (2e-6, 10e-6)
-        value: 6e-6
     #rfadj<5>:
     #    direction: in
     #    datatype: real
@@ -46,7 +42,6 @@ physical_pins:
         datatype: bit
         bus_type: binary
         first_one: high
-        value: (10, 63)
 
 
     outp:
@@ -61,6 +56,13 @@ template_pins:
     outp: outp
     inn: inn
     outn: outn
+
+stimulus_generation:
+    #vdd: (2.7, 3.3)
+    vdd: 3.0
+    #ibias: (2e-6, 6e-6)
+    ibias: 6e-6
+    rfadj: (10, 63)
 
 extras:
     #approx_settling_time: 2e-9
