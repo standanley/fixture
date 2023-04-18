@@ -55,7 +55,7 @@ class PlotHelper:
         #overrides_str = {Regression.regression_name(s): v for s, v in overrides.items()}
         #if target in overrides_str:
         #    return overrides_str[target]
-        if isinstance(target, SignalArray) and target.bus_info['datatype'] == 'binary_analog':
+        if isinstance(target, SignalArray):
             # TODO should have something like Sample.get_plot_value in the future
             # TODO issues if regression_name(b) is in overrides?
             if target in self.expr_dataframe:

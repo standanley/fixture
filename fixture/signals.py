@@ -490,13 +490,20 @@ class SignalManager:
         return ans
 
     def optional_expr(self):
-        # TODO delete the commented line
-        #ans = [x for x in self.signals if getattr(x, 'optional_expr', None)]
-        ans = [x for x in self.signals
-               if isinstance(x, (SignalIn, SignalArray)) and x.optional_expr]
-        for x in ans:
-            assert x.type_ in ['analog', 'binary_analog']
+        # TODO I'm not sure that looking at Value is okay here
+        ans = []
+        for s in self.signals:
+            if (isinstance(s, (SignalIn, SignalArray))
+                and s.auto_set
+                and isinstance(s.value, tuple)):
+                ans.append(s)
         return ans
+        ##ans = [x for x in self.signals if getattr(x, 'optional_expr', None)]
+        #ans = [x for x in self.signals
+        #       if isinstance(x, (SignalIn, SignalArray)) and x.optional_expr]
+        #for x in ans:
+        #    assert x.type_ in ['analog', 'binary_analog']
+        #return ans
 
     def optional_quantized_analog(self):
         for x in self.optional_expr():
