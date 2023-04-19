@@ -35,6 +35,9 @@ def dump_yaml(template, params_by_mode, mapping):
     for mode, params in params_by_mode.items():
         params_flat = {}
         for rhs in params.values():
+            # TODO rhs.verilog(...)
+            #rhs = {'gain': {list(template.signals)[0]: 42.42}}
+            rhs = {'gain': 'woohoo testing raw verilog\nAnd a second line too'}
             params_flat.update(rhs)
 #        # TODO I haven't found a good way to deal with required BA, so this is a bit of a hack
 #        # Note all params_flat that are part of a bus
@@ -102,12 +105,14 @@ def dump_yaml(template, params_by_mode, mapping):
                 names = [s.spice_name for s in template.signals if s.type_ == 'true_digital']
                 mode_dict = {name:x for name,x in zip(names, binary(mode, len(names)))}
             coefs_by_mode = d[param_mapped]
-            terms_verilog = {convert_term_to_verilog(k): v for k,v in terms.items()}
-            coefs_this_mode = {
-                    'mode': mode_dict,
-                    #'coef': terms
-                    'coef': terms_verilog
-            }
+            #terms_verilog = {convert_term_to_verilog(k): v for k,v in terms.items()}
+            #coefs_this_mode = {
+            #        'mode': mode_dict,
+            #        #'coef': terms
+            #        'coef': terms_verilog
+            #}
+            coefs_this_mode = {'mode': mode_dict,
+                               'raw_verilog': terms}
             coefs_by_mode.append(coefs_this_mode)
 
     #print('hello', d['gain'][0]['mode'])

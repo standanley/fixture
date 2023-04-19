@@ -409,7 +409,7 @@ class TemplateMaster():
                 else:
                     # TODO this is not working with modes
                     #  we should load it if/when we need it, I think
-                    rr = {}
+                    rr = checkpoint.load_regression_results(test)
 
 
                 # TODO I'm getting rid of post_regression temporarily

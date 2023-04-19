@@ -21,12 +21,10 @@ physical_pins:
         #value: (2.7, 3.3)
     inp:
         direction: in
-        datatype: real
-        electricaltype: current
+        datatype: current
     inn:
         direction: in
-        datatype: real
-        electricaltype: current
+        datatype: current
     
     ibias:
         direction: in
@@ -41,8 +39,8 @@ physical_pins:
         direction: in
         datatype: bit
         bus_type: binary
-        first_one: low
-        value: (10, 63)
+        first_one: high
+        #value: (10, 63)
 
 
     outp:
@@ -98,8 +96,9 @@ template_pins:
 stimulus_generation:
     indiff: (-3e-6, 3e-6)
     incm: (-1e-6, 1e-6)
-    vdd: (2.7, 3.3)
+    vdd: (2.7, 3.0)
     ibias: 6e-6
+    rfadj: (10, 63)
 
 
 

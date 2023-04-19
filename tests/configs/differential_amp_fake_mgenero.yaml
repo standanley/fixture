@@ -1,28 +1,37 @@
 name: myamp
 filepath: ../spice/myamp_differential_fake.sp
 template: DifferentialAmpTemplate
-pin:
+
+
+
+
+checkpoint_controller:
+    GainTest:
+        choose_inputs: False
+        run_sim: False
+        run_analysis: False
+        run_post_process: False
+        run_regression: False
+
+
+physical_pins:
     vdd:
-        direction: input
+        direction: in
         datatype: real
-        value: 1.2
     vss:
-        direction: input
+        direction: in
         datatype: real
-        value: 0
     inp:
-        direction: input
-        datatype: real
-        value: (.4, .8)
-    outp:
-        direction: output
+        direction: in
         datatype: real
     inn:
-        direction: input
+        direction: in
         datatype: real
-        value: (.4, .8)
+    outp:
+        direction: out
+        datatype: real
     outn:
-        direction: output
+        direction: out
         datatype: real
 
 template_pins:
@@ -35,6 +44,10 @@ extras:
     approx_settling_time: 1e-3
     limits_diff: (-0.2, 0.2)
     limits_cm: (0.55, 0.65)
+
+stimulus_generation:
+    vdd: 1.2
+    vss: 0
 
 mgenero: ./../../mgenero_4/differential_amp_mgenero_config.yaml
 
