@@ -115,10 +115,31 @@ class SampleManager:
         return pandas.DataFrame(new_data)
 
     @classmethod
-    def sample_all(self, N, groups_opt, groups_test):
-        NUM_DIMS = None
-        print('TODO sample_all')
-        pass
+    def sample_all(cls, N, groups_opt, groups_test):
+        # TODO I should really add a get_many method to SampleStyle
+        groups = groups_opt + groups_test
+        NUM_DIMS = sum(g.NUM_DIMS for g in groups)
+        raw_samples_list = Sampler.get_orthogonal_samples(NUM_DIMS, N)
+        raw_samples = np.array(raw_samples_list)
+
+        data = {}
+        dim_count = 0
+        for group in groups:
+            group_data = raw_samples[:, dim_count:dim_count + group.NUM_DIMS]
+            dim_count += group.NUM_DIMS
+            group_data_scaled = {k: [] for k in group.get_nominal()}
+            for x in group_data:
+                datapoint_scaled = group.get(x)
+                assert len(datapoint_scaled) == len(group_data_scaled)
+                for k in datapoint_scaled:
+                    group_data_scaled[k].append(datapoint_scaled[k])
+            data.update(group_data_scaled)
+
+
+        data[cls.GROUP_ID_TAG] = [None]*N
+        data[cls.SWEEP_ID_TAG] = [None]*N
+
+        return pandas.DataFrame(data)
 
 class SampleStyle:
     NUM_DIMS = 1
@@ -418,7 +439,9 @@ class Sampler:
             #if not any(s in test.input_signals for s in group.signals):
             new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 5, 30)
             data = pandas.concat((data, new_data), ignore_index=True)
-        todo = sm.sample_all(100, test.sample_groups_test, test.sample_groups_opt)
+        data_all = sm.sample_all(100, test.sample_groups_test, test.sample_groups_opt)
+        data = pandas.concat((data, data_all), ignore_index=True)
+
         return data
 
 

@@ -26,6 +26,17 @@ class Checkpoint:
             }
             self.data[test] = test_data
 
+    @classmethod
+    def save_csv(cls, dataframe, f):
+        data_converted_none = dataframe.replace({None: 'None'})
+        data_converted_none.to_csv(f, na_rep='nan')
+
+    @classmethod
+    def load_csv(cls, f):
+        data = pandas.read_csv(f)
+        data = data.replace({'None': None})
+        return data
+
     def convert_df_columns(self, test, df):
         # signals in column names
         str_to_signal = {str(s): s for s in
@@ -66,6 +77,7 @@ class Checkpoint:
 
 
     def save_input_vectors(self, test, input_vectors):
+        # TODO use a dataframe so we can use self.save_csv
         self.data[test]['input_vectors'] = input_vectors
         f = self._get_save_file(test, 'input_vectors.csv')
         writer = csv.writer(f)
@@ -100,13 +112,13 @@ class Checkpoint:
     def save_extracted_data_unprocessed(self, test, data):
         self.data[test]['extracted_data_unprocessed'] = data
         f = self._get_save_file(test, 'extracted_data_unprocessed.csv')
-        data.to_csv(f)
+        self.save_csv(data, f)
         f.close()
 
     def load_extracted_data_unprocessed(self, test):
         if self.data[test]['extracted_data_unprocessed'] is None:
             f = self._get_load_file(test, 'extracted_data_unprocessed.csv')
-            data = pandas.read_csv(f)
+            data = self.load_csv(f)
             self.convert_df_columns(test, data)
             self.data[test]['extracted_data_unprocessed'] = data
             f.close()
@@ -117,13 +129,13 @@ class Checkpoint:
     def save_extracted_data(self, test, data):
         self.data[test]['extracted_data'] = data
         f = self._get_save_file(test, 'extracted_data.csv')
-        data.to_csv(f)
+        self.save_csv(data, f)
         f.close()
 
     def load_extracted_data(self, test):
         if True or self.data[test]['extracted_data'] is None:
             f = self._get_load_file(test, 'extracted_data.csv')
-            data = pandas.read_csv(f)
+            data = self.load_csv(f)
             self.convert_df_columns(test, data)
             self.data[test]['extracted_data'] = data
             f.close()
