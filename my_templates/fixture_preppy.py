@@ -2,8 +2,12 @@ import re
 import preppy
 
 class VerilogTemplate:
-    test_pattern = '\\{\\{\\s*BEGINTESTS\\s*\\}\\}(.*)\\{\\{\\s*ENDTESTS\\s*\\}\\}'
-    header_pattern = '\\{\\{\\s*BEGINHEADER\\s*\\}\\}(.*)\\{\\{\\s*ENDHEADER\\s*\\}\\}'
+    start_test_pattern = '\\{\\{\\s*BEGINTESTS\\s*\\}\\}'
+    end_test_pattern = '\\{\\{\\s*ENDTESTS\\s*\\}\\}'
+    start_header_pattern = '\\{\\{\\s*BEGINHEADER\\s*\\}\\}'
+    end_header_pattern = '\\{\\{\\s*ENDHEADER\\s*\\}\\}'
+    header_start_tag = 'HEADER_START_TAG'
+    header_end_tag = 'HEADER_END_TAG'
 
     class ModuleParam:
         def __init__(self, text):
@@ -17,7 +21,7 @@ class VerilogTemplate:
 
         def compile(self, param_dict):
             value = param_dict.get(self.name, self.value)
-            return f'{self.name} = {self.value}'
+            return f'{self.name} = {value}'
 
     class ModuleIO:
         def __init__(self, text):
@@ -52,31 +56,66 @@ class VerilogTemplate:
             assert self.name in param_dict, f'No info for fixture parameter "{self.name}"'
             return param_dict[self.name]['raw_verilog']
 
-    def __init__(self, text):
-        print('todo')
-        self.text = text
+
+    @classmethod
+    def parse_tests(cls, text):
+        test_pattern = cls.start_test_pattern + '(.*)' + cls.end_test_pattern
+        tests = re.search(test_pattern, text, re.DOTALL)
+        assert tests, 'ERROR: test pattern not found'
+        test_list = tests.group(1).strip().split('\n')
+        test_list = [test.strip() for test in test_list]
+        test_list = [test for test in test_list if test != '']
+        return test_list
+
+
+    def __init__(self, text, dictionary):
+        # init accepts the whole dictionary, but it only looks at
+        # dictionary['included_tests'], so it can be used to determine required
+        # things for this template
+        self.original_text = text
+        self.test_info = dictionary['included_tests']
 
         # first, find test list
-        tests = re.search(self.test_pattern, text, re.DOTALL)
-        assert tests, 'ERROR: test pattern not found'
-        self.test_list = tests.group(1).strip().split('\n')
+        self.test_list = self.parse_tests(self.original_text)
         self.def_call = '{{def(' + ', '.join(self.test_list) + ')}}\n'
 
-        # next, preprocess header
-        header = re.search(self.header_pattern, text, re.DOTALL)
-        assert header, 'ERROR: test pattern not found'
-        self.header_text = header.group(1)
-        test_info_temp = [True for _ in self.test_list]
-        self.header = self.parse_header(test_info_temp)
+        # remove test list
+        test_pattern = self.start_test_pattern + '.*' + self.end_test_pattern
+        text_notests = re.sub(test_pattern, '', self.original_text, flags=re.DOTALL)
+
+        # replace header tags with ones that preppy won't get confused by
+        text_temp = re.sub(self.start_header_pattern, self.header_start_tag, text_notests)
+        text_ready = re.sub(self.end_header_pattern, self.header_end_tag, text_temp)
+
+        # next, preprocess with preppy
+        self.text_processed = self.preppy_process(text_ready, self.test_info)
+
+        # now process the header
+        header_pattern = self.header_start_tag + '(.*)' + self.header_end_tag
+        header_match = re.search(header_pattern, self.text_processed, re.DOTALL)
+        if not header_match:
+            assert False, 'Couldnt find header, internal error?'
+        header = header_match.group(1)
+        # parse_header sets some object variables
+        self.parse_header(header)
+
+
+
+        #header = re.search(self.header_pattern, text, re.DOTALL)
+        #assert header, 'ERROR: test pattern not found'
+        #self.header_text = header.group(1)
+        #test_info_temp = [True for _ in self.test_list]
+        #self.header = self.parse_header(test_info_temp)
 
 
     def preppy_process(self, text, test_info):
         preppy_input = self.def_call + text
         preppy_module = preppy.getModule('', sourcetext=preppy_input)
-        preppy_output = preppy_module.get(*test_info)
+        args = [test_info[t] for t in self.test_list]
+        preppy_output = preppy_module.get(*args)
         return preppy_output
 
-    def parse_header(self, test_info):
+    def parse_header(self, header):
         p_cap = '(.*?)'
         p_a = '^\\s*module\\s*\\('
         p_b = '\\)\\s*'
@@ -95,7 +134,7 @@ class VerilogTemplate:
             p_cap, # fixture params
             p_e
         ])
-        header = self.preppy_process(self.header_text, test_info)
+        #header = self.preppy_process(self.header_text, test_info)
 
         res = re.match(parse_header_pattern, header, flags=re.DOTALL)
         if not res:
@@ -128,8 +167,6 @@ class VerilogTemplate:
             fp = self.FixtureParam(fp_line)
             self.fixture_params.append(fp)
 
-        print()
-
 
     def compile_header(self, dictionary):
         module_parameters = self.compile_module_parameters(dictionary)
@@ -151,17 +188,14 @@ class VerilogTemplate:
         return header
 
     def compile(self, dictionary):
-        test_info_temp = [False for _ in self.test_list]
-
-        # first, preprocess the header
-        self.parse_header(test_info_temp)
+        # after init we have already run preppy, but we still need to
+        # compile and replace the header
+        test_info = dictionary['included_tests']
+        assert test_info == self.test_info, f'Model {self} was created with test info {self.test_info}, but compiled with info {test_info}'
 
         header_compiled = self.compile_header(dictionary)
-
-        # next, preprocess everything else
-        text_notests = re.sub(self.test_pattern, '', self.text, flags=re.DOTALL)
-        text_notests_parsedheader = re.sub(self.header_pattern, header_compiled, text_notests, flags=re.DOTALL)
-        model = self.preppy_process(text_notests_parsedheader, test_info_temp)
+        header_pattern = self.header_start_tag + '(.*)' + self.header_end_tag
+        model = re.sub(header_pattern, header_compiled, self.text_processed, flags=re.DOTALL)
         return model
 
 
@@ -178,7 +212,7 @@ class VerilogTemplate:
     def compile_fixture_parameters(self, dictionary):
         param_dict = dictionary['fixture_params']
         fixture_param_strings = [fp.compile(param_dict) for fp in self.fixture_params]
-        return ',\n'.join(fixture_param_strings)
+        return '\n'.join(fixture_param_strings)
 
     def compile_name_mapping(self, dictionary):
         statements = []
@@ -203,15 +237,17 @@ if __name__ == '__main__':
     with open('amp2.sv') as f:
         text = f.read()
 
-    vt = VerilogTemplate(text)
-    ans = vt.compile({
+    dictionary = {
+        'included_tests': {'clamping': False},
         'module_params': {'nodefault': 6.0},
         'module_name': 'my_user_amp',
         'io_mapping': {'in': 'circuit_in', 'out': 'out'},
         'fixture_params': {
             'gain': {'raw_verilog': 'gain=42;'},
             'offset': {'raw_verilog': 'offset=0.6;'}}
-    })
+    }
+    vt = VerilogTemplate(text, dictionary)
+    ans = vt.compile(dictionary)
 
     print(ans)
 
