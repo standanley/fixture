@@ -15,6 +15,10 @@ class VerilogTemplate:
             self.name = parsed.group(1)
             self.value = parsed.group(2)
 
+        def compile(self, param_dict):
+            value = param_dict.get(self.name, self.value)
+            return f'{self.name} = {self.value}'
+
     class ModuleIO:
         def __init__(self, text):
             # I think we can use lazy evaluation to get multi-word types?
@@ -27,6 +31,11 @@ class VerilogTemplate:
             self.type_ = parsed.group(2)
             self.name = parsed.group(3)
 
+        def compile(self, template_to_circuit):
+            assert self.name in template_to_circuit, f'No mapping for template io "{self.name}"'
+            return f'{self.direction} {self.type_} {template_to_circuit[self.name]}'
+
+
     class FixtureParam:
         def __init__(self, text):
             pattern = '\\s*(\\w+?)\\s+(\\w+)\\s*;?'
@@ -36,6 +45,12 @@ class VerilogTemplate:
 
             self.type_ = parsed.group(1)
             self.name = parsed.group(2)
+
+        def compile(self, param_dict, mode='dummy'):
+            # TODO digital modes
+            # TODO types
+            assert self.name in param_dict, f'No info for fixture parameter "{self.name}"'
+            return param_dict[self.name]['raw_verilog']
 
     def __init__(self, text):
         print('todo')
@@ -117,41 +132,88 @@ class VerilogTemplate:
 
 
     def compile_header(self, dictionary):
-        module_parameters =  self.compile_module_parameters(dictionary)
-        module_io =  self.compile_module_io(dictionary)
+        module_parameters = self.compile_module_parameters(dictionary)
+        module_io = self.compile_module_io(dictionary)
         module_name = dictionary['module_name']
-        fixture_parameters =  self.compile_fixture_parameters(dictionary)
+        name_mapping = self.compile_name_mapping(dictionary)
+        fixture_parameters = self.compile_fixture_parameters(dictionary)
+
         header = '\n'.join([
             'module (',
             module_parameters,
-            f') {module_name} ('
+            f') {module_name} (',
             module_io,
-            ');'
+            ');',
+            name_mapping,
+            '',
             fixture_parameters
         ])
+        return header
 
     def compile(self, dictionary):
-        test_info_temp = [True for _ in self.test_list]
+        test_info_temp = [False for _ in self.test_list]
 
         # first, preprocess the header
         self.parse_header(test_info_temp)
 
-        header_tag = 'HEADER_PLACEHOLDER_TAG'
+        header_compiled = self.compile_header(dictionary)
 
         # next, preprocess everything else
         text_notests = re.sub(self.test_pattern, '', self.text, flags=re.DOTALL)
-        text_notests_noheader = re.sub(self.header_pattern, header_tag, text_notests, flags=re.DOTALL)
-        model_noheader = self.preppy_process(text_notests_noheader, test_info_temp)
+        text_notests_parsedheader = re.sub(self.header_pattern, header_compiled, text_notests, flags=re.DOTALL)
+        model = self.preppy_process(text_notests_parsedheader, test_info_temp)
+        return model
 
-        print(preppy_output2)
 
+    def compile_module_parameters(self, dictionary):
+        param_dict = dictionary['module_params']
+        module_param_strings = [mp.compile(param_dict) for mp in self.module_params]
+        return ',\n'.join(module_param_strings)
 
+    def compile_module_io(self, dictionary):
+        io_mapping = dictionary['io_mapping']
+        io_strings = [io.compile(io_mapping) for io in self.module_io]
+        return ',\n'.join(io_strings)
+
+    def compile_fixture_parameters(self, dictionary):
+        param_dict = dictionary['fixture_params']
+        fixture_param_strings = [fp.compile(param_dict) for fp in self.fixture_params]
+        return ',\n'.join(fixture_param_strings)
+
+    def compile_name_mapping(self, dictionary):
+        statements = []
+        io_mapping = dictionary['io_mapping']
+
+        for io in self.module_io:
+            assert io.name in io_mapping, f'No mapping for io {io.name}'
+            template, circuit = io.name, io_mapping[io.name]
+            if circuit == template:
+                continue
+
+            if io.direction == 'input':
+                statements.append(f'assign {template} = {circuit};')
+            elif io.direction == 'output':
+                statements.append(f'assign {circuit} = {template};')
+            else:
+                assert False, f'Do not know how to assign direction {io.direction}'
+
+        return '\n'.join(statements)
 
 if __name__ == '__main__':
     with open('amp2.sv') as f:
         text = f.read()
 
-    VerilogTemplate(text)
+    vt = VerilogTemplate(text)
+    ans = vt.compile({
+        'module_params': {'nodefault': 6.0},
+        'module_name': 'my_user_amp',
+        'io_mapping': {'in': 'circuit_in', 'out': 'out'},
+        'fixture_params': {
+            'gain': {'raw_verilog': 'gain=42;'},
+            'offset': {'raw_verilog': 'offset=0.6;'}}
+    })
+
+    print(ans)
 
 
 
