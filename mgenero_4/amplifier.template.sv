@@ -127,7 +127,8 @@ sensitivity = ['v_icm_r', 'vdd_r', 'wakeup'] + get_sensitivity_list()
 # model parameter mapping for back-annotation
 # { testname : { test output : Verilog variable being mapped to } }
 #model_param_map = { 'test1': {'gain': 'Av'}, 'test1': {'offset_to_cm': 'v_oc_r'} }
-model_param_map = { 'test1': {'gain': 'Av', 'offset_to_cm': 'v_oc_r'} }
+#model_param_map = { 'test1': {'gain': 'Av', 'offset_to_cm': 'v_oc_r'} }
+model_param_map = {'test1': {'gain': 'dummy1', 'cm_gain': 'dummy2'}}
 if Metric.is_exist('filter'):
   ftype = Metric.value('filter')
   if ftype == 'p1':
