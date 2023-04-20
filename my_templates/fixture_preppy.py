@@ -1,5 +1,6 @@
 import re
 import preppy
+import yaml
 
 class VerilogTemplate:
     start_test_pattern = '\\{\\{\\s*BEGINTESTS\\s*\\}\\}'
@@ -205,9 +206,26 @@ class VerilogTemplate:
         return ',\n'.join(module_param_strings)
 
     def compile_module_io(self, dictionary):
+        #io_mapping = dictionary['io_mapping']
+        #io_strings = [io.compile(io_mapping) for io in self.module_io]
+        #return ',\n'.join(io_strings)
+        io = dictionary['pin']
         io_mapping = dictionary['io_mapping']
-        io_strings = [io.compile(io_mapping) for io in self.module_io]
-        return ',\n'.join(io_strings)
+        assert all(t.name in io_mapping for t in self.module_io)
+        template_lookup = {io_mapping[template.name]: template for template in self.module_io}
+        lines = []
+        for name, info in io.items():
+            direction = info['direction']
+            datatype = info['datatype']
+            if name in template_lookup:
+                # there is a template pin for this
+                template = template_lookup[name]
+                if datatype != template.type_:
+                    print(f"Overriding datatype for {name} with matching template pin's datatype '{template.type_}'")
+                    datatype = template.type_
+            lines.append(f'{direction} {datatype} {name}')
+        return ',\n'.join(lines)
+
 
     def compile_fixture_parameters(self, dictionary):
         param_dict = dictionary['fixture_params']
@@ -216,11 +234,13 @@ class VerilogTemplate:
 
     def compile_name_mapping(self, dictionary):
         statements = []
+        io_dict = dictionary['pin']
         io_mapping = dictionary['io_mapping']
 
         for io in self.module_io:
             assert io.name in io_mapping, f'No mapping for io {io.name}'
             template, circuit = io.name, io_mapping[io.name]
+            assert circuit in io_dict, f'No circuit pin "{circuit}" corresponding to mapping "{io.name}: {io_mapping[io.name]}"'
             if circuit == template:
                 continue
 
@@ -237,15 +257,21 @@ if __name__ == '__main__':
     with open('amp2.sv') as f:
         text = f.read()
 
-    dictionary = {
-        'included_tests': {'clamping': False},
-        'module_params': {'nodefault': 6.0},
-        'module_name': 'my_user_amp',
-        'io_mapping': {'in': 'circuit_in', 'out': 'out'},
-        'fixture_params': {
-            'gain': {'raw_verilog': 'gain=42;'},
-            'offset': {'raw_verilog': 'offset=0.6;'}}
-    }
+    #dictionary = {
+    #    'pin': {
+    #        'circuit_in': {'direction': 'input'}
+    #    },
+    #    'included_tests': {'clamping': False},
+    #    'module_params': {'nodefault': 6.0},
+    #    'module_name': 'my_user_amp',
+    #    'io_mapping': {'in': 'circuit_in', 'out': 'out'},
+    #    'fixture_params': {
+    #        'gain': {'raw_verilog': 'gain=42;'},
+    #        'offset': {'raw_verilog': 'offset=0.6;'}}
+    #}
+
+    dictionary = yaml.safe_load(open('useramp_config.yaml', 'r'))
+
     vt = VerilogTemplate(text, dictionary)
     ans = vt.compile(dictionary)
 

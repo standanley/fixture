@@ -13,11 +13,11 @@ clamping
 
 module (
     parameter testparam = 5,
-    parameter nodefault = required,
+    parameter nodefault = required
 )
 placeholder_name (
-    input real in,
-    output real out,
+    input pwl in,
+    output pwl out
 );
 
 real gain;
