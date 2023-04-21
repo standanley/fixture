@@ -70,7 +70,7 @@ def _run(circuit_config_dict):
 
 
 
-    all_checkpionts = {
+    all_checkpoints = {
         'choose_inputs': True,
         'run_sim': True,
         'run_analysis': True,
@@ -78,12 +78,28 @@ def _run(circuit_config_dict):
         'run_regression': True,
     }
 
+    # TODO move this block to config_parse
+    checkpoint_controller = {}
     if 'checkpoint_controller' in circuit_config_dict:
         cc_str = circuit_config_dict['checkpoint_controller']
         test_mapping = {str(test): test for test in t.tests}
-        checkpoint_controller = {test_mapping[test_name]: x for test_name, x in cc_str.items()}
+        for test_str, val in cc_str.items():
+            assert test_str in test_mapping, f'Unknown test "{test_str}" in checkpoint controller'
+            test = test_mapping[test_str]
+            if isinstance(val, bool):
+                if val:
+                    checkpoint_controller[test] = all_checkpoints
+            elif isinstance(val, dict):
+                assert set(val) == set(all_checkpoints), f'If specifying checkpoints for a test, must specify all keys. You gave {set(val)}, should be {set(all_checkpoints)}'
+                checkpoint_controller[test] = val
+            else:
+                assert False, f'Confused by type of "{val}" in checkpoint controller for test "{test_str}"'
     else:
-        checkpoint_controller = {test: all_checkpionts for test in t.tests}
+        print(f'No tests specified, defaulting to all tests: {t.tests}')
+
+
+    # now fill in any
+    checkpoint_controller = {test: all_checkpoints for test in t.tests}
 
     params_by_mode = t.go(checkpoint, checkpoint_controller)
 
