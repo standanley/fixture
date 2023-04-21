@@ -363,7 +363,7 @@ class HeirarchicalExpression(Expression):
             plot_xss = []
             plot_ys = []
             plot_predictions = []
-            for si in sweep_ids:
+            for si in sorted(sweep_ids):
                 # point_data is the data from one point (si) on the sg sweep
                 point_indices = group_data[SampleManager.SWEEP_ID_TAG] == si
                 point_data = group_data[point_indices]
@@ -372,8 +372,6 @@ class HeirarchicalExpression(Expression):
                 self.parent_expression.fit(point_data, point_data_res)
                 group_results.append(self.parent_expression.x_opt)
 
-                # TODO in general this plot xaxis is not right
-                #xaxis = self.parent_expression.input_signals[1]
                 plot_xss.append(point_data)
                 plot_ys.append(point_data_res)
                 predict_data = [point_data[input] for input in self.parent_expression.input_signals]
@@ -388,7 +386,7 @@ class HeirarchicalExpression(Expression):
                         # TODO if this is the only xaxis, should we not skip?
                         continue
 
-                    print('New figure for ', sg)
+                    print('New figure for ', self.name, sg)
                     plt.figure()
                     colors = []
                     orders = []
@@ -414,28 +412,28 @@ class HeirarchicalExpression(Expression):
                         legend.append(', '.join(vals))
 
                     plt.legend(legend)
-                    plt.title(f'Results from sweeping {sg}')
+                    plt.title(f'Fitting {self.name} for various {sg}')
                     plt.xlabel(f'{xaxis}')
-                    plt.ylabel(f'f{self.parent_expression.name}')
+                    plt.ylabel(f'{self.parent_expression.name}')
                     plt.grid()
-                    PlotHelper.save_current_plot(f'{self.name}/Fits for {self.name} vs {xaxis.friendly_name()} from Sweeping {sg.name}')
+                    PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/Fits for {self.name} vs {xaxis.friendly_name()} from Sweeping {sg.name}')
 
             # Next we find expressions for each param, using values from earlier
             # each row in example_data corresponds to one point in the sweep
             # TODO I'd like to delete the columns corresponding to test inputs
             #  in example_data because they are not relevant. But I don't have
-            #  a good way to find the names for those
+            #  a good way to find the names for those. It's just confusing for
+            #  somebody maintaining the code
             example_data = group_data.loc[example_rows]
             for i in range(len(self.child_expressions)):
                 child = self.child_expressions[i]
                 child_results = group_results[:, i]
 
                 # When we fit by group we don't exactly follow the normal
-                # heirarchy for the child, so it has to be in a specific form
+                # hierarchy for the child, so it has to be in a specific form
+                # TODO move this assertion to the top?
                 assert isinstance(child, HeirarchicalExpression)
                 assert isinstance(child.parent_expression, SumExpression)
-                # No longer need this last one since children have offsets now
-                #assert isinstance(child.child_expressions[-1], ConstExpression)
 
                 ## now we look through child's children and determine which
                 # one(s) are actually affected by changing sg
@@ -446,6 +444,8 @@ class HeirarchicalExpression(Expression):
                 for grandchild in child.child_expressions:
                     if grandchild not in fits_for_sweeps[sg]:
                         continue
+                    # we are here because this grandchild actually depends on
+                    # the sg we are currently working with
                     grandchild.fit(example_data, child_results)
 
                     if PLOT:
@@ -468,10 +468,11 @@ class HeirarchicalExpression(Expression):
                         plt.xlabel(f'{xaxis}')
                         plt.ylabel(f'{child.name}')
                         plt.grid()
-                        PlotHelper.save_current_plot(f'{self.name}/Initial fit for {grandchild.name} to {self.name} vs {sg}')
+                        PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/Individual fit for {grandchild.name} vs {sg}')
 
                         # TEMP for checking x_init
                         if grandchild.x_init is not None:
+                            plt.figure()
                             predictions = grandchild.predict_from_dict(data_smooth, grandchild.x_init)
                             #plt.plot(xs, child_results, '*')
                             plt.plot(np.array(xs)[xs_order],
@@ -480,7 +481,7 @@ class HeirarchicalExpression(Expression):
                             plt.xlabel(f'{xaxis}')
                             plt.ylabel(f'{child.name}')
                             plt.grid()
-                            PlotHelper.save_current_plot(f'{self.name}/Debug x_init for {grandchild.name} to {self.name} vs {sg}')
+                            PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/debug/Initial point for minimizer for {grandchild.name} vs {sg}')
                         print()
 
 
@@ -674,12 +675,16 @@ class HeirarchicalExpression(Expression):
             coef_count += 1
         assert coef_count == len(coef_names)
 
+        # parent expression next
         parent_coef_names = [name(ce) for ce in self.child_expressions]
         if self.manage_offsets:
             parent_coef_names.append(name_nominal)
         assert len(parent_coef_names) == self.parent_expression.NUM_COEFFICIENTS
         lines += self.parent_expression.verilog(lhs, parent_coef_names)
-        return lines
+
+        # TODO I want to reverse this properly so the c numbers are in order,
+        #  But I'm afraid I will mess it up and they'll be mismatched
+        return lines[::-1]
 
 class SumExpression(Expression):
     input_signals = []

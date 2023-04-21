@@ -6,6 +6,7 @@ from functools import reduce
 #import matplotlib.pyplot as plt
 import matplotlib
 #matplotlib.use('Agg')
+import fixture.sampler
 plt = matplotlib.pyplot
 import scipy
 import numpy as np
@@ -65,6 +66,10 @@ class PlotHelper:
             result = target.get_decimal_value(elements)
             return result
 
+        if isinstance(target, fixture.sampler.SampleStyle):
+            # TODO multiple signlas
+            return self.get_column(target.signals[0])
+
         # now we start breaking it up by the 6 cases
         if target in self.parameter_algebra:
             if not lhs_pred:
@@ -118,11 +123,11 @@ class PlotHelper:
     def clean_filename(cls, orig):
         # prepend plots/
         # clean spaces - maybe not necessary?
-        # clean forward slashes
         # create necessary directories
 
         #clean = orig.replace('/', '--')
-        clean = orig.replace(' ', '_')
+        #clean = orig.replace(' ', '_')
+        clean = orig
         final = os.path.join('.', 'plots', clean)
         directory = os.path.dirname(final)
         if directory != '' and not os.path.exists(directory):
@@ -147,6 +152,81 @@ class PlotHelper:
         plt.close()
 
     #@classmethod(parameter_algebra, data, )
+
+
+    def plot_results(self):
+        SampleManager = fixture.sampler.SampleManager
+        parameter_algebra = self.test.parameter_algebra_vectored
+        for lhs, expression in parameter_algebra.items():
+            # lhs will be the dependent axis
+            required_inputs = self.test.sample_groups_test
+            optional_inputs = self.test.sample_groups_opt
+            data_nominal_mask = [x is None for x in self.expr_dataframe[SampleManager.GROUP_ID_TAG]]
+            y = self.get_column(lhs)
+            y_pred = self.get_column(lhs, lhs_pred=True)
+
+            y_nominal = y[data_nominal_mask]
+            y_pred_nominal = y_pred[data_nominal_mask]
+
+            # output vs required input
+            for ri in required_inputs:
+                # TODO only works when ri has a single signal
+                x = self.get_column(ri)[data_nominal_mask]
+                plt.figure()
+                plt.plot(x, y_nominal, '*')
+                plt.plot(x, y_pred_nominal, 'x')
+                plt.xlabel(self.friendly_name(ri))
+                plt.ylabel(lhs)
+                plt.grid()
+                plt.legend(['Measured', 'Predicted'])
+                plt.title(f'{lhs} vs. {self.friendly_name(ri)}, nominal')
+                self._save_current_plot(f'final_model/{lhs} vs {self.friendly_name(input)} nominal')
+
+            def contour_plot(x1, x2, y, y_pred, x1name, x2name, yname):
+                    gridx, gridy = np.mgrid[min(x1):max(x1):1000j,
+                                   min(x2):max(x2):1000j]
+                    points = np.vstack((x1, x2)).T
+                    try:
+                        contour_data_meas = griddata(points, y, (gridx, gridy), method='linear')
+                        contour_data_pred = griddata(points, y_pred, (gridx, gridy), method='linear')
+                    except scipy.spatial.qhull.QhullError:
+                        print(f'Issue with input point collinearity for contour plot {lhs}, {input1} vs {input2}')
+                        return
+
+                    plt.figure()
+                    cp = plt.contourf(gridx, gridy, contour_data_meas)#, levels=5)
+                    plt.colorbar(cp)
+                    meas_levels = cp.cvalues
+                    meas_breaks = meas_levels[:-1] + np.diff(meas_levels)/2
+                    plt.contour(gridx, gridy, contour_data_meas, levels=meas_breaks, colors='black', linestyles='solid')
+                    plt.plot(*(points.T), 'x')
+                    plt.contour(gridx, gridy, contour_data_pred, levels=meas_breaks, colors='black', linestyles='dashed')
+                    plt.xlabel(self.friendly_name(input1))
+                    plt.ylabel(self.friendly_name(input2))
+                    plt.title(yname)
+                    plt.grid()
+                    self._save_current_plot(
+                        f'final_model/{lhs}_vs_{x1name}_and_{x2name} nominal')
+
+            # output vs multiple required inputs
+            for input_pair in itertools.combinations(required_inputs, 2):
+                input1, input2 = sorted(input_pair, key=str)
+                x1 = self.get_column(input1.signals[0])[data_nominal_mask]
+                x2 = self.get_column(input2.signals[0])[data_nominal_mask]
+                contour_plot(x1, x2, y_nominal, y_pred_nominal, self.friendly_name(input1), self.friendly_name(input2), self.friendly_name(lhs))
+
+            # one required and one optional
+            for input1 in required_inputs:
+                for input2 in optional_inputs:
+                    # TODO what about multiple signals?
+                    data_opt_mask = self.expr_dataframe[
+                                            SampleManager.GROUP_ID_TAG] == input2
+                    x1 = self.get_column(input1)[data_opt_mask]
+                    x2 = self.get_column(input2)[data_opt_mask]
+                    y_opt = y[data_opt_mask]
+                    y_pred_opt = y_pred[data_opt_mask]
+                    contour_plot(x1, x2, y_opt, y_pred_opt, self.friendly_name(input1), self.friendly_name(input2), self.friendly_name(lhs))
+
 
     def plot_regression(self):
         Regression = fixture.regression.Regression

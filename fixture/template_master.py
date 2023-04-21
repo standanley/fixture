@@ -425,13 +425,14 @@ class TemplateMaster():
             # PlotHelper.plot_regression(regression, test.parameter_algebra_vectored, regression.regression_dataframe)
             # PlotHelper.plot_optional_effects(test, regression.regression_dataframe, regression.results)
             # TODO this has not been tested with modes
-            mode_prefix = '' if mode == tuple() else f'mode_{mode}_'
+            mode_prefix = '' if mode == '()' else f'mode_{mode}_'
             ph = PlotHelper(test,
                             test.parameter_algebra_vectored,
                             mode_prefix,
                             results_each_mode,
                             rr)
-            ph.plot_regression()
+            #ph.plot_regression()
+            ph.plot_results()
 
             # merge results from this test in results from all tests
             for mode in params_by_mode:
