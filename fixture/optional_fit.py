@@ -305,8 +305,9 @@ class HeirarchicalExpression(Expression):
         # relies on a specific structure of heirarchy and specific sweep groups
         # in optional_data in order to fit children and grandchildren one
         # piece at a time
+        # TODO I'm still getting nan instead of None for sg sometimes
         groups = {sg for sg in optional_data[SampleManager.GROUP_ID_TAG]
-                  if sg is not None}
+                  if (sg is not None and not isinstance(sg, float))}
         groups = sorted(groups, key=lambda sg: sg.name)
 
         # first thing is to figure out which sweep groups to use for which

@@ -117,10 +117,11 @@ class PlotHelper:
     @classmethod
     def clean_filename(cls, orig):
         # prepend plots/
-        # clean spaces
+        # clean spaces - maybe not necessary?
+        # clean forward slashes
         # create necessary directories
 
-        #clean = orig.replace('/', '_over_')
+        #clean = orig.replace('/', '--')
         clean = orig.replace(' ', '_')
         final = os.path.join('.', 'plots', clean)
         directory = os.path.dirname(final)
@@ -233,7 +234,7 @@ class PlotHelper:
 
             # now for contour plots
             for input_pair in itertools.combinations(inputs_clean, 2):
-                input1, input2 = sorted(input_pair, key=Regression.regression_name)
+                input1, input2 = sorted(input_pair, key=lambda s: s.friendly_name())
                 x1 = self.get_column(input1)
                 x2 = self.get_column(input2)
                 gridx, gridy = np.mgrid[min(x1):max(x1):1000j,
@@ -272,42 +273,6 @@ class PlotHelper:
                 #print()
 
 
-    ''' 
-    I don't think we use these any more
-    @staticmethod
-    def eval_factor(data, factor):
-
-        if factor == '1':
-            return np.ones(data.shape[0])
-        else:
-            #clean_factor = Regression.clean_string(factor)
-            term = (Regression.regression_name(x) for x in factor)
-            column = reduce(operator.mul,
-                            [data[x] for x in term],
-                            data[Regression.one_literal])
-            return column
-
-    @staticmethod
-    def eval_parameter(data, regression_results, parameter):
-        fit = regression_results[parameter]
-        M = data.shape[0]
-        result = np.zeros(M)
-        for expr, coef in fit.items():
-            term = PlotHelper.eval_factor(data, expr)
-            result += term * coef
-        return result
-
-    @staticmethod
-    def modify_data(orig, overrides):
-        # copy original dataframe and replace overrides
-        new_dict = {}
-        for name in orig.keys():
-            #new_name = Regression.clean_string(name)
-            new_name = name
-            value = overrides.get(name, orig[name])
-            new_dict[new_name] = value
-        return new_dict #pandas.DataFrame(new_dict)
-    '''
 
     @staticmethod
     def friendly_name(s):

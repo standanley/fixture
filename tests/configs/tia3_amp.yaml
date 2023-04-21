@@ -3,13 +3,21 @@ filepath: ../spice/tia3.sp
 template: AmplifierTemplate
 
 checkpoint_controller:
-    DCTest:
+    #DCTest:
+    #    choose_inputs: True
+    #    run_sim: True
+    #    run_analysis: True
+    #    run_post_process: True
+    #    run_regression: True
+    #    #run_post_regression: save
+    DCTest: False
+    DynamicTFTest: 
         choose_inputs: True
         run_sim: True
         run_analysis: True
         run_post_process: True
         run_regression: True
-        run_post_regression: save
+
 
 
 
@@ -96,23 +104,23 @@ template_pins:
 stimulus_generation:
     indiff: (-3e-6, 3e-6)
     incm: (-1e-6, 1e-6)
-    vdd: (2.7, 3.0)
+    #vdd: (2.7, 3.0)
+    vdd: 3.0
     ibias: 6e-6
-    rfadj: (10, 63)
-
-
-
-
-
-
-
+    #rfadj: (10, 63)
+    rfadj: (30, 50)
 
 
 
 extras:
     #approx_settling_time: 2e-9
-    approx_settling_time: 100e-6
+    approx_settling_time: 10e-6
+
+# NOTES: approx_settling_time=10e-6 was good for rfadj=42
+# at the time I had the ngspice timestep at 10e-9
 
 #test_config_file: ngspice_dynamics.yaml
+# small_timestep is too small
 #test_config_file: ngspice_small_tstep.yaml
-test_config_file: ngspice.yaml
+#test_config_file: ngspice.yaml
+test_config_file: ngspice_tia3.yaml

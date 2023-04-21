@@ -424,8 +424,6 @@ def parse_optional_input_info(circuit_config_dict, tests):
     # TODO this can't be in the main parse_config because it needs to wait
     # until after the template has expanded parameter_algebra
 
-    print('TODO ask user about optional expressions')
-
     optional_input_info = circuit_config_dict.get('optional_input_info', {})
 
     # we only make this list of params for an error message

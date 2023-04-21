@@ -55,7 +55,7 @@ class ModalAnalysis:
         h_step_est = self.step_response_from_pz(ps, zs, dc)
         print('Plotting ps, zs, dc', ps, zs, dc)
         t = self.t*self.scale
-        END = len(t)//3
+        END = len(t)#//3
 
         plt.figure()
         plt.plot(t[:END], self.h_step[:END], 'o')

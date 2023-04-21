@@ -9,7 +9,7 @@ checkpoint_controller:
         run_analysis: True
         run_post_process: True
         run_regression: True
-        run_post_regression: save
+        #run_post_regression: save
 
 physical_pins:
     vdd:

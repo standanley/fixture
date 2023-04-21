@@ -313,6 +313,9 @@ class Testbench():
         results = pandas.DataFrame(results_comb)
         return results
 
+    # TODO I don't think there's any reason why this should live in the
+    #  testbench class. If we move it out, we wouldn't need to create the
+    #  testbench to run the post processing step alone
     def post_process(self, results):
         # run through post-processing and append new columns
         results_processed = results.copy()

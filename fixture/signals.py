@@ -39,7 +39,7 @@ class SignalIn():
         self.representation = representation
 
     def __str__(self):
-        return f'<{str(self.template_name)} / {self.spice_name}>'
+        return f'<{str(self.template_name)} -- {self.spice_name}>'
 
     def friendly_name(self):
         return self.template_name if self.spice_name is None else self.spice_name
@@ -66,7 +66,7 @@ class CenteredSignalIn:
         self.template_name = name(ref.template_name)
 
     def __str__(self):
-        return f'<{str(self.template_name)} / {self.spice_name}>'
+        return f'<{str(self.template_name)} -- {self.spice_name}>'
 
     def friendly_name(self):
         return self.template_name if self.spice_name is None else self.spice_name
@@ -91,7 +91,7 @@ class SignalOut():
         self.representation = representation
 
     def __str__(self):
-        return f'<{str(self.template_name)} / {self.spice_name}>'
+        return f'<{str(self.template_name)} -- {self.spice_name}>'
 
     def friendly_name(self):
         return self.template_name if self.spice_name is None else self.spice_name
@@ -414,7 +414,7 @@ class SignalManager:
         if name[0] != '<' or name[-1] != '>':
             raise KeyError(name)
         name = name[1:-1]
-        tokens = name.split(' / ')
+        tokens = name.split(' -- ')
         if len(tokens) == 2:
             t_name, c_name = tokens
         else:
@@ -731,7 +731,7 @@ class SignalArray:
         self.__dict__ = state
 
     def __str__(self):
-        return f'<{str(self.template_name)} / {self.spice_name} / {self.array.shape}>'
+        return f'<{str(self.template_name)} -- {self.spice_name} -- {self.array.shape}>'
 
     def friendly_name(self):
         return self.template_name if self.spice_name is None else self.spice_name

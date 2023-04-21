@@ -97,10 +97,6 @@ def _run(circuit_config_dict):
     else:
         print(f'No tests specified, defaulting to all tests: {t.tests}')
 
-
-    # now fill in any
-    checkpoint_controller = {test: all_checkpoints for test in t.tests}
-
     params_by_mode = t.go(checkpoint, checkpoint_controller)
 
     # No need to print like this now because it prints the verilog representation

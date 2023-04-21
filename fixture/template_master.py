@@ -359,7 +359,7 @@ class TemplateMaster():
 
             # analysis requires a fault testbench even if we skip the actual
             # sim, so the checkpoint logic is not as straightforward here
-            if controller['run_sim'] or controller['run_analysis']:
+            if controller['run_sim'] or controller['run_analysis'] or controller['run_post_process']:
                 tester = Tester(self.dut)
                 # TODO what's a good way to specify do_optional_out
                 #do_optional_out = test == self.tests[0]
