@@ -413,7 +413,7 @@ class HeirarchicalExpression(Expression):
 
                     plt.legend(legend)
                     plt.title(f'Fitting {self.name} for various {sg}')
-                    plt.xlabel(f'{xaxis}')
+                    plt.xlabel(f'{xaxis.friendly_name()}')
                     plt.ylabel(f'{self.parent_expression.name}')
                     plt.grid()
                     PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/Fits for {self.name} vs {xaxis.friendly_name()} from Sweeping {sg.name}')
@@ -465,7 +465,7 @@ class HeirarchicalExpression(Expression):
                         xs_order = np.argsort(xs)
                         plt.plot(np.array(xs)[xs_order], child_results[xs_order], '*')
                         plt.plot(xs_smooth, predictions, 'x--')
-                        plt.xlabel(f'{xaxis}')
+                        plt.xlabel(f'{xaxis.friendly_name()}')
                         plt.ylabel(f'{child.name}')
                         plt.grid()
                         PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/Individual fit for {grandchild.name} vs {sg}')
@@ -478,7 +478,7 @@ class HeirarchicalExpression(Expression):
                             plt.plot(np.array(xs)[xs_order],
                                      child_results[xs_order], '*')
                             plt.plot(xs_smooth, predictions, 'x--')
-                            plt.xlabel(f'{xaxis}')
+                            plt.xlabel(f'{xaxis.friendly_name()}')
                             plt.ylabel(f'{child.name}')
                             plt.grid()
                             PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/debug/Initial point for minimizer for {grandchild.name} vs {sg}')
@@ -512,7 +512,7 @@ class HeirarchicalExpression(Expression):
             plt.plot(xs, result_data, '*')
             plt.plot(xs, predictions, '--')
             plt.grid()
-            plt.xlabel(f'{xaxis}')
+            plt.xlabel(f'{xaxis.friendly_name()}')
             plt.ylabel(f'{self.name}')
         print()
 

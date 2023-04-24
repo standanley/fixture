@@ -180,7 +180,7 @@ class PlotHelper:
                 plt.grid()
                 plt.legend(['Measured', 'Predicted'])
                 plt.title(f'{lhs} vs. {self.friendly_name(ri)}, nominal')
-                self._save_current_plot(f'final_model/{lhs} vs {self.friendly_name(input)} nominal')
+                self._save_current_plot(f'final_model/{lhs} vs {self.friendly_name(ri)} nominal')
 
             def contour_plot(x1, x2, y, y_pred, x1name, x2name, yname):
                     gridx, gridy = np.mgrid[min(x1):max(x1):1000j,
@@ -358,7 +358,7 @@ class PlotHelper:
     def friendly_name(s):
         if isinstance(s, SignalIn):
             return s.friendly_name()
-        return s
+        return str(s)
 
     def plot_optional_effects(self):
         N = 101
