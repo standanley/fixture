@@ -3,12 +3,12 @@ filepath: ../spice/tia3.sp
 template: AmplifierTemplate
 
 checkpoint_controller:
-    DCTest:
-        choose_inputs: False
-        run_sim: False
-        run_analysis: False
-        run_post_process: False
-        run_regression: False
+    #DCTest:
+    #    choose_inputs: False
+    #    run_sim: False
+    #    run_analysis: False
+    #    run_post_process: False
+    #    run_regression: False
     #DCTest: False
     #DynamicTFTest: 
     #    choose_inputs: True
@@ -16,7 +16,7 @@ checkpoint_controller:
     #    run_analysis: True
     #    run_post_process: True
     #    run_regression: True
-    #DCTest: True
+    DCTest: True
 
 
 
