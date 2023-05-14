@@ -4,7 +4,8 @@ import fixture
 from fixture import Tester, Regression, sampler
 from fixture.optional_fit import SympyExpression, get_expression_from_string
 from fixture.sampler import SampleStyle, get_sampler_for_signal
-from fixture.signals import SignalManager, SignalArray, SignalOut, SignalIn, CenteredSignalIn
+from fixture.signals import SignalManager, SignalArray, SignalOut, SignalIn, \
+    CenteredSignalIn, AnalysisResultSignal
 from fixture.plot_helper import PlotHelper
 
 class TemplateMaster():
@@ -93,18 +94,7 @@ class TemplateMaster():
 
             # signals whose values will be calculated by analysis() method
             for name in self.analysis_outputs:
-                self.signals.add(SignalIn(
-                    value=None,
-                    nominal=None,
-                    type_='real',
-                    get_random=False,
-                    auto_set=False,
-                    spice_name=None,
-                    spice_pin=None,
-                    template_name=name,
-                    optional_expr=None,
-                    bus_info=None
-                ))
+                self.signals.add(AnalysisResultSignal(name))
 
             test_dimensions = self.input_domain()
             self.input_signals = None # Todo get rid of this if unused
@@ -189,9 +179,7 @@ class TemplateMaster():
                         continue
                     child_vector_new = []
                     for child_v in child_vector:
-                        for parent_v in vectoring_dict[parent]:
-                            child_v_new = f'{child_v}_{parent_v}'
-                            child_vector_new.append(child_v_new)
+                        child_vector_new += child_v.vector(vectoring_dict[parent])
                     child_vector = child_vector_new
 
                 vectoring_dict[child] = child_vector
@@ -217,13 +205,20 @@ class TemplateMaster():
             #                    input.representation.params.components)
             #        abc
 
+            self.parameter_algebra_vectored = {}
             for lhs, rhs in self.parameter_algebra.items():
-
-                expr = get_expression_from_string(rhs, self.signals, f'test_{lhs}', vectoring_dict)
+                lhs_signal = self.signals.from_template_name(lhs)
+                if lhs_signal in vectoring_dict:
+                    for lhs_vec in vectoring_dict[lhs_signal]:
+                        suffix = '_' + lhs_vec.friendly_name()
+                        expr = get_expression_from_string(rhs, self.signals, self.parameters, lhs_vec.friendly_name(), vectoring_dict, param_suffix=suffix)
+                        self.parameter_algebra_vectored[lhs_vec] = expr
+                else:
+                    expr = get_expression_from_string(rhs, self.signals, self.parameters, lhs, vectoring_dict)
+                    self.parameter_algebra_vectored[lhs_signal] = expr
                 print(expr)
 
 
-            assert False
             return
 
             def read_algebra(algebra_string):

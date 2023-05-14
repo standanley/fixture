@@ -10,7 +10,7 @@ import numpy as np
 import pandas
 
 #import fixture
-from sympy import Symbol
+from sympy import Symbol, lambdify
 
 import fixture.regression
 from fixture.sampler import SampleManager
@@ -691,6 +691,15 @@ class HeirarchicalExpression(Expression):
         #  But I'm afraid I will mess it up and they'll be mismatched
         return lines[::-1]
 
+    def copy(self, param_suffix):
+        # for use with vectoring outputs, copy this whole tree but rename the
+        # parameters with the given suffix
+        parent = self,parent_expression.copy(param_suffix)
+        children = [c.copy(param_suffix) for c in self.child_expressions]
+        name = f'{self.name}_{param_suffix}'
+        ans = HeirarchicalExpression(parent, children, name)
+        return ans
+
 class SumExpression(Expression):
     input_signals = []
 
@@ -888,7 +897,12 @@ class SympyExpression(Expression):
 
 
     def predict(self, opt_values, coefs):
-        assert False
+        input_syms = [self.io_symbols[s] for s in self.input_signals]
+        fun = lambdify(input_syms+self.coefs, self.ast, cse=True)
+        args = list(opt_values) + list(coefs)
+        ans = fun(*args)
+        return ans
+
 
     def verilog(self, lhs, coef_names):
         print('TODO: SympyExpression verilog')
@@ -949,20 +963,16 @@ class SympyExpression(Expression):
         self.NUM_COEFFICIENTS = len(self.coefs)
         return
 
+    def copy(self, param_suffix):
+        assert False
 
-def get_expression_from_string(string, parameters, name, vectoring_dict):
-    # tries to parse the string as an expression using sympy
-    # Tokens that match signal names are mapped to that signal,
-    # tokens that are unrecognized are assumed new parameters
-    # Parameters named like c123 will have their names ignored; any
-    # other name will be kept by creating a ConstExpression (TODO)
-
+def get_ast_from_string(string):
+    # some builtin functions (like abs) we want to keep as functions,
+    # but others (like input) we want to not do that
     FIXTURE_TAG = 'FIXTURE_TAG_'
     def transform_name(tokens, local_dict, global_dict):
         result = []
         for type_, name in tokens:
-            # some builtin functions (like abs) we want to keep as functions,
-            # but others (like input) we want to not do that
             if type_ == 1 and (iskeyword(name) or name == 'input'):
                 result.append((1, FIXTURE_TAG + name))
             else:
@@ -980,6 +990,16 @@ def get_expression_from_string(string, parameters, name, vectoring_dict):
 
     transformations = [transform_name] + list(sympy.parsing.sympy_parser.standard_transformations) + [untransform_name]
     ast = sympy.parsing.sympy_parser.parse_expr(string, transformations=transformations)
+    return ast
+
+def get_expression_from_string(string, signals, parameters, name, vectoring_dict, param_suffix=''):
+    # tries to parse the string as an expression using sympy
+    # Tokens that match signal names are mapped to that signal,
+    # tokens that are unrecognized are assumed new parameters
+    # Parameters named like c123 will have their names ignored; any
+    # other name will be kept by creating a ConstExpression (TODO)
+    ast = get_ast_from_string(string)
+
 
     io_symbols = {}
     param_symbols = []
@@ -998,7 +1018,12 @@ def get_expression_from_string(string, parameters, name, vectoring_dict):
         except KeyError:
             # not a template name
             pass
-        param_symbols.append(sym)
+
+        if sym.name in parameters:
+            param_symbols.append(sym)
+            continue
+
+        assert False, f'Issue with parameter algebra "{string}": token "{sym.name}" is not a known input, output, analysis result, or parameter'
 
     def is_named(param_name):
         match = re.match('c[0-9]+', param_name)
@@ -1007,15 +1032,26 @@ def get_expression_from_string(string, parameters, name, vectoring_dict):
     # let's not do any recognition at first
     print(param_symbols)
 
-    # let's keep all the symbol names for now
-    parent_expr = SympyExpression(ast, io_symbols, param_symbols, f'{name}_combiner')
+    # add param suffix
+    # TODO think about what naming vs. not naming params means for this
+    param_symbols_suffix = []
+    for param_sym in param_symbols:
+        new_sym = Symbol(param_sym.name + param_suffix)
+        ast = ast.subs(param_sym, new_sym)
+        param_symbols_suffix.append(new_sym)
 
-    # do vectoring
+    # let's keep all the symbol names for now
+    parent_expr = SympyExpression(ast, io_symbols, param_symbols_suffix, f'{name}_combiner')
+
+    # do vectoring - see if any of the entries in vectoring_dict are relevant
+    # to this expression, and if they are then apply them
     for before, after in vectoring_dict.items():
+        if before not in io_symbols:
+            continue
         parent_expr.vector(before, after)
 
     child_expressions = []
-    for param_symbol in param_symbols:
+    for param_symbol in param_symbols_suffix:
         param_expr = ConstExpression(param_symbol.name)
         child_expressions.append(param_expr)
 
@@ -1055,7 +1091,7 @@ def get_optional_expression_from_signals(s_list, name, all_signals):
     assert isinstance(name, str)
     individual = []
     for s in s_list:
-        if isinstance(s, SignalIn):
+        if isinstance(s, (SignalIn, SignalArray)):
             child_name = f'{name}_{s.friendly_name()}'
             individual.append(get_optional_expression_from_signal(s, child_name))
         elif isinstance(s, str):

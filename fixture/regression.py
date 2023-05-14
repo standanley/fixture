@@ -86,7 +86,7 @@ class Regression:
             #df_filtered = regression_data[df_row_mask]
 
             # TODO how to handle rows with nan? I copied this from old code
-            lhs_clean = self.clean_string(lhs)
+            lhs_clean = self.clean_string(lhs.friendly_name())
             df_row_mask = ~ data[lhs_clean].isnull()
             # TODO when I blank out entries in the data spreadsheet they appear as nan, but those rows aren't filtered. Is that bad?
             df_filtered = data[df_row_mask]

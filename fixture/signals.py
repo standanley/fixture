@@ -10,7 +10,35 @@ class AmbiguousSliceException(Exception):
     def __str__(self):
         return f'SignalArray slicing still a work in progress. Not clear what order to return things for your slice {self.slice_}'
 
-class SignalIn():
+
+class Signal:
+    # I wanted to use ABC to require these properties, but it checks that they
+    # exist at the start of __init__, whereas I want to require the template
+    # writer to set them by the end of __init__
+    spice_name = None
+    template_name = None
+
+    def friendly_name(self):
+        return self.template_name if self.spice_name is None else self.spice_name
+
+
+class AnalysisResultSignal(Signal):
+    def __init__(self, name):
+        self.template_name = name
+        self.spice_name = None
+
+    def vector(self, vectored_signals):
+        ans = []
+        for vs in vectored_signals:
+            name = f'{self.template_name}_{vs.friendly_name()}'
+            ans.append(AnalysisResultSignal(name))
+        return ans
+
+    def __str__(self):
+        return f'<{self.template_name}>'
+
+
+class SignalIn(Signal):
     def __init__(self,
                  value,
                  nominal,
@@ -41,8 +69,6 @@ class SignalIn():
     def __str__(self):
         return f'<{str(self.template_name)} -- {self.spice_name}>'
 
-    def friendly_name(self):
-        return self.template_name if self.spice_name is None else self.spice_name
 
 
     def __getstate__(self):
@@ -58,6 +84,7 @@ class SignalIn():
 
 class CenteredSignalIn:
     def __init__(self, ref):
+        assert False, 'No longer using CenteredSignalIn'
         self.ref = ref
 
         def name(n):
@@ -72,7 +99,7 @@ class CenteredSignalIn:
         return self.template_name if self.spice_name is None else self.spice_name
 
 
-class SignalOut():
+class SignalOut(Signal):
     def __init__(self,
                  type_,
                  spice_name,
@@ -107,74 +134,6 @@ class SignalOut():
         self.__dict__ = state
 
 
-#def create_signal(pin_dict, c_name=None, c_pin=None, t_name=None):
-#    type_ = pin_dict.get('datatype', 'analog')
-#    assert (c_name is None) == (c_pin is None)
-#    spice_pin = c_pin
-#    spice_name = c_name
-#    template_name = t_name
-#
-#    if pin_dict['direction'] == 'input':
-#        is_proxy_component = pin_dict.get('is_proxy_component', False)
-#        if template_name is None:
-#            pinned = isinstance(pin_dict.get('value', None), numbers.Number)
-#            optional_types = ['analog', 'binary_analog', 'true_digital']
-#            assert (pinned
-#                    or is_proxy_component
-#                    or type_ in optional_types), f'Optional datatype for {spice_name} must be {optional_types}, not {type_}'
-#
-#        value = pin_dict.get('value', None)
-#        get_random = pin_dict.get('get_random',
-#                                  not is_proxy_component
-#                                  and template_name is None and (
-#                                  (type(value) == tuple) or (type_ == 'binary_analog' and value == None)))
-#        def guess_nominal(value, type_):
-#            if value is None:
-#                return None
-#            elif isinstance(value, numbers.Number):
-#                return value
-#            elif len(value) == 1:
-#                return value[0]
-#            elif len(value) == 2 and type_ == 'analog':
-#                assert len(value) == 2
-#                return sum(value) / 2
-#            elif len(value) == 2 and type_ == 'binary_analog':
-#                assert len(value) == 2
-#                #return int(sum(value) // 2)
-#                # this is likely a single bit of a bus, and the nominal will be
-#                # set when the bus is put together
-#                return None
-#            else:
-#                assert ValueError(f'Cannot guess nominal value for <{c_name}/{t_name}>')
-#
-#        nominal = pin_dict.get('nominal', guess_nominal(value, type_))
-#        auto_set = pin_dict.get('auto_set',
-#                                get_random or type(value) == int or type(value) == float)
-#        optional_expr = get_random
-#
-#        s = SignalIn(
-#            value,
-#            nominal,
-#            type_,
-#            get_random,
-#            auto_set,
-#            spice_name,
-#            spice_pin,
-#            template_name,
-#            optional_expr
-#        )
-#        return s
-#
-#    elif pin_dict['direction'] == 'output':
-#        s = SignalOut(type_,
-#                      spice_name,
-#                      spice_pin,
-#                      template_name,
-#                      (template_name is None
-#                       and not pin_dict.get('is_proxy_component', False)))
-#        return s
-#    else:
-#        assert False, 'Unrecognized pin direction' + pin_dict['direction']
 
 def create_input_domain_signal(name, value, spice_pin=None,
                                optional_expr=False):
@@ -352,7 +311,7 @@ class SignalManager:
         #    self.signals_by_template_name = signals_by_template_name
 
     def add(self, signal):
-        assert isinstance(signal, (SignalIn, SignalOut, SignalArray))
+        assert isinstance(signal, Signal)
 
         self.signals.append(signal)
         if signal.template_name is not None:
@@ -487,7 +446,7 @@ class SignalManager:
 
     def true_digital(self):
         # return a list of signals - no SignalArrays
-        ans = [s for s in self.flat() if s.type_ == 'true_digital']
+        ans = [s for s in self.flat() if isinstance(s, SignalIn) and s.type_ == 'true_digital']
         return ans
 
     def optional_expr(self):
@@ -554,7 +513,7 @@ class SignalManager:
             raise AttributeError
 
 
-class SignalArray:
+class SignalArray(Signal):
     attributes_from_children = ['type_',
                                 'get_random',
                                 'auto_set',

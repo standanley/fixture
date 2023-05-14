@@ -437,8 +437,10 @@ def parse_optional_input_info(circuit_config_dict, tests):
     for test in tests:
         parameter_algebra_expr = {}
         for lhs, rhs in test.parameter_algebra_vectored.items():
-            rhs_new = {}
-            for param, multiplier in rhs.items():
+            #rhs_new = {}
+            child_expressions_new = []
+            for param_expression in rhs.child_expressions:
+                param = param_expression.name
                 params.append(param)
                 #params[param] = (test, lhs)
                 # get optional expression for param
@@ -466,29 +468,31 @@ def parse_optional_input_info(circuit_config_dict, tests):
                     print(f'Using default effect model for {param}, which includes {signals}')
 
                 exp = get_optional_expression_from_signals(signals, param, test.signals)
-                rhs_new[exp] = multiplier
+                #rhs_new[exp] = multiplier
+                child_expressions_new.append(exp)
+            rhs_new = HeirarchicalExpression(rhs.parent_expression, child_expressions_new, rhs.name)
             parameter_algebra_expr[lhs] = rhs_new
-        test.parameter_algebra_expr = parameter_algebra_expr
+        test.parameter_algebra_final = parameter_algebra_expr
 
 
     if len(info_copy) > 0:
         raise KeyError(
             f'Specified optional effect(s) for {list(info_copy.keys())}, but recognized params are {params}')
 
-    # now combine the expressions from each parameter into big expressions
-    for test in tests:
-        parameter_algebra_final = {}
-        for lhs, rhs in test.parameter_algebra_expr.items():
-            combined_expression_inputs = []
-            combined_expression_children = []
-            for param_expr, multiplier in rhs.items():
-                assert len(multiplier) == 1, 'TODO deal with non-simple parameter algebra'
-                combined_expression_inputs.append(multiplier[0])
-                combined_expression_children.append(param_expr)
-            combined_expression_algebra = LinearExpression(combined_expression_inputs, f'{lhs}_combiner')
-            combined_expression = HeirarchicalExpression(combined_expression_algebra, combined_expression_children, lhs)
-            parameter_algebra_final[lhs] = combined_expression
-        test.parameter_algebra_final = parameter_algebra_final
+    ## now combine the expressions from each parameter into big expressions
+    #for test in tests:
+    #    parameter_algebra_final = {}
+    #    for lhs, rhs in test.parameter_algebra_expr.items():
+    #        combined_expression_inputs = []
+    #        combined_expression_children = []
+    #        for param_expr, multiplier in rhs.items():
+    #            assert len(multiplier) == 1, 'TODO deal with non-simple parameter algebra'
+    #            combined_expression_inputs.append(multiplier[0])
+    #            combined_expression_children.append(param_expr)
+    #        combined_expression_algebra = LinearExpression(combined_expression_inputs, f'{lhs}_combiner')
+    #        combined_expression = HeirarchicalExpression(combined_expression_algebra, combined_expression_children, lhs)
+    #        parameter_algebra_final[lhs] = combined_expression
+    #    test.parameter_algebra_final = parameter_algebra_final
 
     # we have done our job by creating test.parameter_algebra_final
     return

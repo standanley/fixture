@@ -221,10 +221,13 @@ class AmplifierTemplate(TemplateMaster):
     class DynamicTFTest(TemplateMaster.Test):
         NP = 2
         NZ = 1
+        #analysis_outputs = [f'numerator_{i}' for i in range(1, NZ+1)] + [f'denominator_{i}' for i in range(1, NP+1)]
         parameter_algebra = {
-            **{f'numerator{i}': {f'const_numerator{i}': '1'} for i in range(1, NZ+1)},
-            **{f'denominator{i}': {f'const_denominator{i}': '1'} for i in range(1, NP+1)},
+            **{f'numerator{i}': f'const_numerator{i}' for i in range(1, NZ+1)},
+            **{f'denominator{i}': f'const_denominator{i}' for i in range(1, NP+1)},
         }
+        analysis_outputs = list(parameter_algebra.keys())
+        parameters = list(parameter_algebra.values())
         vector_mapping = {
             **{f'numerator{i}': ['output'] for i in range(1, NZ+1)},
             **{f'denominator{i}': ['output'] for i in range(1, NP + 1)}
@@ -408,7 +411,7 @@ class AmplifierTemplate(TemplateMaster):
     tests_all = [
         DCTest,
         DynamicTFTest,
-        ManualGainTest
+        #ManualGainTest
         #CubicCompression,
         #AbsoluteValue,
     ]
