@@ -2,6 +2,7 @@ import fault
 from abc import ABC, abstractmethod
 import fixture
 from fixture import Tester, Regression, sampler
+from fixture.optional_fit import SympyExpression, get_expression_from_string
 from fixture.sampler import SampleStyle, get_sampler_for_signal
 from fixture.signals import SignalManager, SignalArray, SignalOut, SignalIn, CenteredSignalIn
 from fixture.plot_helper import PlotHelper
@@ -73,7 +74,7 @@ class TemplateMaster():
     class Test(ABC):
         # TODO perhaps put an init method that checks some parameter algebra
         # has been specified
-        input_vector_mapping = {}
+        vector_mapping = {}
 
         def __init__(self, template):
             self.template = template
@@ -84,27 +85,59 @@ class TemplateMaster():
             # TODO this assert was removed at one point, but seems necessary?
             # I think it was to allow the algebra to be added later programatically?
             assert hasattr(self, 'parameter_algebra'), f'{self} should specify parameter_algebra!'
+            assert hasattr(self, 'analysis_outputs'), f'{self} must specify analysis_outputs'
+            assert hasattr(self, 'parameters'), f'{self} must specify parameters'
 
-
+            # inherited signals from template, just required pins I think
             self.signals = self.template.signals.copy()
+
+            # signals whose values will be calculated by analysis() method
+            for name in self.analysis_outputs:
+                self.signals.add(SignalIn(
+                    value=None,
+                    nominal=None,
+                    type_='real',
+                    get_random=False,
+                    auto_set=False,
+                    spice_name=None,
+                    spice_pin=None,
+                    template_name=name,
+                    optional_expr=None,
+                    bus_info=None
+                ))
+
             test_dimensions = self.input_domain()
-            # TODO not sure this is the best way to do input signals
             self.input_signals = None # Todo get rid of this if unused
             self.sample_groups_test = []
             for x in test_dimensions:
                 if isinstance(x, SampleStyle):
                     self.sample_groups_test.append(x)
+                    for s in x.signals:
+                        if s not in self.signals:
+                            self.signals.add(s)
                 elif isinstance(x, (SignalIn, SignalArray)):
                     sg = get_sampler_for_signal(x)
                     self.sample_groups_test += sg
+                    if x not in self.signals:
+                        self.signals.add(x)
                 else:
                     assert False, f'Return from Test.input_dimensions must be a list of SampleGroup or Signal, not list of {type(x)}'
 
-            # We want test_dimensions to end up in self.signals, for parsing
-            # parameter_algebra_vectored and possibly for other things too
-            for x in test_dimensions:
-                self.signals.add(x)
+            # I feel like rebuild_ref_dicts isn't necessary here since we used
+            # signals.add to add them, but I'm too scared to get rid of it
             self.signals.rebuild_ref_dicts()
+
+            # for vector mapping, convert strings to signals
+            if not hasattr(self, 'vector_mapping'):
+                self.vector_mapping = {}
+            vector_mapping_str = self.vector_mapping
+            self.vector_mapping = {}
+            for child_str, parents_str in vector_mapping_str.items():
+                assert isinstance(child_str, str)
+                assert all(isinstance(p, str) for p in parents_str)
+                child = self.signals.from_template_name(child_str)
+                parents = [self.signals.from_template_name(p) for p in parents_str]
+                self.vector_mapping[child] = parents
 
             self._expand_parameter_algebra2()
 
@@ -122,6 +155,76 @@ class TemplateMaster():
             #self.parameter_algebra_vectored = {k: v.copy() for k, v in self.parameter_algebra.items()}
             pa_vec = {}
             ones = ['1', Regression.one_literal]
+
+
+            # TODO I'd like to parse arbitrary expressions from strings,
+            # but if we do that we also need to edit the optional config thing
+            # and probably also figure out vectoring for arbitrary things
+            #expr_str = 'gain_sq*input**2 + gain*input + offset'
+            #expr = get_expression_from_string(expr_str, self.signals, 'test_expr')
+            #self.parameter_algebra_vectored = {'amp_output': expr}
+            #return
+
+            # vectoring_dict maps template signals to their vectored components
+            # looks like {in: [in_diff, in_cm], pole: [pole_diff, pole_cm]}
+            # remember that vectoring can be inherited by analysis outputs
+            vectoring_dict = {}
+            # when the component itself is vectored
+            for s in self.signals:
+                # only the template writer's vector_mapping is used to look
+                # at this array, so only things with template names matter
+                if s.template_name is not None and isinstance(s, SignalArray):
+                    # Notice we use template name on the left (template writer
+                    # is the one looking at this dict) but friendly name on the
+                    # right (to create user-identifiable names)
+                    vectoring_dict[s] = list(s)
+            # when vector_mapping links the component to a vectored parent input
+            for child, parents in self.vector_mapping.items():
+                if not any(parent in vectoring_dict for parent in parents):
+                    continue
+
+                child_vector = [child]
+                for parent in parents:
+                    if parent not in vectoring_dict:
+                        continue
+                    child_vector_new = []
+                    for child_v in child_vector:
+                        for parent_v in vectoring_dict[parent]:
+                            child_v_new = f'{child_v}_{parent_v}'
+                            child_vector_new.append(child_v_new)
+                    child_vector = child_vector_new
+
+                vectoring_dict[child] = child_vector
+
+            #for parent_input in self.input_vector_mapping.get(component, []):
+            #    if isinstance(parent_input, SignalArray):
+            #        new_vec_version = []
+            #        for parent_i, parent_comp in enumerate(parent_input):
+            #            rename_fun = (
+            #                Regression.vector_parameter_name_input if isinstance(
+            #                    parent_comp, SignalIn)
+            #                else Regression.vector_parameter_name_output())
+            #            parent_comp_vec = [
+            #                rename_fun(comp, parent_i, parent_comp) for comp in
+            #                vec_version]
+            #            new_vec_version += parent_comp_vec
+            #        vec_version = new_vec_version
+
+            #for input in self.inputs:
+            #    if hasattr(input,
+            #               'representation') and input.representation.style == 'vector':
+            #        self.vector(input,
+            #                    input.representation.params.components)
+            #        abc
+
+            for lhs, rhs in self.parameter_algebra.items():
+
+                expr = get_expression_from_string(rhs, self.signals, f'test_{lhs}', vectoring_dict)
+                print(expr)
+
+
+            assert False
+            return
 
             def read_algebra(algebra_string):
                 # first, multiplication

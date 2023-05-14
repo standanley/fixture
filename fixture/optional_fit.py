@@ -1,12 +1,17 @@
+import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from keyword import iskeyword
 
+import sympy
 from scipy.optimize import minimize
 from scipy.stats import linregress
 import numpy as np
 import pandas
 
 #import fixture
+from sympy import Symbol
+
 import fixture.regression
 from fixture.sampler import SampleManager
 from fixture.signals import SignalArray, SignalIn, CenteredSignalIn
@@ -871,6 +876,157 @@ For ctrl[5:0], coefs = [Rnom, X1, X2, X3, X4, X5, Y, offset]
         ans = f'{coef_names[0]} / ({denom}) + {coef_names[-1]}'
         return [f'{lhs} = {ans};']
 
+
+class SympyExpression(Expression):
+    def __init__(self, ast, io_symbols, coefs, name):
+        self.ast = ast
+        self.io_symbols = io_symbols
+        self.input_signals = list(io_symbols.keys())
+        self.coefs = coefs
+        self.NUM_COEFFICIENTS = len(coefs)
+        self.name = name
+
+
+    def predict(self, opt_values, coefs):
+        assert False
+
+    def verilog(self, lhs, coef_names):
+        print('TODO: SympyExpression verilog')
+        return lhs + '=' + str(self.ast)
+
+    def vector(self, signal, new_signals):
+        '''
+        Replace signal with new_signals, editing self.ast accordingly
+        Edits: NUM_COEFFICIENTS, ast, coefs, input_signals, io_symbols
+        '''
+
+        assert signal in self.input_signals
+        signal_sym = self.io_symbols[signal]
+        new_signals_sym = [Symbol(s.friendly_name()) for s in new_signals]
+
+        def vector_symbol(sym):
+            ans = []
+            name = sym.name
+            for s in new_signals:
+                identifier = s.friendly_name()
+                new_name = f'{name}_{identifier}'
+                ans.append(Symbol(new_name))
+
+            self.coefs.remove(sym)
+            self.coefs += ans
+            return ans
+
+
+        # temporary approach: replace abc*s with abc1*s1 + abc2*s2
+        products = []
+        def rec(ast):
+            if isinstance(ast, Symbol):
+                return
+            if ast.is_Mul and signal_sym in ast.args:
+                products.append(ast)
+                return
+            for arg in ast.args:
+                rec(arg)
+        rec(self.ast)
+
+        for product in products:
+            if len(product.args) == 2:
+                temp = list(product.args)
+                temp.remove(signal_sym)
+                coefficient = temp[0]
+                new_coefficients = vector_symbol(coefficient)
+                new_expr = sum(c*s for c, s in zip(new_coefficients, new_signals_sym))
+                self.ast = self.ast.subs(product, new_expr)
+                print()
+            else:
+                assert False, f'Todo product of vectored input with multiple things: {product}'
+
+        del self.io_symbols[signal]
+        for new_signal, new_signal_sym in zip(new_signals, new_signals_sym):
+            self.io_symbols[new_signal] = new_signal_sym
+        self.input_signals.remove(signal)
+        self.input_signals += new_signals
+        self.NUM_COEFFICIENTS = len(self.coefs)
+        return
+
+
+def get_expression_from_string(string, parameters, name, vectoring_dict):
+    # tries to parse the string as an expression using sympy
+    # Tokens that match signal names are mapped to that signal,
+    # tokens that are unrecognized are assumed new parameters
+    # Parameters named like c123 will have their names ignored; any
+    # other name will be kept by creating a ConstExpression (TODO)
+
+    FIXTURE_TAG = 'FIXTURE_TAG_'
+    def transform_name(tokens, local_dict, global_dict):
+        result = []
+        for type_, name in tokens:
+            # some builtin functions (like abs) we want to keep as functions,
+            # but others (like input) we want to not do that
+            if type_ == 1 and (iskeyword(name) or name == 'input'):
+                result.append((1, FIXTURE_TAG + name))
+            else:
+                result.append((type_, name))
+        return result
+
+    def untransform_name(tokens, local_dict, global_dict):
+        result = []
+        for type_, name in tokens:
+            if type_ == 1 and FIXTURE_TAG in name:
+                result.append((1, name.replace(FIXTURE_TAG, '')))
+            else:
+                result.append((type_, name))
+        return result
+
+    transformations = [transform_name] + list(sympy.parsing.sympy_parser.standard_transformations) + [untransform_name]
+    ast = sympy.parsing.sympy_parser.parse_expr(string, transformations=transformations)
+
+    io_symbols = {}
+    param_symbols = []
+    for sym in ast.free_symbols:
+        try:
+            s = signals.from_circuit_name(sym.name)
+            io_symbols[s] = sym
+            continue
+        except KeyError:
+            # not a circuit name
+            pass
+        try:
+            s = signals.from_template_name(sym.name)
+            io_symbols[s] = sym
+            continue
+        except KeyError:
+            # not a template name
+            pass
+        param_symbols.append(sym)
+
+    def is_named(param_name):
+        match = re.match('c[0-9]+', param_name)
+        return not match
+
+    # let's not do any recognition at first
+    print(param_symbols)
+
+    # let's keep all the symbol names for now
+    parent_expr = SympyExpression(ast, io_symbols, param_symbols, f'{name}_combiner')
+
+    # do vectoring
+    for before, after in vectoring_dict.items():
+        parent_expr.vector(before, after)
+
+    child_expressions = []
+    for param_symbol in param_symbols:
+        param_expr = ConstExpression(param_symbol.name)
+        child_expressions.append(param_expr)
+
+
+    expr = HeirarchicalExpression(parent_expr, child_expressions, name)
+
+
+    return expr
+
+
+
 def get_optional_expression_from_signal(s, name):
     if isinstance(s, SignalArray):
         print('TODO fix SignalArray behavior, right now defaulting to ReciprocalExpression')
@@ -890,18 +1046,22 @@ def get_optional_expression_from_signal(s, name):
             return AnalogExpression(s, name)
 
 
-def get_optional_expression_from_signals(s_list, name):
+def get_optional_expression_from_signals(s_list, name, all_signals):
     '''
     If s_list is empty, this is a constant.
     If s_list is not empty, it's a sum of expressions for each signal
+    We need all_signals so we can tell what is an input when s is a string
     '''
     assert isinstance(name, str)
     individual = []
     for s in s_list:
-        child_name = f'{name}_{s.friendly_name()}'
-        #if 'cfadj' in child_name:
-        #    continue
-        individual.append(get_optional_expression_from_signal(s, child_name))
+        if isinstance(s, SignalIn):
+            child_name = f'{name}_{s.friendly_name()}'
+            individual.append(get_optional_expression_from_signal(s, child_name))
+        elif isinstance(s, str):
+            expr = get_expression_from_string(s, all_signals, f'{name}_<{s}>')
+        else:
+            assert False, f'Unrecognized optional expression type {type(s)} for "{s}"'
     if len(individual) == 0:
         individual.append(ConstExpression(f'{name}_const'))
     combiner = SumExpression(len(individual)+1, f'{name}_summer')
@@ -968,3 +1128,4 @@ def test_optimizers(error_fun, N_COEFS):
         print('error', e)
         print()
     print()
+

@@ -410,6 +410,7 @@ class SignalManager:
             return a
 
     def from_str(self, name):
+        assert False, 'unused'
         # TODO this is based on assumptions about the various __str__ methods
         if name[0] != '<' or name[-1] != '>':
             raise KeyError(name)
@@ -664,6 +665,8 @@ class SignalArray:
             return ans
         elif self.bus_info.type_ == 'signed_magnitude':
             assert False, 'TODO'
+        elif self.bus_info.type_ is None:
+            assert False, f'Cannot interpret decimal value for bus {self.friendly_name()}, please declare its bus_type in the physical_pin section'
         else:
             assert False, 'TODO'
 

@@ -1,42 +1,63 @@
 name: myamp_params
 filepath: ../spice/myamp_params.sp
 template: AmplifierTemplate
-pin:
+
+
+
+checkpoint_controller:
+    DCTest: True
+
+physical_pins:
     vdd:
-        direction: input
+        direction: in
         datatype: real
-        value: 1.2
     vss:
-        direction: input
+        direction: in
         datatype: real
-        value: 0
     my_in:
-        direction: input
+        direction: in
         datatype: real
-        #value: (.2, 1.0)
         value: (0.45, 0.7)
     adj:
-        direction: input
-        datatype: analog
-        value: (.45, .55)
+        direction: in
+        datatype: real
     ba<3:0>:
-        direction: input
-        datatype: binary_analog
+        direction: in
+        datatype: bit
         bus_type: binary
         first_one: low
     ctrl<1:0>:
-        direction: input
-        datatype: true_digital
+        direction: in
+        #datatype: true_digital
+        datatype: bit
+        bus_type: binary
     my_out:
-        direction: output
+        direction: out
         datatype: real
     vdd_internal:
-        direction: output
+        direction: out
         datatype: real
 
 template_pins:
     input: my_in
     output: my_out
+
+stimulus_generation:
+    vdd: 1.2
+    vss: 0
+    #my_in: (.2, 1.0)
+    #my_in: (0.45, 0.7)
+    my_in: (0.5, 0.6)
+    adj: (0.45, 0.55)
+    #adj: 0.5
+    #ba: (0, 15)
+    ba: 7
+    ctrl: 0
+
+optional_input_info:
+    dcgain: ['c0*adj + c1*adj**2']
+    #offset: [ibias]
+
 
 extras:
     approx_settling_time: 1e-3

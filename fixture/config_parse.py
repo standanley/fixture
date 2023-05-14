@@ -5,7 +5,7 @@ import yaml
 import fixture.cfg_cleaner as cfg_cleaner
 from fixture import Representation, templates
 from fixture.optional_fit import get_optional_expression_from_signals, \
-    LinearExpression, HeirarchicalExpression
+    LinearExpression, HeirarchicalExpression, get_expression_from_string
 from fixture.sampler import SamplerConst, SamplerAnalog, get_sampler_for_signal
 from fixture.signals import parse_bus, parse_name, \
     SignalArray, SignalManager, SignalOut, SignalIn, AmbiguousSliceException
@@ -406,6 +406,7 @@ def parse_config(circuit_config_dict):
     assert 'template_pins' in circuit_config_dict, "Must include mapping from template to circuit names with key 'template_pins'"
     template_mapping_unused = assign_template_pins(signals, circuit_config_dict['template_pins'])
 
+
     assert 'stimulus_generation' in circuit_config_dict, "Must include information for stimulus generation under key 'stimulus_generation'"
     sample_groups = parse_stimulus_generation(signals, circuit_config_dict['stimulus_generation'])
 
@@ -429,6 +430,8 @@ def parse_optional_input_info(circuit_config_dict, tests):
     # we only make this list of params for an error message
     params = []
 
+    # let's edit the expressions in place to replace const versions of
+    # params with more complicated expressions when needed
     # we create a copy and then delete entries as we use them to find unused
     info_copy = optional_input_info.copy()
     for test in tests:
@@ -439,6 +442,7 @@ def parse_optional_input_info(circuit_config_dict, tests):
                 params.append(param)
                 #params[param] = (test, lhs)
                 # get optional expression for param
+                # TODO: rename this like signals_or_str_expressions
                 signals = None
                 if param in info_copy:
                     # todo
@@ -446,8 +450,13 @@ def parse_optional_input_info(circuit_config_dict, tests):
                     del info_copy[param]
                     assert isinstance(signals_str,
                                       list), f'Optional input dependencies for {param} should be list, not {signals_str}'
-                    signals = [test.signals.from_circuit_name(s_str)
-                               for s_str in signals_str]
+                    signals = []
+                    for s_str in signals_str:
+                        try:
+                            signals.append(test.signals.from_circuit_name(s_str))
+                        except KeyError:
+                            # not just a signal name, must be an expression
+                            signals.append(s_str)
                 else:
                     # default expr
                     signals_with_arrays = test.signals.optional_expr()
@@ -456,7 +465,7 @@ def parse_optional_input_info(circuit_config_dict, tests):
                     signals = signals_with_arrays
                     print(f'Using default effect model for {param}, which includes {signals}')
 
-                exp = get_optional_expression_from_signals(signals, param)
+                exp = get_optional_expression_from_signals(signals, param, test.signals)
                 rhs_new[exp] = multiplier
             parameter_algebra_expr[lhs] = rhs_new
         test.parameter_algebra_expr = parameter_algebra_expr

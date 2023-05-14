@@ -15,16 +15,22 @@ class AmplifierTemplate(TemplateMaster):
     }
 
     class DCTest(TemplateMaster.Test):
+        #parameter_algebra = {
+        #    'amp_output': {'dcgain': 'input',
+        #                   'offset': '1'},
+        #    #output_diff = dcgain_from_diff*input_diff + ... + offset
+        #    #output_cm = dcgain_from_diff*input_diff + ... + offset
+        #    #'amp_output_copy': {'just_offset': '1'}
+        #    'amp_output_copy': {'dcgain_3': 'input**3',
+        #                   'dcgain_2': 'input**2',
+        #                   'dcgain_1': 'input',
+        #                   'dcgain_0': '1'}
+        #}
+        analysis_outputs = ['amp_output', 'amp_output_copy']
+        parameters = ['dcgain', 'offset', 'amplitude', 'gain']
         parameter_algebra = {
-            'amp_output': {'dcgain': 'input',
-                           'offset': '1'},
-            #output_diff = dcgain_from_diff*input_diff + ... + offset
-            #output_cm = dcgain_from_diff*input_diff + ... + offset
-            #'amp_output_copy': {'just_offset': '1'}
-            #'amp_output_copy': {'dcgain_3': 'input**3',
-            #               'dcgain_2': 'input**2',
-            #               'dcgain_1': 'input',
-            #               'dcgain_0': '1'}
+            'amp_output': 'dcgain*input + offset',
+            'amp_output_copy': 'amplitude*tanh(gain*input)'
         }
         vector_mapping = {'amp_output': ['output']}
         num_samples = 300
