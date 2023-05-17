@@ -32,7 +32,7 @@ class AmplifierTemplate(TemplateMaster):
             'amp_output': 'dcgain*input + offset',
             'amp_output_copy': 'amplitude*tanh(gain*input)'
         }
-        vector_mapping = {'amp_output': ['output']}
+        vector_mapping = {'amp_output': ['output'], 'amp_output_copy': ['output']}
         num_samples = 300
 
         def input_domain(self):

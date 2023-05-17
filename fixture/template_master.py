@@ -93,8 +93,12 @@ class TemplateMaster():
             self.signals = self.template.signals.copy()
 
             # signals whose values will be calculated by analysis() method
-            for name in self.analysis_outputs:
-                self.signals.add(AnalysisResultSignal(name))
+            analysis_outputs_str = self.analysis_outputs
+            self.analysis_outputs = []
+            for name in analysis_outputs_str:
+                sig = AnalysisResultSignal(name)
+                self.analysis_outputs.append(sig)
+                self.signals.add(sig)
 
             test_dimensions = self.input_domain()
             self.input_signals = None # Todo get rid of this if unused
@@ -129,9 +133,55 @@ class TemplateMaster():
                 parents = [self.signals.from_template_name(p) for p in parents_str]
                 self.vector_mapping[child] = parents
 
+            self.create_vectoring_dict()
+
+            # vector analysis_outputs
+            # TODO is checking for SignalArray the right way to identify
+            #  vectored inputs, as far as test.vector_mapping is concerned?
+            self.analysis_outputs_vectored = []
+            for analysis_output in self.analysis_outputs:
+                if analysis_output in self.vectoring_dict:
+                    self.analysis_outputs_vectored += self.vectoring_dict[analysis_output]
+                else:
+                    self.analysis_outputs_vectored.append(analysis_output)
+
             self._expand_parameter_algebra2()
 
             self.sample_groups_opt = template.sample_groups
+
+        def create_vectoring_dict(self):
+            # sets self.vectoring_dict
+            # vectoring_dict maps template signals to their vectored components
+            # looks like {in: [in_diff, in_cm], pole: [pole_diff, pole_cm]}
+            # remember that vectoring can be inherited by analysis outputs
+            self.vectoring_dict = {}
+            # when the component itself is vectored
+            for s in self.signals:
+                # only the template writer's vector_mapping is used to look
+                # at this array, so only things with template names matter
+                if s.template_name is not None and isinstance(s, SignalArray):
+                    # Notice we use template name on the left (template writer
+                    # is the one looking at this dict) but friendly name on the
+                    # right (to create user-identifiable names)
+                    self.vectoring_dict[s] = list(s)
+            # when vector_mapping links the component to a vectored parent input
+            for child, parents in self.vector_mapping.items():
+                if not any(parent in self.vectoring_dict for parent in parents):
+                    continue
+
+                child_vector = [child]
+                for parent in parents:
+                    if parent not in self.vectoring_dict:
+                        continue
+                    child_vector_new = []
+                    for child_v in child_vector:
+                        new_signals = child_v.vector(self.vectoring_dict[parent])
+                        for new_s in new_signals:
+                            self.signals.add(new_s)
+                        child_vector_new += new_signals
+                    child_vector = child_vector_new
+
+                self.vectoring_dict[child] = child_vector
 
 
         def _expand_parameter_algebra2(self):
@@ -155,34 +205,6 @@ class TemplateMaster():
             #self.parameter_algebra_vectored = {'amp_output': expr}
             #return
 
-            # vectoring_dict maps template signals to their vectored components
-            # looks like {in: [in_diff, in_cm], pole: [pole_diff, pole_cm]}
-            # remember that vectoring can be inherited by analysis outputs
-            vectoring_dict = {}
-            # when the component itself is vectored
-            for s in self.signals:
-                # only the template writer's vector_mapping is used to look
-                # at this array, so only things with template names matter
-                if s.template_name is not None and isinstance(s, SignalArray):
-                    # Notice we use template name on the left (template writer
-                    # is the one looking at this dict) but friendly name on the
-                    # right (to create user-identifiable names)
-                    vectoring_dict[s] = list(s)
-            # when vector_mapping links the component to a vectored parent input
-            for child, parents in self.vector_mapping.items():
-                if not any(parent in vectoring_dict for parent in parents):
-                    continue
-
-                child_vector = [child]
-                for parent in parents:
-                    if parent not in vectoring_dict:
-                        continue
-                    child_vector_new = []
-                    for child_v in child_vector:
-                        child_vector_new += child_v.vector(vectoring_dict[parent])
-                    child_vector = child_vector_new
-
-                vectoring_dict[child] = child_vector
 
             #for parent_input in self.input_vector_mapping.get(component, []):
             #    if isinstance(parent_input, SignalArray):
@@ -208,13 +230,13 @@ class TemplateMaster():
             self.parameter_algebra_vectored = {}
             for lhs, rhs in self.parameter_algebra.items():
                 lhs_signal = self.signals.from_template_name(lhs)
-                if lhs_signal in vectoring_dict:
-                    for lhs_vec in vectoring_dict[lhs_signal]:
+                if lhs_signal in self.vectoring_dict:
+                    for lhs_vec in self.vectoring_dict[lhs_signal]:
                         suffix = '_' + lhs_vec.friendly_name()
-                        expr = get_expression_from_string(rhs, self.signals, self.parameters, lhs_vec.friendly_name(), vectoring_dict, param_suffix=suffix)
+                        expr = get_expression_from_string(rhs, self.signals, self.parameters, lhs_vec.friendly_name(), self.vectoring_dict, param_suffix=suffix)
                         self.parameter_algebra_vectored[lhs_vec] = expr
                 else:
-                    expr = get_expression_from_string(rhs, self.signals, self.parameters, lhs, vectoring_dict)
+                    expr = get_expression_from_string(rhs, self.signals, self.parameters, lhs, self.vectoring_dict)
                     self.parameter_algebra_vectored[lhs_signal] = expr
                 print(expr)
 

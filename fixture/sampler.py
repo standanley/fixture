@@ -437,7 +437,7 @@ class Sampler:
         sm = SampleManager
         for group in test.sample_groups_opt:
             #if not any(s in test.input_signals for s in group.signals):
-            new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 5, 30)
+            new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 10, 30)
             #new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 4, 5)
             data = pandas.concat((data, new_data), ignore_index=True)
         data_all = sm.sample_all(100, test.sample_groups_test, test.sample_groups_opt)

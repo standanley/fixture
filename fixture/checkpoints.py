@@ -116,7 +116,7 @@ class Checkpoint:
         f.close()
 
     def load_extracted_data_unprocessed(self, test):
-        if self.data[test]['extracted_data_unprocessed'] is None:
+        if True or self.data[test]['extracted_data_unprocessed'] is None:
             f = self._get_load_file(test, 'extracted_data_unprocessed.csv')
             data = self.load_csv(f)
             self.convert_df_columns(test, data)
@@ -151,7 +151,9 @@ class Checkpoint:
         for lhs, rhs in rr.items():
             coef_names = [f'lhs[{i}]' for i in range(rhs.NUM_COEFFICIENTS)]
             verilog = rhs.verilog(lhs, coef_names)
-            rr_dict[lhs] = {
+            # TODO I think lhs might always be an AnalysisResultSignal
+            lhs_str = lhs if isinstance(lhs, str) else lhs.friendly_name()
+            rr_dict[lhs_str] = {
                 'verilog': verilog,
                 'coefs': [float(x) for x in rhs.x_opt]
             }
@@ -167,10 +169,11 @@ class Checkpoint:
             #            expression_clean[thing] = coef
             #    rhs_clean[param] = expression_clean
             #rr_clean[lhs] = rhs_clean
-
+        print('aboutto save rr')
         f = self._get_save_file(test, 'regression_results.yaml')
         yaml.dump(rr_dict, f)
         f.close()
+        print('finished saving rr')
 
     def load_regression_results(self, test):
         # loads regression results into rr and returns it
@@ -180,22 +183,25 @@ class Checkpoint:
 
         if True or self.data[test]['regression_results'] is None:
             f = self._get_load_file(test, 'regression_results.yaml')
+            print('about to load rr')
             rr = yaml.safe_load(f)
+            print('finished loading rr')
             f.close()
             rr_clean = {}
 
             for lhs, rhs in test.parameter_algebra_final.items():
-                assert lhs in rr, f'Saved regression results missing info for {lhs}'
+                lhs_str = lhs if isinstance(lhs, str) else lhs.friendly_name()
+                assert lhs_str in rr, f'Saved regression results missing info for {lhs}'
 
                 # check that saved verilog matches current verilog
                 # this makes sure the versions match
                 coef_names = [f'lhs[{i}]' for i in range(rhs.NUM_COEFFICIENTS)]
-                verilog = rhs.verilog(lhs, coef_names)
-                for v_old, v_new in zip(rr[lhs]['verilog'], verilog):
+                verilog = rhs.verilog(lhs_str, coef_names)
+                for v_old, v_new in zip(rr[lhs_str]['verilog'], verilog):
                     assert v_old == v_new, 'Mismatch in verilog in saved regression results; probably saved results for a different circuit version'
 
                 # actually assign x_opt
-                coefs = rr[lhs]['coefs']
+                coefs = rr[lhs_str]['coefs']
                 assert len(coefs) == rhs.NUM_COEFFICIENTS
                 rhs.x_opt = np.array(coefs)
 

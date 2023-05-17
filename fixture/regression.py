@@ -86,8 +86,7 @@ class Regression:
             #df_filtered = regression_data[df_row_mask]
 
             # TODO how to handle rows with nan? I copied this from old code
-            lhs_clean = self.clean_string(lhs.friendly_name())
-            df_row_mask = ~ data[lhs_clean].isnull()
+            df_row_mask = ~ data[lhs].isnull()
             # TODO when I blank out entries in the data spreadsheet they appear as nan, but those rows aren't filtered. Is that bad?
             df_filtered = data[df_row_mask]
 
@@ -96,7 +95,7 @@ class Regression:
             total_expr = rhs
 
             verilog_const_names = [f'c[{i}]' for i in range(total_expr.NUM_COEFFICIENTS)]
-            verilog = total_expr.verilog(lhs_clean, verilog_const_names)
+            verilog = total_expr.verilog(lhs.friendly_name(), verilog_const_names)
 
             # TODO these next 3 lines were commented out and I'm not sure why
             #  I was using lhs_data in place of expr_fit_data
@@ -104,7 +103,7 @@ class Regression:
             #input_names = [self.regression_name(s) for s in total_expr.input_signals]
             #expr_fit_data = [df_filtered[input_name] for input_name in input_names]
             #expr_fit_data = np.array(expr_fit_data)
-            lhs_data = df_filtered[lhs_clean]
+            lhs_data = df_filtered[lhs]
 
             # do the regression!
             print('Starting parameter fit')

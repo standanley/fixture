@@ -185,13 +185,25 @@ class Testbench():
                 # TODO had some issues with pole/zero extraction where things
                 # happened to be a perfect match even though the user did not
                 # expect it
+                # TODO coming back to this later I don't remember exactly how it
+                #  works ... seems like we were attempting to figure out which
+                #  outputs from the analysis() method were vectored by seeing if
+                #  they changed. But in more recent versions of the code we
+                #  have that information stored on the test. But in the old
+                #  version we have this "if False" so it's not doing that
+                #  anyway ... I suspect there's a bug here where functions of
+                #  the input (like input_abs) will be treated as vectored
+                #  outputs even though test.input_mapping says they're not
                 if False and perfect_match:
                     # doesn't change with respect to vectored output
                     results_out[name] = results[output_vecs[0]][name]
                 else:
                     # does change, we need to vector name based on vectored output
                     for vec_i, ov in enumerate(output_vecs):
-                        name_vec = fixture.Regression.vector_parameter_name_output(name, vec_i, ov)
+                        #name_vec = fixture.Regression.vector_parameter_name_output(name, vec_i, ov)
+                        # TODO this would have to change if there were multiple
+                        #  vectored outputs
+                        name_vec = self.test.vectoring_dict[name][vec_i]
                         results_out[name_vec] = results[ov][name]
 
         # we've done output vectoring, now look for vectored inputs
@@ -215,8 +227,24 @@ class Testbench():
 
 
 
+    def call_analysis(self, reads_template):
+        results_str = self.test.analysis(reads_template)
+        if not isinstance(results_str, dict):
+            assert False, 'Return from process_single_test should be a dict'
 
 
+        promised_outputs_str = set(s.friendly_name() for s in self.test.analysis_outputs)
+        for promised_analysis_output in promised_outputs_str:
+            assert promised_analysis_output in results_str, f'analysis() method for {self.test} did not return any output for "{promised_analysis_output}", which is a required output'
+        for returned_analysis_output in results_str.keys():
+            assert returned_analysis_output in promised_outputs_str, f'Return from analysis() method for {self.test} included unexpeced item "{returned_analysis_output}"'
+
+        results_sig = {}
+        for key_str, val in results_str.items():
+            key_sig = self.test.signals.from_template_name(key_str)
+            results_sig[key_sig] = val
+
+        return results_sig
 
     def get_results(self):
         ''' Return results in the following format:
@@ -235,18 +263,19 @@ class Testbench():
             #out_vec_name_mapping = {}
             if len(vectored_outputs) == 0:
                 # no vectored output
-                results_out_req = self.test.analysis(reads_template)
-                if not isinstance(results_out_req, dict):
-                    assert False, 'Return from process_single_test should be a dict'
+                results_out_req = self.call_analysis(reads_template)
                 results_out_req_vec = {None: results_out_req}
             else:
                 # yes vectored output
+                # TODO multiple vectored outputs is difficult. I think we would
+                #  need to change self.test.vectoring_dict to keep track of
+                #  where each component came from
                 assert len(vectored_outputs) == 1, 'TODO multiple vectored outputs'
                 vectored_output = vectored_outputs[0]
                 results_out_req_vec = {}
                 for vec_i, component in enumerate(vectored_output):
                     self.tester.set_vector_read_mode(vectored_output, component)
-                    results_out_req = self.test.analysis(reads_template)
+                    results_out_req = self.call_analysis(reads_template)
                     results_out_req_vec[component] = results_out_req
                 self.tester.clear_vector_read_mode(vectored_output)
 
