@@ -34,7 +34,7 @@ class PlotHelper:
         1) lhs: out
         2) input: in
         3) optional in: vdd
-        4) param: gain = gain_vdd_fit * vdd + gain_const_fit
+        4) param_pred: gain = gain_vdd_fit * vdd + gain_const_fit
         5) lhs_pred: out_lhs_pred = gain*in + offset
         6) param_meas: gain_param_meas = (out - offset) / in
 
@@ -92,7 +92,7 @@ class PlotHelper:
                 return val
 
         for lhs, rhs in self.parameter_algebra.items():
-            if target in rhs:
+            if target in [c.name for c in rhs.child_expressions]:
                 if not param_meas:
                     # Case 4) param
                     rhs_expr = self.expr_fit[lhs]
@@ -156,7 +156,7 @@ class PlotHelper:
 
     def plot_results(self):
         SampleManager = fixture.sampler.SampleManager
-        parameter_algebra = self.test.parameter_algebra_vectored
+        parameter_algebra = self.test.parameter_algebra_final
         for lhs, expression in parameter_algebra.items():
             # lhs will be the dependent axis
             required_inputs = self.test.sample_groups_test
@@ -179,8 +179,8 @@ class PlotHelper:
                 plt.ylabel(lhs)
                 plt.grid()
                 plt.legend(['Measured', 'Predicted'])
-                plt.title(f'{lhs} vs. {self.friendly_name(ri)}, nominal')
-                self._save_current_plot(f'final_model/{lhs} vs {self.friendly_name(ri)} nominal')
+                plt.title(f'{lhs} vs. {self.friendly_name(ri)}')
+                self._save_current_plot(f'final_model/{lhs.friendly_name()}/{lhs.friendly_name()} vs {self.friendly_name(ri)}')
 
             def contour_plot(x1, x2, y, y_pred, x1name, x2name, yname):
                     gridx, gridy = np.mgrid[min(x1):max(x1):1000j,
@@ -206,7 +206,7 @@ class PlotHelper:
                     plt.title(yname)
                     plt.grid()
                     self._save_current_plot(
-                        f'final_model/{lhs}_vs_{x1name}_and_{x2name} nominal')
+                        f'final_model/{lhs.friendly_name()}/{lhs.friendly_name()} vs {x1name} and {x2name}')
 
             # output vs multiple required inputs
             for input_pair in itertools.combinations(required_inputs, 2):

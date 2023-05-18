@@ -539,15 +539,15 @@ class TemplateMaster():
                 params_by_mode[mode] = rr
 
 
-            # TODO this is temporary
-            rr = checkpoint.load_regression_results(test)
+            ## TODO this is temporary
+            #rr = checkpoint.load_regression_results(test)
 
             # PlotHelper.plot_regression(regression, test.parameter_algebra_vectored, regression.regression_dataframe)
             # PlotHelper.plot_optional_effects(test, regression.regression_dataframe, regression.results)
             # TODO this has not been tested with modes
             mode_prefix = '' if mode == '()' else f'mode_{mode}_'
             ph = PlotHelper(test,
-                            test.parameter_algebra_vectored,
+                            test.parameter_algebra_final,
                             mode_prefix,
                             results_each_mode,
                             rr)

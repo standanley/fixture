@@ -81,6 +81,15 @@ class Expression(ABC):
                 ans.append(self.predict(value_vector, coefs))
         return ans
 
+    def error(self, my_input_data, coefs, result_data):
+        # predict_vec = np.vectorize(self.predict, signature='(n),(m)->()')
+        # predictions = predict_vec(my_data, coefs)
+        predictions = self.predict_many(my_input_data, coefs)
+        assert len(result_data) == len(predictions)
+        errors = result_data - predictions
+        e = sum(errors ** 2)
+        return (e / len(result_data)) ** .5
+
     def fit(self, optional_data, result_data):
         # return a best-fit of the coefficients, i.e. minimize
         # predict(optional_data, coefficients) - result_data
@@ -88,14 +97,7 @@ class Expression(ABC):
         my_data = optional_data[self.input_signals]
         assert my_data.shape == (len(result_data), len(self.input_signals))
         def error(coefs):
-            #predict_vec = np.vectorize(self.predict, signature='(n),(m)->()')
-            #predictions = predict_vec(my_data, coefs)
-            predictions = self.predict_many(my_data, coefs)
-            assert len(result_data) == len(predictions)
-            errors = result_data - predictions
-            e = sum(errors**2)
-            return (e/len(result_data))**.5
-
+            return self.error(my_data, coefs, result_data)
         x0 = self.x_init
         if x0 is None:
             x0 = np.ones(self.NUM_COEFFICIENTS)
@@ -558,6 +560,7 @@ class HeirarchicalExpression(Expression):
             plot_xss = []
             plot_ys = []
             plot_predictions = []
+            worst_example = (-1, 0)
             for si in sorted(sweep_ids):
                 # point_data is the data from one point (si) on the sg sweep
                 point_indices = group_data[SampleManager.SWEEP_ID_TAG] == si
@@ -566,6 +569,13 @@ class HeirarchicalExpression(Expression):
                 point_data_res = group_data_res[point_indices]
                 self.parent_expression.fit(point_data, point_data_res)
                 group_results.append(self.parent_expression.x_opt)
+
+                error = self.parent_expression.error(
+                     point_data[self.parent_expression.input_signals],
+                     self.parent_expression.x_opt,
+                     point_data_res)
+                if error > worst_example[1]:
+                    worst_example = (si, error)
 
                 plot_xss.append(point_data)
                 plot_ys.append(point_data_res)
@@ -581,7 +591,7 @@ class HeirarchicalExpression(Expression):
                         # TODO if this is the only xaxis, should we not skip?
                         continue
 
-                    print('New figure for ', self.name, sg)
+                    #print('New figure for ', self.name, sg)
                     plt.figure()
                     colors = []
                     orders = []
@@ -612,6 +622,23 @@ class HeirarchicalExpression(Expression):
                     plt.ylabel(f'{self.parent_expression.name}')
                     plt.grid()
                     PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/Fits for {self.name} vs {xaxis.friendly_name()} from Sweeping {sg.name}')
+
+                    # now plot the worst one by itself
+                    plt.figure()
+                    worst_i = sorted(sweep_ids).index(worst_example[0])
+                    xss = plot_xss[worst_i]
+                    xs = xss[xaxis]
+                    ys = plot_ys[worst_i]
+                    preds = plot_predictions[worst_i]
+
+                    order = np.argsort(xs)
+                    plt.plot(np.array(xs)[order], np.array(ys)[order], '*')
+                    plt.plot(np.array(xs)[order], np.array(preds)[order], '--')
+                    plt.legend('measured', 'predicted')
+                    plt.title(f'Fitting {self.name}, worst fit at {sg}=TODO')
+                    plt.grid()
+                    PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/Worst fit for {self.name} vs {xaxis.friendly_name()} from Sweeping {sg.name}')
+
 
             # Next we find expressions for each param, using values from earlier
             # each row in example_data corresponds to one point in the sweep
@@ -1291,10 +1318,10 @@ def test_optimizers(error_fun, N_COEFS):
         print('round', i, 'guess', x0)
         start = time.time()
 
-        result = minimize(error_fun, x0, method='Powell', options={
+        result = minimize(error_fun, x0, method='Nelder-Mead', options={
             #'gtol': 0,
-            'ftol': 0, # Powell
-            #'fatol': 0, # Nelder-Mead
+            #'ftol': 0, # Powell
+            'fatol': 0, # Nelder-Mead
             'maxfev': 5*10 ** 3,
             'disp': True
         })

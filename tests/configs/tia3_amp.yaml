@@ -3,12 +3,12 @@ filepath: ../spice/tia3.sp
 template: AmplifierTemplate
 
 checkpoint_controller:
-    #DCTest:
-    #    choose_inputs: False
-    #    run_sim: False
-    #    run_analysis: False
-    #    run_post_process: False
-    #    run_regression: False
+    DCTest:
+        choose_inputs: True
+        run_sim: True
+        run_analysis: True
+        run_post_process: True
+        run_regression: True
     #DCTest: False
     #DynamicTFTest: 
     #    choose_inputs: True
@@ -16,7 +16,7 @@ checkpoint_controller:
     #    run_analysis: True
     #    run_post_process: True
     #    run_regression: True
-    DCTest: True
+    #DCTest: True
 
 
 
@@ -103,6 +103,7 @@ template_pins:
 
 stimulus_generation:
     indiff: (-3e-6, 3e-6)
+    #indiff: (-300e-6, 300e-6)
     incm: (-1e-6, 1e-6)
     vdd: (2.7, 3.0, 3.1)
     #vdd: 3.0

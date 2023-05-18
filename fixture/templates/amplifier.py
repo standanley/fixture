@@ -28,9 +28,11 @@ class AmplifierTemplate(TemplateMaster):
         #}
         analysis_outputs = ['amp_output', 'amp_output_copy']
         parameters = ['dcgain', 'offset', 'amplitude', 'gain']
+        #parameters = ['dcgain', 'offset', 'amplitude', 'gain1', 'offset1', 'gain2', 'offset2']
         parameter_algebra = {
             'amp_output': 'dcgain*input + offset',
-            'amp_output_copy': 'amplitude*tanh(gain*input)'
+            'amp_output_copy': 'amplitude*tanh(gain*input)',
+            #'amp_output_copy': 'amplitude*tanh(gain1*input + offset1) + gain2*input + offset2'
         }
         vector_mapping = {'amp_output': ['output'], 'amp_output_copy': ['output']}
         num_samples = 300
