@@ -26,16 +26,26 @@ class AmplifierTemplate(TemplateMaster):
         #                   'dcgain_1': 'input',
         #                   'dcgain_0': '1'}
         #}
-        analysis_outputs = ['amp_output', 'amp_output_copy']
-        parameters = ['dcgain', 'offset', 'amplitude', 'gain']
-        #parameters = ['dcgain', 'offset', 'amplitude', 'gain1', 'offset1', 'gain2', 'offset2']
+        analysis_outputs = [f'out{i}' for i in range(5)]
+        parameters = [
+            'dcgain0', 'offset0',
+            'amplitude1', 'gain1',
+            #'amplitude1', 'gain1', 'offset1', 'gain2', 'offset1',
+            #'breakAB', 'breakBC', 'gainB', 'offsetB',
+            #'breakAB', 'breakBC', 'gainA', 'gainB', 'offsetB', 'gainC',
+            'heightA3', 'heightC3', 'gainB3', 'offset3',
+            'gainB4', 'adjA4', 'adjC4', 'heightA4', 'heightC4'
+            ]
         parameter_algebra = {
-            'amp_output': 'dcgain*input + offset',
-            'amp_output_copy': 'amplitude*tanh(gain*input)',
-            #'amp_output_copy': 'amplitude*tanh(gain1*input + offset1) + gain2*input + offset2'
+            'out0': 'dcgain0*input + offset0',
+            'out1': 'amplitude1*tanh(gain1*input)',
+            #'out2': 'amplitude1*tanh(gain1*input + offset1) + gain2*input + offset2',
+            #'out3': 'Piecewise((gainB*breakAB, input * breakAB < 1), (gainB*input, input * breakBC < 1), (gainB*breakBC, True)) + offsetB'
+            'out3': 'Piecewise((heightA3 + offset3, input * gainB3 < heightA3), (gainB3*input + offset3, gainB3 * input + offset3 < heightC3), (heightC3, True))',
+            'out4': 'Piecewise((gainB4*(1+adjA4)*input - adjA4*heightA4, input * gainB4 < heightA4), (gainB4*input, gainB4 * input < heightC4), (gainB4*(1+adjC4)*input - adjC4*heightC4, True))'
         }
-        vector_mapping = {'amp_output': ['output'], 'amp_output_copy': ['output']}
-        num_samples = 300
+        vector_mapping = {f'out{i}': ['output'] for i in range(5)}
+        #num_samples = 300
 
         def input_domain(self):
             # could also use fixture.RealIn(self.input.limits, 'my_name')
@@ -70,8 +80,7 @@ class AmplifierTemplate(TemplateMaster):
            # if isinstance(self.signals.input, SignalArray):
            #     # we are vectored
 
-            results = {'amp_output': reads.value,
-                       'amp_output_copy': reads.value}
+            results = {f'out{i}': reads.value for i in range(5)}
             return results
 
         def post_regression(self, regression_models, regression_dataframe):

@@ -4,10 +4,10 @@ template: AmplifierTemplate
 
 checkpoint_controller: 
     DCTest:
-        choose_inputs: True
-        run_sim: True
-        run_analysis: True
-        run_post_process: True
+        choose_inputs: False
+        run_sim: False
+        run_analysis: False
+        run_post_process: False
         run_regression: True
         #run_post_regression: save
 
@@ -72,7 +72,7 @@ proxy_signals:
 stimulus_generation:
         vdd: (2.7, 3.3)
         #indiff: (-0.25, 0.25)
-        indiff: (-0.25, 0.25)
+        indiff: (-0.5, 0.5)
         incm: (1.0, 1.2)
 
 template_pins:
@@ -82,8 +82,8 @@ template_pins:
 extras:
     approx_settling_time: 10e-9
     #limits_diff: (-0.03, 0.03)
-    limits_diff: (-0.15, 0.15)
-    limits_cm: (1.15, 1.25)
+    #limits_diff: (-0.50, 0.50)
+    #limits_cm: (1.15, 1.25)
 
 #test_config_file: ngspice_dynamics.yaml
 test_config_file: ngspice.yaml

@@ -4,7 +4,7 @@ from collections import defaultdict
 from keyword import iskeyword
 
 import sympy
-from scipy.optimize import minimize
+from scipy.optimize import minimize, basinhopping
 from scipy.stats import linregress
 import numpy as np
 import pandas
@@ -13,6 +13,7 @@ import pandas
 from sympy import Symbol, lambdify
 
 import fixture.regression
+from fixture.fitting_tricks import init_tricks
 from fixture.sampler import SampleManager
 from fixture.signals import SignalArray, SignalIn, CenteredSignalIn
 from fixture.plot_helper import plt, PlotHelper
@@ -90,17 +91,36 @@ class Expression(ABC):
         e = sum(errors ** 2)
         return (e / len(result_data)) ** .5
 
-    def fit(self, optional_data, result_data):
+    def fit(self, optional_data, result_data, x_init=None):
         # return a best-fit of the coefficients, i.e. minimize
         # predict(optional_data, coefficients) - result_data
         # return a tuple of (coefficients, offset)
         my_data = optional_data[self.input_signals]
         assert my_data.shape == (len(result_data), len(self.input_signals))
         def error(coefs):
-            return self.error(my_data, coefs, result_data)
-        x0 = self.x_init
+            ans = self.error(my_data, coefs, result_data)
+            return ans
+
+        # check init_tricks
+        io_syms = list(self.io_symbols.values())
+        coef_syms = self.coefs
+        #io_reverse = {sym: sig for sig, sym in io_syms.items()}
+        data_by_input_sym = {self.io_symbols[sig]: my_data[sig] for sig in self.input_signals}
+        data_by_input_sym = pandas.DataFrame(data_by_input_sym)
+        for init_trick in init_tricks:
+            suggested_init = init_trick.guess_init(self.ast, io_syms, coef_syms,
+                                                   data_by_input_sym, result_data)
+            if suggested_init is not None:
+                #assert self.x_init is None, 'TODO double suggestion'
+                self.x_init = suggested_init
+
+        if x_init is not None:
+            x0 = x_init
+        else:
+            x0 = self.x_init
         if x0 is None:
             x0 = np.ones(self.NUM_COEFFICIENTS)
+        x0 = np.array(x0)
 
         #import cProfile
         #def to_profile():
@@ -110,10 +130,24 @@ class Expression(ABC):
         start = time.time()
         print('Minimizing', self.name)
         assert x0 is not None
-        result = minimize(error, x0, method='Nelder-Mead', options={
-            'fatol': 0,
-            'maxfev': 10**3
-        })
+        #result = minimize(error, x0, method='Nelder-Mead', options={
+        #    #'ftol': 1e-8, # Powell
+        #    'fatol': 0, # Nelder-Mead
+        #    'maxfev': 10**4,
+        #    'return_all': True
+        #})
+
+        # read about basin hopping temperature to maybe understand this ... I
+        # have no idea what I'm doing, and I made up this metric
+        avg_result = sum(result_data)/len(result_data)
+        error_of_avg = (sum((result_data - avg_result)**2)/len(result_data))**0.5
+        temperature = error_of_avg/10
+        result = basinhopping(
+            error,
+            x0,
+            niter=10**1,
+            T=temperature
+        )
         x_opt = result.x
 
         print('minimization took', time.time() - start, 'error', error(x_opt))
@@ -152,8 +186,9 @@ class Expression(ABC):
         assert isinstance(data, (dict, pandas.DataFrame))
         assert self.x_opt is not None
         print()
-        input_data = [data[input] for input in self.input_signals]
-        result = self.predict(input_data, self.x_opt)
+        #input_data = [data[input] for input in self.input_signals]
+        input_data = data[self.input_signals]
+        result = self.predict_many(input_data, self.x_opt)
         return result
 
     @abstractmethod
@@ -204,10 +239,16 @@ class SympyExpression(Expression):
 
 
     def predict(self, opt_values, coefs):
-        input_syms = [self.io_symbols[s] for s in self.input_signals]
-        fun = lambdify(input_syms+self.coefs, self.ast, cse=True)
-        args = list(opt_values) + list(coefs)
-        ans = fun(*args)
+        #input_syms = [self.io_symbols[s] for s in self.input_signals]
+        ##fun = lambdify(input_syms+self.coefs, self.ast, cse=True)
+        #args_sym = input_syms + self.coefs
+        #args_val = list(opt_values) + list(coefs)
+        ##ans = fun(*args)
+        #ans = self.ast.subs(zip(args_sym, args_val)).evalf()
+
+        # lambdify should be smart enough to accept the input in list form
+        # or not
+        ans = self.fun_compiled(opt_values, coefs)
         return ans
 
     def predict_many(self, opt_value_data, coefs):
@@ -220,14 +261,20 @@ class SympyExpression(Expression):
         #return ans
         #data = opt_value_data[self.input_signals].values
         #data_all = np.concatenate((data, np.array(coefs)))
+
+
         ans = self.fun_compiled(opt_value_data.values.T, coefs)
+
+        #ans = np.array([self.predict(opt_row, coefs) for opt_row in opt_value_data.values])
         return ans
 
 
     def verilog(self, lhs, coef_names):
         assert isinstance(lhs, str)
         print('TODO: SympyExpression verilog')
-        return [lhs + '=' + str(self.ast)]
+        coef_subs = zip(self.coefs, [Symbol(c) for c in coef_names])
+        ast_coef_names = self.ast.subs(coef_subs)
+        return [lhs + '=' + str(ast_coef_names)]
 
     def vector(self, signal, new_signals):
         '''
@@ -248,12 +295,17 @@ class SympyExpression(Expression):
                 new_name = f'{name}_{identifier}'
                 ans.append(Symbol(new_name))
 
-            self.coefs.remove(sym)
-            self.coefs += ans
+            # TODO skips this if sym appears twice in exp, could probably restructure
+            #  for better bug catching
+            if sym in self.coefs:
+                self.coefs.remove(sym)
+                self.coefs += ans
+            self.coefs.sort(key=lambda sym: sym.name)
             return ans
 
 
         # temporary approach: replace abc*s with abc1*s1 + abc2*s2
+        # and replace lone s with (s1+s2)
         products = []
         def rec(ast):
             if isinstance(ast, Symbol):
@@ -552,23 +604,55 @@ class HeirarchicalExpression(Expression):
             group_data = optional_data[group_data_indices]
             group_data_res = result_data[group_data_indices]
 
+            def get_data_for_id(si):
+                point_indices = group_data[SampleManager.SWEEP_ID_TAG] == si
+                point_data = group_data[point_indices]
+                example_row_id = point_indices.idxmax()
+                point_data_res = group_data_res[point_indices]
+
+                return point_data, point_data_res, example_row_id
+
+                self.parent_expression.fit(point_data, point_data_res,
+                                           parent_by_group_x_init)
+                result = self.parent_expression.x_opt
+                error = self.parent_expression.error(
+                    point_data[self.parent_expression.input_signals],
+                    self.parent_expression.x_opt,
+                    point_data_res)
+                return result, error
+
+
             # First, we find values for each param, with optional inputs fixed
             sweep_ids = {si for si in group_data[SampleManager.SWEEP_ID_TAG]}
             group_results = []
             # example rows are one row from each sweep point
-            example_rows = []
+            example_row_ids = []
             plot_xss = []
             plot_ys = []
             plot_predictions = []
             worst_example = (-1, 0)
+            parent_by_group_x_init = None
+            for si in sorted(sweep_ids):
+                point_data, point_data_res, example_row_id = get_data_for_id(si)
+                self.parent_expression.fit(point_data, point_data_res,
+                                           parent_by_group_x_init)
+                parent_by_group_x_init = self.parent_expression.x_opt
             for si in sorted(sweep_ids):
                 # point_data is the data from one point (si) on the sg sweep
-                point_indices = group_data[SampleManager.SWEEP_ID_TAG] == si
-                point_data = group_data[point_indices]
-                example_rows.append(point_indices.idxmax())
-                point_data_res = group_data_res[point_indices]
-                self.parent_expression.fit(point_data, point_data_res)
+                #point_indices = group_data[SampleManager.SWEEP_ID_TAG] == si
+                #point_data = group_data[point_indices]
+                #example_row_ids.append(point_indices.idxmax())
+                #point_data_res = group_data_res[point_indices]
+
+                #self.parent_expression.fit(point_data, point_data_res,
+                #                           parent_by_group_x_init)
+
+                point_data, point_data_res, example_row_id = get_data_for_id(si)
+                self.parent_expression.fit(point_data, point_data_res,
+                                           parent_by_group_x_init)
+                parent_by_group_x_init = self.parent_expression.x_opt
                 group_results.append(self.parent_expression.x_opt)
+                example_row_ids.append(example_row_id)
 
                 error = self.parent_expression.error(
                      point_data[self.parent_expression.input_signals],
@@ -579,8 +663,9 @@ class HeirarchicalExpression(Expression):
 
                 plot_xss.append(point_data)
                 plot_ys.append(point_data_res)
-                predict_data = [point_data[input] for input in self.parent_expression.input_signals]
-                predictions = self.parent_expression.predict(predict_data, self.parent_expression.x_opt)
+                #predict_data = [point_data[input] for input in self.parent_expression.input_signals]
+                predict_data = point_data[self.parent_expression.input_signals]
+                predictions = self.parent_expression.predict_many(predict_data, self.parent_expression.x_opt)
                 plot_predictions.append(predictions)
             group_results = np.array(group_results)
 
@@ -646,7 +731,7 @@ class HeirarchicalExpression(Expression):
             #  in example_data because they are not relevant. But I don't have
             #  a good way to find the names for those. It's just confusing for
             #  somebody maintaining the code
-            example_data = group_data.loc[example_rows]
+            example_data = group_data.loc[example_row_ids]
             for i in range(len(self.child_expressions)):
                 child = self.child_expressions[i]
                 child_results = group_results[:, i]
@@ -725,8 +810,9 @@ class HeirarchicalExpression(Expression):
         self.fit(optional_data, result_data)
 
         if PLOT:
-            predict_data = [optional_data[col] for col in self.input_signals]
-            predictions = self.predict(predict_data, self.x_opt)
+            #predict_data = [optional_data[col] for col in self.input_signals]
+            predict_data = optional_data[self.input_signals]
+            predictions = self.predict_many(predict_data, self.x_opt)
             # TODO fix this xaxis
             xaxis = self.parent_expression.input_signals[0]
             xs = optional_data[xaxis]
@@ -905,7 +991,7 @@ class HeirarchicalExpression(Expression):
                 slice_len -= 1
             child_coefs = coef_names[coef_count : coef_count + slice_len]
             if self.manage_offsets and ce.last_coef_is_offset:
-                child_coefs = list(child_coefs) + [0]
+                child_coefs = list(child_coefs) + ['0']
             coef_count += slice_len
 
             lines += ce.verilog(name(ce), child_coefs)
@@ -1138,11 +1224,25 @@ For ctrl[5:0], coefs = [Rnom, X1, X2, X3, X4, X5, Y, offset]
 def get_ast_from_string(string):
     # some builtin functions (like abs) we want to keep as functions,
     # but others (like input) we want to not do that
+
+    def should_tag(s):
+        # things that are builtin/keyword names, but are more likely to be a
+        # circuit pin than a sympy algebra keyword
+        # Some of the boolean names like 'and' 'or' 'not' are kinda problematic,
+        # although I think sympy typically has you use '&' '|' '!' instead
+        # originally I was using iskeyword() in this function as well
+        should = ['in', 'input', 'raise', 'from', 'assert', 'and', 'or', 'not']
+        return s in should
+
+
+
+
     FIXTURE_TAG = 'FIXTURE_TAG_'
     def transform_name(tokens, local_dict, global_dict):
         result = []
+
         for type_, name in tokens:
-            if type_ == 1 and (iskeyword(name) or name == 'input'):
+            if type_ == 1 and should_tag(name):
                 result.append((1, FIXTURE_TAG + name))
             else:
                 result.append((type_, name))
@@ -1172,7 +1272,10 @@ def get_expression_from_string(string, signals, parameters, name, vectoring_dict
 
     io_symbols = {}
     param_symbols = []
-    for sym in ast.free_symbols:
+    # ast.free_symbols is a set, so the iteration order seems to change
+    # randomly between runs, which is annoying for debugging
+    # To fix that, we explicitly sort by name here
+    for sym in sorted(ast.free_symbols, key=lambda sym: sym.name):
         try:
             s = signals.from_circuit_name(sym.name)
             io_symbols[s] = sym

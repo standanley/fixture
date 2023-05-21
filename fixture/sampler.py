@@ -440,7 +440,7 @@ class Sampler:
             new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 50 , 30)
             #new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 4, 5)
             data = pandas.concat((data, new_data), ignore_index=True)
-        data_all = sm.sample_all(100, test.sample_groups_test, test.sample_groups_opt)
+        data_all = sm.sample_all(500, test.sample_groups_test, test.sample_groups_opt)
         data = pandas.concat((data, data_all), ignore_index=True)
 
         return data
