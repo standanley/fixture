@@ -105,12 +105,10 @@ stimulus_generation:
     indiff: (-3e-6, 3e-6)
     #indiff: (-300e-6, 300e-6)
     incm: (-1e-6, 1e-6)
-    vdd: (2.7, 3.0, 3.1)
-    #vdd: 3.0
+    #vdd: (2.7, 3.0, 3.1)
+    vdd: 3.0
     ibias: 6e-6
-    #ibias: (2e-6, 10e-6)
-    rfadj: 32
-    #rfadj: (10, 63)
+    rfadj: (10, 63)
     #rfadj: (30, 50)
 
 

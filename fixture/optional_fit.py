@@ -4,18 +4,18 @@ from collections import defaultdict
 from keyword import iskeyword
 
 import sympy
-from scipy.optimize import minimize, basinhopping
+from scipy.optimize import minimize, basinhopping, _basinhopping
 from scipy.stats import linregress
 import numpy as np
 import pandas
 
 #import fixture
-from sympy import Symbol, lambdify
+from sympy import Symbol, lambdify, Mul, Add
 
 import fixture.regression
 from fixture.fitting_tricks import init_tricks
 from fixture.sampler import SampleManager
-from fixture.signals import SignalArray, SignalIn, CenteredSignalIn
+from fixture.signals import SignalArray, SignalIn, CenteredSignalIn, Signal
 from fixture.plot_helper import plt, PlotHelper
 
 PLOT = True
@@ -139,14 +139,49 @@ class Expression(ABC):
 
         # read about basin hopping temperature to maybe understand this ... I
         # have no idea what I'm doing, and I made up this metric
+        # I'm also aiming for a relatively high temperature because I think our
+        # minimizer is fairly expensive (???)
         avg_result = sum(result_data)/len(result_data)
         error_of_avg = (sum((result_data - avg_result)**2)/len(result_data))**0.5
-        temperature = error_of_avg/10
+        temperature = error_of_avg/2
+
+        # By default, the step size adjustment moves by 10% changes and can only
+        # change once every 50 steps. I only expect to do ~10 steps total
+        displace = _basinhopping.RandomDisplacement(stepsize=1.0)
+        take_step_wrapped = _basinhopping.AdaptiveStepsize(displace,
+                                            interval=3,
+                                            factor=0.1,
+                                            verbose=False)
+        def random_step(x):
+            # modifies x in place and returns it
+            # most a coef can change in 1 step is a factor of "factor"
+            factor = 3
+            for i in range(len(x)):
+                if abs(x[i]) < 1e-16:
+                    x[i] += np.random.rand() - 0.5
+                elif np.random.rand() < 0.20:
+                    x[i] = -x[i]
+                else:
+                    x[i] *= factor ** (np.random.rand()*2 - 1)
+
+            return x
+
         result = basinhopping(
             error,
             x0,
             niter=10**1,
-            T=temperature
+            T=temperature,
+            #take_step=take_step_wrapped,
+            take_step=random_step,
+            minimizer_kwargs={
+                'method':'Nelder-Mead',
+                'options' : {
+                    #'ftol': 1e-8, # Powell
+                    #'fatol': 0, # Nelder-Mead
+                    'maxfev': 10**3,
+                    'return_all': False
+                }
+            }
         )
         x_opt = result.x
 
@@ -276,39 +311,69 @@ class SympyExpression(Expression):
         ast_coef_names = self.ast.subs(coef_subs)
         return [lhs + '=' + str(ast_coef_names)]
 
+    def vector_cleanup(self, signal, new_signals, new_signals_sym, old_coefs, new_coefs):
+        assert isinstance(signal, Signal)
+
+        del self.io_symbols[signal]
+        for new_signal, new_signal_sym in zip(new_signals, new_signals_sym):
+            self.io_symbols[new_signal] = new_signal_sym
+        self.input_signals.remove(signal)
+        self.input_signals += new_signals
+
+        for old_coef in old_coefs:
+            self.coefs.remove(old_coef)
+        self.coefs += new_coefs
+        self.coefs.sort(key=lambda sym: sym.name)
+        self.NUM_COEFFICIENTS = len(self.coefs)
+
+        self.recompile_fun()
+        return
+
+
+    def vector_fallback(self, signal, new_signals, signal_sym, new_signals_sym):
+        '''
+        Vector the signal by replacing it with a dot product of its
+        components and new weight coefficients.
+        self.vector() will do something better and try to absorb an existing
+        scaling coefficient into the weights, but if that fails it will call
+        this function as a fallback.
+        '''
+        new_coefs_sym = [Symbol(f'{s.friendly_name()}_weight_{self.name}')
+                       for s in new_signals]
+
+        sym_vectored = Add(Mul(c, s)
+                           for c, s in zip(new_coefs_sym, new_signals_sym))
+        self.ast.subs((signal_sym, sym_vectored))
+        self.vector_cleanup(signal, new_signals, new_signals_sym,
+                            [], new_coefs_sym)
+
     def vector(self, signal, new_signals):
         '''
         Replace signal with new_signals, editing self.ast accordingly
         Edits: NUM_COEFFICIENTS, ast, coefs, input_signals, io_symbols,
             compiled_fun
+        Our goal is to replace signal with (A*compA + B*compB), where
+        A^2+B^2=1. But ideally we parameterize that with only one coef.
+        For 2 dimensions the coef can be tanB/A), but for more dimensions
+        I dn't know a good parameterization.
+        ALSO: in cases where every instance of signal has a coefficien, I would
+        like to absordb that into the A and B.
+        So gain*in -> gainA*inA + gainB*inB.
+        TODO what if the thing has signal^2
         '''
 
         assert signal in self.input_signals
         signal_sym = self.io_symbols[signal]
         new_signals_sym = [Symbol(s.friendly_name()) for s in new_signals]
 
-        def vector_symbol(sym):
-            ans = []
-            name = sym.name
-            for s in new_signals:
-                identifier = s.friendly_name()
-                new_name = f'{name}_{identifier}'
-                ans.append(Symbol(new_name))
-
-            # TODO skips this if sym appears twice in exp, could probably restructure
-            #  for better bug catching
-            if sym in self.coefs:
-                self.coefs.remove(sym)
-                self.coefs += ans
-            self.coefs.sort(key=lambda sym: sym.name)
-            return ans
-
-
-        # temporary approach: replace abc*s with abc1*s1 + abc2*s2
-        # and replace lone s with (s1+s2)
+        # search for all the instances of signal in the ast, noting specially
+        # the places where it appears in a  product
         products = []
+        appears_outside_product = False
         def rec(ast):
             if isinstance(ast, Symbol):
+                if ast == signal_sym:
+                    appears_outside_product = True
                 return
             if ast.is_Mul and signal_sym in ast.args:
                 products.append(ast)
@@ -317,27 +382,58 @@ class SympyExpression(Expression):
                 rec(arg)
         rec(self.ast)
 
+        if appears_outside_product:
+            self.vector_fallback()
+            return
+        assert len(products) > 0, 'Internal error in equation vectoring'
+
+        coefs = []
         for product in products:
-            if len(product.args) == 2:
-                temp = list(product.args)
-                temp.remove(signal_sym)
-                coefficient = temp[0]
-                new_coefficients = vector_symbol(coefficient)
-                new_expr = sum(c*s for c, s in zip(new_coefficients, new_signals_sym))
-                self.ast = self.ast.subs(product, new_expr)
-                print()
-            else:
-                assert False, f'Todo product of vectored input with multiple things: {product}'
+            this_product_coefs = []
+            for factor in product.args:
+                if factor == signal_sym:
+                    continue
+                elif isinstance(factor, Symbol):
+                    this_product_coefs.append(factor)
+                else:
+                    # this factor is a whole ast; not what we are looking for
+                    continue
+            coefs.append(this_product_coefs)
+        assert len(coefs) > 0, 'Internal error in equation vectoring'
 
-        del self.io_symbols[signal]
-        for new_signal, new_signal_sym in zip(new_signals, new_signals_sym):
-            self.io_symbols[new_signal] = new_signal_sym
-        self.input_signals.remove(signal)
-        self.input_signals += new_signals
-        self.NUM_COEFFICIENTS = len(self.coefs)
+        # For each appearance of signal in ast there is an entry in coefs.
+        # Each entry in coefs is a list of the symbols that are multiplied by
+        # the signal.
+        # Our goal is to find a symbol that is multiplied by the signal every
+        # time it appears.
+        results = []
+        for candidate in coefs[0]:
+            if all(candidate in cs for cs in coefs):
+                results.append(candidate)
 
-        self.recompile_fun()
-        return
+        if len(results) == 0:
+            # not able to find a coef for signal; fall back to vectoring it
+            # in-place
+            self.vector_fallback()
+            return
+
+        coef_to_vector = results[0]
+        if len(results) > 1:
+            print(f'Unexpected case: in parameter equation {self.ast}, signal {signal} has multiple coefficients {results}, and Fixture does not know which one to vector, but is choosing {coef_to_vector}')
+
+        new_coefs = [Symbol(f'{coef_to_vector.name}_{s.friendly_name()}') for s in new_signals]
+        new_expr = Add(*[Mul(c, s) for c, s in zip(new_coefs, new_signals_sym)])
+        self.ast = self.ast.subs([(Mul(coef_to_vector, signal_sym), new_expr)])
+
+        if coef_to_vector in self.ast.free_symbols:
+            print(f'Warning: when vectoring, the coefficient {coef_to_vector} was replaced by {new_coefs}, but some instances of {coef_to_vector} still remain in the expression "{self.ast}"')
+            old_coefs = []
+        else:
+            old_coefs = [coef_to_vector]
+
+        self.vector_cleanup(signal, new_signals, new_signals_sym,
+                            old_coefs, new_coefs)
+
 
     def copy(self, param_suffix):
         assert False
