@@ -13,7 +13,7 @@ import pandas
 from sympy import Symbol, lambdify, Mul, Add
 
 import fixture.regression
-from fixture.fitting_tricks import init_tricks
+from fixture.fitting_tricks import init_tricks, fit_tricks
 from fixture.sampler import SampleManager
 from fixture.signals import SignalArray, SignalIn, CenteredSignalIn, Signal
 from fixture.plot_helper import plt, PlotHelper
@@ -101,18 +101,32 @@ class Expression(ABC):
             ans = self.error(my_data, coefs, result_data)
             return ans
 
-        # check init_tricks
-        io_syms = list(self.io_symbols.values())
-        coef_syms = self.coefs
-        #io_reverse = {sym: sig for sig, sym in io_syms.items()}
-        data_by_input_sym = {self.io_symbols[sig]: my_data[sig] for sig in self.input_signals}
-        data_by_input_sym = pandas.DataFrame(data_by_input_sym)
-        for init_trick in init_tricks:
-            suggested_init = init_trick.guess_init(self.ast, io_syms, coef_syms,
-                                                   data_by_input_sym, result_data)
-            if suggested_init is not None:
-                #assert self.x_init is None, 'TODO double suggestion'
-                self.x_init = suggested_init
+        # check fit_tricks and init_tricks
+        if not isinstance(self, ConstExpression):
+            io_syms = list(self.io_symbols.values())
+            coef_syms = self.coefs
+            #io_reverse = {sym: sig for sig, sym in io_syms.items()}
+            data_by_input_sym = {self.io_symbols[sig]: my_data[sig] for sig in self.input_signals}
+            data_by_input_sym = pandas.DataFrame(data_by_input_sym)
+
+            for fit_trick in fit_tricks:
+                result = fit_trick.fit(self.ast, io_syms, coef_syms,
+                                       data_by_input_sym, result_data)
+                if result is None:
+                    continue
+
+                # we were able to use this trick! we are done
+                print(f'Successfully fit {self} using {fit_trick}')
+                self.x_opt = result
+                return result
+
+
+            for init_trick in init_tricks:
+                suggested_init = init_trick.guess_init(self.ast, io_syms, coef_syms,
+                                                       data_by_input_sym, result_data)
+                if suggested_init is not None:
+                    #assert self.x_init is None, 'TODO double suggestion'
+                    self.x_init = suggested_init
 
         if x_init is not None:
             x0 = x_init
@@ -147,11 +161,11 @@ class Expression(ABC):
 
         # By default, the step size adjustment moves by 10% changes and can only
         # change once every 50 steps. I only expect to do ~10 steps total
-        displace = _basinhopping.RandomDisplacement(stepsize=1.0)
-        take_step_wrapped = _basinhopping.AdaptiveStepsize(displace,
-                                            interval=3,
-                                            factor=0.1,
-                                            verbose=False)
+        #displace = _basinhopping.RandomDisplacement(stepsize=1.0)
+        #take_step_wrapped = _basinhopping.AdaptiveStepsize(displace,
+        #                                    interval=3,
+        #                                    factor=0.1,
+        #                                    verbose=False)
         def random_step(x):
             # modifies x in place and returns it
             # most a coef can change in 1 step is a factor of "factor"
@@ -177,7 +191,7 @@ class Expression(ABC):
                 'method':'Nelder-Mead',
                 'options' : {
                     #'ftol': 1e-8, # Powell
-                    #'fatol': 0, # Nelder-Mead
+                    'fatol': 0, # Nelder-Mead
                     'maxfev': 10**3,
                     'return_all': False
                 }
@@ -202,7 +216,7 @@ class Expression(ABC):
             plt.title('TEMP looking at x_init')
             plt.scatter(my_data[x_label], result_data)
             plt.scatter(my_data[x_label], predictions)
-            plt.grid()
+            #plt.grid()
             plt.show()
 
             predict_vec = np.vectorize(self.predict, signature='(n),(m)->()')
@@ -210,7 +224,7 @@ class Expression(ABC):
             x_label = my_data.columns[0]
             plt.scatter(my_data[x_label], result_data)
             plt.scatter(my_data[x_label], predictions)
-            plt.grid()
+            #plt.grid()
             plt.show()
 
 
@@ -471,6 +485,10 @@ class ConstExpression(Expression):
         assert len(coefficients) == 1
         return coefficients[0]
 
+    def predict_many(self, opt_value_data, coefs):
+        N = len(opt_value_data)
+        return np.ones(N)*coefs[0]
+
     def verilog(self, lhs, coef_names):
         opt_names = [self.friendly_name(s) for s in self.input_signals]
 
@@ -571,7 +589,11 @@ class HeirarchicalExpression(Expression):
             for child in self.child_expressions:
                 if child.last_coef_is_offset:
                     num_children_offsets += 1
-            self.num_redundant_offsets = num_children_offsets-1 if num_children_offsets > 0 else 0
+
+            # TODO why in the world did I clamp this at 0? And why is it part of
+            #  the object? it's never used outside this init
+            #self.num_redundant_offsets = num_children_offsets-1 if num_children_offsets > 0 else 0
+            self.num_redundant_offsets = num_children_offsets - 1
             self.NUM_COEFFICIENTS = num_child_coefficients - self.num_redundant_offsets
         else:
             self.num_redundant_offsets = 0
@@ -801,7 +823,7 @@ class HeirarchicalExpression(Expression):
                     plt.title(f'Fitting {self.name} for various {sg}')
                     plt.xlabel(f'{xaxis.friendly_name()}')
                     plt.ylabel(f'{self.parent_expression.name}')
-                    plt.grid()
+                    #plt.grid()
                     PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/Fits for {self.name} vs {xaxis.friendly_name()} from Sweeping {sg.name}')
 
                     # now plot the worst one by itself
@@ -817,7 +839,7 @@ class HeirarchicalExpression(Expression):
                     plt.plot(np.array(xs)[order], np.array(preds)[order], '--')
                     plt.legend('measured', 'predicted')
                     plt.title(f'Fitting {self.name}, worst fit at {sg}=TODO')
-                    plt.grid()
+                    #plt.grid()
                     PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/Worst fit for {self.name} vs {xaxis.friendly_name()} from Sweeping {sg.name}')
 
 
@@ -870,7 +892,7 @@ class HeirarchicalExpression(Expression):
                         plt.plot(xs_smooth, predictions, 'x--')
                         plt.xlabel(f'{xaxis.friendly_name()}')
                         plt.ylabel(f'{child.name}')
-                        plt.grid()
+                        #plt.grid()
                         PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/Individual fit for {grandchild.name} vs {sg}')
 
                         # TEMP for checking x_init
@@ -883,7 +905,7 @@ class HeirarchicalExpression(Expression):
                             plt.plot(xs_smooth, predictions, 'x--')
                             plt.xlabel(f'{xaxis.friendly_name()}')
                             plt.ylabel(f'{child.name}')
-                            plt.grid()
+                            #plt.grid()
                             PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/debug/Initial point for minimizer for {grandchild.name} vs {sg}')
                         print()
 
@@ -915,7 +937,7 @@ class HeirarchicalExpression(Expression):
             plt.figure()
             plt.plot(xs, result_data, '*')
             plt.plot(xs, predictions, '--')
-            plt.grid()
+            #plt.grid()
             plt.xlabel(f'{xaxis.friendly_name()}')
             plt.ylabel(f'{self.name}')
         print()
@@ -960,8 +982,8 @@ class HeirarchicalExpression(Expression):
         return ans
 
     def predict_from_dict(self, opt_dict, coefs):
-        assert False
-        return None
+        opt_value_data = opt_dict[self.input_signals]
+        return self.predict_many(opt_value_data, coefs)
 
     def predict_many(self, opt_value_data, coefs):
         ans = self.fun_compiled(opt_value_data.values.T, coefs)
@@ -1037,14 +1059,26 @@ class HeirarchicalExpression(Expression):
                 x_init = np.concatenate((x_init, ce_x_init))
 
         if self.manage_offsets:
-            nominal_offset = sum(nominal_offsets) / len(nominal_offsets)
+            if len(nominal_offsets) == 0:
+                nominal_offset = 0
+            else:
+                nominal_offset = sum(nominal_offsets) / len(nominal_offsets)
             final_offset = nominal_offset - aggregate_offset
             x_init = np.concatenate((x_init, [final_offset]))
 
         return x_init
     @x_init.setter
     def x_init(self, x_init):
-        raise NotImplementedError('Cannot set heirarchical x_init directly')
+        if not all(isinstance(c, ConstExpression)
+                   for c in self.child_expressions):
+            raise NotImplementedError('Cannot set heirarchical x_init directly')
+        if self.NUM_COEFFICIENTS != len(self.child_expressions):
+            raise NotImplementedError('Cannot set heirarchical x_init directly')
+        assert len(x_init) == self.NUM_COEFFICIENTS
+        for x, c in zip(x_init, self.child_expressions):
+            c.x_init = [x]
+        assert list(x_init) == list(self.x_init)
+
 
     def _search(self, target_name):
         # return a list of child expressions with the target name
@@ -1283,7 +1317,7 @@ For ctrl[5:0], coefs = [Rnom, X1, X2, X3, X4, X5, Y, offset]
             return result.rvalue**2, result.slope, result.intercept
         bits = [optional_data[s] for s in self.input_signals]
         denom_coefss = []
-        therm = [1 for i in range(1, len(bits))] + [0]
+        therm = [1 for i in range(1, len(bits))] + [1e-3]
         denom_coefss.append(therm)
         binary_inc = [2**i for i in range(1, len(bits))] + [1e-3]
         denom_coefss.append(binary_inc)
@@ -1357,7 +1391,8 @@ def get_ast_from_string(string):
     ast = sympy.parsing.sympy_parser.parse_expr(string, transformations=transformations)
     return ast
 
-def get_expression_from_string(string, signals, parameters, name, vectoring_dict, param_suffix=''):
+def get_expression_from_string(string, signals, vectoring_dict, name,
+                               parameters=None, param_suffix=''):
     # tries to parse the string as an expression using sympy
     # Tokens that match signal names are mapped to that signal,
     # tokens that are unrecognized are assumed new parameters
@@ -1387,7 +1422,7 @@ def get_expression_from_string(string, signals, parameters, name, vectoring_dict
             # not a template name
             pass
 
-        if sym.name in parameters:
+        if parameters is None or sym.name in parameters:
             param_symbols.append(sym)
             continue
 
@@ -1435,6 +1470,13 @@ def get_optional_expression_from_signal(s, name):
     if isinstance(s, SignalArray):
         print('TODO fix SignalArray behavior, right now defaulting to ReciprocalExpression')
         #return LinearExpression(list(s), name)
+        io_signals = {b: Symbol(b.friendly_name()) for b in list(s)}
+        offset = Symbol(f'{name}_offset')
+        coefs = [Symbol(f'{name}_{io_signals[b].name}') for b in list(s)] + [offset]
+        input_symbols = [io_signals[b] for b in list(s)] + [1]
+        ast = sum(c*b_sym for c, b_sym in zip(coefs, input_symbols))
+        le = SympyExpression(ast, io_signals, coefs, name)
+        #return le
         return ReciprocalExpression(list(s), name)
 
     else:
@@ -1464,7 +1506,9 @@ def get_optional_expression_from_signals(s_list, name, all_signals):
             child_name = f'{name}_{s.friendly_name()}'
             individual.append(get_optional_expression_from_signal(s, child_name))
         elif isinstance(s, str):
-            expr = get_expression_from_string(s, all_signals, f'{name}_<{s}>')
+            expr = get_expression_from_string(s, all_signals, {},
+                                              f'{name}_<{s}>')
+            individual.append(expr)
         else:
             assert False, f'Unrecognized optional expression type {type(s)} for "{s}"'
     if len(individual) == 0:

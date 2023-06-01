@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import sympy
 from sympy import Symbol, Add, Mul
 from sympy.functions.elementary.piecewise import ExprCondPair
+import numpy as np
 
 
 def parse_linear(ast, input_symbols, coef_symbols):
@@ -85,6 +86,19 @@ class InitTrick(ABC):
         pass
 
 
+
+class FitTrick:
+    @staticmethod
+    @abstractmethod
+    def fit(ast, input_symbols, coef_symbols, input_data, result_data):
+        pass
+
+
+
+
+
+
+
 class PiecewiseInit(InitTrick):
     #@staticmethod
     #def check_ast(ast, input_symbols, coef_symbols):
@@ -152,7 +166,48 @@ class PiecewiseInit(InitTrick):
         print('hi')
 
 
+class FitLinear(FitTrick):
+
+    @staticmethod
+    def fit(ast, input_symbols, coef_symbols, input_data, result_data):
+        linear_model = parse_linear(ast, input_symbols, coef_symbols)
+        if linear_model is None:
+            return None
+
+        # Minimize ||Ax-b||
+        # A is N (number of datapoints) by M (number of coefs)
+        N = len(input_data)
+        M = len(coef_symbols)
+        assert M == len(linear_model.coefs) + (1 if linear_model.offset is not None else 0), 'Internal error in parse_linear?'
+        assert len(result_data) == N
+        if N < M:
+            print(f'Warning: using only {N} datapoints to fit {M} coefficients for {ast}')
+
+        # it's possible for some of linear_model.input_funs to be functions of
+        # the inputs, so we use sympy to calculate the column for each one
+        A = np.zeros((N, M))
+        input_data_array = input_data[input_symbols].values.T
+        for coef in linear_model.coefs:
+            lm_i = linear_model.coefs.index(coef)
+            cs_i = coef_symbols.index(coef)
+            input_fun = linear_model.input_funs[lm_i]
+            input_lambda = sympy.lambdify(input_symbols, input_fun)
+            input_fun_data = input_lambda(*input_data_array)
+            A[:, cs_i] = input_fun_data
+        if linear_model.offset is not None:
+            # column of ones
+            cs_i = coef_symbols.index(linear_model.offset)
+            A[:, cs_i] = 1
+
+        b = result_data
+
+        x, residuals, rank, singular_values = np.linalg.lstsq(A, b, rcond=None)
+
+        return x
+
+
+
 
 
 init_tricks = [PiecewiseInit]
-fit_tricks = []
+fit_tricks = [FitLinear]

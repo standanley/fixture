@@ -11,10 +11,15 @@ class PhaseBlenderTemplate_C(TemplateMaster):
 
     #@debug
     class Test1(TemplateMaster.Test):
+        #parameter_algebra = {
+        #    'out_delay': {'gain':'in_phase_delay', 'offset':'1'}
+        #    #'out_delay': {'offset': '1'}
+        #    #'out_delay': {'offset_a': 'sel_therm', 'offset_b': '1'}
+        #}
+        analysis_outputs = ['out_delay']
+        parameters = ['gain', 'offset']
         parameter_algebra = {
-            'out_delay': {'gain':'in_phase_delay', 'offset':'1'}
-            #'out_delay': {'offset': '1'}
-            #'out_delay': {'offset_a': 'sel_therm', 'offset_b': '1'}
+            'out_delay': 'gain * in_phase_delay + offset'
         }
         num_samples = 300
 

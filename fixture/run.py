@@ -95,7 +95,9 @@ def _run(circuit_config_dict):
             else:
                 assert False, f'Confused by type of "{val}" in checkpoint controller for test "{test_str}"'
     else:
-        print(f'No tests specified, defaulting to all tests: {t.tests}')
+        print(f'No tests specified, defaulting to all tests: {[str(test) for test in t.tests]}')
+        for test in t.tests:
+            checkpoint_controller[test] = all_checkpoints
 
     params_by_mode = t.go(checkpoint, checkpoint_controller)
 

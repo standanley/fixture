@@ -285,6 +285,7 @@ class SignalManager:
         self.rebuild_ref_dicts()
 
     def rebuild_ref_dicts(self):
+        #assert False, 'why am I missing elements of a bus when I search by template name?'
         temp = self.signals
         self.signals = []
         self.signals_by_circuit_name = {}
@@ -338,6 +339,7 @@ class SignalManager:
 
     def from_template_name(self, name):
         # return a Signal or SignalArray of signals according to template name
+        # TODO abc I had an issue here with the phase_blender test? But I fixed it?
         bus_name, indices = parse_name(name)
         if len(indices) == 0:
             return self.signals_by_template_name[name]

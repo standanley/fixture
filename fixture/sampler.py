@@ -437,10 +437,11 @@ class Sampler:
         sm = SampleManager
         for group in test.sample_groups_opt:
             #if not any(s in test.input_signals for s in group.signals):
-            new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 50 , 30)
+            new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 50, 50)
             #new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 4, 5)
             data = pandas.concat((data, new_data), ignore_index=True)
-        data_all = sm.sample_all(500, test.sample_groups_test, test.sample_groups_opt)
+        #data_all = sm.sample_all(500, test.sample_groups_test, test.sample_groups_opt)
+        data_all = sm.sample_all(100, test.sample_groups_test, test.sample_groups_opt)
         data = pandas.concat((data, data_all), ignore_index=True)
 
         return data
@@ -724,6 +725,9 @@ def visualize(samples):
     plt.xlim(0, 1)
     plt.ylim(0, 1)
     #plt.show()
+    # save_current_plot will call grid(), but we want it off, so we toggle
+    # an extra time here
+    plt.grid()
     PlotHelper.save_current_plot('sample_test')
     print('created sample_test plot')
 

@@ -259,6 +259,7 @@ def assign_template_pins(signals, template_matching):
             t_array_entries_by_name[t_bus_name] = []
         t_array_entries = t_array_entries_by_name[t_bus_name]
         def match(t_indices_used, t_indices, c_a, c_indices):
+            temp_debug = signals
             # if the template array is 1 entry, that entry encompasses the whole circuit array
             # if the template array is multiple entries, they must match with the circuit
             #    entries 1 to 1 until the template entries run out of dimensions

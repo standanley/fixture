@@ -102,22 +102,20 @@ template_pins:
     output: output_test
 
 stimulus_generation:
-    indiff: (-3e-6, 3e-6)
-    #indiff: (-200e-6, 200e-6)
-    incm: (-5e-6, 5e-6)
-    vdd: (2.99, 3.0, 3.01)
-    #vdd: 3.0
+    #indiff: (-3e-6, 3e-6)
+    indiff: (-200e-6, 200e-6)
+    incm: (-1e-6, 1e-6)
+    #vdd: (2.7, 3.0, 3.1)
+    vdd: 3.0
     ibias: 6e-6
     #ibias: (2e-6, 10e-6)
-    rfadj: 32
-    #rfadj: (10, 63)
+    #rfadj: 32
+    rfadj: (10, 63)
     #rfadj: (30, 50)
 
 
-optional_input_info:
-    #dcgain0_out0_outdiff_indiff: ['c0 + c1*vdd + c2*vdd**2', rfadj]
-    dcgain0_out0_outcm_incm: []
-    offset0_out0_outcm: []
+#optional_input_info:
+#    dcgain0_out0_outdiff_indiff: ['c0 + c1*vdd + c2*vdd**2', rfadj]
 
 extras:
     #approx_settling_time: 2e-9

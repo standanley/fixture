@@ -233,10 +233,16 @@ class TemplateMaster():
                 if lhs_signal in self.vectoring_dict:
                     for lhs_vec in self.vectoring_dict[lhs_signal]:
                         suffix = '_' + lhs_vec.friendly_name()
-                        expr = get_expression_from_string(rhs, self.signals, self.parameters, lhs_vec.friendly_name(), self.vectoring_dict, param_suffix=suffix)
+                        expr = get_expression_from_string(rhs, self.signals,
+                                                          self.vectoring_dict,
+                                                          lhs_vec.friendly_name(),
+                                                          self.parameters,
+                                                          param_suffix=suffix)
                         self.parameter_algebra_vectored[lhs_vec] = expr
                 else:
-                    expr = get_expression_from_string(rhs, self.signals, self.parameters, lhs, self.vectoring_dict)
+                    expr = get_expression_from_string(rhs, self.signals,
+                                                      self.vectoring_dict, lhs,
+                                                      self.parameters)
                     self.parameter_algebra_vectored[lhs_signal] = expr
                 print(expr)
 
