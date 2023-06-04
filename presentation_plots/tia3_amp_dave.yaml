@@ -4,10 +4,10 @@ template: AmplifierTemplate
 
 checkpoint_controller:
     DCTest:
-        choose_inputs: False
-        run_sim: False
-        run_analysis: False
-        run_post_process: False
+        choose_inputs: True
+        run_sim: True
+        run_analysis: True
+        run_post_process: True
         run_regression: True
     #DCTest: False
     #DynamicTFTest: 
@@ -115,8 +115,7 @@ stimulus_generation:
 
 
 optional_input_info:
-    #dcgain0_out0_outdiff_indiff: ['c0 + c1*vdd + c2*vdd**2', rfadj]
-    dcgain0_out0_outdiff_indiff: [vdd, rfadj]
+    dcgain0_out0_outdiff_indiff: ['c0 + c1*vdd + c2*vdd**2', rfadj]
 
 extras:
     #approx_settling_time: 2e-9

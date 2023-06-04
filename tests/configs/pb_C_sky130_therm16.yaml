@@ -1,32 +1,32 @@
 name: phase_blender
 filepath: ../spice/pb_sky130_therm16.sp
 template: PhaseBlenderTemplate_C
-pin:
+
+physical_pins:
     vdd:
-        direction: input
+        direction: in
         datatype: real
-        value: 1.8
 #     gnd:
-#         direction: input
+#         direction: in
 #         datatype: real
 #         value: 0
 
     ph_in[0:1]:
-        direction: input
+        direction: in
         datatype: bit
     #ph_in[1]:
-    #    direction: input
+    #    direction: in
     #    datatype: bit
     #ph_in[0]:
-    #    direction: input
+    #    direction: in
     #    datatype: bit
 
     ph_out:
-        direction: output
+        direction: out
         datatype: bit
     thm_sel_bld[0:15]:
-        direction: input
-        datatype: binary_analog
+        direction: in
+        datatype: bit
         bus_type: thermometer
         #bus_type: binary
 
@@ -34,6 +34,10 @@ template_pins:
     in_a: ph_in[0]
     in_b: ph_in[1]
     out: ph_out
+
+stimulus_generation:
+    vdd: 1.8
+    thm_sel_bld: (0, 16)
 
 extras:
     frequency: 500e6

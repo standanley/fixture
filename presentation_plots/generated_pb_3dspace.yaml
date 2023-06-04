@@ -1,3 +1,7 @@
+# NOTE to produce the plot I used the generated pb and I added a 1000 Ohm resistor from ph_in[1] to ph_out
+# I also used a simulation with t_step=5e-12 and t_tr=0.06e-9
+
+
 name: phase_blender
 filepath: ../spice/generated_pb.sp
 #filepath: ../spice/old_generated_pb.sp

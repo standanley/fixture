@@ -320,6 +320,15 @@ class SignalManager:
         if signal.spice_name is not None:
             self.signals_by_circuit_name[signal.spice_name] = signal
 
+        if isinstance(signal, SignalArray):
+            for bit in signal:
+                if (signal.template_name is None
+                        and bit.template_name is not None):
+                    self.signals_by_template_name[bit.template_name] = bit
+                if (signal.spice_name is None
+                        and bit.spice_name is not None):
+                    self.signals_by_circuit_name[bit.spice_name] = bit
+
     #def update(self, signal):
     #    # if the user edits the circuit or template name (happens during config parsing)
     #    # TODO technically I should check if this signal is still in the dicts
@@ -621,6 +630,17 @@ class SignalArray(Signal):
             assert first_one in ['low', 'high'], f'{self} must set first_one to be "low" or "high"'
             ans_str = bin(decimal)[2:]
             ans = [0]*(self.shape[0] - len(ans_str)) + [int(x) for x in ans_str]
+            if first_one == 'low':
+                ans = ans[::-1]
+            return ans
+        elif self.bus_info.type_ == 'thermometer':
+            first_one = self.bus_info.first_one
+            if first_one is None:
+                first_one = 'low'
+            assert first_one in ['low', 'high'], f'{self} must set first_one to be "low" or "high"'
+            N = self.shape[0]
+            assert 0 <= decimal <= N
+            ans = [0]*(N-decimal) + [1]*decimal
             if first_one == 'low':
                 ans = ans[::-1]
             return ans

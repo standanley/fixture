@@ -823,7 +823,6 @@ class HeirarchicalExpression(Expression):
                     plt.title(f'Fitting {self.name} for various {sg}')
                     plt.xlabel(f'{xaxis.friendly_name()}')
                     plt.ylabel(f'{self.parent_expression.name}')
-                    #plt.grid()
                     PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/Fits for {self.name} vs {xaxis.friendly_name()} from Sweeping {sg.name}')
 
                     # now plot the worst one by itself
@@ -837,9 +836,10 @@ class HeirarchicalExpression(Expression):
                     order = np.argsort(xs)
                     plt.plot(np.array(xs)[order], np.array(ys)[order], '*')
                     plt.plot(np.array(xs)[order], np.array(preds)[order], '--')
-                    plt.legend('measured', 'predicted')
+                    plt.xlabel(f'{xaxis.friendly_name()}')
+                    plt.ylabel(f'{self.parent_expression.name}')
+                    plt.legend(['Peasured', 'Predicted'])
                     plt.title(f'Fitting {self.name}, worst fit at {sg}=TODO')
-                    #plt.grid()
                     PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/Worst fit for {self.name} vs {xaxis.friendly_name()} from Sweeping {sg.name}')
 
 
@@ -889,10 +889,11 @@ class HeirarchicalExpression(Expression):
 
                         xs_order = np.argsort(xs)
                         plt.plot(np.array(xs)[xs_order], child_results[xs_order], '*')
-                        plt.plot(xs_smooth, predictions, 'x--')
+                        #plt.plot(xs_smooth, predictions, 'x--')
+                        #plt.legend(['Measured', 'Predicted'])
                         plt.xlabel(f'{xaxis.friendly_name()}')
                         plt.ylabel(f'{child.name}')
-                        #plt.grid()
+                        plt.ylim((0, 3000))
                         PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/Individual fit for {grandchild.name} vs {sg}')
 
                         # TEMP for checking x_init
@@ -903,9 +904,9 @@ class HeirarchicalExpression(Expression):
                             plt.plot(np.array(xs)[xs_order],
                                      child_results[xs_order], '*')
                             plt.plot(xs_smooth, predictions, 'x--')
+                            plt.legend(['Measured', 'Predicted'])
                             plt.xlabel(f'{xaxis.friendly_name()}')
                             plt.ylabel(f'{child.name}')
-                            #plt.grid()
                             PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/debug/Initial point for minimizer for {grandchild.name} vs {sg}')
                         print()
 
@@ -1140,7 +1141,8 @@ class HeirarchicalExpression(Expression):
 
         # TODO I want to reverse this properly so the c numbers are in order,
         #  But I'm afraid I will mess it up and they'll be mismatched
-        return lines[::-1]
+        #return lines[::-1]
+        return lines
 
     #def copy(self, param_suffix):
     #    # for use with vectoring outputs, copy this whole tree but rename the
@@ -1476,8 +1478,8 @@ def get_optional_expression_from_signal(s, name):
         input_symbols = [io_signals[b] for b in list(s)] + [1]
         ast = sum(c*b_sym for c, b_sym in zip(coefs, input_symbols))
         le = SympyExpression(ast, io_signals, coefs, name)
-        #return le
-        return ReciprocalExpression(list(s), name)
+        return le
+        #return ReciprocalExpression(list(s), name)
 
     else:
         assert isinstance(s, SignalIn)

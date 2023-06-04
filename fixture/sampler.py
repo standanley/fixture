@@ -352,6 +352,43 @@ class SamplerBinary(SampleStyle):
         return self.signal.get_decimal_value(sample)
 
 
+# TODO many of these methods are identical to the binary one
+#  I think only the calculation of range_inclusive in the init is different
+class SamplerThermometer(SampleStyle):
+    def __init__(self, signal):
+        assert isinstance(signal, SignalArray)
+        assert signal.bus_info.type_ == 'thermometer', f'Cannot create thermometer sampler for signal {signal}'
+        self.signal = signal
+        self.signals = [self.signal]
+
+        self.num_bits = len(list(signal))
+        self.range_inclusive = signal.value
+        if self.range_inclusive is None:
+            self.range_inclusive = (0, self.num_bits)
+        self.name = signal.friendly_name()
+
+    def get_bits(self, v):
+        bits = self.signal.get_binary_value(v)
+        ans = {s: b for s, b in zip(list(self.signal), bits)}
+        ans[self.signal] = v
+        return ans
+
+    def get(self, target):
+        N = self.range_inclusive[1] - self.range_inclusive[0] + 1
+        minimum = self.range_inclusive[0]
+        v = minimum + int(target[0] * N)
+        if v == minimum + N:
+            # happens when target is exactly 1
+            v -= 1
+        return self.get_bits(v)
+
+    def get_nominal(self):
+        return self.get_bits(self.signal.nominal)
+
+    def get_plot_value(self, sample):
+        return self.signal.get_decimal_value(sample)
+
+
 class SamplerTEMP(SampleStyle):
     def __init__(self, name, limits, nominal):
         assert len(limits) == 2, 'Sampling analog requires an input range'
@@ -403,7 +440,7 @@ def get_sampler_for_signal(signal):
             elif signal.bus_info.type_ == 'binary':
                 return [SamplerBinary(signal)]
             elif signal.bus_info.type_ == 'thermometer':
-                assert False, 'todo'
+                return [SamplerThermometer(signal)]
             else:
                 assert False, f'Cannot create Sampler for bus type {signal.bus_info.type_} from signal {signal}'
 
@@ -437,11 +474,12 @@ class Sampler:
         sm = SampleManager
         for group in test.sample_groups_opt:
             #if not any(s in test.input_signals for s in group.signals):
-            new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 50, 50)
-            #new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 4, 5)
+            new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 50, 30)
+            #new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 20, 17)
             data = pandas.concat((data, new_data), ignore_index=True)
         #data_all = sm.sample_all(500, test.sample_groups_test, test.sample_groups_opt)
-        data_all = sm.sample_all(100, test.sample_groups_test, test.sample_groups_opt)
+        #data_all = sm.sample_all(100, test.sample_groups_test, test.sample_groups_opt)
+        data_all = sm.sample_all(10, test.sample_groups_test, test.sample_groups_opt)
         data = pandas.concat((data, data_all), ignore_index=True)
 
         return data

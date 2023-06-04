@@ -11,7 +11,8 @@ plt = matplotlib.pyplot
 import scipy
 import numpy as np
 import fixture.regression
-from fixture.signals import SignalIn, SignalOut, SignalArray, CenteredSignalIn
+from fixture.signals import SignalIn, SignalOut, SignalArray, CenteredSignalIn, \
+    AnalysisResultSignal
 from scipy.interpolate import griddata
 
 
@@ -141,6 +142,19 @@ class PlotHelper:
     @classmethod
     def save_current_plot(cls, name):
         plt.grid()
+
+        # fix overlap of long xtick labels
+        # calling draw forces is to populate tick labels .. maybe is slow too?
+        ax = plt.gca()
+        plt.gcf().canvas.draw()
+        ticklabels = ax.get_xticklabels()
+        maxlength = max(len(t._text) for t in ticklabels)
+        if maxlength > 6:
+            plt.xticks(rotation=30)
+            print('ROTATING TICKS')
+        plt.tight_layout()
+
+
         #plt.show()
 
         plt.savefig(cls.clean_filename(name), dpi=cls.dpi)
@@ -176,10 +190,9 @@ class PlotHelper:
                 plt.plot(x, y_nominal, '*')
                 plt.plot(x, y_pred_nominal, 'x')
                 plt.xlabel(self.friendly_name(ri))
-                plt.ylabel(lhs)
-                plt.grid()
+                plt.ylabel(lhs.friendly_name())
                 plt.legend(['Measured', 'Predicted'])
-                plt.title(f'{lhs} vs. {self.friendly_name(ri)}')
+                plt.title(f'{lhs.friendly_name()} vs. {self.friendly_name(ri)}')
                 self._save_current_plot(f'final_model/{lhs.friendly_name()}/{lhs.friendly_name()} vs {self.friendly_name(ri)}')
 
             def contour_plot(x1, x2, y, y_pred, x1name, x2name, yname):
@@ -199,7 +212,8 @@ class PlotHelper:
                     meas_levels = cp.cvalues
                     meas_breaks = meas_levels[:-1] + np.diff(meas_levels)/2
                     plt.contour(gridx, gridy, contour_data_meas, levels=meas_breaks, colors='black', linestyles='solid')
-                    plt.plot(*(points.T), 'x')
+                    # TODO turn these xs back on
+                    #plt.plot(*(points.T), 'x')
                     plt.contour(gridx, gridy, contour_data_pred, levels=meas_breaks, colors='black', linestyles='dashed')
                     plt.xlabel(self.friendly_name(input1))
                     plt.ylabel(self.friendly_name(input2))
@@ -226,6 +240,14 @@ class PlotHelper:
                     y_opt = y[data_opt_mask]
                     y_pred_opt = y_pred[data_opt_mask]
                     contour_plot(x1, x2, y_opt, y_pred_opt, self.friendly_name(input1), self.friendly_name(input2), self.friendly_name(lhs))
+
+                    ## Do 3D scatter instead of contour; only for interactive
+                    #fig = plt.figure()
+                    #ax = fig.add_subplot(111, projection='3d')
+                    #ax.scatter(x1, x2, y_opt)
+                    ##ax.scatter(x1, x2, y_pred)
+                    ## ax.scatter(in_diff, in_cm, pred_tmp)
+                    #plt.show()
 
 
     def plot_regression(self):
@@ -259,11 +281,11 @@ class PlotHelper:
                 plt.plot(x, y_meas, '*')
                 plt.plot(x_nonan, y_pred, 'x')
                 plt.xlabel(self.friendly_name(input))
-                plt.ylabel(lhs)
+                plt.ylabel(lhs.friendly_name())
                 plt.grid()
                 plt.legend(['Measured', 'Predicted'])
-                plt.title(f'{lhs} vs. {self.friendly_name(input)}')
-                self._save_current_plot(f'{lhs}_vs_{self.friendly_name(input)}')
+                plt.title(f'{lhs.friendly_name()} vs. {self.friendly_name(input)}')
+                self._save_current_plot(f'{lhs.friendly_name().friendly_name()}_vs_{self.friendly_name(input)}')
                 #plt.show()
 
 
@@ -305,11 +327,11 @@ class PlotHelper:
                     plt.scatter(x_adj, y_meas_adj, marker='*', s=20)
                     plt.scatter(x_adj, y_pred_adj, marker='x', s=20)
                     plt.xlabel(self.friendly_name(input))
-                    plt.ylabel(lhs)
+                    plt.ylabel(lhs.friendly_name())
                     plt.grid()
                     plt.legend(['Measured', 'Predicted'])
-                    plt.title(f'{lhs} vs. {self.friendly_name(input)}, corrected for nominal {[self.friendly_name(opt) for opt in optional]}')
-                    self._save_current_plot(f'{lhs}_vs_{self.friendly_name(input)}_nom_opt')
+                    plt.title(f'{lhs.friendly_name()} vs. {self.friendly_name(input)}, corrected for nominal {[self.friendly_name(opt) for opt in optional]}')
+                    self._save_current_plot(f'{lhs.friendly_name()}_vs_{self.friendly_name(input)}_nom_opt')
                     #plt.show()
 
             # now for contour plots
@@ -337,26 +359,26 @@ class PlotHelper:
                 plt.contour(gridx, gridy, contour_data_pred, levels=meas_breaks, colors='black', linestyles='dashed')
                 plt.xlabel(self.friendly_name(input1))
                 plt.ylabel(self.friendly_name(input2))
-                plt.title(lhs)
+                plt.title(lhs.friendly_name())
                 plt.grid()
                 self._save_current_plot(
-                    f'{lhs}_vs_{self.friendly_name(input1)}_and_{self.friendly_name(input2)}')
+                    f'{lhs.friendly_name()}_vs_{self.friendly_name(input1)}_and_{self.friendly_name(input2)}')
                 #plt.show()
 
                 # Do 3D scatter instead of contour; only for interactive
-                #fig = plt.figure()
-                #ax = fig.add_subplot(111, projection='3d')
-                #ax.scatter(x1, x2, y_meas)
+                fig = plt.figure()
+                ax = fig.add_subplot(111, projection='3d')
+                ax.scatter(x1, x2, y_meas)
                 #ax.scatter(x1, x2, y_pred)
-                ## ax.scatter(in_diff, in_cm, pred_tmp)
-                ##plt.show()
+                # ax.scatter(in_diff, in_cm, pred_tmp)
+                plt.show()
                 #print()
 
 
 
     @staticmethod
     def friendly_name(s):
-        if isinstance(s, SignalIn):
+        if isinstance(s, (SignalIn, AnalysisResultSignal)):
             return s.friendly_name()
         return str(s)
 
