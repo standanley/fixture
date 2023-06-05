@@ -226,8 +226,16 @@ def assign_template_pins(signals, template_matching):
         #  bus already exists. If the bus doesn't exist, we are in trouble
         #  also if the user is slicing the circuit bus right now, we are in trouble
         #  I think the best solution is to have rebuild_ref_dicts condense template bits
-        if isinstance(signals.from_circuit_name(c), SignalArray):
-            signals.from_circuit_name(c).template_name = t_bus_name
+        try:
+            if isinstance(signals.from_circuit_name(c), SignalArray):
+                signals.from_circuit_name(c).template_name = t_bus_name
+        except AmbiguousSliceException:
+            # the intention was to assign a circuit name to the entire bus
+            # referred to by c
+            # But it went wrong in this case becasue c was not the whole bus
+            # TODO in cases where c is the whole bus but the user named it using
+            #  the slice, I think we won't realize it's the whole bus
+            pass
 
         # c_array is for the whole circuit bus, not just this entry/entries
         # if it's not a bus, then c_array should  be the object

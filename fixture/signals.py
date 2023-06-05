@@ -1,5 +1,8 @@
+import itertools
 import re
 import numbers
+from collections import defaultdict
+
 import numpy as np
 from functools import reduce
 
@@ -215,6 +218,10 @@ def parse_bus(name):
     return bus_name, indices_parsed, info_parsed, names
 
 def parse_name(name):
+    '''
+    'mybus[5][7]' -> ('mybus', (5, 7))
+    'mysingle' -> ('mysingle', ())
+    '''
     indices = re.findall(re_index + '|' + re_index_range, name)
     bus_name = re.sub(re_index + '|' + re_index_range, '', name)
     indices_parsed = []
@@ -293,23 +300,58 @@ class SignalManager:
         for s in temp:
             self.add(s)
 
-        #self.signals_by_circuit_name = {}
-        #for s_or_a in self.signals:
-        #    if isinstance(s_or_a, SignalArray):
-        #        for s in s_or_a.flatten():
-        #            if s.spice_name is not None:
-        #                self.signals_by_circuit_name[s.spice_pin] = s
+        # add will put individual signals into the dicts, but now we need to
+        # look for entire buses
+        # TODO I copied this from config_parse - I think we should somehow
+        #  leverage this version and delete the one there
+        #  However, I think template doesn't care so much about bus_info
+        # bus_name values are lists of (bit_signal, bit_signal_indices)
+        bus_names = defaultdict(list)
+        for s in self.flat():
+            if s.template_name is None:
+                continue
+            bus_name, indices = parse_name(s.template_name)
+            if len(indices) == 0:
+                continue
+            bus_names[bus_name].append((s, indices))
 
-        #        if s_or_a.spice_name is not None:
-        #            self.signals_by_circuit_name[s_or_a.spice_name] = s_or_a
-        #    else:
-        #        if s_or_a.spice_name is not None:
-        #            self.signals_by_circuit_name[s_or_a.spice_name] = s_or_a
+        # now go through each bus and collect its entries into an array
+        for bus_name, entries in bus_names.items():
+            if bus_name in self.signals_by_template_name:
+                continue
 
-        #if signals_by_template_name is None:
-        #    self.signals_by_template_name = {}
-        #else:
-        #    self.signals_by_template_name = signals_by_template_name
+            assert len(entries) > 0
+            # For circuit names we cared about this stuff, but now we don't
+            #brackets_rep = entries[0].bus_info.brackets
+            #assert all(e.bus_info.brackets == brackets_rep for e in entries), f'Mismatched number of dimensions, index direction, or bracket type for bus "{bus_name}"'
+            #type_rep = entries[0].bus_info.type_
+            #assert all(e.bus_info.type_ == type_rep for e in entries), f'Mismatched number of dimensions, index direction, or bracket type for bus "{bus_name}"'
+            #first_one_rep = entries[0].bus_info.first_one
+            #assert all(e.bus_info.first_one == first_one_rep for e in entries), f'Mismatched number of dimensions, index direction, or bracket type for bus "{bus_name}"'
+
+            all_indices = np.array(list(e[1] for e in entries))
+            indices_limits_lower = np.min(all_indices, 0)
+            for axis, lim in enumerate(indices_limits_lower):
+                assert lim == 0, f'Lower limit for axis {axis} for bus "{bus_name}" must be 0, but it is {lim}'
+
+            # like verilog, but not python, indices_limits_upper is INCLUSIVE
+            indices_limits_upper = np.max(all_indices, 0)
+            indices_limits_upper_exclusive = indices_limits_upper + 1
+            array = np.empty(indices_limits_upper_exclusive, dtype=object)
+            for bit, indices in entries:
+                loc = indices
+                assert array[loc] is None, f'Duplicate definition of "{bit.template_name}"'
+                array[loc] = bit
+
+            for loc in itertools.product(*list(range(b) for b in array.shape)):
+                assert array[loc] is not None, f'Missing definition for "{bus_name}" at index {loc} for bus with shape {array.shape}'
+
+            #bi_total = BusInfo(bus_name, indices_limits_upper_exclusive, brackets_rep, type_rep, first_one_rep)
+            bi_total = None
+            sa = SignalArray(array, bi_total, None, bus_name)
+            #signals.append(sa)
+            self.signals_by_template_name[bus_name] = sa
+
 
     def add(self, signal):
         assert isinstance(signal, Signal)
@@ -367,6 +409,7 @@ class SignalManager:
             else:
                 if x.spice_pin is pin:
                     return x
+        raise KeyError(f'No signal corresponding to circuit pin {pin}')
 
     def from_circuit_name(self, name):
         # return a Signal or SignalArray of signals according to template name

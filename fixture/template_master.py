@@ -23,12 +23,12 @@ class TemplateMaster():
                 if name == '__len__':
                     assert False, 'unexpected, who is asking?'
                 signals = self.sm.from_template_name(name)
+                return signals
 
-                def get_spice(s):
-                    return s.spice_pin if hasattr(s, 'spice_pin') else None
-                ss = signals.map(get_spice) if isinstance(signals, SignalArray) else get_spice(signals)
-
-                return ss
+                #def get_spice(s):
+                #    return s.spice_pin if hasattr(s, 'spice_pin') else None
+                #ss = signals.map(get_spice) if isinstance(signals, SignalArray) else get_spice(signals)
+                #return ss
             except KeyError as err:
                 raise AttributeError(err)
 
@@ -459,7 +459,7 @@ class TemplateMaster():
                 bump += 0.0 # useful for separating clock signals
             plt.grid()
             plt.legend(leg)
-            #plt.show()
+            plt.show()
             PlotHelper.save_current_plot(f'{self}_debug.png')
             #plt.savefig(f'{self}_debug.png', dpi=300)
             #plt.clf()

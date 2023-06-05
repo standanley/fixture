@@ -33,6 +33,10 @@ class Testbench():
         # individual bits are not in test_vectors?
         self.test_vectors = pandas.DataFrame({s: vs for s, vs in test_vectors.items()
                              if isinstance(s, SignalIn)})
+        if self.test_vectors.shape == (0,0):
+            # when we have no columns, self.test_vectors loses its length
+            shape = (self.test_vectors_all.shape[0], 0)
+            self.test_vectors = pandas.DataFrame(np.zeros(shape))
         self.do_optional_out = do_optional_out
 
     @staticmethod

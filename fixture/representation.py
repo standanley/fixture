@@ -1,5 +1,5 @@
 from fault.domain_read import EdgeNotFoundError, domain_read
-from fixture.signals import SignalOut, SignalIn, SignalArray
+from fixture.signals import SignalOut, SignalIn, SignalArray, Signal
 import numpy as np
 
 class Representation:
@@ -108,10 +108,11 @@ class Representation:
 
     def finish_init(self, signal_manager):
         if self.style == 'pulse_width':
-            # overwrite string version of reference with actual object
-            self.params['reference_str'] = self.params['reference']
-            self.params['reference'] = signal_manager.from_circuit_name(
-                self.params['reference_str'])
+            assert isinstance(self.params['reference'], Signal)
+            ## overwrite string version of reference with actual object
+            #self.params['reference_str'] = self.params['reference']
+            #self.params['reference'] = signal_manager.from_circuit_name(
+            #    self.params['reference_str'])
             pulse_start = SignalOut(
                 'real',
                 f'{self.name}_pulse_start',

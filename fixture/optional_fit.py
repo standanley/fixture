@@ -301,20 +301,10 @@ class SympyExpression(Expression):
         return ans
 
     def predict_many(self, opt_value_data, coefs):
-        #input_syms = [self.io_symbols[s] for s in self.input_signals]
-        #substitutions = zip(self.coefs, coefs)
-        #ast_coefs = self.ast.subs(substitutions)
-        #fun = lambdify([input_syms], ast_coefs, cse=True)#, docstring_limit=-1)
-        #data = opt_value_data[self.input_signals].values
-        #ans = fun(data.T)
-        #return ans
-        #data = opt_value_data[self.input_signals].values
-        #data_all = np.concatenate((data, np.array(coefs)))
-
-
         ans = self.fun_compiled(opt_value_data.values.T, coefs)
-
-        #ans = np.array([self.predict(opt_row, coefs) for opt_row in opt_value_data.values])
+        if opt_value_data.shape[1] == 0:
+            # fun_compiled will not respect shape[0] in this case
+            ans = np.zeros(opt_value_data.shape[0]) + ans
         return ans
 
 
@@ -893,7 +883,7 @@ class HeirarchicalExpression(Expression):
                         #plt.legend(['Measured', 'Predicted'])
                         plt.xlabel(f'{xaxis.friendly_name()}')
                         plt.ylabel(f'{child.name}')
-                        plt.ylim((0, 3000))
+                        #plt.ylim((0, 3000))
                         PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/Individual fit for {grandchild.name} vs {sg}')
 
                         # TEMP for checking x_init
@@ -928,12 +918,18 @@ class HeirarchicalExpression(Expression):
         # now we are ready
         self.fit(optional_data, result_data)
 
-        if PLOT:
+        if False and PLOT:
+
             #predict_data = [optional_data[col] for col in self.input_signals]
             predict_data = optional_data[self.input_signals]
             predictions = self.predict_many(predict_data, self.x_opt)
-            # TODO fix this xaxis
-            xaxis = self.parent_expression.input_signals[0]
+            if len(self.parent_expression.input_signals) == 0:
+                xaxis = list(range(len(predictions)))
+            elif len(self.parent_expression.input_signals) == 1:
+                xaxis = self.parent_expression.input_signals[0]
+            else:
+                # TODO fix this xaxis
+                xaxis = self.parent_expression.input_signals[0]
             xs = optional_data[xaxis]
             plt.figure()
             plt.plot(xs, result_data, '*')
@@ -941,6 +937,7 @@ class HeirarchicalExpression(Expression):
             #plt.grid()
             plt.xlabel(f'{xaxis.friendly_name()}')
             plt.ylabel(f'{self.name}')
+            plt.show()
         print()
 
     def predict(self, opt_values, coefs):
@@ -986,8 +983,12 @@ class HeirarchicalExpression(Expression):
         opt_value_data = opt_dict[self.input_signals]
         return self.predict_many(opt_value_data, coefs)
 
+    # TODO inherit from SympyExpression
     def predict_many(self, opt_value_data, coefs):
         ans = self.fun_compiled(opt_value_data.values.T, coefs)
+        if opt_value_data.shape[1] == 0:
+            # fun_compiled will not respect shape[0] in this case
+            ans = np.zeros(opt_value_data.shape[0]) + ans
         return ans
 
 
