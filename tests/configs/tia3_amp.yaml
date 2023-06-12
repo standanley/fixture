@@ -4,10 +4,10 @@ template: AmplifierTemplate
 
 checkpoint_controller:
     DCTest:
-        choose_inputs: False
-        run_sim: False
-        run_analysis: False
-        run_post_process: False
+        choose_inputs: True
+        run_sim: True
+        run_analysis: True
+        run_post_process: True
         run_regression: True
     #DCTest: False
     #DynamicTFTest: 
@@ -107,7 +107,7 @@ stimulus_generation:
     incm: (-1e-6, 1e-6)
     vdd: (2.8, 3.0, 3.1)
     #vdd: 3.0
-    ibias: 6e-6
+    #ibias: 6e-6
     #ibias: (2e-6, 10e-6)
     #rfadj: 32
     rfadj: (10, 63)

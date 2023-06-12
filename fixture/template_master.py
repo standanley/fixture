@@ -459,7 +459,7 @@ class TemplateMaster():
                 bump += 0.0 # useful for separating clock signals
             plt.grid()
             plt.legend(leg)
-            plt.show()
+            #plt.show()
             PlotHelper.save_current_plot(f'{self}_debug.png')
             #plt.savefig(f'{self}_debug.png', dpi=300)
             #plt.clf()

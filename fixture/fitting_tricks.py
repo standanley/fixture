@@ -166,6 +166,19 @@ class PiecewiseInit(InitTrick):
         print('hi')
 
 
+
+class FitConstant(FitTrick):
+    @staticmethod
+    def fit(ast, input_symbols, coef_symbols, input_data, result_data):
+        # NOTE this could almost fall under FitLinear, but right now there's
+        # an issue with parse_linear so it doesn't see this
+        if not isinstance(ast, Symbol):
+            return None
+        if not ast in coef_symbols:
+            return None
+        avg = sum(result_data) / len(result_data)
+        return np.array([avg])
+
 class FitLinear(FitTrick):
 
     @staticmethod
@@ -210,4 +223,4 @@ class FitLinear(FitTrick):
 
 
 init_tricks = [PiecewiseInit]
-fit_tricks = [FitLinear]
+fit_tricks = [FitConstant, FitLinear]
