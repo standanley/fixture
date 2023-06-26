@@ -1,5 +1,5 @@
-name: myamp
-filepath: ../spice/tia3.sp
+name: myamp_clamped
+filepath: ../spice/tia6.sp
 template: AmplifierTemplate
 
 checkpoint_controller:
@@ -51,10 +51,10 @@ physical_pins:
         #value: (10, 63)
 
 
-    outp:
+    outp_clamped:
         direction: out
         datatype: real
-    outn:
+    outn_clamped:
         direction: out
         datatype: real
 
@@ -79,12 +79,12 @@ proxy_signals:
 
     outdiff:
         style: linear_combination_out
-        components: [outp, outn]
+        components: [outp_clamped, outn_clamped]
         coefficients: [1, -1]
 
     outcm:
         style: linear_combination_out
-        components: [outp, outn]
+        components: [outp_clamped, outn_clamped]
         coefficients: [0.5, 0.5]
 
 
@@ -103,20 +103,25 @@ template_pins:
 
 stimulus_generation:
     #indiff: (-3e-6, 3e-6)
-    indiff: (-200e-6, 200e-6)
+    indiff: (-100e-6, 100e-6)
     incm: (-1e-6, 1e-6)
     vdd: (2.8, 3.0, 3.1)
     #vdd: 3.0
     ibias: 10e-6
     #ibias: (2e-6, 10e-6)
     #rfadj: 32
-    rfadj: (10, 63)
+    rfadj: (10, 16, 50)
     #rfadj: (30, 50)
 
 
 optional_input_info:
     #dcgain0_out0_outdiff_indiff: ['c0 + c1*vdd + c2*vdd**2', rfadj]
-    dcgain0_out0_outdiff_indiff: [vdd, rfadj]
+    #dcgain0_out0_outdiff_indiff: ['c0 + c1*vdd + c2*vdd**2', rfadj]
+    #amplitude1_out1_outdiff: ['c0 + c1*vdd + c2*vdd**2', rfadj]
+    #gain1_out1_outdiff_indiff: ['c0 + c1*vdd + c2*vdd**2', rfadj]
+    dcgain0_out0_outdiff_indiff: ['c1*vdd + c2*vdd**2', rfadj]
+    amplitude1_out1_outdiff: ['c1*vdd + c2*vdd**2', rfadj]
+    gain1_out1_outdiff_indiff: ['c1*vdd + c2*vdd**2', rfadj]
 
 extras:
     #approx_settling_time: 2e-9

@@ -19,7 +19,10 @@ class Representation:
     def convert_and_tag_referenced_signals(params, signals):
         def get_and_tag(name):
             # TODO might be bad if ref_signal is SA, but also I think we are phasing out is_proxy_component
-            s = signals.from_circuit_name(name)
+            try:
+                s = signals.from_circuit_name(name)
+            except KeyError:
+                raise KeyError(f'Could not find signal "{name}" when creating a proxy signal')
             s.is_proxy_component = True
             return s
         if params['style'] == 'pulse_width':

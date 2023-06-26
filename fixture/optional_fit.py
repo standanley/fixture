@@ -180,6 +180,11 @@ class Expression(ABC):
 
             return x
 
+        if str(self) == 'out1_outdiff_combiner':
+            bounds = [(0, None), (None, None), (None, None)]
+        else:
+            bounds = None
+
         result = basinhopping(
             error,
             x0,
@@ -188,12 +193,13 @@ class Expression(ABC):
             #take_step=take_step_wrapped,
             take_step=random_step,
             minimizer_kwargs={
-                'method':'Nelder-Mead',
-                'options' : {
+                'method': 'Nelder-Mead',
+                'bounds': bounds,
+                'options': {
                     #'ftol': 1e-8, # Powell
                     'fatol': 0, # Nelder-Mead
-                    'maxfev': 10**3,
-                    'return_all': False
+                    'maxfev': 10**2,
+                    'return_all': False,
                 }
             }
         )
@@ -649,7 +655,10 @@ class HeirarchicalExpression(Expression):
         for sym in self.ast.free_symbols:
             assert sym in input_syms or sym in self.coefs
 
-        self.fun_compiled = lambdify([input_syms, self.coefs], self.ast, cse=True)
+        # I want to use cse=True, but there seems to be a bug in lambdify
+        # so it doesn't always clean the special characters (angle brackets)
+        # correctly when that option is turned on
+        self.fun_compiled = lambdify([input_syms, self.coefs], self.ast, cse=False)
 
 
 
@@ -801,13 +810,18 @@ class HeirarchicalExpression(Expression):
                         plt.plot(np.array(xs)[order], np.array(preds)[order], '--', color=c)
 
                     legend = []
-                    for xss in plot_xss:
+                    MAX_LEGEND_LEN = 10
+                    def sg_vals_str(xss):
                         vals = []
                         for s in sg.signals:
                             v = list(xss[s])[0]
                             v_str = str(v) if isinstance(v, int) else f'{v:.4g}'
                             vals.append(f'{s.friendly_name()}={v_str}')
-                        legend.append(', '.join(vals))
+                        return ', '.join(vals)
+
+                    for xss in plot_xss:
+                        if len(legend) < MAX_LEGEND_LEN:
+                            legend.append(sg_vals_str(xss))
 
                     plt.legend(legend)
                     plt.title(f'Fitting {self.name} for various {sg}')
@@ -822,6 +836,7 @@ class HeirarchicalExpression(Expression):
                     xs = xss[xaxis]
                     ys = plot_ys[worst_i]
                     preds = plot_predictions[worst_i]
+                    sg_val = sg_vals_str(get_data_for_id(worst_example[0])[0])
 
                     order = np.argsort(xs)
                     plt.plot(np.array(xs)[order], np.array(ys)[order], '*')
@@ -829,7 +844,7 @@ class HeirarchicalExpression(Expression):
                     plt.xlabel(f'{xaxis.friendly_name()}')
                     plt.ylabel(f'{self.parent_expression.name}')
                     plt.legend(['Peasured', 'Predicted'])
-                    plt.title(f'Fitting {self.name}, worst fit at {sg}=TODO')
+                    plt.title(f'Fitting {self.name}, worst fit at {sg_val}')
                     PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/Worst fit for {self.name} vs {xaxis.friendly_name()} from Sweeping {sg.name}')
 
 
@@ -879,8 +894,8 @@ class HeirarchicalExpression(Expression):
 
                         xs_order = np.argsort(xs)
                         plt.plot(np.array(xs)[xs_order], child_results[xs_order], '*')
-                        #plt.plot(xs_smooth, predictions, 'x--')
-                        #plt.legend(['Measured', 'Predicted'])
+                        plt.plot(xs_smooth, predictions, 'x--')
+                        plt.legend(['Measured', 'Predicted'])
                         plt.xlabel(f'{xaxis.friendly_name()}')
                         plt.ylabel(f'{child.name}')
                         #plt.ylim((0, 3000))
@@ -915,8 +930,23 @@ class HeirarchicalExpression(Expression):
             x_init = sum(fits) / len(fits)
             grandchild.x_init = x_init
 
+
+        def scatter(coefs, title):
+            predict_data = optional_data[self.input_signals]
+            predictions = self.predict_many(predict_data, coefs)
+            plt.scatter(result_data, predictions)
+            plt.title(title)
+            plt.xlabel('Measured')
+            plt.ylabel('Predicted')
+
+            PlotHelper.save_current_plot(
+                f'individual_fits/{self.name}/debug/{title}')
+
+        scatter(self.x_init, f'Initial Fit for {self.name}')
         # now we are ready
         self.fit(optional_data, result_data)
+
+        scatter(self.x_opt, f'Result for {self.name}')
 
         if False and PLOT:
 
@@ -1473,14 +1503,14 @@ def get_optional_expression_from_signal(s, name):
     if isinstance(s, SignalArray):
         print('TODO fix SignalArray behavior, right now defaulting to ReciprocalExpression')
         #return LinearExpression(list(s), name)
-        io_signals = {b: Symbol(b.friendly_name()) for b in list(s)}
-        offset = Symbol(f'{name}_offset')
-        coefs = [Symbol(f'{name}_{io_signals[b].name}') for b in list(s)] + [offset]
-        input_symbols = [io_signals[b] for b in list(s)] + [1]
-        ast = sum(c*b_sym for c, b_sym in zip(coefs, input_symbols))
-        le = SympyExpression(ast, io_signals, coefs, name)
-        return le
-        #return ReciprocalExpression(list(s), name)
+        #io_signals = {b: Symbol(b.friendly_name()) for b in list(s)}
+        #offset = Symbol(f'{name}_offset')
+        #coefs = [Symbol(f'{name}_{io_signals[b].name}') for b in list(s)] + [offset]
+        #input_symbols = [io_signals[b] for b in list(s)] + [1]
+        #ast = sum(c*b_sym for c, b_sym in zip(coefs, input_symbols))
+        #le = SympyExpression(ast, io_signals, coefs, name)
+        #return le
+        return ReciprocalExpression(list(s), name)
 
     else:
         assert isinstance(s, SignalIn)

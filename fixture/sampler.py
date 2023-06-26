@@ -473,8 +473,10 @@ class Sampler:
         data = pandas.DataFrame()
         sm = SampleManager
         for group in test.sample_groups_opt:
+            opt_nums = {'vdd': 10, 'rfadj': 40}
+            opt_num = opt_nums[str(group)]
             #if not any(s in test.input_signals for s in group.signals):
-            new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 20, 30)
+            new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 10, opt_num)
             #new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 20, 17)
             data = pandas.concat((data, new_data), ignore_index=True)
         #data_all = sm.sample_all(500, test.sample_groups_test, test.sample_groups_opt)

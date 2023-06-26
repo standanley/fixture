@@ -1,40 +1,44 @@
+TODO do not use this, I dont think this idea works at all
+
+* Copy of tia3, except we replace the differential amp with two inverters
+
 .model EENMOS NMOS (VTO=0.4 KP=432E-6 GAMMA=0.2 PHI=.88)
 .model EEPMOS PMOS (VTO=-0.4 KP=122E-6 GAMMA=0.2 PHI=.88)
 
-* block symbol definitions
-.subckt myamp_stage inn_internal inp_internal vdd vbias outn outp
-M1 vtail vbias 0 0 EENMOS l=.1u w=20u
-M2 outn inp_internal vtail 0 EENMOS l=.1u w=10u
-M3 outp inn_internal vtail 0 EENMOS l=.1u w=10u
-R1 vdd outn 5k
-R2 vdd outp 5k
-
-
-* added to increase cm gain
-* apparently the current source transistor M3 has no sensitivity to source-drain voltage
-*R3 N001 outp 50k
-*R4 N001 outn 50k
-R5 vtail 0 10k
-
-* we should probably do that on the other transistors as well
-Rpnonideality outp vtail 10k
-Rnnonideality outn vtail 10k
-
-
-.ends myamp_stage
+** block symbol definitions
+*.subckt myamp_stage inn_internal inp_internal vdd outn outp
+*M1 vtail vbias 0 0 EENMOS l=.1u w=20u
+*M2 outn inp_internal vtail 0 EENMOS l=.1u w=10u
+*M3 outp inn_internal vtail 0 EENMOS l=.1u w=10u
+*R1 vdd outn 5k
+*R2 vdd outp 5k
+*
+*
+** added to increase cm gain
+** apparently the current source transistor M3 has no sensitivity to source-drain voltage
+**R3 N001 outp 50k
+**R4 N001 outn 50k
+*R5 vtail 0 10k
+*
+*
+*.ends myamp_stage
 
 
 .subckt myinv vdd in out
-Mmp out in 0 0 EENMOS l=0.1u w=1u
-Mmn vdd in out vdd EEPMOS l=0.1u w=1u
+Mmp out in 0 0 EENMOS l=0.1u w=8u
+Mmn vdd in out vdd EEPMOS l=0.1u w=10u
 .ends myinv
 
 
-.subckt myamp inn inp vdd ibias outn outp rfadj<0> rfadj<1> rfadj<2> rfadj<3> rfadj<4> rfadj<5>
+.subckt myamp inn inp vdd outn outp rfadj<0> rfadj<1> rfadj<2> rfadj<3> rfadj<4> rfadj<5>
 * just need to generate vbias, let's multiply by 10, so nominal ibias maybe 20u? no idea
 Mbias ibias ibias 0 0 EENMOS l=0.1u w=2u
-X1 inn inp vdd ibias outn_mid outp_mid myamp_stage
-X2 outn_mid outp_mid vdd ibias outn outp myamp_stage
+*X1 inn inp vdd ibias outn_mid outp_mid myamp_stage
+*X2 outn_mid outp_mid vdd ibias outn outp myamp_stage
+X1n vdd inn outp_mid myinv
+X1p vdd inp outn_mid myinv
+X2n vdd outp_mid outn myinv
+X2p vdd outn_mid outp myinv
 
 * trying to fix a convergence problem
 Cloadmidn outn_mid 0 1p

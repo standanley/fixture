@@ -175,7 +175,14 @@ class PlotHelper:
             # lhs will be the dependent axis
             required_inputs = self.test.sample_groups_test
             optional_inputs = self.test.sample_groups_opt
-            data_nominal_mask = [x is None for x in self.expr_dataframe[SampleManager.GROUP_ID_TAG]]
+
+            # This nominal flag used to be None, but I think an update to the
+            # readcsv function changed it so that None is read in as nan, and
+            # now it could be None or nan depending on whether or not the
+            # results are read from file
+            def is_nominal_group(x):
+                return x is None or (isinstance(x, float) and np.isnan(x))
+            data_nominal_mask = [is_nominal_group(x) for x in self.expr_dataframe[SampleManager.GROUP_ID_TAG]]
             y = self.get_column(lhs)
             y_pred = self.get_column(lhs, lhs_pred=True)
 

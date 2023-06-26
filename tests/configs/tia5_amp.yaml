@@ -1,6 +1,9 @@
+NOTE do not use this, I dont think the spice circuit works at all
+
 name: myamp
-filepath: ../spice/tia3.sp
-template: AmplifierTemplate
+filepath: ../spice/tia5.sp
+#template: AmplifierTemplate
+template: DO_NOT_USE_tia5_amp
 
 checkpoint_controller:
     DCTest:
@@ -34,11 +37,6 @@ physical_pins:
         direction: in
         datatype: current
     
-    ibias:
-        direction: in
-        datatype: current
-        #value: (2e-6, 10e-6)
-        #value: 6e-6
     #rfadj<5>:
     #    direction: in
     #    datatype: real
@@ -107,8 +105,6 @@ stimulus_generation:
     incm: (-1e-6, 1e-6)
     vdd: (2.8, 3.0, 3.1)
     #vdd: 3.0
-    ibias: 10e-6
-    #ibias: (2e-6, 10e-6)
     #rfadj: 32
     rfadj: (10, 63)
     #rfadj: (30, 50)

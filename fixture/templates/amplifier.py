@@ -38,7 +38,7 @@ class AmplifierTemplate(TemplateMaster):
             ]
         parameter_algebra = {
             'out0': 'dcgain0*input + offset0',
-            'out1': 'amplitude1*tanh(gain1/amplitude1*input)',
+            'out1': 'amplitude1*tanh(gain1/abs(amplitude1)*input)',
             #'out2': 'amplitude1*tanh(gain1*input + offset1) + gain2*input + offset2',
             #'out3': 'Piecewise((gainB*breakAB, input * breakAB < 1), (gainB*input, input * breakBC < 1), (gainB*breakBC, True)) + offsetB'
             #'out3': 'Piecewise((heightA3 + offset3, input * gainB3 < heightA3), (gainB3*input + offset3, gainB3 * input + offset3 < heightC3), (heightC3, True))',
@@ -55,17 +55,24 @@ class AmplifierTemplate(TemplateMaster):
             return [self.signals.from_template_name('input')]
 
         def testbench(self, tester, values):
-            debug_time = 500e-9
+            #debug_time = 500e-9
+            debug_time = 10#self.extras['approx_settling_time']*800
             #self.debug(tester, self.signals.input, debug_time)
             #self.debug(tester, self.signals.output[0], debug_time)
             #self.debug(tester, self.signals.input[0], debug_time)
-            #self.debug(tester, self.signals.input[0], debug_time)
-            #self.debug(tester, self.signals.input[1], debug_time)
-            #self.debug(tester, self.signals.from_spice_name('cm_adj<0>').spice_pin, debug_time)
-            #self.debug(tester, self.signals.from_spice_name('cm_adj<1>').spice_pin, debug_time)
-            #self.debug(tester, self.signals.from_spice_name('cm_adj<2>').spice_pin, debug_time)
-            #self.debug(tester, self.signals.from_spice_name('cm_adj<3>').spice_pin, debug_time)
-            #self.debug(tester, self.signals.from_spice_name('vbias').spice_pin, debug_time)
+            self.debug(tester, self.signals.input[0], debug_time)
+            self.debug(tester, self.signals.input[1], debug_time)
+            #self.debug(tester, self.signals.from_circuit_name('cm_adj<0>').spice_pin, debug_time)
+            #self.debug(tester, self.signals.from_circuit_name('cm_adj<1>').spice_pin, debug_time)
+            #self.debug(tester, self.signals.from_circuit_name('cm_adj<2>').spice_pin, debug_time)
+            #self.debug(tester, self.signals.from_circuit_name('cm_adj<3>').spice_pin, debug_time)
+            #self.debug(tester, self.signals.from_circuit_name('vbias').spice_pin, debug_time)
+            self.debug(tester, self.signals.from_circuit_name('inp').spice_pin, debug_time)
+            #self.debug(tester, self.signals.from_circuit_name('outp').spice_pin, debug_time)
+            self.debug(tester, self.signals.from_circuit_name('outp_clamped').spice_pin, debug_time)
+            self.debug(tester, self.signals.from_circuit_name('inn').spice_pin, debug_time)
+            #self.debug(tester, self.signals.from_circuit_name('outn').spice_pin, debug_time)
+            self.debug(tester, self.signals.from_circuit_name('outn_clamped').spice_pin, debug_time)
             input = self.signals.input
 
             tester.poke(input, values[input])

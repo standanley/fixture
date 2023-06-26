@@ -100,3 +100,36 @@ Ccfp inp outn 100p
 Cloadn outn 0 100p
 Cloadp outp 0 100p
 .ends myamp
+
+
+
+.subckt myamp_clamped inn inp vdd ibias outn_clamped outp_clamped rfadj<0> rfadj<1> rfadj<2> rfadj<3> rfadj<4> rfadj<5>
+
+Xorig_amp inn inp vdd ibias outn outp rfadj<0> rfadj<1> rfadj<2> rfadj<3> rfadj<4> rfadj<5> myamp
+
+*** now just clamp outp and outn
+*** center of output is around 2.28
+*** we want nmos to pull up to 2.38, so we use clamp_high=2.78 
+*** and pmos to pull down to 2.18, so we use clamp_low=1.78
+*** I think we need to buffer these with the threshold value of 0.4
+**
+**Vvclamp_high clamp_high 0 2.78
+**Vvclamp_low clamp_low 0 1.78
+**
+**Mclamp_high_n_nmos outn             clamp_high outn_clamped_mid 0     EENMOS l=0.1u w=1u
+**Mclamplow_n_pmos   outn_clamped_mid clamp_low  outn_clamped     vdd   EEPMOS l=0.1u w=2u
+**
+**Mclamp_high_p_nmos outp             clamp_high outp_clamped_mid 0     EENMOS l=0.1u w=1u
+**Mclamplow_p_pmos   outp_clamped_mid clamp_low  outp_clamped     vdd   EEPMOS l=0.1u w=2u
+
+* we never got that clamping to work properly, so let's just use a vcvs
+
+Ediff outdiff 0 VALUE {V(outp) - V(outn)}
+Eamplitude amplitude 0 VALUE {0.1+0.08*(sin((V(vdd)-3.0)*3-0.7)+0.64)}
+Ediff_clamped outdiff_clamped 0 VALUE {V(amplitude)*tanh((1/V(amplitude))*V(outdiff)) + 0.05*V(outdiff)}
+Ecm outcm 0 VALUE {(V(outp)+V(outn))/2}
+Epclamped outp_clamped 0 VALUE {V(outcm) + V(outdiff_clamped)/2}
+Enclamped outn_clamped 0 VALUE {V(outcm) - V(outdiff_clamped)/2}
+
+
+.ends myamp_clamped
