@@ -10,7 +10,7 @@ import numpy as np
 import pandas
 
 #import fixture
-from sympy import Symbol, lambdify, Mul, Add
+from sympy import Symbol, lambdify, Mul, Add, diff, simplify
 
 import fixture.regression
 from fixture.fitting_tricks import init_tricks, fit_tricks
@@ -306,7 +306,7 @@ class SympyExpression(Expression):
         # I wrote this code to rename everything simply. That turned out to be
         # unnecessary, but now that I have that code I can use it and turn cse
         # back on again.
-        self.ast = self.ast.simplify()
+        #self.ast = self.ast.simplify()
         iss_renamed = []
         cs_renamed = []
         ast_renamed = self.ast
@@ -324,16 +324,45 @@ class SympyExpression(Expression):
         self.fun_compiled = lambdify([iss_renamed, cs_renamed], ast_renamed, cse=True)
 
         # check for offset
+        def is_offset(sym):
+            # check if it's an offset:
+            # One way is by taking a symbolic derivative, but
+            # I'm worried about wasting effort here, but I actually don't have
+            # a good way to do it otherwise ...
+            # inspecting the ast is harder than
+            # it seems because I had a case like (A*x + B*y) - A, so A looked
+            # like an offset until I actually crawled the whole thing.
+            # A cheap alternative might be a "numerical derivative" by checking
+            # whether increasing the sym by d increases the result by d
+            # Actually this only catches things with derivative exactly one,
+            # while I should probably be catching anythign with constant
+            # derivative. But then I'd have to store what the derivative is if
+            # I ever want to do anything with the constant later, etc...
+            #ot = Symbol('OFFSET_TEST')
+            #test_a = self.ast.subs(sym, sym + ot)
+            #test_b = self.ast + ot
+            #return simplify(test_a - test_b) == 0
+            # okaaay, that was a disaster because simplify is slow
+            #d = diff(self.ast, sym)
+            #return d == 1
+            # and diff is slow. great.
+            if not self.ast.is_Add:
+                return False
+            appears_as_const = False
+            appears_elsewhere = False
+            for arg in self.ast.args:
+                if arg == sym:
+                    appears_as_const = True
+                elif sym in arg.free_symbols:
+                    appears_elsewhere = True
+            return appears_as_const and not appears_elsewhere
+
         self.offset = None
-        if self.ast.is_Symbol:
-            self.offset = self.ast
-        elif self.ast.is_Add:
-            for child in self.ast.args:
-                if child in self.coefs:
-                    # got one!
-                    if self.offset is not None:
-                        print(f'Warning: multiple offset coefficients for "{self.name}" expr "{self.ast}", "{self.offset}" and "{child}"')
-                    self.offset = child
+        for sym in self.ast.free_symbols:
+            if is_offset(sym):
+                #if self.offset is not None:
+                #    print(f'Warning: multiple offset coefficients for "{self.name}" expr "{self.ast}", "{self.offset}" and "{sym}"')
+                self.offset = sym
 
         # check for centering
         self.nominal = self.ast
@@ -573,26 +602,30 @@ class AnalogExpression(SympyExpression):
     #    assert len(coef_names) == 2
     #    return [f'{lhs} = {coef_names[0]}*{opt_names[0]} + {coef_names[1]};']
 
-class ConstExpression(Expression):
-    NUM_COEFFICIENTS = 1
-    input_signals = []
-    last_coef_is_offset = True
+class ConstExpression(SympyExpression):
+    #NUM_COEFFICIENTS = 1
+    #input_signals = []
+    #last_coef_is_offset = True
 
-    def predict(self, opt_values, coefficients):
-        assert len(opt_values) == 0
-        assert len(coefficients) == 1
-        return coefficients[0]
+    def __init__(self, name):
+        sym = Symbol(name)
+        super().__init__(sym, {}, [sym], name)
 
-    def predict_many(self, opt_value_data, coefs):
-        N = len(opt_value_data)
-        return np.ones(N)*coefs[0]
+    #def predict(self, opt_values, coefficients):
+    #    assert len(opt_values) == 0
+    #    assert len(coefficients) == 1
+    #    return coefficients[0]
 
-    def verilog(self, lhs, coef_names):
-        opt_names = [self.friendly_name(s) for s in self.input_signals]
+    #def predict_many(self, opt_value_data, coefs):
+    #    N = len(opt_value_data)
+    #    return np.ones(N)*coefs[0]
 
-        assert len(opt_names) == 0
-        assert len(coef_names) == 1
-        return [f'{lhs} = {coef_names[0]};']
+    #def verilog(self, lhs, coef_names):
+    #    opt_names = [self.friendly_name(s) for s in self.input_signals]
+
+    #    assert len(opt_names) == 0
+    #    assert len(coef_names) == 1
+    #    return [f'{lhs} = {coef_names[0]};']
 
 
 class AffineExpression(Expression):
@@ -664,14 +697,23 @@ class LinearExpression(Expression):
 
 # TODO fix the spelling lol
 class HeirarchicalExpression(SympyExpression):
+    '''
+    The most confusing thing about the HeirarchicalExpression is the way it
+    manages the offsets of child expressions.  I'm changing it so that the
+    child expressions can't have offsets. Every optional influence must have
+    no offset, and it must evaluate to zero when the optional inputs are
+    nominal. I think this is doable by changing the expressions themselves,
+    and I think it's easier to explain to the end user this way.
+    '''
     def __init__(self, parent_expression, child_expressions, name):
-        #assert False, 'TODO inherit from sympyexpression'
         # each coefficient in the parent expression is the result of evaluating
         # a child expression
         # child_expression_names should match the parent inputs
         self.name = name
-        self.manage_offsets = isinstance(parent_expression, SumExpression)
-
+        self.manage_offsets = False #isinstance(parent_expression, SumExpression)
+        assert isinstance(child_expressions, dict)
+        assert all(isinstance(k, Symbol) for k in child_expressions)
+        assert all(isinstance(v, Expression) for v in child_expressions.values())
 
         # TODO I think there could be a bug if we are managing coefficients
         #  but one of the child expressions is a ConstExpression
@@ -679,33 +721,36 @@ class HeirarchicalExpression(SympyExpression):
         self.parent_expression = parent_expression
         self.child_expressions = child_expressions
 
-        child_inputs = [s for ce in child_expressions for s in ce.input_signals]
+        child_inputs = [s for ce in child_expressions.values() for s in ce.input_signals]
         self.input_signals = list(parent_expression.input_signals) + child_inputs
 
-        num_child_coefficients = sum(ce.NUM_COEFFICIENTS for ce in child_expressions)
-        # don't add num parent coefficients because those are the child expressions
-        if self.manage_offsets:
-            # we do something special here by consolidating child offsets
-            num_children_offsets = 0
-            for child in self.child_expressions:
-                if child.last_coef_is_offset:
-                    num_children_offsets += 1
+        # Don't bother calculating self.NUM_COEFFICIENTS, just count self.coefs
+        #num_child_coefficients = sum(ce.NUM_COEFFICIENTS for ce in child_expressions.values())
+        ## don't add num parent coefficients because those are the child expressions
+        #if self.manage_offsets:
+        #    # we do something special here by consolidating child offsets
+        #    num_children_offsets = 0
+        #    for child in self.child_expressions:
+        #        if child.last_coef_is_offset:
+        #            num_children_offsets += 1
 
-            # TODO why in the world did I clamp this at 0? And why is it part of
-            #  the object? it's never used outside this init
-            #self.num_redundant_offsets = num_children_offsets-1 if num_children_offsets > 0 else 0
-            self.num_redundant_offsets = num_children_offsets - 1
-            self.NUM_COEFFICIENTS = num_child_coefficients - self.num_redundant_offsets
-        else:
-            self.num_redundant_offsets = 0
-            self.NUM_COEFFICIENTS = num_child_coefficients
+        #    # TODO why in the world did I clamp this at 0? And why is it part of
+        #    #  the object? it's never used outside this init
+        #    #self.num_redundant_offsets = num_children_offsets-1 if num_children_offsets > 0 else 0
+        #    self.num_redundant_offsets = num_children_offsets - 1
+        #    self.NUM_COEFFICIENTS = num_child_coefficients - self.num_redundant_offsets
+        #else:
+        #    self.num_redundant_offsets = 0
+        #    self.NUM_COEFFICIENTS = num_child_coefficients
 
         # compile our own ast
 
         io_symbols = self.parent_expression.io_symbols.copy()
-        coefs = []
+        coefs = [c for c in self.parent_expression.coefs
+                 if c not in child_expressions]
         assert isinstance(parent_expression, SympyExpression)
         if self.manage_offsets:
+            assert False
             child_asts = []
             for child in self.child_expressions:
                 if isinstance(child, ConstExpression):
@@ -725,21 +770,18 @@ class HeirarchicalExpression(SympyExpression):
                 coefs += child.coefs[:-1]
 
         else:
-            child_asts = []
-            for sym, child in zip(self.parent_expression.coefs, self.child_expressions):
-                if isinstance(child, ConstExpression):
-                    child_asts.append(sym)
-                    coefs.append(sym)
-                    continue
-                child_asts.append(child.ast)
+            #child_asts = []
+            for sym, child in self.child_expressions.items():
+                #child_asts.append(child.ast)
                 io_symbols.update(child.io_symbols)
                 coefs += child.coefs
 
         final_ast = self.parent_expression.ast
-        for sym, child_ast in zip(self.parent_expression.coefs, child_asts):
-            final_ast = final_ast.subs(sym, child_ast)
+        for sym, child_expr in self.child_expressions.items():
+            final_ast = final_ast.subs(sym, child_expr.ast)
 
         if self.manage_offsets:
+            assert False
             # TODO I don't think I specified in the definition of the parent
             #  expression that the offset_sym has to be the last coef
             # parent_expression already has extra offset, just need it in coefs
@@ -749,12 +791,14 @@ class HeirarchicalExpression(SympyExpression):
         self.ast = final_ast
         self.io_symbols = io_symbols
         self.coefs = coefs
-        assert len(self.coefs) == self.NUM_COEFFICIENTS
+        #assert len(self.coefs) == self.NUM_COEFFICIENTS
+        self.NUM_COEFFICIENTS = len(self.coefs)
 
         # self.inputs probably has repeats,
         # but self.io_symbols.keys() should be the same set without repeats
         assert set(self.input_signals) == set(self.io_symbols)
-        self.input_signals = list(self.io_symbols.keys())
+        self.input_signals = sorted(self.io_symbols.keys(),
+                                    key=lambda s: s.friendly_name())
         input_syms = [self.io_symbols[s] for s in self.input_signals]
 
         for sym in self.ast.free_symbols:
@@ -773,6 +817,15 @@ class HeirarchicalExpression(SympyExpression):
         # relies on a specific structure of heirarchy and specific sweep groups
         # in optional_data in order to fit children and grandchildren one
         # piece at a time
+
+        assert self.parent_expression.ast.is_Add
+        for child in self.child_expressions:
+            assert isinstance(child.child_expressions[0], ConstExpression)
+            for grandchild in child.child_expressions[1:]:
+                assert grandchild.offset is None
+                assert grandchild.nominal == 0
+
+
         # TODO I'm still getting nan instead of None for sg sometimes
         groups = {sg for sg in optional_data[SampleManager.GROUP_ID_TAG]
                   if (sg is not None and not isinstance(sg, float))}
@@ -1278,6 +1331,22 @@ class HeirarchicalExpression(SympyExpression):
         #return lines[::-1]
         return lines
 
+    def recompile(self):
+        # just check that things make sense and then do the normal recompile
+        #parent_inputs = set(self.parent_expression.input_signals)
+        #parent_coefs = set(self.parent_expression.coefs)
+        #parent_child_syms = set(self.child_expressions.values())
+        #parent_all_syms = parent_inputs | parent_coefs | parent_child_syms
+        #assert len(parent_all_syms) == len(parent_inputs) + len(parent_coefs) + len(parent_child_syms)
+        #assert parent_all_syms == self.parent_expression.ast.free_symbols
+        input_symbols = set(self.io_symbols.values())
+        for parent_sym in self.parent_expression.ast.free_symbols:
+            assert (parent_sym in input_symbols
+                    or parent_sym in self.child_expressions
+                    or parent_sym in self.coefs)
+
+        super().recompile()
+
     #def copy(self, param_suffix):
     #    # for use with vectoring outputs, copy this whole tree but rename the
     #    # parameters with the given suffix
@@ -1588,7 +1657,7 @@ def get_expression_from_string(string, signals, vectoring_dict, name,
         return not match
 
     # let's not do any recognition at first
-    print(param_symbols)
+    print('param_symbols: ', param_symbols)
 
     # add param suffix
     # TODO think about what naming vs. not naming params means for this
@@ -1610,12 +1679,12 @@ def get_expression_from_string(string, signals, vectoring_dict, name,
 
     # Create child expressions anywhere we want the user to see named things
     # First, any named parameters
-    child_expressions = []
+    child_expressions = {}
     for param_symbol in param_symbols_named:
         param_expr = ConstExpression(param_symbol.name)
-        child_expressions.append(param_expr)
+        child_expressions[param_symbol] = param_expr
 
-    assert len(child_expressions) == len(parent_expr.coefs)
+    #assert len(child_expressions) == len(parent_expr.coefs)
 
     # Second, any optional inputs that need to be centered/broken into bits
     # we need to detect parent_expr.input_signals that should actually be
@@ -1652,12 +1721,42 @@ def get_expression_from_string(string, signals, vectoring_dict, name,
         parent_expr.io_symbols.pop(input_signal)
         parent_expr.coefs.append(new_sym)
         parent_expr.NUM_COEFFICIENTS += 1
-        child_expressions.append(expr)
+        child_expressions[new_sym] = expr
     parent_expr.recompile()
 
+    #child_dict = {coef: ce for ce, coef in zip(child_expressions, parent_expr.coefs)}
     expr = HeirarchicalExpression(parent_expr, child_expressions, name)
 
     return expr
+
+def get_centered_expression(expr):
+    # return a new expression that is like expr, but centered
+    # (or just return expr if it's already centered)
+    # If expr has an offset already, replace that with a child expression that
+    # always equals the right thing to center it
+    # If expr has no offset, create one
+    assert expr.nominal is not None, 'Cannot center non-optional expression'
+    if expr.nominal == 0:
+        # we are good to go
+        return expr
+
+    if expr.offset is None:
+        nom = SympyExpression(expr.nominal, {},
+                              list(expr.nominal.free_symbols),
+                              f'{expr.name}_centering')
+        nom_sym = Symbol(nom.name)
+        if isinstance(expr, HeirarchicalExpression):
+            # edit parent expression
+            abc
+        #ans.ast = ans.ast -
+    else:
+        #non_offset = expr.ast - expr.offset
+        desired_offset = expr.nominal - expr.offset
+        assert expr.offset not in desired_offset.free_symbols, 'Unexpected result'
+        if expr.offset in desired_offset.free_symbols:
+            # that doesn't seem right ... maybe just needs simplification?
+            assert expr.offset not in simplify(desired_offset.free_symbols)
+
 
 
 
@@ -1696,7 +1795,7 @@ def get_optional_expression_from_influences(influence_list, name, all_signals):
     We need all_signals so we can tell what is an input when s is a string
     '''
     assert isinstance(name, str)
-    individual = []
+    individual = [ConstExpression(f'{name}_nominal')]
     for s_or_expr in influence_list:
         if isinstance(s_or_expr, (SignalIn, SignalArray)):
             child_name = f'{name}_{s_or_expr.friendly_name()}'
@@ -1705,14 +1804,15 @@ def get_optional_expression_from_influences(influence_list, name, all_signals):
 
         elif isinstance(s_or_expr, str):
             expr = get_expression_from_string(s_or_expr, all_signals, {},
-                                              f'{name}_<{s_or_expr}>')
-            individual.append(expr)
+                                              f'{name}_<{s_or_expr}>',
+                                              param_suffix=f'_{name}')
+            expr_centered = get_centered_expression(expr)
+            individual.append(expr_centered)
         else:
             assert False, f'Unrecognized optional expression type {type(s_or_expr)} for "{s_or_expr}"'
-    if len(individual) == 0:
-        individual.append(ConstExpression(f'{name}_const'))
-    combiner = SumExpression(len(individual)+1, f'{name}_summer')
-    total = HeirarchicalExpression(combiner, individual, name)
+    combiner = SumExpression(len(individual), f'{name}_summer')
+    child_dict = {coef: ce for ce, coef in zip(individual, combiner.coefs)}
+    total = HeirarchicalExpression(combiner, child_dict, name)
     return total
 
 
