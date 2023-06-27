@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 
 import sympy
-from sympy import Symbol, Add, Mul
+from sympy import Symbol, Add, Mul, lambdify
 from sympy.functions.elementary.piecewise import ExprCondPair
 import numpy as np
 
@@ -13,11 +13,13 @@ def parse_linear(ast, input_symbols, coef_symbols):
     Note that in_ast is any ast that is a function only of input_symbols
     I sometimes call this a "regressable" function
     Return None if the ast is not of this form
+    TODO: right now I think there' an issue with forms like A*in + A,
+     And I did try to fix it once but the interaction with the offset is wrong
     '''
     class LinearAst:
         def __init__(self, input_asts, coefs, offset):
             assert len(input_asts) == len(coefs)
-            assert offset is None or isinstance(offset, Symbol)
+            assert offset is None or isinstance(offset, Symbol) # or offset.is_Number
             self.input_funs = input_asts
             self.coefs = coefs
             self.offset = offset
@@ -34,7 +36,7 @@ def parse_linear(ast, input_symbols, coef_symbols):
     if not ast.is_Add:
         return None
     for arg in ast.args:
-        if isinstance(arg, Symbol):
+        if arg.is_Symbol: # or arg.is_Number:
             offsets.append(arg)
             continue
 
@@ -77,6 +79,23 @@ def parse_linear(ast, input_symbols, coef_symbols):
 
     return LinearAst(input_asts, coefs, offset)
 
+def strip_const(ast):
+    # if ast is of the form "stuff + const_sym", return (const_sym, stuff)
+    # otherwise return None
+    if not ast.is_Add:
+        return None
+
+    const = None
+    for arg in ast.args:
+        if arg.is_Symbol:
+            const = arg
+            break
+
+    if const is None:
+        return None
+
+    return const, ast - const
+
 class InitTrick(ABC):
     #@staticmethod
     #@abstractmethod
@@ -107,10 +126,53 @@ class FitTrick:
 
 
 
+class InitReciprocal(InitTrick):
+    @staticmethod
+    def guess_init(ast, input_symbols, coef_symbols, input_data, result_data):
+        for arg in ast.args:
+            if not arg.is_Pow:
+                continue
+            #a, b = arg.args
+            #if not a.is_Number or not b.is_Pow:
+            #    continue
+            denom, d = arg.args
+            if not d == -1:
+                continue
+            denom_lin = parse_linear(denom, input_symbols, coef_symbols)
+            if denom_lin is None:
+                continue
+
+            # the plan is to ignore everything but 1/denom, flip both sides of
+            # the equation, and do a linear fit
+            # make sure we guess the numerator as 1, other unknowns can be zero
+            used_coefs = [c for c in coef_symbols if c in denom.free_symbols]
+            temp = FitLinear.fit(denom, input_symbols, used_coefs, input_data, 1/result_data)
+
+            init_guess = {c: 0 for c in coef_symbols}
+            for c, v in zip(used_coefs, temp):
+                init_guess[c] = v
+            ans = np.array([init_guess[c] for c in coef_symbols])
+
+            # see if we can fit the constant as well
+            temp = strip_const(ast)
+            if temp is None:
+                return ans
+            const, other = temp
+
+            expr = lambdify([input_symbols, coef_symbols], ast)
+            input_data_array = input_data[input_symbols].values.T
+            preds = expr(input_data_array, ans)
+            errors = preds - result_data
+            avg_error = sum(errors) / len(errors)
+            init_guess[const] -= avg_error
+            ans = np.array([init_guess[c] for c in coef_symbols])
+
+            return ans
 
 
 
-class PiecewiseInit(InitTrick):
+
+class InitPiecewise(InitTrick):
     #@staticmethod
     #def check_ast(ast, input_symbols, coef_symbols):
     #    if not isinstance(ast, sympy.Piecewise):
@@ -233,5 +295,5 @@ class FitLinear(FitTrick):
 
 
 
-init_tricks = [PiecewiseInit]
+init_tricks = [InitReciprocal, InitPiecewise]
 fit_tricks = [FitConstant, FitLinear]

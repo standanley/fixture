@@ -69,10 +69,10 @@ class AmplifierTemplate(TemplateMaster):
             #self.debug(tester, self.signals.from_circuit_name('vbias').spice_pin, debug_time)
             self.debug(tester, self.signals.from_circuit_name('inp').spice_pin, debug_time)
             #self.debug(tester, self.signals.from_circuit_name('outp').spice_pin, debug_time)
-            self.debug(tester, self.signals.from_circuit_name('outp_clamped').spice_pin, debug_time)
+            #self.debug(tester, self.signals.from_circuit_name('outp_clamped').spice_pin, debug_time)
             self.debug(tester, self.signals.from_circuit_name('inn').spice_pin, debug_time)
             #self.debug(tester, self.signals.from_circuit_name('outn').spice_pin, debug_time)
-            self.debug(tester, self.signals.from_circuit_name('outn_clamped').spice_pin, debug_time)
+            #self.debug(tester, self.signals.from_circuit_name('outn_clamped').spice_pin, debug_time)
             input = self.signals.input
 
             tester.poke(input, values[input])

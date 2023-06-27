@@ -852,6 +852,8 @@ class HeirarchicalExpression(SympyExpression):
 
         for child in self.ces_ordered:
             for grandchild in child.ces_ordered:
+                if isinstance(grandchild, ConstExpression):
+                    continue
                 # which sweep is best for grandchild.input_signals
                 # first, search for an exact match
                 def break_buses(ss):
@@ -1813,6 +1815,7 @@ def get_centered_expression(expr):
             assert False, 'TODO'
         #ans.ast = ans.ast -
     else:
+        assert False, 'TODO'
         #non_offset = expr.ast - expr.offset
         desired_offset = expr.nominal - expr.offset
         assert expr.offset not in desired_offset.free_symbols, 'Unexpected result'
