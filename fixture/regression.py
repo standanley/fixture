@@ -13,7 +13,7 @@ from ast import literal_eval
 from fixture.signals import SignalArray, SignalIn, CenteredSignalIn
 import operator
 
-from fixture.optional_fit import get_optional_expression_from_signals, LinearExpression, HeirarchicalExpression
+from fixture.optional_fit import get_optional_expression_from_influences, LinearExpression, HeirarchicalExpression
 
 
 class Regression:

@@ -504,7 +504,7 @@ class SignalManager:
         return ans
 
     def optional_expr(self):
-        # TODO I'm not sure that looking at Value is okay here
+        # TODO I'm not sure that looking at value is okay here
         ans = []
         for s in self.signals:
             if (isinstance(s, (SignalIn, SignalArray))

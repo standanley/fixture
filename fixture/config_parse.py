@@ -4,7 +4,7 @@ import os
 import yaml
 import fixture.cfg_cleaner as cfg_cleaner
 from fixture import Representation, templates
-from fixture.optional_fit import get_optional_expression_from_signals, \
+from fixture.optional_fit import get_optional_expression_from_influences, \
     LinearExpression, HeirarchicalExpression, get_expression_from_string
 from fixture.sampler import SamplerConst, SamplerAnalog, get_sampler_for_signal
 from fixture.signals import parse_bus, parse_name, \
@@ -454,29 +454,25 @@ def parse_optional_input_info(circuit_config_dict, tests):
                 #params[param] = (test, lhs)
                 # get optional expression for param
                 # TODO: rename this like signals_or_str_expressions
-                signals = None
+                signal_or_expr_list = None
                 if param in info_copy:
-                    # todo
                     signals_str = info_copy[param]
                     del info_copy[param]
                     assert isinstance(signals_str,
                                       list), f'Optional input dependencies for {param} should be list, not {signals_str}'
-                    signals = []
+                    signal_or_expr_list = []
                     for s_str in signals_str:
                         try:
-                            signals.append(test.signals.from_circuit_name(s_str))
+                            signal_or_expr_list.append(test.signals.from_circuit_name(s_str))
                         except KeyError:
                             # not just a signal name, must be an expression
-                            signals.append(s_str)
+                            signal_or_expr_list.append(s_str)
                 else:
                     # default expr
-                    signals_with_arrays = test.signals.optional_expr()
-                    #signals = [s for x in signals_with_arrays for s in (
-                    #    x if isinstance(x, SignalArray) else [x])]
-                    signals = signals_with_arrays
-                    print(f'Using default effect model for {param}, which includes {signals}')
+                    signal_or_expr_list = test.signals.optional_expr()
+                    print(f'Using default effect model for {param}, which includes {signal_or_expr_list}')
 
-                exp = get_optional_expression_from_signals(signals, param, test.signals)
+                exp = get_optional_expression_from_influences(signal_or_expr_list, param, test.signals)
                 #rhs_new[exp] = multiplier
                 child_expressions_new.append(exp)
             rhs_new = HeirarchicalExpression(rhs.parent_expression, child_expressions_new, rhs.name)

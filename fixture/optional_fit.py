@@ -284,13 +284,65 @@ class SympyExpression(Expression):
         self.NUM_COEFFICIENTS = len(coefs)
         self.name = name
 
-        self.recompile_fun()
+        self.offset = 'should_be_set_in_recompile'
+        self.nominal = 'should_be_set_in_recompile'
 
-    def recompile_fun(self):
+        self.recompile()
+
+    def recompile(self):
+        # recompile fun_compiled, recalculate offset and centered params
+
+        # first, check that params make sense
+        sympy_inputs = set(self.io_symbols.values()) | set(self.coefs)
+        assert len(sympy_inputs) == len(self.io_symbols) + len(self.coefs)
+        assert self.ast.free_symbols == sympy_inputs
+
+
         input_syms = [self.io_symbols[s] for s in self.input_signals]
-        self.fun_compiled = lambdify([input_syms, self.coefs], self.ast, cse=True)
-        #test = self.fun_compiled([1, 2], [3, 4, 5])
-        #print(test)
+        # I want to use cse=True, but there seems to be a bug in lambdify
+        # so it doesn't always clean the special characters (angle brackets)
+        # correctly when that option is turned on
+        # Then I had a different bug that made me think sympy was at fault, so
+        # I wrote this code to rename everything simply. That turned out to be
+        # unnecessary, but now that I have that code I can use it and turn cse
+        # back on again.
+        self.ast = self.ast.simplify()
+        iss_renamed = []
+        cs_renamed = []
+        ast_renamed = self.ast
+        count = 0
+        for is_ in input_syms:
+            is_renamed = Symbol(f'c{count}')
+            count += 1
+            iss_renamed.append(is_renamed)
+            ast_renamed = ast_renamed.subs(is_, is_renamed)
+        for c in self.coefs:
+            c_renamed = Symbol(f'c{count}')
+            count += 1
+            cs_renamed.append(c_renamed)
+            ast_renamed = ast_renamed.subs(c, c_renamed)
+        self.fun_compiled = lambdify([iss_renamed, cs_renamed], ast_renamed, cse=True)
+
+        # check for offset
+        self.offset = None
+        if self.ast.is_Symbol:
+            self.offset = self.ast
+        elif self.ast.is_Add:
+            for child in self.ast.args:
+                if child in self.coefs:
+                    # got one!
+                    if self.offset is not None:
+                        print(f'Warning: multiple offset coefficients for "{self.name}" expr "{self.ast}", "{self.offset}" and "{child}"')
+                    self.offset = child
+
+        # check for centering
+        self.nominal = self.ast
+        for input_signal, input_symbol in self.io_symbols.items():
+            if input_signal.nominal is None:
+                # this is not a function of optional inputs
+                self.nominal = None
+                break
+            self.nominal = self.nominal.subs(input_symbol, input_signal.nominal)
 
 
     def predict(self, opt_values, coefs):
@@ -336,7 +388,7 @@ class SympyExpression(Expression):
         self.coefs.sort(key=lambda sym: sym.name)
         self.NUM_COEFFICIENTS = len(self.coefs)
 
-        self.recompile_fun()
+        self.recompile()
         return
 
 
@@ -353,7 +405,7 @@ class SympyExpression(Expression):
 
         sym_vectored = Add(Mul(c, s)
                            for c, s in zip(new_coefs_sym, new_signals_sym))
-        self.ast.subs((signal_sym, sym_vectored))
+        self.ast = self.ast.subs((signal_sym, sym_vectored))
         self.vector_cleanup(signal, new_signals, new_signals_sym,
                             [], new_coefs_sym)
 
@@ -448,6 +500,56 @@ class SympyExpression(Expression):
     def copy(self, param_suffix):
         assert False
 
+
+def get_ast_from_signal(signal, qualifier=None):
+    if isinstance(signal, SignalIn):
+        # centered version of signal
+        assert isinstance(signal, SignalIn)
+        sym = Symbol(signal.friendly_name())
+        ast = sym - signal.nominal
+        return ast, {signal: sym}, []
+    elif isinstance(signal, SignalArray):
+        # weighted sum of bits
+        assert isinstance(signal, SignalArray)
+        assert len(signal.shape) == 1, 'TODO multidimensional optional input'
+        bits = list(signal)
+        if qualifier is None:
+            weights = [Symbol(f'{b.friendly_name()}{qualifier}_w{i}') for i, b in
+                       enumerate(bits)]
+        else:
+            weights = [Symbol(f'{qualifier}_w{i}') for i, b in enumerate(bits)]
+        bits_sym = [Symbol(b.friendly_name()) for b in bits]
+        ast = sum(b * w for b, w in zip(bits_sym, weights))
+        bits_dict = {b: s for b, s in zip(bits, bits_sym)}
+        return ast, bits_dict, weights
+    else:
+        assert False
+
+
+def get_default_expr_from_signal(signal, name):
+    # Does not have an offset coefficient
+    # Already centered, so expr(nominal) = 0
+    if isinstance(signal, SignalArray):
+        ast, s_syms, c_syms = get_ast_from_signal(signal, name)
+        nominal = signal.get_binary_value(signal.nominal)
+        # NOTE next line depends on implementation of get_ast_from_signalarray
+        nominal_ast = sum(c*n for c, n in zip(c_syms, nominal))
+        ast_centered = ast - nominal_ast
+        expr = SympyExpression(ast_centered, s_syms, c_syms, name)
+        return expr
+    elif isinstance(signal, SignalIn):
+        assert isinstance(signal.value, (list, tuple)), f'Trying to model as a function of {signal}, but it has pinned value {signal.value} instead of a range'
+        assert len(signal.value) == 2, f'Trying to model as a function of {signal}, but it has value {signal.value} instead of a range'
+        ast, s_syms, c_syms = get_ast_from_signal(signal)
+        w_sym = Symbol(f'{name}_w')
+        ast_weighted = w_sym * ast
+        expr = SympyExpression(ast_weighted, s_syms, c_syms + [w_sym], name)
+        return expr
+    else:
+        assert False, f'Cannot create ast for signal {signal} of type {type(signal)}'
+
+
+
 class AnalogExpression(SympyExpression):
     NUM_COEFFICIENTS = 2
     last_coef_is_offset = True
@@ -531,6 +633,7 @@ class LinearExpression(Expression):
     last_coef_is_offset = False
 
     def __init__(self, inputs, name):
+        assert False
         self.name = name
         self.input_signals = inputs
         # coefficients do NOT include any constant offset, because often the
@@ -559,8 +662,10 @@ class LinearExpression(Expression):
         ans = ' + '.join(f'{cn}*{on}' for on, cn in zip(opt_names, coef_names))
         return [f'{lhs} = {ans};']
 
-class HeirarchicalExpression(Expression):
+# TODO fix the spelling lol
+class HeirarchicalExpression(SympyExpression):
     def __init__(self, parent_expression, child_expressions, name):
+        #assert False, 'TODO inherit from sympyexpression'
         # each coefficient in the parent expression is the result of evaluating
         # a child expression
         # child_expression_names should match the parent inputs
@@ -655,10 +760,7 @@ class HeirarchicalExpression(Expression):
         for sym in self.ast.free_symbols:
             assert sym in input_syms or sym in self.coefs
 
-        # I want to use cse=True, but there seems to be a bug in lambdify
-        # so it doesn't always clean the special characters (angle brackets)
-        # correctly when that option is turned on
-        self.fun_compiled = lambdify([input_syms, self.coefs], self.ast, cse=False)
+        self.recompile()
 
 
 
@@ -1009,17 +1111,18 @@ class HeirarchicalExpression(Expression):
         ans = self.parent_expression.predict(parent_input_values, parent_coefs)
         return ans
 
-    def predict_from_dict(self, opt_dict, coefs):
-        opt_value_data = opt_dict[self.input_signals]
-        return self.predict_many(opt_value_data, coefs)
+    # I'm hoping these two will inherit from SympyExpression
+    #def predict_from_dict(self, opt_dict, coefs):
+    #    opt_value_data = opt_dict[self.input_signals]
+    #    return self.predict_many(opt_value_data, coefs)
 
-    # TODO inherit from SympyExpression
-    def predict_many(self, opt_value_data, coefs):
-        ans = self.fun_compiled(opt_value_data.values.T, coefs)
-        if opt_value_data.shape[1] == 0:
-            # fun_compiled will not respect shape[0] in this case
-            ans = np.zeros(opt_value_data.shape[0]) + ans
-        return ans
+    ## TODO inherit from SympyExpression
+    #def predict_many(self, opt_value_data, coefs):
+    #    ans = self.fun_compiled(opt_value_data.values.T, coefs)
+    #    if opt_value_data.shape[1] == 0:
+    #        # fun_compiled will not respect shape[0] in this case
+    #        ans = np.zeros(opt_value_data.shape[0]) + ans
+    #    return ans
 
 
     @property
@@ -1231,6 +1334,7 @@ def center_expression_inputs(ExpressionUncentered, signals_to_center):
     centers the signals in signals_to_center before using them. The generated
     Verilog will include extra lines to do this centering.
     '''
+    assert False
     assert issubclass(ExpressionUncentered, SympyExpression)
     name_mapping = {s: f'{s.friendly_name()}_deviation'
                     for s in signals_to_center}
@@ -1431,6 +1535,24 @@ def get_expression_from_string(string, signals, vectoring_dict, name,
     # tokens that are unrecognized are assumed new parameters
     # Parameters named like c123 will have their names ignored; any
     # other name will be kept by creating a ConstExpression (TODO)
+    '''
+    Turn the string into an expression using sympy. Parameters with names that
+    are not like c123 will be broken out into child expressions so the names
+    appear in the user's output.
+    Parameters:
+        string (str): the string you want to turn into an Expression
+        signals (SignalManager): existing signals, used to check which things
+            in string are signals and which are coefficients, also to check
+            whether things are optional signals that should be centered
+        vectoring_dict (dict): Any time one of the dict keys appears in the
+            expression, vector it into the values
+        name (str): name for the Expression
+        parameters (list): Names expected for the parameters. If None, assume
+            anything unrecognized is a parameter; if not None then error when
+            something is unexpected and not in the list.
+        param_suffix (str): if not None, rename all parameters to append this
+            suffix
+    '''
     ast = get_ast_from_string(string)
 
 
@@ -1470,14 +1592,14 @@ def get_expression_from_string(string, signals, vectoring_dict, name,
 
     # add param suffix
     # TODO think about what naming vs. not naming params means for this
-    param_symbols_suffix = []
+    param_symbols_named = []
     for param_sym in param_symbols:
         new_sym = Symbol(param_sym.name + param_suffix)
         ast = ast.subs(param_sym, new_sym)
-        param_symbols_suffix.append(new_sym)
+        param_symbols_named.append(new_sym)
 
     # let's keep all the symbol names for now
-    parent_expr = SympyExpression(ast, io_symbols, param_symbols_suffix, f'{name}_combiner')
+    parent_expr = SympyExpression(ast, io_symbols, param_symbols_named, f'{name}_combiner')
 
     # do vectoring - see if any of the entries in vectoring_dict are relevant
     # to this expression, and if they are then apply them
@@ -1486,20 +1608,61 @@ def get_expression_from_string(string, signals, vectoring_dict, name,
             continue
         parent_expr.vector(before, after)
 
+    # Create child expressions anywhere we want the user to see named things
+    # First, any named parameters
     child_expressions = []
-    for param_symbol in param_symbols_suffix:
+    for param_symbol in param_symbols_named:
         param_expr = ConstExpression(param_symbol.name)
         child_expressions.append(param_expr)
 
+    assert len(child_expressions) == len(parent_expr.coefs)
+
+    # Second, any optional inputs that need to be centered/broken into bits
+    # we need to detect parent_expr.input_signals that should actually be
+    # their own child expressions and replace them
+    optional_inputs = signals.optional_expr()
+    optional_input_substitutions = {}
+    for input_signal in parent_expr.input_signals:
+        if input_signal in optional_inputs:
+            if input_signal in optional_input_substitutions:
+                # already got this one
+                continue
+            qualifier = input_signal.friendly_name()+param_suffix
+            ast, s_syms, c_syms = get_ast_from_signal(input_signal, qualifier)
+            if ast == Symbol(input_signal.friendly_name()):
+                # No need to create a name for this
+                continue
+
+            if isinstance(input_signal, SignalArray):
+                suffix = '_bus'
+                io_syms = {b: sym for b, sym in zip(list(input_signal), s_syms)}
+            elif isinstance(input_signal, SignalIn):
+                suffix = '_centered'
+                #assert len(s_syms) == 1
+                #io_syms = {input_signal: s_syms[0]}
+            sig_expr = SympyExpression(ast, s_syms, c_syms,
+                                       input_signal.friendly_name()+suffix)
+            optional_input_substitutions[input_signal] = sig_expr
+
+    for input_signal, expr in optional_input_substitutions.items():
+        old_sym = Symbol(input_signal.friendly_name())
+        new_sym = Symbol(expr.name)
+        parent_expr.ast = parent_expr.ast.subs(old_sym, new_sym)
+        parent_expr.input_signals.remove(input_signal)
+        parent_expr.io_symbols.pop(input_signal)
+        parent_expr.coefs.append(new_sym)
+        parent_expr.NUM_COEFFICIENTS += 1
+        child_expressions.append(expr)
+    parent_expr.recompile()
 
     expr = HeirarchicalExpression(parent_expr, child_expressions, name)
-
 
     return expr
 
 
 
 def get_optional_expression_from_signal(s, name):
+    assert False
     if isinstance(s, SignalArray):
         print('TODO fix SignalArray behavior, right now defaulting to ReciprocalExpression')
         #return LinearExpression(list(s), name)
@@ -1526,7 +1689,7 @@ def get_optional_expression_from_signal(s, name):
             return AnalogExpression(s, name)
 
 
-def get_optional_expression_from_signals(s_list, name, all_signals):
+def get_optional_expression_from_influences(influence_list, name, all_signals):
     '''
     If s_list is empty, this is a constant.
     If s_list is not empty, it's a sum of expressions for each signal
@@ -1534,16 +1697,18 @@ def get_optional_expression_from_signals(s_list, name, all_signals):
     '''
     assert isinstance(name, str)
     individual = []
-    for s in s_list:
-        if isinstance(s, (SignalIn, SignalArray)):
-            child_name = f'{name}_{s.friendly_name()}'
-            individual.append(get_optional_expression_from_signal(s, child_name))
-        elif isinstance(s, str):
-            expr = get_expression_from_string(s, all_signals, {},
-                                              f'{name}_<{s}>')
+    for s_or_expr in influence_list:
+        if isinstance(s_or_expr, (SignalIn, SignalArray)):
+            child_name = f'{name}_{s_or_expr.friendly_name()}'
+            #individual.append(get_optional_expression_from_signal(s_or_expr, child_name))
+            individual.append(get_default_expr_from_signal(s_or_expr, child_name))
+
+        elif isinstance(s_or_expr, str):
+            expr = get_expression_from_string(s_or_expr, all_signals, {},
+                                              f'{name}_<{s_or_expr}>')
             individual.append(expr)
         else:
-            assert False, f'Unrecognized optional expression type {type(s)} for "{s}"'
+            assert False, f'Unrecognized optional expression type {type(s_or_expr)} for "{s_or_expr}"'
     if len(individual) == 0:
         individual.append(ConstExpression(f'{name}_const'))
     combiner = SumExpression(len(individual)+1, f'{name}_summer')
