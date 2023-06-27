@@ -790,7 +790,7 @@ class HeirarchicalExpression(SympyExpression):
 
         self.ast = final_ast
         self.io_symbols = io_symbols
-        self.coefs = coefs
+        self.coefs = sorted(set(coefs), key=lambda c: c.name)
         #assert len(self.coefs) == self.NUM_COEFFICIENTS
         self.NUM_COEFFICIENTS = len(self.coefs)
 
@@ -818,10 +818,21 @@ class HeirarchicalExpression(SympyExpression):
         # in optional_data in order to fit children and grandchildren one
         # piece at a time
 
-        assert self.parent_expression.ast.is_Add
-        for child in self.child_expressions:
-            assert isinstance(child.child_expressions[0], ConstExpression)
-            for grandchild in child.child_expressions[1:]:
+        self.ces_ordered = list(self.child_expressions.values())
+        for child in self.ces_ordered:
+            assert child.parent_expression.ast.is_Add
+            ces = list(child.child_expressions.values())
+            const_loc = None
+            for i, ce in enumerate(ces):
+                if isinstance(ce, ConstExpression):
+                    assert const_loc is None
+                    const_loc = i
+            assert const_loc is not None
+            ces[0], ces[const_loc] = ces[const_loc], ces[0]
+            child.ces_ordered = ces
+
+            assert isinstance(child.ces_ordered[0], ConstExpression)
+            for grandchild in child.ces_ordered[1:]:
                 assert grandchild.offset is None
                 assert grandchild.nominal == 0
 
@@ -834,9 +845,13 @@ class HeirarchicalExpression(SympyExpression):
         # first thing is to figure out which sweep groups to use for which
         # fit expressions
         fits_for_sweeps = defaultdict(list)
-        for i in range(len(self.child_expressions)):
-            child = self.child_expressions[i]
-            for grandchild in child.child_expressions:
+        #for i in range(len(self.ces_ordered)):
+        #    child = self.ces_ordered[i]
+
+        # kind of probelmatic
+
+        for child in self.ces_ordered:
+            for grandchild in child.ces_ordered:
                 # which sweep is best for grandchild.input_signals
                 # first, search for an exact match
                 def break_buses(ss):
@@ -1010,8 +1025,8 @@ class HeirarchicalExpression(SympyExpression):
             #  a good way to find the names for those. It's just confusing for
             #  somebody maintaining the code
             example_data = group_data.loc[example_row_ids]
-            for i in range(len(self.child_expressions)):
-                child = self.child_expressions[i]
+            for i in range(len(self.ces_ordered)):
+                child = self.ces_ordered[i]
                 child_results = group_results[:, i]
 
                 # When we fit by group we don't exactly follow the normal
@@ -1026,12 +1041,19 @@ class HeirarchicalExpression(SympyExpression):
                 # TODO what about when sg has multiple signals?
                 # TODO what about when child.input_signals has multiple signals?
                 #relevant_grandchildren = []
-                for grandchild in child.child_expressions:
+                for grandchild in child.ces_ordered:
                     if grandchild not in fits_for_sweeps[sg]:
                         continue
                     # we are here because this grandchild actually depends on
                     # the sg we are currently working with
-                    grandchild.fit(example_data, child_results)
+                    offset_sym = Symbol('grandchild_offset')
+                    grandchild_with_offset = SympyExpression(
+                        grandchild.ast + offset_sym,
+                        grandchild.io_symbols,
+                        grandchild.coefs + [offset_sym],
+                        f'{grandchild.name}_individualfit'
+                    )
+                    grandchild_with_offset.fit(example_data, child_results)
 
                     if PLOT:
                         # plotting secondary fits, from using fit params as goals
@@ -1044,7 +1066,7 @@ class HeirarchicalExpression(SympyExpression):
                         targets = np.concatenate((x_targets, 0.5*np.ones((100, sg.NUM_DIMS-1))), 1)
                         data_smooth = pandas.DataFrame(sg.get_many(targets))
                         data_smooth = data_smooth.sort_values(by=[xaxis])
-                        predictions = grandchild.predict_from_dict(data_smooth, grandchild.x_opt)
+                        predictions = grandchild_with_offset.predict_from_dict(data_smooth, grandchild_with_offset.x_opt)
                         xs_smooth = data_smooth[xaxis]
 
                         xs_order = np.argsort(xs)
@@ -1054,12 +1076,12 @@ class HeirarchicalExpression(SympyExpression):
                         plt.xlabel(f'{xaxis.friendly_name()}')
                         plt.ylabel(f'{child.name}')
                         #plt.ylim((0, 3000))
-                        PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/Individual fit for {grandchild.name} vs {sg}')
+                        PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/Individual fit for {grandchild_with_offset.name} vs {sg}')
 
                         # TEMP for checking x_init
-                        if grandchild.x_init is not None:
+                        if grandchild_with_offset.x_init is not None:
                             plt.figure()
-                            predictions = grandchild.predict_from_dict(data_smooth, grandchild.x_init)
+                            predictions = grandchild_with_offset.predict_from_dict(data_smooth, grandchild_with_offset.x_init)
                             #plt.plot(xs, child_results, '*')
                             plt.plot(np.array(xs)[xs_order],
                                      child_results[xs_order], '*')
@@ -1067,11 +1089,11 @@ class HeirarchicalExpression(SympyExpression):
                             plt.legend(['Measured', 'Predicted'])
                             plt.xlabel(f'{xaxis.friendly_name()}')
                             plt.ylabel(f'{child.name}')
-                            PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/debug/Initial point for minimizer for {grandchild.name} vs {sg}')
+                            PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/debug/Initial point for minimizer for {grandchild_with_offset.name} vs {sg}')
                         print()
 
-
-                    result_fits[grandchild].append(grandchild.x_opt)
+                    result_fits[child.ces_ordered[0]].append(grandchild_with_offset.x_opt[-1:])
+                    result_fits[grandchild].append(grandchild_with_offset.x_opt[:-1])
 
         # I think that result_fits should have one entry per optional input
         # expression, plus one entry per optional input for the constants
@@ -1183,6 +1205,14 @@ class HeirarchicalExpression(SympyExpression):
         return self._x_opt
     @x_opt.setter
     def x_opt(self, x_opt):
+        assert len(x_opt) == len(self.coefs)
+        results = {c: v for c, v in zip(self.coefs, x_opt)}
+        for child in self.child_expressions.values():
+            child_x_opt = [results[c] for c in child.coefs]
+            child.x_opt = child_x_opt
+        self._x_opt = x_opt
+        return
+
         # set self.opt for self and all the children
         # the incoming x_opt is short because it has only the aggregate offset
         # the final x_opt_new is long because is has the offset for each child
@@ -1224,6 +1254,15 @@ class HeirarchicalExpression(SympyExpression):
 
     @property
     def x_init(self):
+        # TODO error handling
+        result_dict = {}
+        for child in self.child_expressions.values():
+            assert len(child.coefs) == len(child.x_init)
+            for c, v in zip(child.coefs, child.x_init):
+                result_dict[c] = v
+        x_init = [result_dict[c] for c in self.coefs]
+        return x_init
+
         # we need to aggregate x_init from children, taking care with
         # redundant offsets. Returns a single aggregate offset, assuming the
         # children are each passed zero for their redundant offsets
@@ -1259,10 +1298,18 @@ class HeirarchicalExpression(SympyExpression):
     def x_init(self, x_init):
         if not all(isinstance(c, ConstExpression)
                    for c in self.child_expressions):
-            raise NotImplementedError('Cannot set heirarchical x_init directly')
+            #raise NotImplementedError('Cannot set heirarchical x_init directly')
+            assert len(x_init) == len(self.coefs)
+            results = {c: v for c, v in zip(self.coefs, x_init)}
+            for child in self.child_expressions.values():
+                child_x_init = [results[c] for c in child.coefs]
+                child.x_init = child_x_init
+            return
+
         if self.NUM_COEFFICIENTS != len(self.child_expressions):
             raise NotImplementedError('Cannot set heirarchical x_init directly')
         assert len(x_init) == self.NUM_COEFFICIENTS
+        assert False, 'TODO new child_expressions'
         for x, c in zip(x_init, self.child_expressions):
             c.x_init = [x]
         assert list(x_init) == list(self.x_init)
@@ -1295,6 +1342,7 @@ class HeirarchicalExpression(SympyExpression):
 
     def verilog(self, lhs, coef_names):
         assert len(coef_names) == self.NUM_COEFFICIENTS
+        coef_name_map = {coef: name for coef, name in zip(self.coefs, coef_names)}
         def name(expr):
             # seems like expr.name is already qualified with self.name
             return f'{expr.name}'
@@ -1302,29 +1350,32 @@ class HeirarchicalExpression(SympyExpression):
         lines = []
 
         # all the child expressions
-        coef_count = 0
-        for ce in self.child_expressions:
-            slice_len = ce.NUM_COEFFICIENTS
-            if self.manage_offsets and ce.last_coef_is_offset:
-                slice_len -= 1
-            child_coefs = coef_names[coef_count : coef_count + slice_len]
-            if self.manage_offsets and ce.last_coef_is_offset:
-                child_coefs = list(child_coefs) + ['0']
-            coef_count += slice_len
+        #coef_count = 0
+        for ce in self.child_expressions.values():
+            #slice_len = ce.NUM_COEFFICIENTS
+            #if self.manage_offsets and ce.last_coef_is_offset:
+            #    slice_len -= 1
+            #child_coefs = coef_names[coef_count : coef_count + slice_len]
+            #if self.manage_offsets and ce.last_coef_is_offset:
+            #    child_coefs = list(child_coefs) + ['0']
+            #coef_count += slice_len
 
+            child_coefs = [coef_name_map[c] for c in ce.coefs]
             lines += ce.verilog(name(ce), child_coefs)
-        if self.manage_offsets:
-            lines.append(f'{name_nominal} = {coef_names[coef_count]};')
-            coef_count += 1
-        assert coef_count == len(coef_names)
+        #if self.manage_offsets:
+        #    lines.append(f'{name_nominal} = {coef_names[coef_count]};')
+        #    coef_count += 1
+        #assert coef_count == len(coef_names)
 
         # parent expression next
-        parent_coef_names = [name(ce) for ce in self.child_expressions]
+        parent_coef_names = [name(ce) for ce in self.child_expressions.values()]
         if self.manage_offsets:
             parent_coef_names.append(name_nominal)
-        assert len(parent_coef_names) == self.parent_expression.NUM_COEFFICIENTS
+        #assert len(parent_coef_names) == self.parent_expression.NUM_COEFFICIENTS
         lhs_str = lhs if isinstance(lhs, str) else lhs.friendly_name()
         lines += self.parent_expression.verilog(lhs_str, parent_coef_names)
+
+        lines += [f'TODO: check that all the coefficients for the parent made it in: {self.parent_expression.ast}']
 
         # TODO I want to reverse this properly so the c numbers are in order,
         #  But I'm afraid I will mess it up and they'll be mismatched
@@ -1747,7 +1798,19 @@ def get_centered_expression(expr):
         nom_sym = Symbol(nom.name)
         if isinstance(expr, HeirarchicalExpression):
             # edit parent expression
-            abc
+            # sadly we have to make a new heirarchical so it can calculate ast
+            parent = SympyExpression(expr.parent_expression.ast - nom_sym,
+                                     expr.parent_expression.io_symbols,
+                                     expr.parent_expression.coefs + [nom_sym],
+                                     expr.parent_expression.name)
+            child_dict = expr.child_expressions.copy()
+            child_dict[nom_sym] = nom
+            expr_centered = HeirarchicalExpression(parent,
+                                                   child_dict,
+                                                   expr.name)
+            return expr_centered
+        else:
+            assert False, 'TODO'
         #ans.ast = ans.ast -
     else:
         #non_offset = expr.ast - expr.offset
@@ -1756,6 +1819,7 @@ def get_centered_expression(expr):
         if expr.offset in desired_offset.free_symbols:
             # that doesn't seem right ... maybe just needs simplification?
             assert expr.offset not in simplify(desired_offset.free_symbols)
+        assert False, 'TODO'
 
 
 
@@ -1807,6 +1871,7 @@ def get_optional_expression_from_influences(influence_list, name, all_signals):
                                               f'{name}_<{s_or_expr}>',
                                               param_suffix=f'_{name}')
             expr_centered = get_centered_expression(expr)
+            assert expr_centered.nominal == 0
             individual.append(expr_centered)
         else:
             assert False, f'Unrecognized optional expression type {type(s_or_expr)} for "{s_or_expr}"'

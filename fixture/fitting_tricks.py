@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+from collections import defaultdict
+
 import sympy
 from sympy import Symbol, Add, Mul
 from sympy.functions.elementary.piecewise import ExprCondPair
@@ -59,6 +61,15 @@ def parse_linear(ast, input_symbols, coef_symbols):
         else:
             # something in the sum is not a Symbol or a Mul
             return None
+
+    # sometimes the same coefficient shows up multiple times; we just need to
+    # sum all its corresponding inputs
+    coef_dict = defaultdict(float)
+    for coef, input_ast in zip(coefs, input_asts):
+        coef_dict[coef] += input_ast
+    pairs = sorted(coef_dict.items(), key=lambda kv: kv[0].name)
+    coefs = [p[0] for p in pairs]
+    input_asts = [p[1] for p in pairs]
 
     if len(offsets) > 1:
         return None

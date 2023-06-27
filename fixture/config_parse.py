@@ -475,7 +475,8 @@ def parse_optional_input_info(circuit_config_dict, tests):
                 exp = get_optional_expression_from_influences(signal_or_expr_list, param, test.signals)
                 #rhs_new[exp] = multiplier
                 child_expressions_new.append(exp)
-            rhs_new = HeirarchicalExpression(rhs.parent_expression, child_expressions_new, rhs.name)
+            child_dict = {coef: ce for ce, coef in zip(child_expressions_new, rhs.parent_expression.coefs)}
+            rhs_new = HeirarchicalExpression(rhs.parent_expression, child_dict, rhs.name)
             parameter_algebra_expr[lhs] = rhs_new
         test.parameter_algebra_final = parameter_algebra_expr
 
