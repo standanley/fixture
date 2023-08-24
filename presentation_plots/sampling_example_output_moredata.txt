@@ -1,0 +1,1348 @@
+TODO rename info to bus_info or vice versa
+TODO get rid of SignalArray.value if it is not used
+TODO rename info to bus_info or vice versa
+TODO get rid of SignalArray.value if it is not used
+TODO rename info to bus_info or vice versa
+TODO get rid of SignalArray.value if it is not used
+param_symbols:  [amplitude1, gain1]
+param_symbols:  [amplitude1, gain1]
+out1_outcm
+TODO rename info to bus_info or vice versa
+TODO get rid of SignalArray.value if it is not used
+TODO rename info to bus_info or vice versa
+TODO get rid of SignalArray.value if it is not used
+param_symbols:  [const_numerator1]
+param_symbols:  [const_numerator1]
+numerator1_outcm
+param_symbols:  [const_denominator1]
+param_symbols:  [const_denominator1]
+denominator1_outcm
+param_symbols:  [const_denominator2]
+param_symbols:  [const_denominator2]
+denominator2_outcm
+param_symbols:  [c1, c2]
+param_symbols:  [c0]
+Using default effect model for gain1_out1_outdiff_incm, which includes [<fixture.signals.SignalIn object at 0x7fd1189ab280>, <fixture.signals.SignalArray object at 0x7fd1189ab670>]
+param_symbols:  [c1, c2]
+param_symbols:  [c0]
+Using default effect model for amplitude1_out1_outcm, which includes [<fixture.signals.SignalIn object at 0x7fd1189ab280>, <fixture.signals.SignalArray object at 0x7fd1189ab670>]
+Using default effect model for gain1_out1_outcm_incm, which includes [<fixture.signals.SignalIn object at 0x7fd1189ab280>, <fixture.signals.SignalArray object at 0x7fd1189ab670>]
+Using default effect model for gain1_out1_outcm_indiff, which includes [<fixture.signals.SignalIn object at 0x7fd1189ab280>, <fixture.signals.SignalArray object at 0x7fd1189ab670>]
+Using default effect model for const_numerator1_numerator1_outdiff, which includes [<fixture.signals.SignalIn object at 0x7fd1189ab280>, <fixture.signals.SignalArray object at 0x7fd1189ab670>]
+Using default effect model for const_numerator1_numerator1_outcm, which includes [<fixture.signals.SignalIn object at 0x7fd1189ab280>, <fixture.signals.SignalArray object at 0x7fd1189ab670>]
+Using default effect model for const_denominator1_denominator1_outdiff, which includes [<fixture.signals.SignalIn object at 0x7fd1189ab280>, <fixture.signals.SignalArray object at 0x7fd1189ab670>]
+Using default effect model for const_denominator1_denominator1_outcm, which includes [<fixture.signals.SignalIn object at 0x7fd1189ab280>, <fixture.signals.SignalArray object at 0x7fd1189ab670>]
+Using default effect model for const_denominator2_denominator2_outdiff, which includes [<fixture.signals.SignalIn object at 0x7fd1189ab280>, <fixture.signals.SignalArray object at 0x7fd1189ab670>]
+Using default effect model for const_denominator2_denominator2_outcm, which includes [<fixture.signals.SignalIn object at 0x7fd1189ab280>, <fixture.signals.SignalArray object at 0x7fd1189ab670>]
+Overwriting file checkpoint_folder/DCTest/input_vectors.csv
+calling with sim dict {'vsup': 1.2, 't_tr': 1e-11, 'model_paths': [PosixPath('/home/dstanley/research/fixture/tests/spice/tia6.sp')]}
+Stderr from spice simulator:
+Reference value :  2.52000e-03 Reference value :  4.26010e-03 Reference value :  5.66000e-03 Reference value :  6.68000e-03
+Overwriting file checkpoint_folder/DCTest/extracted_data_unprocessed.csv
+Overwriting file checkpoint_folder/DCTest/extracted_data.csv
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+Starting parameter fit
+Minimizing out1_outdiff_combiner
+minimization took 0.10755562782287598 error 0.00013332822326123951
+[1. 1. 1.]
+[1.09032085e-01 1.27217834e+02 3.29049303e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10401320457458496 error 0.00012074680098496919
+[1.09032085e-01 1.27217834e+02 3.29049303e+03]
+[ 1.09241646e-01 -9.06813901e+00  3.03612438e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.0999901294708252 error 7.408092726626043e-05
+[ 1.09241646e-01 -9.06813901e+00  3.03612438e+03]
+[ 1.07679169e-01 -1.07658853e+01  2.38794249e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.09886884689331055 error 7.912094801733376e-05
+[ 1.07679169e-01 -1.07658853e+01  2.38794249e+03]
+[1.08630038e-01 1.67048116e+01 2.64335732e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10049700736999512 error 0.00011338383631597931
+[1.08630038e-01 1.67048116e+01 2.64335732e+03]
+[ 1.07685259e-01 -1.13437816e+01  2.02198761e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.11043763160705566 error 0.00010936905619997736
+[ 1.07685259e-01 -1.13437816e+01  2.02198761e+03]
+[ 1.07767242e-01 -3.75645609e+01  2.02128158e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10000801086425781 error 7.043676566190524e-05
+[ 1.07767242e-01 -3.75645609e+01  2.02128158e+03]
+[1.07049582e-01 8.75337691e+01 1.67857299e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.09989428520202637 error 6.372313719565435e-05
+[1.07049582e-01 8.75337691e+01 1.67857299e+03]
+[1.06169311e-01 4.40576993e+01 1.59506002e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10161256790161133 error 7.033190116683125e-05
+[1.06169311e-01 4.40576993e+01 1.59506002e+03]
+[1.06775956e-01 4.78680945e+01 1.39628173e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.09941267967224121 error 6.635907570632033e-05
+[1.06775956e-01 4.78680945e+01 1.39628173e+03]
+[1.05746324e-01 4.46576317e+01 1.28638266e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10055947303771973 error 0.0001068849529138771
+[1.05746324e-01 4.46576317e+01 1.28638266e+03]
+[ 1.06158040e-01 -4.64257653e+01  1.28632442e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.09980392456054688 error 6.112463574330643e-05
+[ 1.06158040e-01 -4.64257653e+01  1.28632442e+03]
+[ 1.05958133e-01 -1.10968796e+02  1.54214387e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.09962010383605957 error 6.635773344575845e-05
+[ 1.05958133e-01 -1.10968796e+02  1.54214387e+03]
+[1.05682126e-01 1.41410166e+02 1.35617881e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.09996652603149414 error 9.767886468605702e-05
+[1.05682126e-01 1.41410166e+02 1.35617881e+03]
+[ 1.07073975e-01 -7.29867226e+00  1.29737255e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.1006619930267334 error 0.00010918772393027129
+[ 1.07073975e-01 -7.29867226e+00  1.29737255e+03]
+[ 1.04873455e-01 -5.46188373e-03  1.20364616e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10121560096740723 error 6.499423470264365e-05
+[ 1.04873455e-01 -5.46188373e-03  1.20364616e+03]
+[ 1.06254871e-01 -5.76924401e-03  1.14199050e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.1007533073425293 error 6.468879666718848e-05
+[ 1.06254871e-01 -5.76924401e-03  1.14199050e+03]
+[1.08677210e-01 5.80897867e-03 1.03335305e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.09927558898925781 error 0.00011591876651848808
+[1.08677210e-01 5.80897867e-03 1.03335305e+03]
+[1.03675027e-01 6.51329271e-03 9.74505763e+02]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10017633438110352 error 8.151471505360481e-05
+[1.03675027e-01 6.51329271e-03 9.74505763e+02]
+[1.01382797e-01 6.95885446e-03 9.87874694e+02]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.1005098819732666 error 0.00011016843924288457
+[1.01382797e-01 6.95885446e-03 9.87874694e+02]
+[1.05704489e-01 6.97043467e-03 9.52301178e+02]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10009264945983887 error 0.00014105369273070207
+[1.05704489e-01 6.97043467e-03 9.52301178e+02]
+[1.08916444e-01 5.73173391e+01 3.29321223e+03]
+
+Result for group=rfadj, sweep_id=0.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[1.08916444e-01 5.73173391e+01 3.29321223e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.1009373664855957 error 0.00011993016520441811
+[1.08916444e-01 5.73173391e+01 3.29321223e+03]
+[1.09188254e-01 3.89929495e+00 3.03715305e+03]
+
+Result for group=rfadj, sweep_id=1.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[1.09188254e-01 3.89929495e+00 3.03715305e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10033655166625977 error 7.466225021533341e-05
+[1.09188254e-01 3.89929495e+00 3.03715305e+03]
+[1.07693497e-01 1.83833415e+00 2.38763227e+03]
+
+Result for group=rfadj, sweep_id=2.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[1.07693497e-01 1.83833415e+00 2.38763227e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.09808921813964844 error 7.905330743409537e-05
+[1.07693497e-01 1.83833415e+00 2.38763227e+03]
+[1.08643351e-01 1.90693266e+00 2.64320605e+03]
+
+Result for group=rfadj, sweep_id=3.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[1.08643351e-01 1.90693266e+00 2.64320605e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10118603706359863 error 0.0001040073014855479
+[1.08643351e-01 1.90693266e+00 2.64320605e+03]
+[ 1.07694635e-01 -1.12004106e+02  2.02074105e+03]
+
+Result for group=rfadj, sweep_id=4.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[ 1.07694635e-01 -1.12004106e+02  2.02074105e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10056924819946289 error 0.00010936859241913437
+[ 1.07694635e-01 -1.12004106e+02  2.02074105e+03]
+[ 1.07769635e-01 -3.78477012e+01  2.02126827e+03]
+
+Result for group=rfadj, sweep_id=5.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[ 1.07769635e-01 -3.78477012e+01  2.02126827e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10151958465576172 error 6.866212447387104e-05
+[ 1.07769635e-01 -3.78477012e+01  2.02126827e+03]
+[1.07131722e-01 1.12592209e+02 1.67760636e+03]
+
+Result for group=rfadj, sweep_id=6.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[1.07131722e-01 1.12592209e+02 1.67760636e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10026144981384277 error 6.376037564423216e-05
+[1.07131722e-01 1.12592209e+02 1.67760636e+03]
+[1.06102332e-01 4.02819342e+01 1.59528502e+03]
+
+Result for group=rfadj, sweep_id=7.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[1.06102332e-01 4.02819342e+01 1.59528502e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10186195373535156 error 6.97038112443171e-05
+[1.06102332e-01 4.02819342e+01 1.59528502e+03]
+[1.06589069e-01 1.55611145e+01 1.39685139e+03]
+
+Result for group=rfadj, sweep_id=8.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[1.06589069e-01 1.55611145e+01 1.39685139e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.1011209487915039 error 6.739701222155286e-05
+[1.06589069e-01 1.55611145e+01 1.39685139e+03]
+[1.05661690e-01 1.64521566e+01 1.28668037e+03]
+
+Result for group=rfadj, sweep_id=9.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[1.05661690e-01 1.64521566e+01 1.28668037e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10186576843261719 error 0.00010954086059885928
+[1.05661690e-01 1.64521566e+01 1.28668037e+03]
+[ 1.05885307e-01 -9.51768116e+01  1.28695234e+03]
+
+Result for group=rfadj, sweep_id=10.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[ 1.05885307e-01 -9.51768116e+01  1.28695234e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10061216354370117 error 6.249093254328355e-05
+[ 1.05885307e-01 -9.51768116e+01  1.28695234e+03]
+[ 1.06049727e-01 -8.82024920e+01  1.54139948e+03]
+
+Result for group=rfadj, sweep_id=11.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[ 1.06049727e-01 -8.82024920e+01  1.54139948e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10006451606750488 error 6.870583358116392e-05
+[ 1.06049727e-01 -8.82024920e+01  1.54139948e+03]
+[1.06249138e-01 5.38164406e+01 1.35480129e+03]
+
+Result for group=rfadj, sweep_id=12.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[1.06249138e-01 5.38164406e+01 1.35480129e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10111188888549805 error 9.82012686589234e-05
+[1.06249138e-01 5.38164406e+01 1.35480129e+03]
+[ 1.07153753e-01 -1.10060841e+00  1.29705433e+03]
+
+Result for group=rfadj, sweep_id=13.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[ 1.07153753e-01 -1.10060841e+00  1.29705433e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10057997703552246 error 0.00010915522568213251
+[ 1.07153753e-01 -1.10060841e+00  1.29705433e+03]
+[1.04889609e-01 2.22194250e-01 1.20356510e+03]
+
+Result for group=rfadj, sweep_id=14.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[1.04889609e-01 2.22194250e-01 1.20356510e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.09938859939575195 error 6.503543109049241e-05
+[1.04889609e-01 2.22194250e-01 1.20356510e+03]
+[1.06261852e-01 1.71539181e-01 1.14198901e+03]
+
+Result for group=rfadj, sweep_id=15.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[1.06261852e-01 1.71539181e-01 1.14198901e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10048389434814453 error 6.357388396302902e-05
+[1.06261852e-01 1.71539181e-01 1.14198901e+03]
+[1.08880842e-01 2.64686772e+01 1.03309789e+03]
+
+Result for group=rfadj, sweep_id=16.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[1.08880842e-01 2.64686772e+01 1.03309789e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10175299644470215 error 0.00011706353584356208
+[1.08880842e-01 2.64686772e+01 1.03309789e+03]
+[ 1.03375088e-01 -7.75528411e+00  9.74024995e+02]
+
+Result for group=rfadj, sweep_id=17.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[ 1.03375088e-01 -7.75528411e+00  9.74024995e+02]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10044717788696289 error 8.014684417717467e-05
+[ 1.03375088e-01 -7.75528411e+00  9.74024995e+02]
+[ 1.01528014e-01 -8.65199236e+00  9.87711317e+02]
+
+Result for group=rfadj, sweep_id=18.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[ 1.01528014e-01 -8.65199236e+00  9.87711317e+02]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10125064849853516 error 0.00011006633168081759
+[ 1.01528014e-01 -8.65199236e+00  9.87711317e+02]
+[ 1.05576193e-01 -8.86131719e+00  9.52371257e+02]
+
+Result for group=rfadj, sweep_id=19.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[ 1.05576193e-01 -8.86131719e+00  9.52371257e+02]
+
+Minimizing amplitude1_out1_outdiff_<1_over_(rfadj+c0)>_individualfit
+minimization took 0.029744863510131836 error 0.001039838333506964
+[ 9.09264285  0.32528232  0.2327012   0.02693399 -0.03621712  0.17804375
+ -0.03700552  0.10724451]
+[ 9.18603635  0.32278829  0.23408332  0.02874233 -0.03628655  0.17738534
+ -0.03328029  0.10723191]
+
+Result for sg=rfadj i=0:
+[c0_amplitude1_out1_outdiff, rfadj_amplitude1_out1_outdiff_w0, rfadj_amplitude1_out1_outdiff_w1, rfadj_amplitude1_out1_outdiff_w2, rfadj_amplitude1_out1_outdiff_w3, rfadj_amplitude1_out1_outdiff_w4, rfadj_amplitude1_out1_outdiff_w5, grandchild_offset]
+[ 9.18603635  0.32278829  0.23408332  0.02874233 -0.03628655  0.17738534
+ -0.03328029  0.10723191]
+
+
+Successfully fit gain1_out1_outdiff_incm_rfadj_individualfit using <class 'fixture.fitting_tricks.FitLinear'>
+Result for sg=rfadj i=1:
+[gain1_out1_outdiff_incm_rfadj_w0, gain1_out1_outdiff_incm_rfadj_w1, gain1_out1_outdiff_incm_rfadj_w2, gain1_out1_outdiff_incm_rfadj_w3, gain1_out1_outdiff_incm_rfadj_w4, gain1_out1_outdiff_incm_rfadj_w5, grandchild_offset]
+[ -0.36581553 -23.92729084  41.45197985 -34.92816495 -13.11288576
+ -15.09767326  -5.12139066]
+
+
+Minimizing gain1_out1_outdiff_indiff_<1_over_(rfadj+c0)>_individualfit
+minimization took 0.030999422073364258 error 6.823996457060519
+[-1.40878668e-05  6.37265389e-04  3.90135354e-04  2.23156507e-04
+  1.17930434e-04  6.13418123e-05  3.01586469e-05  2.65688220e+03]
+[-1.40071601e-05  6.38641163e-04  3.90936586e-04  2.24587489e-04
+  1.18676121e-04  6.24881589e-05  3.05617599e-05  2.65884247e+03]
+
+Result for sg=rfadj i=2:
+[c0_gain1_out1_outdiff_indiff, rfadj_gain1_out1_outdiff_indiff_w0, rfadj_gain1_out1_outdiff_indiff_w1, rfadj_gain1_out1_outdiff_indiff_w2, rfadj_gain1_out1_outdiff_indiff_w3, rfadj_gain1_out1_outdiff_indiff_w4, rfadj_gain1_out1_outdiff_indiff_w5, grandchild_offset]
+[-1.40071601e-05  6.38641163e-04  3.90936586e-04  2.24587489e-04
+  1.18676121e-04  6.24881589e-05  3.05617599e-05  2.65884247e+03]
+
+
+Minimizing out1_outdiff_combiner
+minimization took 0.103302001953125 error 9.954434857250649e-05
+[1. 1. 1.]
+[ 8.23066431e-02 -2.42393468e+01  2.60403976e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10561680793762207 error 0.00011645667146992622
+[ 8.23066431e-02 -2.42393468e+01  2.60403976e+03]
+[ 8.43735117e-02 -3.08867552e+01  2.61204325e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10316944122314453 error 0.0001437048566488421
+[ 8.43735117e-02 -3.08867552e+01  2.61204325e+03]
+[8.85075501e-02 8.29901533e-02 2.61576414e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10439610481262207 error 0.0001360914542287131
+[8.85075501e-02 8.29901533e-02 2.61576414e+03]
+[9.11963538e-02 4.70515765e+00 2.62068358e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.1056528091430664 error 0.00010190366748422855
+[9.11963538e-02 4.70515765e+00 2.62068358e+03]
+[ 9.54326295e-02 -8.86506524e-01  2.61774507e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10621953010559082 error 0.0001606714230074454
+[ 9.54326295e-02 -8.86506524e-01  2.61774507e+03]
+[ 1.01748623e-01 -2.53173333e+02  2.63489177e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10542941093444824 error 7.70741324897709e-05
+[ 1.01748623e-01 -2.53173333e+02  2.63489177e+03]
+[1.10025961e-01 1.14151067e+01 2.65037835e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10542011260986328 error 0.0001181455140010038
+[1.10025961e-01 1.14151067e+01 2.65037835e+03]
+[ 1.15690103e-01 -9.71903226e+01  2.65680889e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10347223281860352 error 8.02438536651012e-05
+[ 1.15690103e-01 -9.71903226e+01  2.65680889e+03]
+[1.21933399e-01 2.23210860e+01 2.67155060e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10518097877502441 error 0.00013026976014833937
+[1.21933399e-01 2.23210860e+01 2.67155060e+03]
+[1.25090605e-01 1.88611367e+00 2.68519202e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10523462295532227 error 9.333519630596935e-05
+[1.25090605e-01 1.88611367e+00 2.68519202e+03]
+[8.23602126e-02 8.57348285e+01 2.60139792e+03]
+
+Result for group=vdd, sweep_id=0.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[8.23602126e-02 8.57348285e+01 2.60139792e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.1056828498840332 error 0.00011655385856837043
+[8.23602126e-02 8.57348285e+01 2.60139792e+03]
+[ 8.43787876e-02 -4.43589713e+01  2.61188338e+03]
+
+Result for group=vdd, sweep_id=1.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[ 8.43787876e-02 -4.43589713e+01  2.61188338e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10550928115844727 error 0.00012365895633392252
+[ 8.43787876e-02 -4.43589713e+01  2.61188338e+03]
+[8.85618963e-02 3.52163528e+02 2.61208422e+03]
+
+Result for group=vdd, sweep_id=2.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[8.85618963e-02 3.52163528e+02 2.61208422e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10719513893127441 error 0.00013292751681324595
+[8.85618963e-02 3.52163528e+02 2.61208422e+03]
+[9.09460311e-02 3.53773607e+02 2.63245161e+03]
+
+Result for group=vdd, sweep_id=3.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[9.09460311e-02 3.53773607e+02 2.63245161e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10631060600280762 error 0.00011963087413217137
+[9.09460311e-02 3.53773607e+02 2.63245161e+03]
+[9.53767417e-02 1.67158143e+02 2.62087446e+03]
+
+Result for group=vdd, sweep_id=4.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[9.53767417e-02 1.67158143e+02 2.62087446e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10602450370788574 error 0.00014613200439893802
+[9.53767417e-02 1.67158143e+02 2.62087446e+03]
+[ 1.02056332e-01 -3.04752982e+02  2.62499777e+03]
+
+Result for group=vdd, sweep_id=5.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[ 1.02056332e-01 -3.04752982e+02  2.62499777e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.1056661605834961 error 7.805301953825226e-05
+[ 1.02056332e-01 -3.04752982e+02  2.62499777e+03]
+[1.10051835e-01 5.45145375e+01 2.64993893e+03]
+
+Result for group=vdd, sweep_id=6.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[1.10051835e-01 5.45145375e+01 2.64993893e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10783100128173828 error 0.0001247839501341194
+[1.10051835e-01 5.45145375e+01 2.64993893e+03]
+[ 1.15883358e-01 -1.51445189e+02  2.65486135e+03]
+
+Result for group=vdd, sweep_id=7.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[ 1.15883358e-01 -1.51445189e+02  2.65486135e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.1046895980834961 error 8.545939739929486e-05
+[ 1.15883358e-01 -1.51445189e+02  2.65486135e+03]
+[1.21959019e-01 9.59297054e+01 2.67088835e+03]
+
+Result for group=vdd, sweep_id=8.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[1.21959019e-01 9.59297054e+01 2.67088835e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10529685020446777 error 0.00011570162838877771
+[1.21959019e-01 9.59297054e+01 2.67088835e+03]
+[ 1.25218180e-01 -8.68371893e+01  2.68282509e+03]
+
+Result for group=vdd, sweep_id=9.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[ 1.25218180e-01 -8.68371893e+01  2.68282509e+03]
+
+Successfully fit amplitude1_out1_outdiff_<c1*vdd + c2*vdd**2>_individualfit using <class 'fixture.fitting_tricks.FitLinear'>
+Result for sg=vdd i=0:
+[c1_amplitude1_out1_outdiff, c2_amplitude1_out1_outdiff, grandchild_offset]
+[0.19460865 0.29668118 0.10865812]
+
+
+Successfully fit gain1_out1_outdiff_incm_vdd_individualfit using <class 'fixture.fitting_tricks.FitLinear'>
+Result for sg=vdd i=1:
+[gain1_out1_outdiff_incm_vdd_w, grandchild_offset]
+[-850.10562505    7.29523855]
+
+
+Successfully fit gain1_out1_outdiff_indiff_<c1*vdd + c2*vdd**2>_individualfit using <class 'fixture.fitting_tricks.FitLinear'>
+Result for sg=vdd i=2:
+[c1_gain1_out1_outdiff_indiff, c2_gain1_out1_outdiff_indiff, grandchild_offset]
+[ 353.32730575  780.43439941 2646.20315801]
+
+
+Minimizing out1_outdiff
+minimization took 0.2329704761505127 error 0.00022556194148262636
+[ 1.07945014e-01  9.18603635e+00 -1.40071601e-05  1.94608653e-01
+  3.53327306e+02  2.96681182e-01  7.80434399e+02  1.08692395e+00
+ -3.65815531e-01 -2.39272908e+01  4.14519798e+01 -3.49281649e+01
+ -1.31128858e+01 -1.50976733e+01 -8.50105625e+02  2.65252282e+03
+  3.22788295e-01  2.34083320e-01  2.87423283e-02 -3.62865511e-02
+  1.77385344e-01 -3.32802862e-02  6.38641163e-04  3.90936586e-04
+  2.24587489e-04  1.18676121e-04  6.24881589e-05  3.05617599e-05]
+[ 1.08109569e-01  9.26897398e+00 -1.39581651e-05  1.93327456e-01
+  3.19291824e+02  2.99359816e-01  7.87480679e+02  1.09673742e+00
+ -3.69118356e-01 -2.41433223e+01  4.18262358e+01 -3.52435196e+01
+ -1.32312776e+01 -1.52339851e+01 -8.57780942e+02  2.65435488e+03
+  3.25702642e-01  2.36196779e-01  2.90018331e-02 -3.66141701e-02
+  1.78986897e-01 -3.35807627e-02  6.37261395e-04  3.91261013e-04
+  2.24193263e-04  1.18920557e-04  6.21986967e-05  3.04803814e-05]
+
+
+out1_outdiff=amplitude1_out1_outdiff*tanh((gain1_out1_outdiff_incm*incm + gain1_out1_outdiff_indiff*indiff)/Abs(amplitude1_out1_outdiff))
+
+
+
+amplitude1_out1_outdiff = amplitude1_out1_outdiff_nominal + amplitude1_out1_outdiff_<c1*vdd + c2*vdd**2> + amplitude1_out1_outdiff_<1_over_(rfadj+c0)>;
+
+amplitude1_out1_outdiff_nominal=c[0]
+
+amplitude1_out1_outdiff_<c1*vdd + c2*vdd**2>=c1_amplitude1_out1_outdiff*vdd_centered + c2_amplitude1_out1_outdiff*vdd_centered**2
+c1_amplitude1_out1_outdiff=c[3]
+c2_amplitude1_out1_outdiff=c[5]
+vdd_centered=vdd - 3.0
+
+amplitude1_out1_outdiff_<1_over_(rfadj+c0)>=-amplitude1_out1_outdiff_<1_over_(rfadj+c0)>_centering + 1/(c0_amplitude1_out1_outdiff + rfadj_bus)
+c0_amplitude1_out1_outdiff=c[1]
+rfadj_bus=c[16]*rfadj<0> + c[17]*rfadj<1> + c[18]*rfadj<2> + c[19]*rfadj<3> + c[20]*rfadj<4> + c[21]*rfadj<5>
+amplitude1_out1_outdiff_<1_over_(rfadj+c0)>_centering=1/(c[17] + c[1])
+
+
+gain1_out1_outdiff_incm = gain1_out1_outdiff_incm_nominal + gain1_out1_outdiff_incm_vdd + gain1_out1_outdiff_incm_rfadj;
+gain1_out1_outdiff_incm_nominal=c[7]
+gain1_out1_outdiff_incm_vdd=c[14]*(vdd - 3.0)
+gain1_out1_outdiff_incm_rfadj=c[10]*rfadj<2> + c[11]*rfadj<3> + c[12]*rfadj<4> + c[13]*rfadj<5> + c[8]*rfadj<0> + c[9]*rfadj<1> - c[9]
+
+
+gain1_out1_outdiff_indiff = gain1_out1_outdiff_indiff_nominal + gain1_out1_outdiff_indiff_<c1*vdd + c2*vdd**2> + gain1_out1_outdiff_indiff_<1_over_(rfadj+c0)>;
+
+gain1_out1_outdiff_indiff_nominal=c[15]
+
+gain1_out1_outdiff_indiff_<c1*vdd + c2*vdd**2>=c1_gain1_out1_outdiff_indiff*vdd_centered + c2_gain1_out1_outdiff_indiff*vdd_centered**2
+c1_gain1_out1_outdiff_indiff=c[4]
+c2_gain1_out1_outdiff_indiff=c[6]
+vdd_centered=vdd - 3.0
+
+gain1_out1_outdiff_indiff_<1_over_(rfadj+c0)>=-gain1_out1_outdiff_indiff_<1_over_(rfadj+c0)>_centering + 1/(c0_gain1_out1_outdiff_indiff + rfadj_bus)
+c0_gain1_out1_outdiff_indiff=c[2]
+rfadj_bus=c[22]*rfadj<0> + c[23]*rfadj<1> + c[24]*rfadj<2> + c[25]*rfadj<3> + c[26]*rfadj<4> + c[27]*rfadj<5>
+gain1_out1_outdiff_indiff_<1_over_(rfadj+c0)>_centering=1/(c[23] + c[2])
+
+
+
+
+c[0] = 0.1081095687475698;
+c[1] = 9.268973976718364;
+c[2] = -1.3958165073831843e-05;
+c[3] = 0.19332745648727295;
+c[4] = 319.291823575344;
+c[5] = 0.2993598163068223;
+c[6] = 787.4806787749767;
+c[7] = 1.0967374180673772;
+c[8] = -0.36911835616050437;
+c[9] = -24.1433222879854;
+c[10] = 41.82623581538279;
+c[11] = -35.243519583537804;
+c[12] = -13.231277593545435;
+c[13] = -15.23398507207478;
+c[14] = -857.7809424445859;
+c[15] = 2654.3548821656323;
+c[16] = 0.3257026415508294;
+c[17] = 0.23619677930764893;
+c[18] = 0.029001833093818416;
+c[19] = -0.03661417011527854;
+c[20] = 0.17898689681725188;
+c[21] = -0.03358076269719604;
+c[22] = 0.0006372613952102194;
+c[23] = 0.0003912610133697252;
+c[24] = 0.00022419326302633755;
+c[25] = 0.00011892055670274164;
+c[26] = 6.219869667448445e-05;
+c[27] = 3.048038142747189e-05;
+
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+Starting parameter fit
+Minimizing out1_outcm_combiner
+minimization took 0.09424901008605957 error 2.3108238144615414
+[1. 1. 1.]
+[848624.66603602 180279.00021522  -3134.32198588]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09317159652709961 error 2.313667894694404
+[848624.66603602 180279.00021522  -3134.32198588]
+[ 317917.03970632 -132349.3292589     2103.34805552]
+
+Minimizing out1_outcm_combiner
+minimization took 0.0942850112915039 error 2.306817804964471
+[ 317917.03970632 -132349.3292589     2103.34805552]
+[  1734.27379606 361037.03716242   -709.52091947]
+
+Minimizing out1_outcm_combiner
+minimization took 0.0934286117553711 error 2.130103029439296
+[  1734.27379606 361037.03716242   -709.52091947]
+[ 8.71815254e-01 -3.47124700e+07  4.61456147e+05]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09308099746704102 error 2.269675800479851
+[ 8.71815254e-01 -3.47124700e+07  4.61456147e+05]
+[-4.63191358e-01 -6.25292866e+07 -3.00539889e+06]
+
+Minimizing out1_outcm_combiner
+minimization took 0.0932619571685791 error 2.2688908657841873
+[-4.63191358e-01 -6.25292866e+07 -3.00539889e+06]
+[-4.65943269e-01 -2.45291709e+08  3.06385772e+05]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09204506874084473 error 2.2701006084051625
+[-4.65943269e-01 -2.45291709e+08  3.06385772e+05]
+[-4.61083583e-01  5.83962226e+09  4.74343127e+07]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09509444236755371 error 2.121335661966373
+[-4.61083583e-01  5.83962226e+09  4.74343127e+07]
+[-9.28057862e-01 -2.93519880e+09  5.48802456e+07]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09524750709533691 error 2.268179809605264
+[-9.28057862e-01 -2.93519880e+09  5.48802456e+07]
+[4.65707049e-01 1.47822451e+09 3.93613060e+06]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09466075897216797 error 2.3146287223218085
+[4.65707049e-01 1.47822451e+09 3.93613060e+06]
+[2.37556632e-03 5.62696919e+09 4.51217059e+06]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09615063667297363 error 2.3144084683082364
+[2.37556632e-03 5.62696919e+09 4.51217059e+06]
+[2.58194704e-03 5.22864288e+09 4.33174350e+06]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09593582153320312 error 2.2701612644923617
+[2.58194704e-03 5.22864288e+09 4.33174350e+06]
+[ 4.60791200e-01 -1.58258186e+11  4.43526880e+08]
+
+Minimizing out1_outcm_combiner
+minimization took 0.10033011436462402 error 2.269138246670964
+[ 4.60791200e-01 -1.58258186e+11  4.43526880e+08]
+[4.66478149e-01 1.65520092e+07 1.75676378e+05]
+
+Minimizing out1_outcm_combiner
+minimization took 0.0982961654663086 error 2.1260995340289046
+[4.66478149e-01 1.65520092e+07 1.75676378e+05]
+[-8.73349870e-01 -1.24840529e+08  2.50610054e+06]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09284067153930664 error 2.314555673014376
+[-8.73349870e-01 -1.24840529e+08  2.50610054e+06]
+[1.20172005e-03 2.58845539e+07 1.39076077e+07]
+
+Minimizing out1_outcm_combiner
+minimization took 0.0929865837097168 error 2.315250006823036
+[1.20172005e-03 2.58845539e+07 1.39076077e+07]
+[ 6.26733896e-04  5.87677185e+06 -2.40978558e+05]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09629940986633301 error 2.146779033311084
+[ 6.26733896e-04  5.87677185e+06 -2.40978558e+05]
+[6.00772690e-01 7.00860415e+07 4.83241993e+05]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09559988975524902 error 2.1816494813744645
+[6.00772690e-01 7.00860415e+07 4.83241993e+05]
+[ 4.28183339e-01  5.15414756e+07 -8.34549326e+05]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09778738021850586 error 2.1236639748957
+[ 4.28183339e-01  5.15414756e+07 -8.34549326e+05]
+[ 9.25135967e-01 -3.72172300e+08 -4.98145131e+06]
+
+Minimizing out1_outcm_combiner
+minimization took 0.10415410995483398 error 2.2682758779941365
+[ 9.25135967e-01 -3.72172300e+08 -4.98145131e+06]
+[4.65454197e-01 1.57852220e+08 1.31220188e+06]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09985733032226562 error 2.268052944758557
+[4.65454197e-01 1.57852220e+08 1.31220188e+06]
+[ 4.65813133e-01  6.38043449e+10 -6.12585343e+07]
+
+Result for group=rfadj, sweep_id=0.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[ 4.65813133e-01  6.38043449e+10 -6.12585343e+07]
+
+Minimizing out1_outcm_combiner
+minimization took 0.0925743579864502 error 2.1287427031375508
+[ 4.65813133e-01  6.38043449e+10 -6.12585343e+07]
+[ 9.96905908e-01 -6.96892881e+07 -1.16563243e+06]
+
+Result for group=rfadj, sweep_id=1.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[ 9.96905908e-01 -6.96892881e+07 -1.16563243e+06]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09293365478515625 error 2.1756767935321917
+[ 9.96905908e-01 -6.96892881e+07 -1.16563243e+06]
+[ 4.46120613e-01  2.30506171e+07 -1.65776234e+05]
+
+Result for group=rfadj, sweep_id=2.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[ 4.46120613e-01  2.30506171e+07 -1.65776234e+05]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09326291084289551 error 2.1308105233260295
+[ 4.46120613e-01  2.30506171e+07 -1.65776234e+05]
+[-9.86981617e-01  3.90172543e+07 -5.20565868e+05]
+
+Result for group=rfadj, sweep_id=3.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[-9.86981617e-01  3.90172543e+07 -5.20565868e+05]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09432768821716309 error 2.254045615549833
+[-9.86981617e-01  3.90172543e+07 -5.20565868e+05]
+[-7.54141857e-01  6.88585194e+06 -1.15481792e+05]
+
+Result for group=rfadj, sweep_id=4.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[-7.54141857e-01  6.88585194e+06 -1.15481792e+05]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09309768676757812 error 2.2690009924944983
+[-7.54141857e-01  6.88585194e+06 -1.15481792e+05]
+[ 4.63921082e-01  1.00396977e+07 -1.52764564e+05]
+
+Result for group=rfadj, sweep_id=5.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[ 4.63921082e-01  1.00396977e+07 -1.52764564e+05]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09434199333190918 error 2.269583105146825
+[ 4.63921082e-01  1.00396977e+07 -1.52764564e+05]
+[-4.63615736e-01 -3.05084269e+07 -3.44694418e+06]
+
+Result for group=rfadj, sweep_id=6.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[-4.63615736e-01 -3.05084269e+07 -3.44694418e+06]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09439802169799805 error 2.2687700095556633
+[-4.63615736e-01 -3.05084269e+07 -3.44694418e+06]
+[ 4.62666745e-01 -2.06141372e+09 -3.14402086e+08]
+
+Result for group=rfadj, sweep_id=7.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[ 4.62666745e-01 -2.06141372e+09 -3.14402086e+08]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09346151351928711 error 2.3139134619753263
+[ 4.62666745e-01 -2.06141372e+09 -3.14402086e+08]
+[7.94271851e-03 2.42479534e+09 1.68040878e+07]
+
+Result for group=rfadj, sweep_id=8.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[7.94271851e-03 2.42479534e+09 1.68040878e+07]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09396815299987793 error 2.3146287223218085
+[7.94271851e-03 2.42479534e+09 1.68040878e+07]
+[2.37554870e-03 5.34959644e+10 3.09861717e+07]
+
+Result for group=rfadj, sweep_id=9.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[2.37554870e-03 5.34959644e+10 3.09861717e+07]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09466838836669922 error 2.3144084683082364
+[2.37554870e-03 5.34959644e+10 3.09861717e+07]
+[2.58191273e-03 4.97109769e+10 2.97468551e+07]
+
+Result for group=rfadj, sweep_id=10.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[2.58191273e-03 4.97109769e+10 2.97468551e+07]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09469079971313477 error 2.2701612644922826
+[2.58191273e-03 4.97109769e+10 2.97468551e+07]
+[-4.60790599e-01  3.24728316e+11 -5.27323301e+08]
+
+Result for group=rfadj, sweep_id=11.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[-4.60790599e-01  3.24728316e+11 -5.27323301e+08]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09344029426574707 error 2.26913783169902
+[-4.60790599e-01  3.24728316e+11 -5.27323301e+08]
+[4.65933844e-01 1.33805886e+13 4.30402200e+10]
+
+Result for group=rfadj, sweep_id=12.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[4.65933844e-01 1.33805886e+13 4.30402200e+10]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09501266479492188 error 2.2681117391116996
+[4.65933844e-01 1.33805886e+13 4.30402200e+10]
+[-4.65594300e-01 -3.69399008e+12  6.12831369e+10]
+
+Result for group=rfadj, sweep_id=13.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[-4.65594300e-01 -3.69399008e+12  6.12831369e+10]
+
+Minimizing out1_outcm_combiner
+minimization took 0.0949394702911377 error 2.12206493071185
+[-4.65594300e-01 -3.69399008e+12  6.12831369e+10]
+[ 9.24133354e-01 -1.14580787e+13  1.92036598e+11]
+
+Result for group=rfadj, sweep_id=14.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[ 9.24133354e-01 -1.14580787e+13  1.92036598e+11]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09400057792663574 error 2.2682865438282676
+[ 9.24133354e-01 -1.14580787e+13  1.92036598e+11]
+[-4.66385413e-01 -1.74139869e+13  2.72877984e+11]
+
+Result for group=rfadj, sweep_id=15.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[-4.66385413e-01 -1.74139869e+13  2.72877984e+11]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09482550621032715 error 2.121034137193055
+[-4.66385413e-01 -1.74139869e+13  2.72877984e+11]
+[9.26730719e-01 6.64157334e+12 4.60339175e+10]
+
+Result for group=rfadj, sweep_id=16.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[9.26730719e-01 6.64157334e+12 4.60339175e+10]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09372782707214355 error 2.3145743909417678
+[9.26730719e-01 6.64157334e+12 4.60339175e+10]
+[-2.65144222e-03 -8.69960046e+12 -5.50246264e+10]
+
+Result for group=rfadj, sweep_id=17.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[-2.65144222e-03 -8.69960046e+12 -5.50246264e+10]
+
+Minimizing out1_outcm_combiner
+minimization took 0.0950469970703125 error 2.2692943200975644
+[-2.65144222e-03 -8.69960046e+12 -5.50246264e+10]
+[ 4.64911595e-01  2.76844063e+10 -4.83173788e+08]
+
+Result for group=rfadj, sweep_id=18.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[ 4.64911595e-01  2.76844063e+10 -4.83173788e+08]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09378552436828613 error 2.2683853058549683
+[ 4.64911595e-01  2.76844063e+10 -4.83173788e+08]
+[ 4.64920648e-01  2.91283677e+10 -4.81052896e+08]
+
+Result for group=rfadj, sweep_id=19.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[ 4.64920648e-01  2.91283677e+10 -4.81052896e+08]
+
+Successfully fit amplitude1_out1_outcm_rfadj_individualfit using <class 'fixture.fitting_tricks.FitLinear'>
+Result for sg=rfadj i=0:
+[amplitude1_out1_outcm_rfadj_w0, amplitude1_out1_outcm_rfadj_w1, amplitude1_out1_outcm_rfadj_w2, amplitude1_out1_outcm_rfadj_w3, amplitude1_out1_outcm_rfadj_w4, amplitude1_out1_outcm_rfadj_w5, grandchild_offset]
+[ 0.21501941 -0.05286108  0.24897252  0.33796419  0.05016142  0.13417579
+ -0.40688157]
+
+
+Successfully fit gain1_out1_outcm_incm_rfadj_individualfit using <class 'fixture.fitting_tricks.FitLinear'>
+Result for sg=rfadj i=1:
+[gain1_out1_outcm_incm_rfadj_w0, gain1_out1_outcm_incm_rfadj_w1, gain1_out1_outcm_incm_rfadj_w2, gain1_out1_outcm_incm_rfadj_w3, gain1_out1_outcm_incm_rfadj_w4, gain1_out1_outcm_incm_rfadj_w5, grandchild_offset]
+[-3.64093179e+12 -2.34375467e+12 -2.71480101e+12  3.16408197e+11
+ -2.78911119e+12 -4.64702436e+12  3.43065073e+12]
+
+
+Successfully fit gain1_out1_outcm_indiff_rfadj_individualfit using <class 'fixture.fitting_tricks.FitLinear'>
+Result for sg=rfadj i=2:
+[gain1_out1_outcm_indiff_rfadj_w0, gain1_out1_outcm_indiff_rfadj_w1, gain1_out1_outcm_indiff_rfadj_w2, gain1_out1_outcm_indiff_rfadj_w3, gain1_out1_outcm_indiff_rfadj_w4, gain1_out1_outcm_indiff_rfadj_w5, grandchild_offset]
+[ 4.81956680e+10 -7.91060567e+09  2.07658610e+10  1.93006863e+10
+ -2.41621875e+10  5.74338471e+10 -3.64472719e+10]
+
+
+Minimizing out1_outcm_combiner
+minimization took 0.09559774398803711 error 2.1171642680477474
+[1. 1. 1.]
+[ 4.32269947e-01 -1.43036953e+07  1.17374413e+06]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09545564651489258 error 2.138088066681267
+[ 4.32269947e-01 -1.43036953e+07  1.17374413e+06]
+[ 4.35237978e-01 -1.64181424e+07  5.36353931e+06]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09439373016357422 error 2.168658947588504
+[ 4.35237978e-01 -1.64181424e+07  5.36353931e+06]
+[ 4.42110930e-01  9.74995815e+09 -3.19950997e+08]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09430742263793945 error 2.1868834014546192
+[ 4.42110930e-01  9.74995815e+09 -3.19950997e+08]
+[-4.46368096e-01 -5.95892762e+09 -3.27434376e+08]
+
+Minimizing out1_outcm_combiner
+minimization took 0.0945441722869873 error 2.207869197989833
+[-4.46368096e-01 -5.95892762e+09 -3.27434376e+08]
+[-4.53527988e-01 -5.37181315e+09  6.19323484e+07]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09604716300964355 error 2.239914121973271
+[-4.53527988e-01 -5.37181315e+09  6.19323484e+07]
+[-4.68469065e-01 -2.27672723e+08 -3.77072030e+06]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09470510482788086 error 2.2759935561340376
+[-4.68469065e-01 -2.27672723e+08 -3.77072030e+06]
+[-4.66857190e-01 -3.14482144e+07 -3.54004752e+05]
+
+Minimizing out1_outcm_combiner
+minimization took 0.0943293571472168 error 2.3423397872198106
+[-4.66857190e-01 -3.14482144e+07 -3.54004752e+05]
+[ 6.70768004e-03  4.19402824e+06 -3.77903093e+04]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09586334228515625 error 2.320312254876031
+[ 6.70768004e-03  4.19402824e+06 -3.77903093e+04]
+[ 4.73767813e-01  1.26553003e+07 -4.25781132e+06]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09418702125549316 error 2.3311548653468237
+[ 4.73767813e-01  1.26553003e+07 -4.25781132e+06]
+[-5.03150227e-01 -9.80992022e+06  1.30992665e+05]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09522080421447754 error 2.1166561669548036
+[-5.03150227e-01 -9.80992022e+06  1.30992665e+05]
+[-4.34739631e-01 -2.33639776e+08 -6.34929464e+05]
+
+Result for group=vdd, sweep_id=0.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[-4.34739631e-01 -2.33639776e+08 -6.34929464e+05]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09447598457336426 error 2.138436226649498
+[-4.34739631e-01 -2.33639776e+08 -6.34929464e+05]
+[ 4.33310171e-01 -4.57429661e+11  9.58955136e+08]
+
+Result for group=vdd, sweep_id=1.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[ 4.33310171e-01 -4.57429661e+11  9.58955136e+08]
+
+Minimizing out1_outcm_combiner
+minimization took 0.0940101146697998 error 2.213263849389342
+[ 4.33310171e-01 -4.57429661e+11  9.58955136e+08]
+[-2.63401430e-03 -2.00201387e+12  2.66190502e+08]
+
+Result for group=vdd, sweep_id=2.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[-2.63401430e-03 -2.00201387e+12  2.66190502e+08]
+
+Minimizing out1_outcm_combiner
+minimization took 0.0946800708770752 error 2.231972160493526
+[-2.63401430e-03 -2.00201387e+12  2.66190502e+08]
+[-2.64700435e-03 -4.56528193e+12  4.01661674e+07]
+
+Result for group=vdd, sweep_id=3.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[-2.64700435e-03 -4.56528193e+12  4.01661674e+07]
+
+Minimizing out1_outcm_combiner
+minimization took 0.0941469669342041 error 2.253976205335672
+[-2.64700435e-03 -4.56528193e+12  4.01661674e+07]
+[-2.74132841e-03 -4.63437808e+12  3.88492078e+07]
+
+Result for group=vdd, sweep_id=4.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[-2.74132841e-03 -4.63437808e+12  3.88492078e+07]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09254646301269531 error 2.286484095485468
+[-2.74132841e-03 -4.63437808e+12  3.88492078e+07]
+[-2.68180777e-03 -4.74398358e+12  3.88278251e+07]
+
+Result for group=vdd, sweep_id=5.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[-2.68180777e-03 -4.74398358e+12  3.88278251e+07]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09387016296386719 error 2.323385470406732
+[-2.68180777e-03 -4.74398358e+12  3.88278251e+07]
+[-2.70115661e-03 -4.88700468e+12  3.80854852e+07]
+
+Result for group=vdd, sweep_id=6.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[-2.70115661e-03 -4.88700468e+12  3.80854852e+07]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09480142593383789 error 2.3449274321931144
+[-2.70115661e-03 -4.88700468e+12  3.80854852e+07]
+[-2.54370878e-03 -5.01502682e+12  3.80719614e+07]
+
+Result for group=vdd, sweep_id=7.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[-2.54370878e-03 -5.01502682e+12  3.80719614e+07]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09448909759521484 error 2.3681844004620034
+[-2.54370878e-03 -5.01502682e+12  3.80719614e+07]
+[-2.57241913e-03 -5.06499919e+12  3.77378245e+07]
+
+Result for group=vdd, sweep_id=8.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[-2.57241913e-03 -5.06499919e+12  3.77378245e+07]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09409809112548828 error 2.3793645251539166
+[-2.57241913e-03 -5.06499919e+12  3.77378245e+07]
+[-2.83486588e-03 -4.82389803e+12  3.60101947e+07]
+
+Result for group=vdd, sweep_id=9.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[-2.83486588e-03 -4.82389803e+12  3.60101947e+07]
+
+Successfully fit amplitude1_out1_outcm_vdd_individualfit using <class 'fixture.fitting_tricks.FitLinear'>
+Result for sg=vdd i=0:
+[amplitude1_out1_outcm_vdd_w, grandchild_offset]
+[0.12956682 0.00456365]
+
+
+Successfully fit gain1_out1_outcm_incm_vdd_individualfit using <class 'fixture.fitting_tricks.FitLinear'>
+Result for sg=vdd i=1:
+[gain1_out1_outcm_incm_vdd_w, grandchild_offset]
+[-1.74359052e+13 -4.54018813e+12]
+
+
+Successfully fit gain1_out1_outcm_indiff_vdd_individualfit using <class 'fixture.fitting_tricks.FitLinear'>
+Result for sg=vdd i=2:
+[gain1_out1_outcm_indiff_vdd_w, grandchild_offset]
+[-1.40790421e+09  7.48766940e+07]
+
+
+Minimizing out1_outcm
+minimization took 0.19669842720031738 error 2.302536586184606
+[-2.01158964e-01  2.15019412e-01 -5.28610827e-02  2.48972522e-01
+  3.37964188e-01  5.01614151e-02  1.34175791e-01  1.29566825e-01
+ -5.54768700e+11 -3.64093179e+12 -2.34375467e+12 -2.71480101e+12
+  3.16408197e+11 -2.78911119e+12 -4.64702436e+12 -1.74359052e+13
+ -1.81861976e+10  4.81956680e+10 -7.91060567e+09  2.07658610e+10
+  1.93006863e+10 -2.41621875e+10  5.74338471e+10 -1.40790421e+09]
+[ 2.46564689e-01  5.11625078e-01  2.65302635e-01 -1.58949020e-01
+ -4.25831568e-01  7.55461928e-02  6.37493013e-02 -8.07642724e-02
+ -1.86267016e+12 -3.87337345e+13  5.36538640e+12  6.42049584e+12
+  2.01936992e+11 -2.05889153e+13  4.08770417e+12 -1.33760162e+13
+  1.31449813e+10  1.43481305e+10 -1.64865751e+10  6.13351423e+10
+  1.16834987e+10 -3.99367099e+09  2.27569022e+11 -1.14338798e+09]
+
+
+out1_outcm=amplitude1_out1_outcm*tanh((gain1_out1_outcm_incm*incm + gain1_out1_outcm_indiff*indiff)/Abs(amplitude1_out1_outcm))
+amplitude1_out1_outcm = amplitude1_out1_outcm_nominal + amplitude1_out1_outcm_vdd + amplitude1_out1_outcm_rfadj;
+amplitude1_out1_outcm_nominal=c[0]
+amplitude1_out1_outcm_vdd=c[7]*(vdd - 3.0)
+amplitude1_out1_outcm_rfadj=c[1]*rfadj<0> + c[2]*rfadj<1> - c[2] + c[3]*rfadj<2> + c[4]*rfadj<3> + c[5]*rfadj<4> + c[6]*rfadj<5>
+gain1_out1_outcm_incm = gain1_out1_outcm_incm_nominal + gain1_out1_outcm_incm_vdd + gain1_out1_outcm_incm_rfadj;
+gain1_out1_outcm_incm_nominal=c[8]
+gain1_out1_outcm_incm_vdd=c[15]*(vdd - 3.0)
+gain1_out1_outcm_incm_rfadj=c[10]*rfadj<1> - c[10] + c[11]*rfadj<2> + c[12]*rfadj<3> + c[13]*rfadj<4> + c[14]*rfadj<5> + c[9]*rfadj<0>
+gain1_out1_outcm_indiff = gain1_out1_outcm_indiff_nominal + gain1_out1_outcm_indiff_vdd + gain1_out1_outcm_indiff_rfadj;
+gain1_out1_outcm_indiff_nominal=c[16]
+gain1_out1_outcm_indiff_vdd=c[23]*(vdd - 3.0)
+gain1_out1_outcm_indiff_rfadj=c[17]*rfadj<0> + c[18]*rfadj<1> - c[18] + c[19]*rfadj<2> + c[20]*rfadj<3> + c[21]*rfadj<4> + c[22]*rfadj<5>
+c[0] = 0.24656468864565229;
+c[1] = 0.5116250784370657;
+c[2] = 0.265302634656064;
+c[3] = -0.15894902041192566;
+c[4] = -0.4258315683212898;
+c[5] = 0.07554619277538642;
+c[6] = 0.06374930133772042;
+c[7] = -0.08076427241244055;
+c[8] = -1862670157934.8225;
+c[9] = -38733734495999.02;
+c[10] = 5365386399467.204;
+c[11] = 6420495837537.443;
+c[12] = 201936992209.4678;
+c[13] = -20588915270946.293;
+c[14] = 4087704168557.1875;
+c[15] = -13376016150362.395;
+c[16] = 13144981301.239054;
+c[17] = 14348130549.291878;
+c[18] = -16486575103.213842;
+c[19] = 61335142267.72813;
+c[20] = 11683498681.990808;
+c[21] = -3993670994.241439;
+c[22] = 227569022296.47998;
+c[23] = -1143387982.0691557;
+
+TODO: plot optional effects - here or later?
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+aboutto save rr
+Overwriting file checkpoint_folder/DCTest/regression_results.yaml
+finished saving rr
+about to load rr
+finished loading rr
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+
+
+Results for DCTest:
+	Model for <out1_outdiff>:
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+		out1_outdiff=amplitude1_out1_outdiff*tanh((gain1_out1_outdiff_incm*incm + gain1_out1_outdiff_indiff*indiff)/Abs(amplitude1_out1_outdiff))
+		amplitude1_out1_outdiff = amplitude1_out1_outdiff_nominal + amplitude1_out1_outdiff_<c1*vdd + c2*vdd**2> + amplitude1_out1_outdiff_<1_over_(rfadj+c0)>;
+		amplitude1_out1_outdiff_nominal=c0
+		amplitude1_out1_outdiff_<c1*vdd + c2*vdd**2>=c1_amplitude1_out1_outdiff*vdd_centered + c2_amplitude1_out1_outdiff*vdd_centered**2
+		c1_amplitude1_out1_outdiff=c3
+		c2_amplitude1_out1_outdiff=c5
+		vdd_centered=vdd - 3.0
+		amplitude1_out1_outdiff_<1_over_(rfadj+c0)>=-amplitude1_out1_outdiff_<1_over_(rfadj+c0)>_centering + 1/(c0_amplitude1_out1_outdiff + rfadj_bus)
+		c0_amplitude1_out1_outdiff=c1
+		rfadj_bus=c16*rfadj<0> + c17*rfadj<1> + c18*rfadj<2> + c19*rfadj<3> + c20*rfadj<4> + c21*rfadj<5>
+		amplitude1_out1_outdiff_<1_over_(rfadj+c0)>_centering=1/(c1 + c17)
+		gain1_out1_outdiff_incm = gain1_out1_outdiff_incm_nominal + gain1_out1_outdiff_incm_vdd + gain1_out1_outdiff_incm_rfadj;
+		gain1_out1_outdiff_incm_nominal=c7
+		gain1_out1_outdiff_incm_vdd=c14*(vdd - 3.0)
+		gain1_out1_outdiff_incm_rfadj=c10*rfadj<2> + c11*rfadj<3> + c12*rfadj<4> + c13*rfadj<5> + c8*rfadj<0> + c9*rfadj<1> - c9
+		gain1_out1_outdiff_indiff = gain1_out1_outdiff_indiff_nominal + gain1_out1_outdiff_indiff_<c1*vdd + c2*vdd**2> + gain1_out1_outdiff_indiff_<1_over_(rfadj+c0)>;
+		gain1_out1_outdiff_indiff_nominal=c15
+		gain1_out1_outdiff_indiff_<c1*vdd + c2*vdd**2>=c1_gain1_out1_outdiff_indiff*vdd_centered + c2_gain1_out1_outdiff_indiff*vdd_centered**2
+		c1_gain1_out1_outdiff_indiff=c4
+		c2_gain1_out1_outdiff_indiff=c6
+		vdd_centered=vdd - 3.0
+		gain1_out1_outdiff_indiff_<1_over_(rfadj+c0)>=-gain1_out1_outdiff_indiff_<1_over_(rfadj+c0)>_centering + 1/(c0_gain1_out1_outdiff_indiff + rfadj_bus)
+		c0_gain1_out1_outdiff_indiff=c2
+		rfadj_bus=c22*rfadj<0> + c23*rfadj<1> + c24*rfadj<2> + c25*rfadj<3> + c26*rfadj<4> + c27*rfadj<5>
+		gain1_out1_outdiff_indiff_<1_over_(rfadj+c0)>_centering=1/(c2 + c23)
+		c0 = 0.1081095687475698;
+		c1 = 9.268973976718364;
+		c2 = -1.3958165073831843e-05;
+		c3 = 0.19332745648727295;
+		c4 = 319.291823575344;
+		c5 = 0.2993598163068223;
+		c6 = 787.4806787749767;
+		c7 = 1.0967374180673772;
+		c8 = -0.36911835616050437;
+		c9 = -24.1433222879854;
+		c10 = 41.82623581538279;
+		c11 = -35.243519583537804;
+		c12 = -13.231277593545435;
+		c13 = -15.23398507207478;
+		c14 = -857.7809424445859;
+		c15 = 2654.3548821656323;
+		c16 = 0.3257026415508294;
+		c17 = 0.23619677930764893;
+		c18 = 0.029001833093818416;
+		c19 = -0.03661417011527854;
+		c20 = 0.17898689681725188;
+		c21 = -0.03358076269719604;
+		c22 = 0.0006372613952102194;
+		c23 = 0.0003912610133697252;
+		c24 = 0.00022419326302633755;
+		c25 = 0.00011892055670274164;
+		c26 = 6.219869667448445e-05;
+		c27 = 3.048038142747189e-05;
+
+	Model for <out1_outcm>:
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+		out1_outcm=amplitude1_out1_outcm*tanh((gain1_out1_outcm_incm*incm + gain1_out1_outcm_indiff*indiff)/Abs(amplitude1_out1_outcm))
+		amplitude1_out1_outcm = amplitude1_out1_outcm_nominal + amplitude1_out1_outcm_vdd + amplitude1_out1_outcm_rfadj;
+		amplitude1_out1_outcm_nominal=c0
+		amplitude1_out1_outcm_vdd=c7*(vdd - 3.0)
+		amplitude1_out1_outcm_rfadj=c1*rfadj<0> + c2*rfadj<1> - c2 + c3*rfadj<2> + c4*rfadj<3> + c5*rfadj<4> + c6*rfadj<5>
+		gain1_out1_outcm_incm = gain1_out1_outcm_incm_nominal + gain1_out1_outcm_incm_vdd + gain1_out1_outcm_incm_rfadj;
+		gain1_out1_outcm_incm_nominal=c8
+		gain1_out1_outcm_incm_vdd=c15*(vdd - 3.0)
+		gain1_out1_outcm_incm_rfadj=c10*rfadj<1> - c10 + c11*rfadj<2> + c12*rfadj<3> + c13*rfadj<4> + c14*rfadj<5> + c9*rfadj<0>
+		gain1_out1_outcm_indiff = gain1_out1_outcm_indiff_nominal + gain1_out1_outcm_indiff_vdd + gain1_out1_outcm_indiff_rfadj;
+		gain1_out1_outcm_indiff_nominal=c16
+		gain1_out1_outcm_indiff_vdd=c23*(vdd - 3.0)
+		gain1_out1_outcm_indiff_rfadj=c17*rfadj<0> + c18*rfadj<1> - c18 + c19*rfadj<2> + c20*rfadj<3> + c21*rfadj<4> + c22*rfadj<5>
+		c0 = 0.24656468864565229;
+		c1 = 0.5116250784370657;
+		c2 = 0.265302634656064;
+		c3 = -0.15894902041192566;
+		c4 = -0.4258315683212898;
+		c5 = 0.07554619277538642;
+		c6 = 0.06374930133772042;
+		c7 = -0.08076427241244055;
+		c8 = -1862670157934.8225;
+		c9 = -38733734495999.02;
+		c10 = 5365386399467.204;
+		c11 = 6420495837537.443;
+		c12 = 201936992209.4678;
+		c13 = -20588915270946.293;
+		c14 = 4087704168557.1875;
+		c15 = -13376016150362.395;
+		c16 = 13144981301.239054;
+		c17 = 14348130549.291878;
+		c18 = -16486575103.213842;
+		c19 = 61335142267.72813;
+		c20 = 11683498681.990808;
+		c21 = -3993670994.241439;
+		c22 = 227569022296.47998;
+		c23 = -1143387982.0691557;
+

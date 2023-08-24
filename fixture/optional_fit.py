@@ -901,14 +901,14 @@ class HeirarchicalExpression(SympyExpression):
 
                 return point_data, point_data_res, example_row_id
 
-                self.parent_expression.fit(point_data, point_data_res,
-                                           parent_by_group_x_init)
-                result = self.parent_expression.x_opt
-                error = self.parent_expression.error(
-                    point_data[self.parent_expression.input_signals],
-                    self.parent_expression.x_opt,
-                    point_data_res)
-                return result, error
+                #self.parent_expression.fit(point_data, point_data_res,
+                #                           parent_by_group_x_init)
+                #result = self.parent_expression.x_opt
+                #error = self.parent_expression.error(
+                #    point_data[self.parent_expression.input_signals],
+                #    self.parent_expression.x_opt,
+                #    point_data_res)
+                #return result, error
 
 
             # First, we find values for each param, with optional inputs fixed
@@ -921,11 +921,14 @@ class HeirarchicalExpression(SympyExpression):
             plot_predictions = []
             worst_example = (-1, 0)
             parent_by_group_x_init = None
+            # do a first pass for each one to hopefully settle on a good guess
             for si in sorted(sweep_ids):
                 point_data, point_data_res, example_row_id = get_data_for_id(si)
                 self.parent_expression.fit(point_data, point_data_res,
                                            parent_by_group_x_init)
                 parent_by_group_x_init = self.parent_expression.x_opt
+            # now fit them all a second time since we should have a good
+            # initial guess from the previous time around
             for si in sorted(sweep_ids):
                 # point_data is the data from one point (si) on the sg sweep
                 #point_indices = group_data[SampleManager.SWEEP_ID_TAG] == si
@@ -939,6 +942,12 @@ class HeirarchicalExpression(SympyExpression):
                 point_data, point_data_res, example_row_id = get_data_for_id(si)
                 self.parent_expression.fit(point_data, point_data_res,
                                            parent_by_group_x_init)
+
+                print(f'Result for group={sg}, sweep_id={si}:')
+                print(self.parent_expression.coefs)
+                print(self.parent_expression.x_opt)
+                print()
+
                 parent_by_group_x_init = self.parent_expression.x_opt
                 group_results.append(self.parent_expression.x_opt)
                 example_row_ids.append(example_row_id)
@@ -982,7 +991,7 @@ class HeirarchicalExpression(SympyExpression):
                         plt.plot(np.array(xs)[order], np.array(preds)[order], '--', color=c)
 
                     legend = []
-                    MAX_LEGEND_LEN = 10
+                    MAX_LEGEND_LEN = 16
                     def sg_vals_str(xss):
                         vals = []
                         for s in sg.signals:
@@ -1015,7 +1024,7 @@ class HeirarchicalExpression(SympyExpression):
                     plt.plot(np.array(xs)[order], np.array(preds)[order], '--')
                     plt.xlabel(f'{xaxis.friendly_name()}')
                     plt.ylabel(f'{self.parent_expression.name}')
-                    plt.legend(['Peasured', 'Predicted'])
+                    plt.legend(['Measured', 'Predicted'])
                     plt.title(f'Fitting {self.name}, worst fit at {sg_val}')
                     PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/Worst fit for {self.name} vs {xaxis.friendly_name()} from Sweeping {sg.name}')
 
@@ -1056,6 +1065,10 @@ class HeirarchicalExpression(SympyExpression):
                         f'{grandchild.name}_individualfit'
                     )
                     grandchild_with_offset.fit(example_data, child_results)
+                    print(f'Result for sg={sg} i={i}:')
+                    print(grandchild_with_offset.coefs)
+                    print(grandchild_with_offset.x_opt)
+                    print()
 
                     if PLOT:
                         # plotting secondary fits, from using fit params as goals
@@ -1078,6 +1091,7 @@ class HeirarchicalExpression(SympyExpression):
                         plt.xlabel(f'{xaxis.friendly_name()}')
                         plt.ylabel(f'{child.name}')
                         #plt.ylim((0, 3000))
+                        plt.title(f'{grandchild_with_offset.name} vs. {sg}')
                         PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/Individual fit for {grandchild_with_offset.name} vs {sg}')
 
                         # TEMP for checking x_init
@@ -1091,6 +1105,7 @@ class HeirarchicalExpression(SympyExpression):
                             plt.legend(['Measured', 'Predicted'])
                             plt.xlabel(f'{xaxis.friendly_name()}')
                             plt.ylabel(f'{child.name}')
+                            plt.title(f'Initial Minimizer Guess for\n{grandchild_with_offset.name} vs. {sg}')
                             PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/debug/Initial point for minimizer for {grandchild_with_offset.name} vs {sg}')
                         print()
 
@@ -1351,6 +1366,14 @@ class HeirarchicalExpression(SympyExpression):
         name_nominal = f'{self.name}_nominal'
         lines = []
 
+        # parent expression first
+        parent_coef_names = [name(ce) for ce in self.child_expressions.values()]
+        if self.manage_offsets:
+            parent_coef_names.append(name_nominal)
+        #assert len(parent_coef_names) == self.parent_expression.NUM_COEFFICIENTS
+        lhs_str = lhs if isinstance(lhs, str) else lhs.friendly_name()
+        lines += self.parent_expression.verilog(lhs_str, parent_coef_names)
+
         # all the child expressions
         #coef_count = 0
         for ce in self.child_expressions.values():
@@ -1369,15 +1392,7 @@ class HeirarchicalExpression(SympyExpression):
         #    coef_count += 1
         #assert coef_count == len(coef_names)
 
-        # parent expression next
-        parent_coef_names = [name(ce) for ce in self.child_expressions.values()]
-        if self.manage_offsets:
-            parent_coef_names.append(name_nominal)
-        #assert len(parent_coef_names) == self.parent_expression.NUM_COEFFICIENTS
-        lhs_str = lhs if isinstance(lhs, str) else lhs.friendly_name()
-        lines += self.parent_expression.verilog(lhs_str, parent_coef_names)
-
-        lines += [f'TODO: check that all the coefficients for the parent made it in: {self.parent_expression.ast}']
+        #lines += [f'TODO: check that all the coefficients for the parent made it in: {self.parent_expression.ast}']
 
         # TODO I want to reverse this properly so the c numbers are in order,
         #  But I'm afraid I will mess it up and they'll be mismatched
@@ -1862,6 +1877,8 @@ def get_optional_expression_from_influences(influence_list, name, all_signals):
     We need all_signals so we can tell what is an input when s is a string
     '''
     assert isinstance(name, str)
+    def clean_expression_for_name(expression):
+        return expression.replace('/', '_over_')
     individual = [ConstExpression(f'{name}_nominal')]
     for s_or_expr in influence_list:
         if isinstance(s_or_expr, (SignalIn, SignalArray)):
@@ -1870,8 +1887,9 @@ def get_optional_expression_from_influences(influence_list, name, all_signals):
             individual.append(get_default_expr_from_signal(s_or_expr, child_name))
 
         elif isinstance(s_or_expr, str):
+            influence_name = f'{name}_<{clean_expression_for_name(s_or_expr)}>'
             expr = get_expression_from_string(s_or_expr, all_signals, {},
-                                              f'{name}_<{s_or_expr}>',
+                                              influence_name,
                                               param_suffix=f'_{name}')
             expr_centered = get_centered_expression(expr)
             assert expr_centered.nominal == 0

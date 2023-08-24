@@ -157,7 +157,7 @@ class PlotHelper:
 
         #plt.show()
 
-        plt.savefig(cls.clean_filename(name), dpi=cls.dpi)
+        plt.savefig(cls.clean_filename(name) + '.pdf', dpi=cls.dpi, format='pdf')
         # I've had lots of problems with seeing the results of earlier plots
         # on new plots, and plt.clf might be the solution?
         # I think the issue is when a plot is created outside plot_helper,
@@ -176,6 +176,8 @@ class PlotHelper:
             required_inputs = self.test.sample_groups_test
             optional_inputs = self.test.sample_groups_opt
 
+            # TODO the next few lines talk about the "nominal mask" but I think
+            #  that's a mistake; it's the simultaneous sweep mask, right?
             # This nominal flag used to be None, but I think an update to the
             # readcsv function changed it so that None is read in as nan, and
             # now it could be None or nan depending on whether or not the
@@ -202,13 +204,38 @@ class PlotHelper:
                 plt.title(f'{lhs.friendly_name()} vs. {self.friendly_name(ri)}')
                 self._save_current_plot(f'final_model/{lhs.friendly_name()}/{lhs.friendly_name()} vs {self.friendly_name(ri)}')
 
+                # residual
+                x = self.get_column(ri)[data_nominal_mask]
+                plt.figure()
+                plt.plot(x, y_pred_nominal - y_nominal, '*')
+                plt.xlabel(self.friendly_name(ri))
+                plt.ylabel(f'{lhs.friendly_name()} Residual')
+                plt.title(f'{lhs.friendly_name()} Residual Error vs. {self.friendly_name(ri)}')
+                self._save_current_plot(f'final_model/{lhs.friendly_name()}/{lhs.friendly_name()} Residual Error vs {self.friendly_name(ri)}')
+
+
+            # output vs optional input, residual only
+            for opt in optional_inputs:
+                # residual
+                x = self.get_column(opt)[data_nominal_mask]
+                plt.figure()
+                plt.plot(x, y_pred_nominal - y_nominal, '*')
+                plt.xlabel(self.friendly_name(opt))
+                plt.ylabel(f'{lhs.friendly_name()} Residual')
+                plt.title(f'{lhs.friendly_name()} Residual Error vs. {self.friendly_name(ri)}')
+                self._save_current_plot(f'final_model/{lhs.friendly_name()}/{lhs.friendly_name()} Residual Error vs {self.friendly_name(opt)}')
+
+
             def contour_plot(x1, x2, y, y_pred, x1name, x2name, yname):
                     gridx, gridy = np.mgrid[min(x1):max(x1):1000j,
                                    min(x2):max(x2):1000j]
                     points = np.vstack((x1, x2)).T
                     try:
                         contour_data_meas = griddata(points, y, (gridx, gridy), method='linear')
-                        contour_data_pred = griddata(points, y_pred, (gridx, gridy), method='linear')
+                        if y_pred is not None:
+                            contour_data_pred = griddata(points, y_pred, (gridx, gridy), method='linear')
+                        else:
+                            contour_data_pred = None
                     except scipy.spatial.qhull.QhullError:
                         print(f'Issue with input point collinearity for contour plot {lhs}, {input1} vs {input2}')
                         return
@@ -220,14 +247,15 @@ class PlotHelper:
                     meas_breaks = meas_levels[:-1] + np.diff(meas_levels)/2
                     plt.contour(gridx, gridy, contour_data_meas, levels=meas_breaks, colors='black', linestyles='solid')
                     # TODO turn these xs back on
-                    #plt.plot(*(points.T), 'x')
-                    plt.contour(gridx, gridy, contour_data_pred, levels=meas_breaks, colors='black', linestyles='dashed')
+                    plt.plot(*(points.T), 'x')
+                    if contour_data_pred is not None:
+                        plt.contour(gridx, gridy, contour_data_pred, levels=meas_breaks, colors='black', linestyles='dashed')
                     plt.xlabel(self.friendly_name(input1))
                     plt.ylabel(self.friendly_name(input2))
                     plt.title(yname)
                     plt.grid()
                     self._save_current_plot(
-                        f'final_model/{lhs.friendly_name()}/{lhs.friendly_name()} vs {x1name} and {x2name}')
+                        f'final_model/{lhs.friendly_name()}/{yname} vs {x1name} and {x2name}')
 
             # output vs multiple required inputs
             for input_pair in itertools.combinations(required_inputs, 2):
@@ -235,6 +263,7 @@ class PlotHelper:
                 x1 = self.get_column(input1.signals[0])[data_nominal_mask]
                 x2 = self.get_column(input2.signals[0])[data_nominal_mask]
                 contour_plot(x1, x2, y_nominal, y_pred_nominal, self.friendly_name(input1), self.friendly_name(input2), self.friendly_name(lhs))
+                contour_plot(x1, x2, y_pred_nominal - y_nominal, None, self.friendly_name(input1), self.friendly_name(input2), f'{self.friendly_name(lhs)} Residual Error')
 
             # one required and one optional
             for input1 in required_inputs:
@@ -247,11 +276,17 @@ class PlotHelper:
                     y_opt = y[data_opt_mask]
                     y_pred_opt = y_pred[data_opt_mask]
                     contour_plot(x1, x2, y_opt, y_pred_opt, self.friendly_name(input1), self.friendly_name(input2), self.friendly_name(lhs))
+                    contour_plot(x1, x2, y_pred_opt - y_opt, None, self.friendly_name(input1), self.friendly_name(input2), f'{self.friendly_name(lhs)} Residual Error')
 
                     ## Do 3D scatter instead of contour; only for interactive
                     #fig = plt.figure()
                     #ax = fig.add_subplot(111, projection='3d')
-                    #ax.scatter(x1, x2, y_opt)
+                    #ax.set_xlabel(str(input1))
+                    ##ax.set_ylabel(str(input2))
+                    #ax.set_ylabel('thermometer_code')
+                    #ax.set_zlabel(lhs.friendly_name())
+                    #frequency = 4e9
+                    #ax.scatter(x1*frequency, x2, y_opt*frequency)
                     ##ax.scatter(x1, x2, y_pred)
                     ## ax.scatter(in_diff, in_cm, pred_tmp)
                     #plt.show()

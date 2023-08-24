@@ -30,7 +30,7 @@ Mmn vdd in out vdd EEPMOS l=0.1u w=1u
 .ends myinv
 
 
-.subckt myamp inn inp vdd ibias outn outp rfadj<0> rfadj<1> rfadj<2> rfadj<3> rfadj<4> rfadj<5>
+.subckt myamp inn inp vdd ibias outn outp radj<0> radj<1> radj<2> radj<3> radj<4> radj<5>
 * just need to generate vbias, let's multiply by 10, so nominal ibias maybe 20u? no idea
 Mbias ibias ibias 0 0 EENMOS l=0.1u w=2u
 X1 inn inp vdd ibias outn_mid outp_mid myamp_stage
@@ -41,52 +41,52 @@ Cloadmidn outn_mid 0 1p
 Cloadmidp outp_mid 0 1p
 
 * TODO inverter to create rf_adj_b
-Xrfinv0 vdd rfadj<0> rfadj_b<0> myinv
-Xrfinv1 vdd rfadj<1> rfadj_b<1> myinv
-Xrfinv2 vdd rfadj<2> rfadj_b<2> myinv
-Xrfinv3 vdd rfadj<3> rfadj_b<3> myinv
-Xrfinv4 vdd rfadj<4> rfadj_b<4> myinv
-Xrfinv5 vdd rfadj<5> rfadj_b<5> myinv
+Xrfinv0 vdd radj<0> radj_b<0> myinv
+Xrfinv1 vdd radj<1> radj_b<1> myinv
+Xrfinv2 vdd radj<2> radj_b<2> myinv
+Xrfinv3 vdd radj<3> radj_b<3> myinv
+Xrfinv4 vdd radj<4> radj_b<4> myinv
+Xrfinv5 vdd radj<5> radj_b<5> myinv
 
 * n side feedback
 Rrfn0 rfn0node outp 1k
-Mnrfn0 inn rfadj<0> rfn0node 0   EENMOS l=0.1u w=1u
-Mprfn0 inn rfadj_b<0> rfn0node vdd EEPMOS l=0.1u w=1u
+Mnrfn0 inn radj<0> rfn0node 0   EENMOS l=0.1u w=1u
+Mprfn0 inn radj_b<0> rfn0node vdd EEPMOS l=0.1u w=1u
 Rrfn1 rfn1node outp 2k
-Mnrfn1 inn rfadj<1> rfn1node 0   EENMOS l=0.1u w=1u
-Mprfn1 inn rfadj_b<1> rfn1node vdd EEPMOS l=0.1u w=1u
+Mnrfn1 inn radj<1> rfn1node 0   EENMOS l=0.1u w=1u
+Mprfn1 inn radj_b<1> rfn1node vdd EEPMOS l=0.1u w=1u
 Rrfn2 rfn2node outp 4k
-Mnrfn2 inn rfadj<2> rfn2node 0   EENMOS l=0.1u w=1u
-Mprfn2 inn rfadj_b<2> rfn2node vdd EEPMOS l=0.1u w=1u
+Mnrfn2 inn radj<2> rfn2node 0   EENMOS l=0.1u w=1u
+Mprfn2 inn radj_b<2> rfn2node vdd EEPMOS l=0.1u w=1u
 Rrfn3 rfn3node outp 8k
-Mnrfn3 inn rfadj<3> rfn3node 0   EENMOS l=0.1u w=1u
-Mprfn3 inn rfadj_b<3> rfn3node vdd EEPMOS l=0.1u w=1u
+Mnrfn3 inn radj<3> rfn3node 0   EENMOS l=0.1u w=1u
+Mprfn3 inn radj_b<3> rfn3node vdd EEPMOS l=0.1u w=1u
 Rrfn4 rfn4node outp 16k
-Mnrfn4 inn rfadj<4> rfn4node 0   EENMOS l=0.1u w=1u
-Mprfn4 inn rfadj_b<4> rfn4node vdd EEPMOS l=0.1u w=1u
+Mnrfn4 inn radj<4> rfn4node 0   EENMOS l=0.1u w=1u
+Mprfn4 inn radj_b<4> rfn4node vdd EEPMOS l=0.1u w=1u
 Rrfn5 rfn5node outp 32k
-Mnrfn5 inn rfadj<5> rfn5node 0   EENMOS l=0.1u w=1u
-Mprfn5 inn rfadj_b<5> rfn5node vdd EEPMOS l=0.1u w=1u
+Mnrfn5 inn radj<5> rfn5node 0   EENMOS l=0.1u w=1u
+Mprfn5 inn radj_b<5> rfn5node vdd EEPMOS l=0.1u w=1u
 
 * p side feedback
 Rrfp0 rfp0node outn 1k
-Mnrfp0 inp rfadj<0> rfp0node 0   EENMOS l=0.1u w=1u
-Mprfp0 inp rfadj_b<0> rfp0node vdd EEPMOS l=0.1u w=1u
+Mnrfp0 inp radj<0> rfp0node 0   EENMOS l=0.1u w=1u
+Mprfp0 inp radj_b<0> rfp0node vdd EEPMOS l=0.1u w=1u
 Rrfp1 rfp1node outn 2k
-Mnrfp1 inp rfadj<1> rfp1node 0   EENMOS l=0.1u w=1u
-Mprfp1 inp rfadj_b<1> rfp1node vdd EEPMOS l=0.1u w=1u
+Mnrfp1 inp radj<1> rfp1node 0   EENMOS l=0.1u w=1u
+Mprfp1 inp radj_b<1> rfp1node vdd EEPMOS l=0.1u w=1u
 Rrfp2 rfp2node outn 4k
-Mnrfp2 inp rfadj<2> rfp2node 0   EENMOS l=0.1u w=1u
-Mprfp2 inp rfadj_b<2> rfp2node vdd EEPMOS l=0.1u w=1u
+Mnrfp2 inp radj<2> rfp2node 0   EENMOS l=0.1u w=1u
+Mprfp2 inp radj_b<2> rfp2node vdd EEPMOS l=0.1u w=1u
 Rrfp3 rfp3node outn 8k
-Mnrfp3 inp rfadj<3> rfp3node 0   EENMOS l=0.1u w=1u
-Mprfp3 inp rfadj_b<3> rfp3node vdd EEPMOS l=0.1u w=1u
+Mnrfp3 inp radj<3> rfp3node 0   EENMOS l=0.1u w=1u
+Mprfp3 inp radj_b<3> rfp3node vdd EEPMOS l=0.1u w=1u
 Rrfp4 rfp4node outn 16k
-Mnrfp4 inp rfadj<4> rfp4node 0   EENMOS l=0.1u w=1u
-Mprfp4 inp rfadj_b<4> rfp4node vdd EEPMOS l=0.1u w=1u
+Mnrfp4 inp radj<4> rfp4node 0   EENMOS l=0.1u w=1u
+Mprfp4 inp radj_b<4> rfp4node vdd EEPMOS l=0.1u w=1u
 Rrfp5 rfp5node outn 32k
-Mnrfp5 inp rfadj<5> rfp5node 0   EENMOS l=0.1u w=1u
-Mprfp5 inp rfadj_b<5> rfp5node vdd EEPMOS l=0.1u w=1u
+Mnrfp5 inp radj<5> rfp5node 0   EENMOS l=0.1u w=1u
+Mprfp5 inp radj_b<5> rfp5node vdd EEPMOS l=0.1u w=1u
 
 *Rrfn inn outp 10k
 *Rrfp inp outn 10k
@@ -103,9 +103,9 @@ Cloadp outp 0 100p
 
 
 
-.subckt myamp_clamped inn inp vdd ibias outn_clamped outp_clamped rfadj<0> rfadj<1> rfadj<2> rfadj<3> rfadj<4> rfadj<5>
+.subckt myamp_clamped inn inp vdd ibias outn_clamped outp_clamped radj<0> radj<1> radj<2> radj<3> radj<4> radj<5>
 
-Xorig_amp inn inp vdd ibias outn outp rfadj<0> rfadj<1> rfadj<2> rfadj<3> rfadj<4> rfadj<5> myamp
+Xorig_amp inn inp vdd ibias outn outp radj<0> radj<1> radj<2> radj<3> radj<4> radj<5> myamp
 
 *** now just clamp outp and outn
 *** center of output is around 2.28

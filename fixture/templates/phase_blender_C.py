@@ -99,7 +99,7 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             # wait a touch longer so our read doesn't happen on the next one's
             # initial rising edge
             tester.delay(0.1 / freq)
-            return [in_b_last, out_last]
+            return [in_b_last, out_last, in_phase_delay]
 
         def analysis(self, reads):
             freq = float(self.extras['frequency'])
@@ -107,13 +107,14 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             # delta because it's time from <read request> to <edge> (always negative)
             in_b_delta = reads[0].value[0]
             out_delta = reads[1].value[0]
+            in_phase_delay = reads[2]
 
             ## fix for unintentional wrapping below 0
             #period = 1 / freq
             #if out_delay > 0.9 * period:
             #    out_delay -= period
 
-            delay_seconds = out_delta - in_b_delta
+            delay_seconds = out_delta - in_b_delta + in_phase_delay
             ret = {'out_delay': delay_seconds}
             #print('returning outdelay of', delay_seconds*freq)
             return ret

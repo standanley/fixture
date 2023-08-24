@@ -4,10 +4,10 @@ template: AmplifierTemplate
 
 checkpoint_controller:
     DCTest:
-        choose_inputs: False
-        run_sim: False
-        run_analysis: False
-        run_post_process: False
+        choose_inputs: True
+        run_sim: True
+        run_analysis: True
+        run_post_process: True
         run_regression: True
     #DCTest: False
     #DynamicTFTest: 

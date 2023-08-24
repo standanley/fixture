@@ -472,16 +472,19 @@ class Sampler:
         #  sweep_one method, it's just a holder for two lists
         data = pandas.DataFrame()
         sm = SampleManager
+        #opt_nums = {str(group): 17 for group in test.sample_groups_opt}
         for group in test.sample_groups_opt:
-            opt_nums = {'vdd': 10, 'rfadj': 40}
+            #opt_nums = {'vdd': 9, 'radj': 24}
+            opt_nums = {'vdd': 6, 'radj': 16}
             opt_num = opt_nums[str(group)]
             #if not any(s in test.input_signals for s in group.signals):
-            new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 10, opt_num)
+            new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group,9, opt_num)
             #new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 20, 17)
             data = pandas.concat((data, new_data), ignore_index=True)
         #data_all = sm.sample_all(500, test.sample_groups_test, test.sample_groups_opt)
         #data_all = sm.sample_all(100, test.sample_groups_test, test.sample_groups_opt)
-        data_all = sm.sample_all(200, test.sample_groups_test, test.sample_groups_opt)
+        #data_all = sm.sample_all(15, test.sample_groups_test, test.sample_groups_opt)
+        data_all = sm.sample_all(90, test.sample_groups_test, test.sample_groups_opt)
         data = pandas.concat((data, data_all), ignore_index=True)
 
         return data
@@ -782,15 +785,15 @@ if __name__ == '__main__':
     '''
     #visualize(get_orthogonal_samples(2, 1, 85))
 
-    Da, Dd = 2, 12
-    samples = Sampler.get_orthogonal_samples(Da, Dd, 10)
+    Da, Dd = 2, 0
+    samples = Sampler.get_orthogonal_samples(Da+Dd, 30)
 
     reorg = list(zip(*samples))
     analog_samples = list(zip(*(reorg[:Da])))
     print(analog_samples)
     digital_samples = list(zip(*(reorg[Da:])))
 
-    Sampler.assert_fifty_fifty(digital_samples)
+    #Sampler.assert_fifty_fifty(digital_samples)
     Sampler.assert_lhs(analog_samples)
     visualize(samples)
 

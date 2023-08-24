@@ -20,7 +20,7 @@ tests = [
     ('configs/tia3.yaml', None),
     ('configs/tia4.yaml', None),
     ('configs/tia3_amp.yaml', None),
-    ('configs/tia6_amp.yaml', None), # this spice model never worked
+    ('configs/tia6_amp.yaml', None),
 
 ]
 
@@ -35,5 +35,5 @@ def test_by_config(test):
     fixture.run(circuit_fname)
 
 if __name__ == '__main__':
-    test_by_config(tests[8])
+    test_by_config(tests[9])
 

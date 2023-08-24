@@ -106,7 +106,7 @@ def linear_plots():
     plt.plot(d[rf_decimal_col_name], gain_lhs_rfadj, 'x')
     plt.legend(['Measured, with vdd effect removed', 'Modeled, not including vdd effect'], loc='lower left')
     plt.title('Estimated gain vs. radj with vdd effect removed')
-    plt.xlabel('rfadj decimal value')
+    plt.xlabel('radj decimal value')
     plt.ylabel('estimated gain')
     plt.ylim((0, 3500))
     plt.grid()
@@ -116,7 +116,7 @@ def linear_plots():
 
     plt.plot(d[vdd_col_name], gain_no_rfadj, '*')
     plt.plot(d[vdd_col_name], gain_lhs_vdd, 'x')
-    plt.legend(['Measured, with rfadj effect removed', 'Modeled, not including rfadj effect'], loc='lower left')
+    plt.legend(['Measured, with radj effect removed', 'Modeled, not including radj effect'], loc='lower left')
     plt.title('Estimated gain vs. vdd with radj effect removed')
     plt.xlabel('vdd')
     plt.ylabel('estimated gain')
@@ -134,6 +134,6 @@ def nonlinear_plots():
         amplitude = 2.2 + 0.2*(vdd-3.0)
 
 
-#linear_plots()
-nonlinear_plots()
+linear_plots()
+#nonlinear_plots()
 
