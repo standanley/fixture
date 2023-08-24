@@ -458,10 +458,25 @@ def get_sampler_for_signal(signal):
 
 class Sampler:
     seed = 4
+    # the 3 here is just empirical; it seems to be big enough
+    SAMPLE_COUNT_MULTIPLIER = 3.0
+
+    @classmethod
+    def num_sample_points(cls, group, parameter_algebra):
+        assert False
 
     @classmethod
     def rand(cls):
         return random.random()
+
+    @classmethod
+    def get_num_samples(cls, sample_group, parameter_algebra):
+        count = 0
+        for s in sample_group.signals:
+            for rhs in parameter_algebra.values():
+                if s in rhs.coef_counts:
+                    count = max(count, rhs.coef_counts[s])
+        return math.ceil(count * cls.SAMPLE_COUNT_MULTIPLIER)
 
     @classmethod
     def get_samples(cls, test):
@@ -474,17 +489,28 @@ class Sampler:
         sm = SampleManager
         #opt_nums = {str(group): 17 for group in test.sample_groups_opt}
         for group in test.sample_groups_opt:
+            # hardcoding opt_num for some thesis plots
             #opt_nums = {'vdd': 9, 'radj': 24}
-            opt_nums = {'vdd': 6, 'radj': 16}
-            opt_num = opt_nums[str(group)]
-            #if not any(s in test.input_signals for s in group.signals):
-            new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group,9, opt_num)
-            #new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, 20, 17)
+            #opt_nums = {'vdd': 6, 'radj': 16}
+            #opt_num = opt_nums[str(group)]
+
+
+            opt_num = cls.get_num_samples(group, test.parameter_algebra_final)
+            req_num = max(cls.get_num_samples(sg, test.parameter_algebra_final)
+                          for sg in test.sample_groups_test)
+
+
+            new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, req_num, opt_num)
             data = pandas.concat((data, new_data), ignore_index=True)
+
         #data_all = sm.sample_all(500, test.sample_groups_test, test.sample_groups_opt)
         #data_all = sm.sample_all(100, test.sample_groups_test, test.sample_groups_opt)
         #data_all = sm.sample_all(15, test.sample_groups_test, test.sample_groups_opt)
-        data_all = sm.sample_all(90, test.sample_groups_test, test.sample_groups_opt)
+
+        total_coefs = max(len(rhs.coefs)
+                        for rhs in test.parameter_algebra_final.values())
+        total_count = math.ceil(total_coefs*cls.SAMPLE_COUNT_MULTIPLIER)
+        data_all = sm.sample_all(total_count, test.sample_groups_test, test.sample_groups_opt)
         data = pandas.concat((data, data_all), ignore_index=True)
 
         return data

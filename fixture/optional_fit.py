@@ -1,6 +1,6 @@
 import re
 from abc import ABC, abstractmethod
-from collections import defaultdict
+from collections import defaultdict, Counter
 from keyword import iskeyword
 
 import sympy
@@ -1870,6 +1870,12 @@ def get_optional_expression_from_signal(s, name):
             return AnalogExpression(s, name)
 
 
+#def get_coef_counts(expr):
+#    # this is almost as easy as
+#    # return {s: len(coefs) for s in input_signals}
+#    # except we want to condense buses
+#
+
 def get_optional_expression_from_influences(influence_list, name, all_signals):
     '''
     If s_list is empty, this is a constant.
@@ -1880,6 +1886,10 @@ def get_optional_expression_from_influences(influence_list, name, all_signals):
     def clean_expression_for_name(expression):
         return expression.replace('/', '_over_')
     individual = [ConstExpression(f'{name}_nominal')]
+
+    # used for determining how many sample points to collect
+    coefficient_counts = Counter()
+
     for s_or_expr in influence_list:
         if isinstance(s_or_expr, (SignalIn, SignalArray)):
             child_name = f'{name}_{s_or_expr.friendly_name()}'
@@ -1896,9 +1906,27 @@ def get_optional_expression_from_influences(influence_list, name, all_signals):
             individual.append(expr_centered)
         else:
             assert False, f'Unrecognized optional expression type {type(s_or_expr)} for "{s_or_expr}"'
+
+        for s in individual[-1].input_signals:
+            coefficient_counts[s] += len(individual[-1].coefs)
+
     combiner = SumExpression(len(individual), f'{name}_summer')
     child_dict = {coef: ce for ce, coef in zip(individual, combiner.coefs)}
     total = HeirarchicalExpression(combiner, child_dict, name)
+
+    # for coefficient_counts, condense buses and add 1 to represent constant
+    for s in coefficient_counts:
+        coefficient_counts[s] += 1
+    final_counts = {}
+    for s, count in coefficient_counts.items():
+        if not isinstance(s, SignalArray) and s.bus_info is not None:
+            # this is an individual bit
+            bus = all_signals.from_circuit_name(s.bus_info.bus_name)
+            final_counts[bus] = max(final_counts.get(bus, 0), count)
+        else:
+            final_counts[s] = count
+    total.optional_input_coef_counts = final_counts
+
     return total
 
 

@@ -1,6 +1,8 @@
 import itertools
 import numbers
 import os
+from collections import defaultdict
+
 import yaml
 import fixture.cfg_cleaner as cfg_cleaner
 from fixture import Representation, templates
@@ -477,6 +479,17 @@ def parse_optional_input_info(circuit_config_dict, tests):
                 child_expressions_new.append(exp)
             child_dict = {coef: ce for ce, coef in zip(child_expressions_new, rhs.parent_expression.coefs)}
             rhs_new = HeirarchicalExpression(rhs.parent_expression, child_dict, rhs.name)
+
+
+            # coefficient counts for determining how many sample points
+            coef_counts = defaultdict(int)
+            for child in rhs_new.child_expressions.values():
+                for s, count in child.optional_input_coef_counts.items():
+                    coef_counts[s] = max(coef_counts[s], count)
+            for s in rhs_new.parent_expression.input_signals:
+                coef_counts[s] = len(rhs_new.parent_expression.coefs)
+            rhs_new.coef_counts = coef_counts
+
             parameter_algebra_expr[lhs] = rhs_new
         test.parameter_algebra_final = parameter_algebra_expr
 
