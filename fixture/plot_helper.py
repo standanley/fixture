@@ -222,7 +222,7 @@ class PlotHelper:
                 plt.plot(x, y_pred_nominal - y_nominal, '*')
                 plt.xlabel(self.friendly_name(opt))
                 plt.ylabel(f'{lhs.friendly_name()} Residual')
-                plt.title(f'{lhs.friendly_name()} Residual Error vs. {self.friendly_name(ri)}')
+                plt.title(f'{lhs.friendly_name()} Residual Error vs. {self.friendly_name(opt)}')
                 self._save_current_plot(f'final_model/{lhs.friendly_name()}/{lhs.friendly_name()} Residual Error vs {self.friendly_name(opt)}')
 
 
