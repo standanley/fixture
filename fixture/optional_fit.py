@@ -429,6 +429,9 @@ class SympyExpression(Expression):
         scaling coefficient into the weights, but if that fails it will call
         this function as a fallback.
         '''
+        # TODO we want to constrain weights so that magnitude is 1
+        # I think I will just do all but one and calculate the last one
+        # I wish it were easier in my system to assign bounds and/or constraints
         new_coefs_sym = [Symbol(f'{s.friendly_name()}_weight_{self.name}')
                        for s in new_signals]
 
@@ -456,6 +459,158 @@ class SympyExpression(Expression):
         assert signal in self.input_signals
         signal_sym = self.io_symbols[signal]
         new_signals_sym = [Symbol(s.friendly_name()) for s in new_signals]
+
+        all_new_coefs = []
+
+        def vector_coef(coef_to_vector):
+            new_coefs = [Symbol(f'{coef_to_vector.name}_{s.friendly_name()}')
+                         for s in new_signals]
+            for c in new_coefs:
+                all_new_coefs.append(c)
+
+            new_expr = Add(
+                *[Mul(c, s) for c, s in zip(new_coefs, new_signals_sym)])
+            return new_expr
+
+        def combine_coefs(distributed_coef, original_coef):
+            n = f'{distributed_coef.name}_times_{original_coef.name}'
+            c = Symbol(n)
+            all_new_coefs.append(c)
+            return c
+
+        def fallback(ast):
+            assert False, 'todo'
+
+
+        def distribute(coef, tree):
+            # distribute coef into tree[0] according to path in tree
+            ast, children = tree
+            if len(children) > 0:
+                processed_children = [distribute(coef, c) for c in tree[1]]
+                return Add(*processed_children)
+            else:
+                if ast == signal_sym:
+                    # this is where we vector the input with a coef
+                    new_ast = vector_coef(coef)
+                    return new_ast
+                elif ast in self.coefs:
+                    # combine two coefs into one
+                    return combine_coefs(coef, ast)
+                else:
+                    # if it doesn't fit one of the above cases I don't think
+                    # it should have been in the tree
+                    assert False, f'Internal error in equation vectoring for {self.ast}'
+
+        def vec(ast):
+            '''
+            If the input is not here at all, or you can't distribute into this
+            ast and combine with the input, return None.
+            If it would be okay to distribute a coefficient into this ast,
+            return a list of child asts to distribute into
+
+            Different states we might want to return:
+            0: This ast would like a coefficient
+            1: This ast is a coefficient
+            2: This ast could take a coefficient into it
+            3: This ast could not take a coefficient
+
+            In all cases, return a tuple with the case and then additional stuff
+            Case 0: return a list of tree nodes to multiply the coef into
+                The tree nodes are tuples of (ast, [child nodes])
+
+            NOTE: I'm being a bit lazy about cases where there are multiple
+            things to be distributed. I may fall back when I don't need to.
+            For example, a*b*(in-c)*(in-d), I'll only end up distributing the
+            a into the first parenthetical, and won't distribute the b into the
+            second even though I should.
+            Additionally, in a*b*(c + (in-d)*(in-e)) I could distribute both
+            of them in but won't. This example is much harder to fix than the
+            last because I'd have to keep track of how many coefficients each
+            subtree could take. I'm not gonna bother.
+            '''
+
+            if ast in self.coefs:
+                return 1, (ast, [])
+
+            elif ast == signal_sym:
+                return 0, (ast, [])
+
+            elif ast.is_Add:
+                children = [vec(a) for a in ast.args]
+                cases = [c[0] for c in children]
+                if 0 in cases:
+                    if 3 in cases:
+                        # we need to fall back, and this is case 3
+                        assert False
+                    else:
+                        # will be case 0
+                        new_ast = Add(*list(c[1][0] for c in children))
+                        return 0, (new_ast, [c[1]
+                                         for a, c in zip(ast.args, children)])
+                else:
+                    new_ast = Add(*list(c[1][0] for c in children))
+                    if 3 in cases:
+                        # will be case 3
+                        return 3, (new_ast, )
+                    else:
+                        # will be case 2
+                        return 2, (new_ast, [c[1]
+                                         for a, c in zip(ast.args, children)])
+
+            elif ast.is_Mul:
+                children = [vec(a) for a in ast.args]
+                cases = [c[0] for c in children]
+                if 0 in cases:
+                    if 1 in cases:
+                        # Nice! we can put a coefficient in
+                        i0 = cases.index(0)
+                        i1 = cases.index(1)
+                        result = distribute(children[i1][1][0], children[i0][1])
+
+                        # I'm theoretically missing opportunities to do further
+                        # vectoring with other instances of the input, but I
+                        # am not going to worry about it
+
+                        remaining = [c[1][0] for i, c in enumerate(children)
+                                     if i not in [i0, i1]]
+                        result = Mul(*remaining, result)
+                        return 3, (result, )
+                    else:
+                        # this will be a case 0
+                        assert False
+                else:
+                    new_ast = Mul(*list(c[1][0] for c in children))
+                    if 1 in cases:
+                        # cool, we can distribute into the coef
+                        i = cases.index(1)
+                        return 2, (new_ast, [children[i][1]])
+                    elif 2 in cases:
+                        # still okay, we can distribute into something else
+                        i = cases.index(2)
+                        return 2, (new_ast, [children[i][1]])
+                    else:
+                        # no way to take a coef, this is case 3
+                        return 3, (new_ast, )
+
+            else:
+                # we don't know how to deal with this; it's case 3
+                children = [vec(a) for a in ast.args]
+                new_args = [c[1][0] for c in children]
+                new_ast = ast.func(*new_args)
+                return 3, (new_ast, )
+
+
+        case, tree = vec(self.ast)
+        old_ast = self.ast
+        self.ast = tree[0]
+
+        old_coefs = [c for c in self.coefs if c not in self.ast.free_symbols]
+        self.vector_cleanup(signal, new_signals, new_signals_sym, old_coefs, all_new_coefs)
+        return
+
+
+
+
 
         # search for all the instances of signal in the ast, noting specially
         # the places where it appears in a  product
@@ -1725,7 +1880,7 @@ def get_expression_from_string(string, signals, vectoring_dict, name,
         return not match
 
     # let's not do any recognition at first
-    print('param_symbols: ', param_symbols)
+    #print('param_symbols: ', param_symbols)
 
     # add param suffix
     # TODO think about what naming vs. not naming params means for this
@@ -1990,3 +2145,52 @@ def test_optimizers(error_fun, N_COEFS):
         print()
     print()
 
+
+
+
+
+def test_vectoring():
+    #coefs = [Symbol(a) for a in 'abcdef']
+    #inputs = {x: Symbol(x) for x in 'uvwxyz'}
+    coef_names = 'abcdef'
+    input_names = 'uvwxyz'
+
+    tests = [
+        #('a*x + b', 'a0*x0 + a1*x1 + b'),
+        #('b*atan(a/b*(x-c)) + d', 'b*atan(1/b*(a0*x0 + a1*x1 + a_times_c)) + d'),
+        ('a*(x+b)', 'a_x0*x0 + a_x1*x1 + a_times_b'),
+        # this next one is questionable because we have increased the number of
+        # coefficients by splitting the vectored a and the non-vectored a**3
+        # But honestly I'm not going to worry about it
+        ('a*(x+b) + a**3', 'a_x0*x0 + a_x1*x1 + a_times_b + a**3'),
+        ('a*c*(x+b) + y + a**3', 'c*(a_x0*x0 + a_x1*x1 + a_times_b) + a**3 + y'),
+        # I think this next one is bad: we would like to distribute the a inside
+        # and then distribute to the b in both terms, but instead it will
+        # go to the b in the first term and the c in the second.
+        # but maybe it's not a concern since you won't often have a c*b
+        # ('a*((in + b) + (c*b))
+
+    ]
+
+    class FakeSignal(Signal):
+        def __init__(self, name):
+            self.name = name
+            self.nominal = None
+        def friendly_name(self):
+            return self.name
+
+    for before, after in tests:
+        ast = get_ast_from_string(before)
+        coefs = [fs for fs in ast.free_symbols if fs.name in coef_names]
+        inputs = {FakeSignal(fs.name): fs
+                  for fs in ast.free_symbols if fs.name in input_names}
+        x = [s for s in inputs if s.name == 'x'][0]
+
+
+        se = SympyExpression(ast, inputs, coefs, 'vec_test_expr')
+        se.vector(x, [FakeSignal('x0'), FakeSignal('x1')])
+        after_ast = get_ast_from_string(after)
+        assert se.ast == after_ast
+
+if __name__ == '__main__':
+    test_vectoring()

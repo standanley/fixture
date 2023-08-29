@@ -77,6 +77,8 @@ stimulus_generation:
 
 extras:
     approx_settling_time: 100e-6
+    limits_diff: (-3e-6, 3e-6)
+    limits_cm: (-1e-6, 1e-6)
 
 optional_input_info:
     gain: [ibias, rfadj]

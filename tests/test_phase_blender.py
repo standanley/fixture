@@ -17,9 +17,6 @@ def test_spectre():
 
     fixture.run(circuit_fname)
 
-# I need to make some updates to fault related to verilog busses being
-# intepreted as a binary number instead of an array of bits
-@pytest.mark.xfail
 def test_generated():
     circuit_fname = file_relative_to_test('configs/generated_pb.yaml')
 
@@ -55,9 +52,9 @@ def test_therm16_model():
 
 
 if __name__ == '__main__':
-    test_generated()
+    #test_generated()
     #test_ngspice()
     #test_spectre()
     #test_C_sky130()
     #test_C_sky130_therm16()
-    #test_therm16_model()
+    test_therm16_model()
