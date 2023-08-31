@@ -31,6 +31,7 @@ class AmplifierTemplate(TemplateMaster):
             'dcgain0', 'offset0',
             'amplitude1', 'gain1',
             #'amplitude1', 'gain1', 'offset1', 'gain2', 'offset1',
+            'v_max2', 'v_min2', 'gain2', 'amplitude2', 'input_offset2',
             #'breakAB', 'breakBC', 'gainB', 'offsetB',
             #'breakAB', 'breakBC', 'gainA', 'gainB', 'offsetB', 'gainC',
             #'heightA3', 'heightC3', 'gainB3', 'offset3',
@@ -39,6 +40,7 @@ class AmplifierTemplate(TemplateMaster):
         parameter_algebra = {
             'out0': 'dcgain0*input + offset0',
             'out1': 'amplitude1*tanh(gain1/abs(amplitude1)*input)',
+            'out2': '(v_max2-v_min2)/2 * tanh(gain2/amplitude2 * (input-input_offset2)) + (v_max2+v_min2/2)',
             #'out2': 'amplitude1*tanh(gain1*input + offset1) + gain2*input + offset2',
             #'out3': 'Piecewise((gainB*breakAB, input * breakAB < 1), (gainB*input, input * breakBC < 1), (gainB*breakBC, True)) + offsetB'
             #'out3': 'Piecewise((heightA3 + offset3, input * gainB3 < heightA3), (gainB3*input + offset3, gainB3 * input + offset3 < heightC3), (heightC3, True))',
