@@ -55,8 +55,13 @@ class Tester(fault.Tester):
 
             else:
                 # not a linear combination, so just match port/value one-to-one
-                assert len(port.array) == len(value)
-                return self.poke(list(port), value, delay=delay)
+                if isinstance(value, int):
+                    # try using port's conversion
+                    binary = port.get_binary_value(value)
+                    return self.poke(list(port), binary, delay=delay)
+                else:
+                    assert len(port.array) == len(value)
+                    return self.poke(list(port), value, delay=delay)
 
         else:
             return super().poke(port, value, delay=delay)
