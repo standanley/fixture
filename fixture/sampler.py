@@ -496,8 +496,8 @@ class Sampler:
 
 
             opt_num = cls.get_num_samples(group, test.parameter_algebra_final)
-            req_num = max(cls.get_num_samples(sg, test.parameter_algebra_final)
-                          for sg in test.sample_groups_test)
+            req_num = max([cls.get_num_samples(sg, test.parameter_algebra_final)
+                          for sg in test.sample_groups_test] + [1])
 
 
             new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, req_num, opt_num)

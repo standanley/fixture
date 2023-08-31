@@ -594,9 +594,12 @@ class SympyExpression(Expression):
 
             else:
                 # we don't know how to deal with this; it's case 3
-                children = [vec(a) for a in ast.args]
-                new_args = [c[1][0] for c in children]
-                new_ast = ast.func(*new_args)
+                if len(ast.args) > 0:
+                    children = [vec(a) for a in ast.args]
+                    new_args = [c[1][0] for c in children]
+                    new_ast = ast.func(*new_args)
+                else:
+                    new_ast = ast
                 return 3, (new_ast, )
 
 
@@ -975,7 +978,7 @@ class HeirarchicalExpression(SympyExpression):
 
         self.ces_ordered = list(self.child_expressions.values())
         for child in self.ces_ordered:
-            assert child.parent_expression.ast.is_Add
+            assert child.parent_expression.ast.is_Add or child.parent_expression.ast.is_Symbol
             ces = list(child.child_expressions.values())
             const_loc = None
             for i, ce in enumerate(ces):
@@ -1291,7 +1294,9 @@ class HeirarchicalExpression(SympyExpression):
             PlotHelper.save_current_plot(
                 f'individual_fits/{self.name}/debug/{title}')
 
-        scatter(self.x_init, f'Initial Fit for {self.name}')
+        if self.x_init is not None:
+            scatter(self.x_init, f'Initial Fit for {self.name}')
+
         # now we are ready
         self.fit(optional_data, result_data)
 
@@ -1429,6 +1434,8 @@ class HeirarchicalExpression(SympyExpression):
         # TODO error handling
         result_dict = {}
         for child in self.child_expressions.values():
+            if child.x_init is None:
+                return None
             assert len(child.coefs) == len(child.x_init)
             for c, v in zip(child.coefs, child.x_init):
                 result_dict[c] = v
