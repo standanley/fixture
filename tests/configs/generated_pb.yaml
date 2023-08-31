@@ -6,12 +6,18 @@ template: PhaseBlenderTemplate_C
 
 
 checkpoint_controller:
-    Test1:
-        choose_inputs: True
-        run_sim: True
+    GlitchTest:
+        choose_inputs: False
+        run_sim: False
         run_analysis: True
         run_post_process: True
         run_regression: True
+    #Test1:
+    #    choose_inputs: True
+    #    run_sim: True
+    #    run_analysis: True
+    #    run_post_process: True
+    #    run_regression: True
 
 
 physical_pins:
@@ -58,6 +64,11 @@ extras:
     #phase_offset_range: [.2, 0.3]
     phase_offset_range: [.0, 0.3]
     #phase_offset_range: [.10, 0.100001]
+    control_input: thm_sel_bld
+
+optional_input_info:
+    glitch_start: []
+    glitch_end: []
 
 #mgenero: pb_mgenero.yaml
 
