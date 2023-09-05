@@ -46,6 +46,10 @@ class AmplifierTemplate(TemplateMaster):
             #'out3': 'Piecewise((heightA3 + offset3, input * gainB3 < heightA3), (gainB3*input + offset3, gainB3 * input + offset3 < heightC3), (heightC3, True))',
             #'out4': 'Piecewise((gainB4*(1+adjA4)*input - adjA4*heightA4, input * gainB4 < heightA4), (gainB4*input, gainB4 * input < heightC4), (gainB4*(1+adjC4)*input - adjC4*heightC4, True))'
         }
+        bounds_dict = {
+            'v_max2': (0, np.inf),
+            'v_min2': (-np.inf, 0)
+        }
         vector_mapping = {f'out{i}': ['output'] for i in range(5)}
         #num_samples = 300
 

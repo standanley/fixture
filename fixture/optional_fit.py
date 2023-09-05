@@ -180,10 +180,13 @@ class Expression(ABC):
 
             return x
 
-        if str(self) == 'out1_outdiff_combiner':
-            bounds = [(0, None), (None, None), (None, None)]
-        else:
-            bounds = None
+
+        bounds = []
+        for coef in self.coefs:
+            if coef in self.bounds_dict:
+                bounds.append(self.bounds_dict[coef])
+            else:
+                bounds.append((None, None))
 
         result = basinhopping(
             error,
@@ -268,7 +271,7 @@ class Expression(ABC):
 
 
 class SympyExpression(Expression):
-    def __init__(self, ast, io_symbols, coefs, name):
+    def __init__(self, ast, io_symbols, coefs, name, bounds_dict={}):
         '''
         ast: sympy ast
         io_symbols: dict mapping from signals to symbols
@@ -286,6 +289,8 @@ class SympyExpression(Expression):
 
         self.offset = 'should_be_set_in_recompile'
         self.nominal = 'should_be_set_in_recompile'
+
+        self.bounds_dict = bounds_dict
 
         self.recompile()
 
@@ -863,7 +868,9 @@ class HeirarchicalExpression(SympyExpression):
     nominal. I think this is doable by changing the expressions themselves,
     and I think it's easier to explain to the end user this way.
     '''
-    def __init__(self, parent_expression, child_expressions, name):
+    def __init__(self, parent_expression, child_expressions, name,
+                 bounds_dict={}):
+        # TODO this never calls super().__init__() and it probably should
         # each coefficient in the parent expression is the result of evaluating
         # a child expression
         # child_expression_names should match the parent inputs
@@ -961,6 +968,8 @@ class HeirarchicalExpression(SympyExpression):
 
         for sym in self.ast.free_symbols:
             assert sym in input_syms or sym in self.coefs
+
+        self.bounds_dict = bounds_dict
 
         self.recompile()
 
@@ -1846,7 +1855,8 @@ def get_ast_from_string(string):
     return ast
 
 def get_expression_from_string(string, signals, vectoring_dict, name,
-                               parameters=None, param_suffix=''):
+                               parameters=None, param_suffix='',
+                               bounds_dict={}):
     # tries to parse the string as an expression using sympy
     # Tokens that match signal names are mapped to that signal,
     # tokens that are unrecognized are assumed new parameters
@@ -1869,6 +1879,9 @@ def get_expression_from_string(string, signals, vectoring_dict, name,
             something is unexpected and not in the list.
         param_suffix (str): if not None, rename all parameters to append this
             suffix
+        bounds_dict (dict): keep track of bounds for a particular parameter.
+            Apply param_suffix and then store the bounds on the Expression.
+            For now, ignore bounds that apply to vectored input parameters.
     '''
     ast = get_ast_from_string(string)
 
@@ -1910,13 +1923,17 @@ def get_expression_from_string(string, signals, vectoring_dict, name,
     # add param suffix
     # TODO think about what naming vs. not naming params means for this
     param_symbols_named = []
+    bounds_named = {}
     for param_sym in param_symbols:
         new_sym = Symbol(param_sym.name + param_suffix)
         ast = ast.subs(param_sym, new_sym)
         param_symbols_named.append(new_sym)
+        if param_sym.name in bounds_dict:
+            bounds_named[new_sym] = bounds_dict[param_sym.name]
 
     # let's keep all the symbol names for now
-    parent_expr = SympyExpression(ast, io_symbols, param_symbols_named, f'{name}_combiner')
+    parent_expr = SympyExpression(ast, io_symbols, param_symbols_named,
+                                  f'{name}_combiner', bounds_dict=bounds_named)
 
     # do vectoring - see if any of the entries in vectoring_dict are relevant
     # to this expression, and if they are then apply them
@@ -1973,7 +1990,8 @@ def get_expression_from_string(string, signals, vectoring_dict, name,
     parent_expr.recompile()
 
     #child_dict = {coef: ce for ce, coef in zip(child_expressions, parent_expr.coefs)}
-    expr = HeirarchicalExpression(parent_expr, child_expressions, name)
+    expr = HeirarchicalExpression(parent_expr, child_expressions, name,
+                                  bounds_dict=bounds_named)
 
     return expr
 

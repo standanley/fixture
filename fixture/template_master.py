@@ -76,6 +76,7 @@ class TemplateMaster():
         # TODO perhaps put an init method that checks some parameter algebra
         # has been specified
         vector_mapping = {}
+        bounds_dict = {}
 
         def __init__(self, template):
             self.template = template
@@ -237,12 +238,15 @@ class TemplateMaster():
                                                           self.vectoring_dict,
                                                           lhs_vec.friendly_name(),
                                                           self.parameters,
-                                                          param_suffix=suffix)
+                                                          param_suffix=suffix,
+                                                          bounds_dict=self.bounds_dict)
                         self.parameter_algebra_vectored[lhs_vec] = expr
                 else:
                     expr = get_expression_from_string(rhs, self.signals,
-                                                      self.vectoring_dict, lhs,
-                                                      self.parameters)
+                                                      self.vectoring_dict,
+                                                      lhs,
+                                                      self.parameters,
+                                                      bounds_dict=self.bounds_dict)
                     self.parameter_algebra_vectored[lhs_signal] = expr
                 print(expr)
 
