@@ -117,11 +117,17 @@ stimulus_generation:
 optional_input_info:
     #dcgain0_out0_outdiff_indiff: ['c0 + c1*vdd + c2*vdd**2', rfadj]
     #dcgain0_out0_outdiff_indiff: [vdd, rfadj]
-    dcgain0_out0_outdiff_indiff: [vdd, '1/(rfadj+c100)']
+    #dcgain0_out0_outdiff_indiff: [vdd, '1/(rfadj+c100)']
+    gain2_out2_outdiff_indiff: [vdd, '1/(rfadj+c100)']
 
 extras:
     #approx_settling_time: 2e-9
     approx_settling_time: 10e-6
+
+# don't really need parameter hints here because the amp is 
+# amazingly linear and linear regression works
+#parameter_hints:
+#    test: 123
 
 # NOTES: approx_settling_time=10e-6 was good for rfadj=42
 # at the time I had the ngspice timestep at 10e-9

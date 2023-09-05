@@ -1480,9 +1480,27 @@ class HeirarchicalExpression(SympyExpression):
             #raise NotImplementedError('Cannot set heirarchical x_init directly')
             assert len(x_init) == len(self.coefs)
             results = {c: v for c, v in zip(self.coefs, x_init)}
+            nominal_parent_values = {}
             for child in self.child_expressions.values():
                 child_x_init = [results[c] for c in child.coefs]
                 child.x_init = child_x_init
+
+                if (isinstance(child, HeirarchicalExpression)
+                        and isinstance(child.parent_expression, SumExpression)):
+                    # if any of this child's children are const, then they
+                    # probably represent a nominal value for one of the parents
+                    for grandchild in child.child_expressions.values():
+                        if isinstance(grandchild, ConstExpression):
+                            nominal_parent_values[child] = grandchild.x_init[0]
+
+            if len(nominal_parent_values) > 0:
+                p = self.parent_expression
+                # we should set the parent x_init as well
+                p.x_init = np.zeros(len(p.coefs))
+                for c, nominal in nominal_parent_values.items():
+                    index = [c.name for c in p.coefs].index(c.name)
+                    p.x_init[index] = nominal
+
             return
 
         if self.NUM_COEFFICIENTS != len(self.child_expressions):

@@ -429,7 +429,55 @@ def parse_config(circuit_config_dict):
 
     t = TemplateClass(UserCircuit, simulator, signals, sample_groups, extras)
 
+    parse_optional_input_info(circuit_config_dict, t.tests)
+
+    parameter_hints = circuit_config_dict.get('parameter_hints', {})
+    parse_parameter_hints(t.tests, parameter_hints)
+
     return t
+
+
+
+def parse_parameter_hints(tests, parameter_hints):
+    def error(name):
+        print()
+        print('All available parameters are:')
+        all_params = []
+        for test in tests:
+            for lhs, rhs in test.parameter_algebra_final.items():
+                all_params += [c.name for c in rhs.coefs]
+        for param in all_params:
+            print(f'\t{param}')
+        assert False, f'Could not find parameter matching parameter hint for {name}, see available parameters above.'
+
+    def set_hint(rhs, name, value):
+        index = [c.name for c in rhs.coefs].index(name)
+        if rhs.x_init is None:
+            # TODO when there are no hints we use np.ones
+            #  But I feel like that was because there is no sense of scale with
+            #  np.zeros, and in this case the hint will set the scale
+            rhs.x_init = np.zeros(len(rhs.coefs))
+
+        # this is kind of sloppy because we have overridden the setter for
+        # x_init, so I'd like to set it all at once rather than edit one index
+        new_x_init = rhs.x_init
+        new_x_init[index] = value
+        rhs.x_init = new_x_init
+
+
+
+    for name, hint in parameter_hints.items():
+        found = False
+        for test in tests:
+            for lhs, rhs in test.parameter_algebra_final.items():
+                if name in [c.name for c in rhs.coefs]:
+                    set_hint(rhs, name, hint)
+                    found = True
+                    break
+            if found:
+                break
+        if not found:
+            error(name)
 
 
 def parse_optional_input_info(circuit_config_dict, tests):

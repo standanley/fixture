@@ -4,8 +4,8 @@ template: AmplifierTemplate
 
 checkpoint_controller:
     DCTest:
-        choose_inputs: True
-        run_sim: True
+        choose_inputs: False
+        run_sim: False
         run_analysis: True
         run_post_process: True
         run_regression: True
@@ -120,12 +120,22 @@ optional_input_info:
     #amplitude1_out1_outdiff: ['c0 + c1*vdd + c2*vdd**2', radj]
     #gain1_out1_outdiff_indiff: ['c0 + c1*vdd + c2*vdd**2', radj]
     #dcgain0_out0_outdiff_indiff: ['c1*vdd + c2*vdd**2', 'c0/(radj + 1)']
-    amplitude1_out1_outdiff: ['c1*vdd + c2*vdd**2', '1/(radj+c0)']
-    gain1_out1_outdiff_indiff: ['c1*vdd + c2*vdd**2', '1/(radj+c0)']
+    #amplitude1_out1_outdiff: ['c1*vdd + c2*vdd**2', '1/(radj+c0)']
+    #gain1_out1_outdiff_indiff: ['c1*vdd + c2*vdd**2', '1/(radj+c0)']
+    gain2_out2_outdiff_indiff: [vdd, '1/(radj+c100)']
 
 extras:
     #approx_settling_time: 2e-9
     approx_settling_time: 10e-6
+
+# This one does fine without hints, and in particular it doesn't even
+# look at the hints for dcgain0 because that one is linear and it can
+# get the best answer directly with linear regression
+parameter_hints:
+    #dcgain0_out0_outdiff_indiff_nominal: 10
+    v_min2_out2_outdiff_nominal: -0.10
+    v_max2_out2_outdiff_nominal: 0.10
+    gain2_out2_outdiff_indiff_nominal: 4000
 
 # NOTES: approx_settling_time=10e-6 was good for radj=42
 # at the time I had the ngspice timestep at 10e-9
