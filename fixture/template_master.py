@@ -9,7 +9,7 @@ from fixture.signals import SignalManager, SignalArray, SignalOut, SignalIn, \
 from fixture.plot_helper import PlotHelper
 
 class TemplateMaster():
-    debug = True
+    debug = False
 
     class Ports:
         def __init__(self, signal_manager):

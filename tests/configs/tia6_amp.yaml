@@ -119,9 +119,9 @@ optional_input_info:
     #dcgain0_out0_outdiff_indiff: ['c0 + c1*vdd + c2*vdd**2', radj]
     #amplitude1_out1_outdiff: ['c0 + c1*vdd + c2*vdd**2', radj]
     #gain1_out1_outdiff_indiff: ['c0 + c1*vdd + c2*vdd**2', radj]
-    #dcgain0_out0_outdiff_indiff: ['c1*vdd + c2*vdd**2', 'c0/(radj + 1)']
-    #amplitude1_out1_outdiff: ['c1*vdd + c2*vdd**2', '1/(radj+c0)']
-    #gain1_out1_outdiff_indiff: ['c1*vdd + c2*vdd**2', '1/(radj+c0)']
+    dcgain0_out0_outdiff_indiff: ['c1*vdd + c2*vdd**2', 'c0/(radj + 1)']
+    amplitude1_out1_outdiff: ['c1*vdd + c2*vdd**2', '1/(radj+c0)']
+    gain1_out1_outdiff_indiff: ['c1*vdd + c2*vdd**2', '1/(radj+c0)']
     gain2_out2_outdiff_indiff: [vdd, '1/(radj+c100)']
 
 extras:

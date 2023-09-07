@@ -1,14 +1,17 @@
 import itertools
 import numbers
 import os
+import re
 from collections import defaultdict
 
 import yaml
 import fixture.cfg_cleaner as cfg_cleaner
 from fixture import Representation, templates
 from fixture.optional_fit import get_optional_expression_from_influences, \
-    LinearExpression, HeirarchicalExpression, get_expression_from_string
-from fixture.sampler import SamplerConst, SamplerAnalog, get_sampler_for_signal
+    LinearExpression, HeirarchicalExpression, get_expression_from_string, \
+    get_ast_from_string
+from fixture.sampler import SamplerConst, SamplerAnalog, get_sampler_for_signal, \
+    SamplerConstrained
 from fixture.signals import parse_bus, parse_name, \
     SignalArray, SignalManager, SignalOut, SignalIn, AmbiguousSliceException
 import magma
@@ -335,6 +338,34 @@ def assign_template_pins(signals, template_matching):
 
 
 def parse_stimulus_generation(signals, stim_dict):
+    def parse_sample_group(names, info_dict):
+        assert isinstance(info_dict, dict), f'Info for sample group <{names}> must be dict, not <{info_dict}>'
+        signal_names = re.findall('\\w+', names)
+        assert set(signal_names)|{'filter_fun'} == set(info_dict), f'Info for sample group <{names}> must be dict with those signals, plus "filter_fun", not <{info_dict}>'
+
+        samplers = []
+        for sn in signal_names:
+            info = info_dict[sn]
+            sampler = samplers_from_entry(sn, info)
+            samplers += sampler
+
+        try:
+            ast = get_ast_from_string(info_dict['filter_fun'])
+        except TypeError:
+            assert False, f'Issue with filter_fun "{info_dict["filter_fun"]}", note that a<b<c should be written as (a<b)&(b<c)'
+        def fun(sample):
+            sample_str = {s.friendly_name(): v for s, v in sample.items()}
+            subs = {}
+            for sym in ast.free_symbols:
+                assert sym.name in sample_str, f'Cannot evaluate filter_fun "{ast}" because of unknown symbol "{sym.name}", known symbols are {list(sample_str)}'
+                subs[sym] = sample_str[sym.name]
+            result = ast.subs(subs)
+            return result
+
+        return [SamplerConstrained(samplers, fun)]
+
+
+
     def samplers_from_entry(name, info):
         # never returns multiple, but sometimes returns zero
 
@@ -342,6 +373,19 @@ def parse_stimulus_generation(signals, stim_dict):
             s = signals.from_circuit_name(name)
         except AmbiguousSliceException:
             assert False, f'Right now we do not support stimulus generation on a slice of a bus. If you want the whole bus, do not include any indices in stimulus generation. Bad key was {name}'
+        except KeyError:
+            # maybe it's a tuple of circuit signals
+            pattern = '\\((\\w+,? ?)*\\)'
+            if re.match(pattern, name):
+                return parse_sample_group(name, info)
+            else:
+                # we just don't know this key
+                assert False, f'Cannot create sampler for unknown signal name "{name}"'
+
+        # this is already done once in parse_config, but that doesn't work
+        # correctly for sample groups where this function is called recursively
+        if isinstance(info, str):
+            info = ast.literal_eval(info)
 
         if isinstance(info, Number):
             s.value = info

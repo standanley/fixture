@@ -3,19 +3,19 @@ filepath: ../spice/tia3.sp
 template: AmplifierTemplate
 
 checkpoint_controller:
-    DCTest:
-        choose_inputs: True
-        run_sim: True
-        run_analysis: True
-        run_post_process: True
-        run_regression: True
-    #DCTest: False
-    #DynamicTFTest: 
+    #DCTest:
     #    choose_inputs: True
     #    run_sim: True
     #    run_analysis: True
     #    run_post_process: True
     #    run_regression: True
+    DCTest: False
+    DynamicTFTest: 
+        choose_inputs: False
+        run_sim: False
+        run_analysis: True
+        run_post_process: True
+        run_regression: True
     #DCTest: True
 
 
@@ -105,20 +105,22 @@ stimulus_generation:
     #indiff: (-3e-6, 3e-6)
     indiff: (-100e-6, 100e-6)
     incm: (-1e-6, 1e-6)
-    vdd: (2.8, 3.0, 3.1)
-    #vdd: 3.0
+    #vdd: (2.8, 3.0, 3.1)
+    vdd: 3.0
     ibias: 10e-6
     #ibias: (2e-6, 10e-6)
     #rfadj: 32
-    rfadj: (10, 63)
-    #rfadj: (30, 50)
+    # rfadj=(10,36) is what I used for most of the thesis
+    #rfadj: (10, 63)
+    rfadj: (30, 50)
 
 
 optional_input_info:
     #dcgain0_out0_outdiff_indiff: ['c0 + c1*vdd + c2*vdd**2', rfadj]
     #dcgain0_out0_outdiff_indiff: [vdd, rfadj]
     #dcgain0_out0_outdiff_indiff: [vdd, '1/(rfadj+c100)']
-    gain2_out2_outdiff_indiff: [vdd, '1/(rfadj+c100)']
+    dcgain0_out0_outdiff_indiff: ['1/(rfadj+c100)']
+    #gain2_out2_outdiff_indiff: [vdd, '1/(rfadj+c100)']
 
 extras:
     #approx_settling_time: 2e-9
@@ -137,3 +139,4 @@ extras:
 #test_config_file: ngspice_small_tstep.yaml
 test_config_file: ngspice.yaml
 #test_config_file: ngspice_tia3.yaml
+#test_config_file: ngspice_tia3_amp_dynamics.yaml

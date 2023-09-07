@@ -37,8 +37,10 @@ def extract_pzs(nps, nzs, x, y):
     #print(y)
     #plot(x, y)
     first_good_index = 0#np.where(x > 0)[0][0]
-    x_trimmed = x[first_good_index:]
-    y_trimmed = y[first_good_index:]
+    settled = np.abs(y - y[-1]) < np.abs(y[-1]*1e-4)
+    last_good_index = np.argwhere(settled==False)[-1][0]
+    x_trimmed = x[first_good_index:last_good_index]
+    y_trimmed = y[first_good_index:last_good_index]
 
     #plot(x_trimmed, y_trimmed, ['input data'])
 
