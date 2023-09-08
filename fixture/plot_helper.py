@@ -214,8 +214,19 @@ class PlotHelper:
                 self._save_current_plot(f'final_model/{lhs.friendly_name()}/{lhs.friendly_name()} Residual Error vs {self.friendly_name(ri)}')
 
 
-            # output vs optional input, residual only
+            # output vs optional input, used to only do residual, but why?
+            # I guess because we already had the individual sweeps for the opt?
             for opt in optional_inputs:
+                x = self.get_column(opt)[data_nominal_mask]
+                plt.figure()
+                plt.plot(x, y_nominal, '*')
+                plt.plot(x, y_pred_nominal, 'x')
+                plt.xlabel(self.friendly_name(opt))
+                plt.ylabel(lhs.friendly_name())
+                plt.legend(['Measured', 'Predicted'])
+                plt.title(f'{lhs.friendly_name()} vs. {self.friendly_name(opt)}')
+                self._save_current_plot(f'final_model/{lhs.friendly_name()}/{lhs.friendly_name()} vs {self.friendly_name(opt)}')
+
                 # residual
                 x = self.get_column(opt)[data_nominal_mask]
                 plt.figure()

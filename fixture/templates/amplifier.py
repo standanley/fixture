@@ -289,7 +289,7 @@ class AmplifierTemplate(TemplateMaster):
 
         def testbench(self, tester, values):
             wait_time = float(self.extras['approx_settling_time'])*2
-            debug_time = wait_time * 4
+            debug_time = wait_time * 200
             #self.debug(tester, self.ports.inp, 1)
             #self.debug(tester, self.ports.inn, 1)
             #self.debug(tester, self.ports.outp, 1)
@@ -297,6 +297,9 @@ class AmplifierTemplate(TemplateMaster):
             #self.debug(tester, self.signals.from_spice_name('v_fz').spice_pin, 1)
             self.debug(tester, self.signals.input, debug_time)
             self.debug(tester, self.signals.output, debug_time)
+            self.debug(tester, self.signals.from_circuit_name('rfadj<1>'), debug_time)
+            self.debug(tester, self.signals.from_circuit_name('rfadj<2>'), debug_time)
+            self.debug(tester, self.signals.from_circuit_name('rfadj<3>'), debug_time)
 
             # settle from changes to optional inputs
             #tester.delay(wait_time * 1.0)

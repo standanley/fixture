@@ -6,7 +6,7 @@ import pandas
 import numpy as np
 from abc import abstractmethod
 
-from fixture.plot_helper import PlotHelper
+from fixture.plot_helper import PlotHelper, plt
 #from fixture.optional_fit import SampleManager
 import fixture.optional_fit
 from fixture.signals import SignalIn, SignalArray
@@ -35,7 +35,7 @@ class SampleManager:
         self.data = pandas.DataFrame()
 
     @classmethod
-    def sweep_one(cls, test_groups, opt_groups, group, N_test, N_optional):
+    def sweep_one(cls, test_groups, opt_groups, group, N_test, N_optional, name):
         # group is the one optional group to sweep, while holding others nominal
         # Choose N_optional values for the optional group, and then for each
         # one sweep N_test different test inputs
@@ -52,6 +52,22 @@ class SampleManager:
             assert set(opt_samples) == set(opt_sample_scaled), f'Internal error, maybe keys for {group} get_nominal() dont match the ones for get()'
             for k in opt_sample_scaled:
                 opt_samples[k].append(opt_sample_scaled[k])
+
+        if isinstance(group, SamplerConstrained):
+            # debug plot
+            for sampler_a, sampler_b in itertools.combinations(group.samplers, 2):
+                a = sampler_a.signals[0]
+                b = sampler_b.signals[0]
+                x = opt_samples[a]
+                y = opt_samples[b]
+                plt.scatter(x, y)
+                plt.title(f'Sampled input points for Sweep of {a.friendly_name()} and {b.friendly_name()}')
+                plt.xlabel(a.friendly_name())
+                plt.ylabel(b.friendly_name())
+                PlotHelper.save_current_plot(f'individual_fits/{name}/Sample Points {a.friendly_name()} vs {b.friendly_name()}')
+
+
+
 
         '''
         This code works, but the approach is not good - when N_test is small
@@ -71,6 +87,7 @@ class SampleManager:
         test_samples = test_samples_flat.reshape((N_optional, N_test, TEST_DIMS))
         '''
 
+        # sample required inputs
         # TODO nominal doesn't necessarily make sense for test inputs
         test_keys = [k for ti in test_groups for k in ti.get_nominal()]
         for k in test_keys:
@@ -500,7 +517,7 @@ class Sampler:
                           for sg in test.sample_groups_test] + [1])
 
 
-            new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, req_num, opt_num)
+            new_data = sm.sweep_one(test.sample_groups_test, test.sample_groups_opt, group, req_num, opt_num, str(test))
             data = pandas.concat((data, new_data), ignore_index=True)
 
         #data_all = sm.sample_all(500, test.sample_groups_test, test.sample_groups_opt)
