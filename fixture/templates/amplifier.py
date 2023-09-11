@@ -34,6 +34,7 @@ class AmplifierTemplate(TemplateMaster):
             #'breakAB', 'breakBC', 'gainB', 'offsetB',
             #'breakAB', 'breakBC', 'gainA', 'gainB', 'offsetB', 'gainC',
             #'heightA3', 'heightC3', 'gainB3', 'offset3',
+            'in_sq_gain3', 'in_gain3', 'offset3',
             #'gainB4', 'adjA4', 'adjC4', 'heightA4', 'heightC4'
             ]
         parameter_algebra = {
@@ -43,6 +44,7 @@ class AmplifierTemplate(TemplateMaster):
             #'out2': 'amplitude1*tanh(gain1*input + offset1) + gain2*input + offset2',
             #'out3': 'Piecewise((gainB*breakAB, input * breakAB < 1), (gainB*input, input * breakBC < 1), (gainB*breakBC, True)) + offsetB'
             #'out3': 'Piecewise((heightA3 + offset3, input * gainB3 < heightA3), (gainB3*input + offset3, gainB3 * input + offset3 < heightC3), (heightC3, True))',
+            'out3': 'in_sq_gain3*(input**2) + in_gain3*input + offset3',
             #'out4': 'Piecewise((gainB4*(1+adjA4)*input - adjA4*heightA4, input * gainB4 < heightA4), (gainB4*input, gainB4 * input < heightC4), (gainB4*(1+adjC4)*input - adjC4*heightC4, True))'
         }
         bounds_dict = {
