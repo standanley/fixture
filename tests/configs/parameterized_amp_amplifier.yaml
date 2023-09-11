@@ -7,8 +7,8 @@ template: AmplifierTemplate
 checkpoint_controller:
     #DCTest: True
     DCTest:
-        choose_inputs: False
-        run_sim: False
+        choose_inputs: True
+        run_sim: True
         run_analysis: True
         run_post_process: True
         run_regression: True
@@ -63,6 +63,10 @@ stimulus_generation:
 #optional_input_info:
 #    dcgain: ['c0*adj + c1*adj**2']
 #    #offset: [ibias]
+
+digital_modes:
+    order: [ctrl<1>, ctrl<0>]
+    modes: ['00', '01', '10']
 
 
 extras:
