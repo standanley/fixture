@@ -56,7 +56,7 @@ class Regression:
         return f'{name}_invec[{vec_i}]'
 
 
-    def __init__(self, template, test, data):
+    def __init__(self, template, test, data, mode_prefix):
         '''
         Incoming data should be of the form 
         {pin:[x1, ...], ...}
@@ -107,14 +107,14 @@ class Regression:
 
             # do the regression!
             print('Starting parameter fit')
-            coefs_fit = total_expr.fit_by_group(df_filtered, lhs_data)
+            coefs_fit = total_expr.fit_by_group(df_filtered, lhs_data, mode_prefix)
             #total_expr.coefs_fit = coefs_fit
             for line in verilog:
                 print(line)
             for n, v in zip(verilog_const_names, total_expr.x_opt):
                 print(f'{n} = {v};')
             print()
-            results_expr[lhs] = total_expr
+            results_expr[lhs] = total_expr.copy()
 
         # We don't edit data, so there's no reason to re-save it here
         #self.expr_dataframe = data

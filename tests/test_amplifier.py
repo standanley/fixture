@@ -28,6 +28,7 @@ tests = [
 @pytest.mark.parametrize('test', tests)
 def test_by_config(test):
     config, req = test
+    print('Testing ', config)
     if req is not None and not shutil.which(req):
         pytest.skip(f'Requirement "{req}" not installed here')
         return
@@ -36,5 +37,5 @@ def test_by_config(test):
     fixture.run(circuit_fname)
 
 if __name__ == '__main__':
-    test_by_config(tests[8])
+    test_by_config(tests[4])
 

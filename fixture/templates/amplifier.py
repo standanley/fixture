@@ -62,21 +62,27 @@ class AmplifierTemplate(TemplateMaster):
 
         def testbench(self, tester, values):
             #debug_time = 500e-9
-            debug_time = 10#self.extras['approx_settling_time']*800
+            debug_time = self.extras['approx_settling_time']*800
             #self.debug(tester, self.signals.input, debug_time)
             #self.debug(tester, self.signals.output[0], debug_time)
             #self.debug(tester, self.signals.input[0], debug_time)
-            self.debug(tester, self.signals.input[0], debug_time)
-            self.debug(tester, self.signals.input[1], debug_time)
+            if isinstance(self.signals.input, SignalArray):
+                for s in self.signals.input:
+                    self.debug(tester, s, debug_time)
+            else:
+                self.debug(tester, self.signals.input, debug_time)
+            if isinstance(self.signals.output, SignalArray):
+                for s in self.signals.output:
+                    self.debug(tester, s, debug_time)
+            else:
+                self.debug(tester, self.signals.output, debug_time)
             #self.debug(tester, self.signals.from_circuit_name('cm_adj<0>').spice_pin, debug_time)
             #self.debug(tester, self.signals.from_circuit_name('cm_adj<1>').spice_pin, debug_time)
             #self.debug(tester, self.signals.from_circuit_name('cm_adj<2>').spice_pin, debug_time)
             #self.debug(tester, self.signals.from_circuit_name('cm_adj<3>').spice_pin, debug_time)
             #self.debug(tester, self.signals.from_circuit_name('vbias').spice_pin, debug_time)
-            self.debug(tester, self.signals.from_circuit_name('inp').spice_pin, debug_time)
             #self.debug(tester, self.signals.from_circuit_name('outp').spice_pin, debug_time)
             #self.debug(tester, self.signals.from_circuit_name('outp_clamped').spice_pin, debug_time)
-            self.debug(tester, self.signals.from_circuit_name('inn').spice_pin, debug_time)
             #self.debug(tester, self.signals.from_circuit_name('outn').spice_pin, debug_time)
             #self.debug(tester, self.signals.from_circuit_name('outn_clamped').spice_pin, debug_time)
             input = self.signals.input

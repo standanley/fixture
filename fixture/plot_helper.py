@@ -19,12 +19,14 @@ from scipy.interpolate import griddata
 class PlotHelper:
     dpi = 300
 
-    def __init__(self, test, parameter_algebra, mode_prefix, expr_dataframe, expr_fit):
+    def __init__(self, test, parameter_algebra, mode_prefix, expr_dataframe,
+                 expr_fit):
         self.test = test
         self.parameter_algebra = parameter_algebra
         self.mode_prefix = mode_prefix
         self.expr_dataframe = expr_dataframe
         self.expr_fit = expr_fit
+        print('expr_fit', expr_fit)
 
     def get_column(self, target, overrides=None, lhs_pred=False, param_meas=False):
         '''

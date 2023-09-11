@@ -188,6 +188,7 @@ class Expression(ABC):
             else:
                 bounds.append((None, None))
 
+        print(f'Error before:', error(x0))
         result = basinhopping(
             error,
             x0,
@@ -293,6 +294,13 @@ class SympyExpression(Expression):
         self.bounds_dict = bounds_dict
 
         self.recompile()
+
+    def copy(self):
+        # the reason for this is so that self.x_init is not shared
+        # it's okay if they point to the same list, as long as replacing
+        # the whole list isn't shared
+        return SympyExpression(self.ast, self.io_symbols, self.coefs, self.name,
+                               bounds_dict=self.bounds_dict)
 
     def recompile(self):
         # recompile fun_compiled, recalculate offset and centered params
@@ -689,9 +697,6 @@ class SympyExpression(Expression):
                             old_coefs, new_coefs)
 
 
-    def copy(self, param_suffix):
-        assert False
-
 
 def get_ast_from_signal(signal, qualifier=None):
     if isinstance(signal, SignalIn):
@@ -980,10 +985,14 @@ class HeirarchicalExpression(SympyExpression):
 
 
 
-    def fit_by_group(self, optional_data, result_data):
+    def fit_by_group(self, optional_data, result_data, mode_prefix):
         # relies on a specific structure of heirarchy and specific sweep groups
         # in optional_data in order to fit children and grandchildren one
         # piece at a time
+
+        # TODO we should update PlotHelper to make this case, where we only
+        #  use if for mode_prefix, more intentional
+        ph = PlotHelper(None, None, mode_prefix, None, None)
 
         self.ces_ordered = list(self.child_expressions.values())
         for child in self.ces_ordered:
@@ -1175,7 +1184,7 @@ class HeirarchicalExpression(SympyExpression):
                     plt.title(f'Fitting {self.name} for various {sg}')
                     plt.xlabel(f'{xaxis.friendly_name()}')
                     plt.ylabel(f'{self.parent_expression.name}')
-                    PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/Fits for {self.name} vs {xaxis.friendly_name()} from Sweeping {sg.name}')
+                    ph._save_current_plot(f'individual_fits/{self.name}/{sg.name}/Fits for {self.name} vs {xaxis.friendly_name()} from Sweeping {sg.name}')
 
                     # now plot the worst one by itself
                     plt.figure()
@@ -1193,7 +1202,7 @@ class HeirarchicalExpression(SympyExpression):
                     plt.ylabel(f'{self.parent_expression.name}')
                     plt.legend(['Measured', 'Predicted'])
                     plt.title(f'Fitting {self.name}, worst fit at {sg_val}')
-                    PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/Worst fit for {self.name} vs {xaxis.friendly_name()} from Sweeping {sg.name}')
+                    ph._save_current_plot(f'individual_fits/{self.name}/{sg.name}/Worst fit for {self.name} vs {xaxis.friendly_name()} from Sweeping {sg.name}')
 
 
             # Next we find expressions for each param, using values from earlier
@@ -1259,7 +1268,7 @@ class HeirarchicalExpression(SympyExpression):
                         plt.ylabel(f'{child.name}')
                         #plt.ylim((0, 3000))
                         plt.title(f'{grandchild_with_offset.name} vs. {sg}')
-                        PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/Individual fit for {grandchild_with_offset.name} vs {sg}')
+                        ph._save_current_plot(f'individual_fits/{self.name}/{sg.name}/Individual fit for {grandchild_with_offset.name} vs {sg}')
 
                         # TEMP for checking x_init
                         if grandchild_with_offset.x_init is not None:
@@ -1273,7 +1282,7 @@ class HeirarchicalExpression(SympyExpression):
                             plt.xlabel(f'{xaxis.friendly_name()}')
                             plt.ylabel(f'{child.name}')
                             plt.title(f'Initial Minimizer Guess for\n{grandchild_with_offset.name} vs. {sg}')
-                            PlotHelper.save_current_plot(f'individual_fits/{self.name}/{sg.name}/debug/Initial point for minimizer for {grandchild_with_offset.name} vs {sg}')
+                            ph._save_current_plot(f'individual_fits/{self.name}/{sg.name}/debug/Initial point for minimizer for {grandchild_with_offset.name} vs {sg}')
                         print()
 
                     result_fits[child.ces_ordered[0]].append(grandchild_with_offset.x_opt[-1:])
@@ -1300,7 +1309,7 @@ class HeirarchicalExpression(SympyExpression):
             plt.xlabel('Measured')
             plt.ylabel('Predicted')
 
-            PlotHelper.save_current_plot(
+            ph._save_current_plot(
                 f'individual_fits/{self.name}/debug/{title}')
 
         if self.x_init is not None:

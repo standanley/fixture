@@ -5,7 +5,13 @@ template: AmplifierTemplate
 
 
 checkpoint_controller:
-    DCTest: True
+    #DCTest: True
+    DCTest:
+        choose_inputs: False
+        run_sim: False
+        run_analysis: True
+        run_post_process: True
+        run_regression: True
 
 physical_pins:
     vdd:
@@ -28,7 +34,7 @@ physical_pins:
         first_one: low
     ctrl<1:0>:
         direction: in
-        #datatype: true_digital
+        is_true_digital: True
         datatype: bit
         bus_type: binary
     my_out:
@@ -52,11 +58,11 @@ stimulus_generation:
     #adj: 0.5
     #ba: (0, 15)
     ba: 7
-    ctrl: 0
+    #ctrl: 0
 
-optional_input_info:
-    dcgain: ['c0*adj + c1*adj**2']
-    #offset: [ibias]
+#optional_input_info:
+#    dcgain: ['c0*adj + c1*adj**2']
+#    #offset: [ibias]
 
 
 extras:

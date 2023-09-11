@@ -143,37 +143,42 @@ class Checkpoint:
         data = self.data[test]['extracted_data']
         return data
 
-    def save_regression_results(self, test, rr):
-        # TODO doesn't work with multiple modes
-        self.data[test]['regression_results'] = rr
-        # remove references from rr because yaml doesn't handle them well
-        rr_dict = {}
-        for lhs, rhs in rr.items():
-            coef_names = [f'lhs[{i}]' for i in range(rhs.NUM_COEFFICIENTS)]
-            verilog = rhs.verilog(lhs, coef_names)
-            # TODO I think lhs might always be an AnalysisResultSignal
-            lhs_str = lhs if isinstance(lhs, str) else lhs.friendly_name()
-            rr_dict[lhs_str] = {
-                'verilog': verilog,
-                'coefs': [float(x) for x in rhs.x_opt]
-            }
+    def save_regression_results(self, test, results_by_mode):
+        self.data[test]['regression_results'] = results_by_mode
+        rbm_dict = {}
+        for mode in results_by_mode:
+            rr = results_by_mode[mode]
 
-            #rhs_clean = {}
-            #for param, expression in rhs.items():
-            #    expression_clean = {}
-            #    for thing, coef in expression.items():
-            #        if not isinstance(thing, str):
-            #            thing_clean = str(thing)
-            #            expression_clean[thing_clean] = coef
-            #        else:
-            #            expression_clean[thing] = coef
-            #    rhs_clean[param] = expression_clean
-            #rr_clean[lhs] = rhs_clean
-        print('aboutto save rr')
+            # remove references from rr because yaml doesn't handle them well
+            rr_dict = {}
+            for lhs, rhs in rr.items():
+                coef_names = [f'lhs[{i}]' for i in range(rhs.NUM_COEFFICIENTS)]
+                verilog = rhs.verilog(lhs, coef_names)
+                # TODO I think lhs might always be an AnalysisResultSignal
+                lhs_str = lhs if isinstance(lhs, str) else lhs.friendly_name()
+                rr_dict[lhs_str] = {
+                    'verilog': verilog,
+                    'coefs': [float(x) for x in rhs.x_opt]
+                }
+
+                #rhs_clean = {}
+                #for param, expression in rhs.items():
+                #    expression_clean = {}
+                #    for thing, coef in expression.items():
+                #        if not isinstance(thing, str):
+                #            thing_clean = str(thing)
+                #            expression_clean[thing_clean] = coef
+                #        else:
+                #            expression_clean[thing] = coef
+                #    rhs_clean[param] = expression_clean
+                #rr_clean[lhs] = rhs_clean
+
+            rbm_dict[mode] = rr_dict
+
         f = self._get_save_file(test, 'regression_results.yaml')
-        yaml.dump(rr_dict, f)
+        yaml.dump(rbm_dict, f)
         f.close()
-        print('finished saving rr')
+        print('finished saving regression results')
 
     def load_regression_results(self, test):
         # loads regression results into rr and returns it
@@ -184,42 +189,47 @@ class Checkpoint:
         if True or self.data[test]['regression_results'] is None:
             f = self._get_load_file(test, 'regression_results.yaml')
             print('about to load rr')
-            rr = yaml.safe_load(f)
+            rbm = yaml.safe_load(f)
             print('finished loading rr')
             f.close()
-            rr_clean = {}
+            rbm_clean = {}
+            for mode in rbm:
+                rr = rbm[mode]
 
-            for lhs, rhs in test.parameter_algebra_final.items():
-                lhs_str = lhs if isinstance(lhs, str) else lhs.friendly_name()
-                assert lhs_str in rr, f'Saved regression results missing info for {lhs}'
+                rr_clean = {}
+                for lhs, rhs in test.parameter_algebra_final.items():
+                    lhs_str = lhs if isinstance(lhs, str) else lhs.friendly_name()
+                    assert lhs_str in rr, f'Saved regression results missing info for {lhs}'
 
-                # check that saved verilog matches current verilog
-                # this makes sure the versions match
-                coef_names = [f'lhs[{i}]' for i in range(rhs.NUM_COEFFICIENTS)]
-                verilog = rhs.verilog(lhs_str, coef_names)
-                for v_old, v_new in zip(rr[lhs_str]['verilog'], verilog):
-                    assert v_old == v_new, 'Mismatch in verilog in saved regression results; probably saved results for a different circuit version'
+                    # check that saved verilog matches current verilog
+                    # this makes sure the versions match
+                    coef_names = [f'lhs[{i}]' for i in range(rhs.NUM_COEFFICIENTS)]
+                    verilog = rhs.verilog(lhs_str, coef_names)
+                    for v_old, v_new in zip(rr[lhs_str]['verilog'], verilog):
+                        assert v_old == v_new, 'Mismatch in verilog in saved regression results; probably saved results for a different circuit version'
 
-                # actually assign x_opt
-                coefs = rr[lhs_str]['coefs']
-                assert len(coefs) == rhs.NUM_COEFFICIENTS
-                rhs.x_opt = np.array(coefs)
+                    # actually assign x_opt
+                    coefs = rr[lhs_str]['coefs']
+                    assert len(coefs) == rhs.NUM_COEFFICIENTS
+                    rhs.x_opt = np.array(coefs)
 
-                # grab coefs for rr_clean
-                rr_clean[lhs] = rhs #rr[lhs]['coefs']
+                    # grab coefs for rr_clean
+                    rr_clean[lhs] = rhs #rr[lhs]['coefs']
 
-            ## edit rr in place to replace things with Signal objects
-            #for lhs, rhs in rr.items():
-            #    for param, expression in rhs.items():
-            #        for thing in list(expression.keys()):
-            #            try:
-            #                thing_obj = test.signals.from_str(thing)
-            #                expression[thing_obj] = expression[thing]
-            #                del expression[thing]
-            #            except KeyError:
-            #                pass
+                ## edit rr in place to replace things with Signal objects
+                #for lhs, rhs in rr.items():
+                #    for param, expression in rhs.items():
+                #        for thing in list(expression.keys()):
+                #            try:
+                #                thing_obj = test.signals.from_str(thing)
+                #                expression[thing_obj] = expression[thing]
+                #                del expression[thing]
+                #            except KeyError:
+                #                pass
 
-            self.data[test]['regression_results'] = rr_clean
+                rbm_clean[mode] = rr_clean
+
+            self.data[test]['regression_results'] = rbm_clean
         return self.data[test]['regression_results']
 
 

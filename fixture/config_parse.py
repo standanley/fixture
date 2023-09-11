@@ -105,9 +105,9 @@ def parse_physical_pins(physical_pin_dict):
             self.type_ = type_
             self.first_one = first_one
 
-    def make_signal(name, dt, direction, bus_info=None):
+    def make_signal(name, dt, direction, bus_info=None, is_true_digital=False):
         if direction == 'in':
-            return SignalIn(None, None, None, None, None, name, dt,
+            return SignalIn(None, None, is_true_digital, None, None, name, dt,
                                 None, None, bus_info)
         elif direction == 'out':
             return SignalOut(None, name, dt, None, None, bus_info)
@@ -125,14 +125,17 @@ def parse_physical_pins(physical_pin_dict):
         assert info['datatype'] in datatypes, f'"datatype" for "{name}" must be one of {list(datatypes.keys())}'
         assert 'direction' in info, f'Missing "direction" key for "{name}" physical pin'
         assert info['direction'] in directions, f'"direction" for "{name}" must be one of {list(directions.keys())}'
+        assert isinstance(info.get('is_true_digital', False), bool), f'"is_true_digital" for "{name}" must be True or False'
 
         datatype = datatypes[info["datatype"]]
         direction = directions[info["direction"]]
         dt = direction(datatype)
+        is_true_digital = info.get('is_true_digital', False)
 
         bus_name, indices_parsed, info_parsed, bits = parse_bus(name)
         if len(indices_parsed) == 0:
-            signal = make_signal(name, dt, info['direction'])
+            signal = make_signal(name, dt, info['direction'],
+                                 is_true_digital=is_true_digital)
             signals.append(signal)
         else:
             bus_names.add(bus_name)
@@ -140,7 +143,8 @@ def parse_physical_pins(physical_pin_dict):
                 type_ = info.get('bus_type', None)
                 first_one = info.get('first_one', None)
                 bi = BusInfo(bus_name, bit_pos, info_parsed, type_, first_one)
-                signal = make_signal(bit_name, dt, info['direction'], bi)
+                signal = make_signal(bit_name, dt, info['direction'], bi,
+                                     is_true_digital=is_true_digital)
                 bus_bits.append(signal)
 
     # now go through each bus and collect its entries into an array

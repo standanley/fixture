@@ -45,7 +45,7 @@ class SignalIn(Signal):
     def __init__(self,
                  value,
                  nominal,
-                 type_,
+                 is_true_digital,
                  get_random,
                  auto_set,
                  spice_name,
@@ -58,7 +58,7 @@ class SignalIn(Signal):
         # TODO: do we need bus info?
         self.value = value
         self.nominal = nominal
-        self.type_ = type_
+        self.is_true_digital = is_true_digital
         self.get_random = get_random
         self.auto_set = auto_set
         self.spice_name = spice_name
@@ -500,7 +500,7 @@ class SignalManager:
 
     def true_digital(self):
         # return a list of signals - no SignalArrays
-        ans = [s for s in self.flat() if isinstance(s, SignalIn) and s.type_ == 'true_digital']
+        ans = [s for s in self.flat() if isinstance(s, SignalIn) and s.is_true_digital]
         return ans
 
     def optional_expr(self):

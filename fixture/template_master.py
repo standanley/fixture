@@ -522,47 +522,44 @@ class TemplateMaster():
 
             results_each_mode = checkpoint.load_extracted_data(test)
             results_each_mode[Regression.one_literal] = 1
+            modes = sorted(set(results_each_mode.mode_id))
+
             params_by_mode = {}
-            for mode in set(results_each_mode.mode_id):
-                results = results_each_mode.loc[results_each_mode.mode_id==mode]
-                if controller['run_regression']:
-                    regression = Regression(self, test, results)
-
-                    print('TODO: plot optional effects - here or later?')
-                    #ph.plot_optional_effects()
-
+            if controller['run_regression']:
+                for mode in modes:
+                    mode_prefix = '' if mode == '()' else f'mode_{mode}_'
+                    results = results_each_mode.loc[results_each_mode.mode_id==mode]
+                    regression = Regression(self, test, results, mode_prefix)
                     rr = regression.results_expr
+                    params_by_mode[mode] = rr
 
-                    checkpoint.save_regression_results(test, rr)
-                    # TODO just a load test
-                    rr = checkpoint.load_regression_results(test)
-                else:
-                    # TODO this is not working with modes
-                    #  we should load it if/when we need it, I think
-                    rr = checkpoint.load_regression_results(test)
+                checkpoint.save_regression_results(test, params_by_mode)
+                # TODO just a load test
+                params_by_mode = checkpoint.load_regression_results(test)
 
-
-                # TODO I'm getting rid of post_regression temporarily
-                #temp = test.post_regression(regression.results_models, regression.regression_dataframe)
-                #rr.update(temp)
-
-                params_by_mode[mode] = rr
+            else:
+                # TODO this is not working with modes
+                #  we should load it if/when we need it, I think
+                params_by_mode = checkpoint.load_regression_results(test)
 
 
-            ## TODO this is temporary
-            #rr = checkpoint.load_regression_results(test)
+            # TODO I'm getting rid of post_regression temporarily
+            #temp = test.post_regression(regression.results_models, regression.regression_dataframe)
+            #rr.update(temp)
 
-            # PlotHelper.plot_regression(regression, test.parameter_algebra_vectored, regression.regression_dataframe)
-            # PlotHelper.plot_optional_effects(test, regression.regression_dataframe, regression.results)
-            # TODO this has not been tested with modes
-            mode_prefix = '' if mode == '()' else f'mode_{mode}_'
-            ph = PlotHelper(test,
-                            test.parameter_algebra_final,
-                            mode_prefix,
-                            results_each_mode,
-                            rr)
-            #ph.plot_regression()
-            ph.plot_results()
+
+
+            # now for plots
+            for mode in modes:
+                mode_prefix = '' if mode == '()' else f'mode_{mode}_'
+                rr = params_by_mode[mode]
+                ph = PlotHelper(test,
+                                test.parameter_algebra_final,
+                                mode_prefix,
+                                results_each_mode,
+                                rr)
+                #ph.plot_regression()
+                ph.plot_results()
 
             # merge results from this test in results from all tests
             for mode in params_by_mode:
