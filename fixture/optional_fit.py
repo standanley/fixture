@@ -244,7 +244,6 @@ class Expression(ABC):
         # for use after fitting has been done
         assert isinstance(data, (dict, pandas.DataFrame))
         assert self.x_opt is not None
-        print()
         #input_data = [data[input] for input in self.input_signals]
         input_data = data[self.input_signals]
         result = self.predict_many(input_data, self.x_opt)
@@ -287,11 +286,10 @@ class SympyExpression(Expression):
         self.coefs = coefs
         self.NUM_COEFFICIENTS = len(coefs)
         self.name = name
+        self.bounds_dict = bounds_dict
 
         self.offset = 'should_be_set_in_recompile'
         self.nominal = 'should_be_set_in_recompile'
-
-        self.bounds_dict = bounds_dict
 
         self.recompile()
 
@@ -299,8 +297,11 @@ class SympyExpression(Expression):
         # the reason for this is so that self.x_init is not shared
         # it's okay if they point to the same list, as long as replacing
         # the whole list isn't shared
-        return SympyExpression(self.ast, self.io_symbols, self.coefs, self.name,
+        e = SympyExpression(self.ast, self.io_symbols, self.coefs, self.name,
                                bounds_dict=self.bounds_dict)
+        e.x_init = self.x_init
+        e.x_opt = self.x_opt
+        return e
 
     def recompile(self):
         # recompile fun_compiled, recalculate offset and centered params
@@ -752,6 +753,7 @@ class AnalogExpression(SympyExpression):
     last_coef_is_offset = True
 
     def __init__(self, opt_signal, name, centering_offset=0):
+        assert False
         #self.name = name
         #self.input_signals = [opt_signal]
         io_symbols = {opt_signal: Symbol(opt_signal.friendly_name())}
@@ -778,6 +780,12 @@ class ConstExpression(SympyExpression):
     def __init__(self, name):
         sym = Symbol(name)
         super().__init__(sym, {}, [sym], name)
+
+    def copy(self):
+        e = ConstExpression(self.name)
+        e.x_init = self.x_init
+        e.x_opt = self.x_opt
+        return e
 
     #def predict(self, opt_values, coefficients):
     #    assert len(opt_values) == 0
@@ -978,6 +986,16 @@ class HeirarchicalExpression(SympyExpression):
 
         self.recompile()
 
+    def copy(self):
+        e = HeirarchicalExpression(
+            self.parent_expression.copy(),
+            {lhs: e.copy() for lhs, e in self.child_expressions.items()},
+            self.name,
+            self.bounds_dict
+        )
+        e.x_init = self.x_init
+        e.x_opt = self.x_opt
+        return e
 
 
 
@@ -1634,6 +1652,12 @@ class SumExpression(SympyExpression):
         ast = sum(coefs)
         super().__init__(ast, io_symbols, coefs, name)
 
+    def copy(self):
+        e = SumExpression(len(self.coefs), self.name)
+        e.x_init = self.x_init
+        e.x_opt = self.x_opt
+        return e
+
     #def predict(self, opt_values, coefs):
     #    assert len(opt_values) == 0
     #    return sum(coefs)
@@ -1748,6 +1772,7 @@ For ctrl[5:0], coefs = [Rnom, X1, X2, X3, X4, X5, Y, offset]
     last_coef_is_offset = True
 
     def __init__(self, inputs, name):
+        assert False
         #self.name = name
         #self.input_signals = inputs
         #self.NUM_COEFFICIENTS = len(inputs) + 2

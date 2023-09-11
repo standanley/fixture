@@ -552,11 +552,13 @@ class TemplateMaster():
             # now for plots
             for mode in modes:
                 mode_prefix = '' if mode == '()' else f'mode_{mode}_'
+                results = results_each_mode.loc[
+                    results_each_mode.mode_id == mode]
                 rr = params_by_mode[mode]
                 ph = PlotHelper(test,
                                 test.parameter_algebra_final,
                                 mode_prefix,
-                                results_each_mode,
+                                results,
                                 rr)
                 #ph.plot_regression()
                 ph.plot_results()

@@ -172,8 +172,7 @@ class PlotHelper:
 
     def plot_results(self):
         SampleManager = fixture.sampler.SampleManager
-        parameter_algebra = self.test.parameter_algebra_final
-        for lhs, expression in parameter_algebra.items():
+        for lhs, expression in self.expr_fit.items():
             # lhs will be the dependent axis
             required_inputs = self.test.sample_groups_test
             optional_inputs = self.test.sample_groups_opt

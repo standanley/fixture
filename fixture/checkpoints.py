@@ -197,7 +197,10 @@ class Checkpoint:
                 rr = rbm[mode]
 
                 rr_clean = {}
-                for lhs, rhs in test.parameter_algebra_final.items():
+                # TODO maybe check that the entries is rbm match  the ones in
+                #  parameter_algebra_final exactly
+                for lhs, rhs_orig in test.parameter_algebra_final.items():
+                    rhs = rhs_orig.copy()
                     lhs_str = lhs if isinstance(lhs, str) else lhs.friendly_name()
                     assert lhs_str in rr, f'Saved regression results missing info for {lhs}'
 
