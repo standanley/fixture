@@ -433,6 +433,34 @@ def parse_stimulus_generation(signals, stim_dict):
         sample_groups += samplers_from_entry(name, info)
     return sample_groups
 
+def parse_digital_modes(mode_config, signals):
+    true_digital = signals.true_digital()
+    assert set(mode_config) == {'order', 'modes'}, f'Keys for mode_config must be "order" and "modes", not {list(signals.keys())}'
+    order_str = mode_config['order']
+    assert isinstance(order_str, list), f'Digital mode "order" should be a list of pins, not "{order}"'
+    modes_str = mode_config['modes']
+    assert isinstance(modes_str, list), f'True digital mode config "modes" should be a list of strings with a "0" or "1" for each input, not "{modes_str}"'
+    assert all(isinstance(x, str) for x in modes_str), f'True digital mode config "modes" should be a list of strings with a "0" or "1" for each input, not "{modes_str}"'
+
+    order = []
+    for s_str in order_str:
+        try:
+            s = signals.from_circuit_name(s_str)
+            order.append(s)
+        except KeyError:
+            assert False, f'Each entry in digital mode order should be a true digital input, not "{s_str}". True digital inputs are {true_digital}'
+    assert set(true_digital) == set(order), f'Inputs included in digital mode config order must match all true digital pins. You have {order}, but we expected {true_digital}'
+
+    modes = []
+    for m_str in modes_str:
+        assert len(m_str) == len(order), f'Each entry in digital mode order should have a single "0" or "1" for each digital input, not "{m_str}"'
+        assert all(x=='0' or x=='1' for x in m_str), f'Each entry in digital mode order should have a single "0" or "1" for each digital input, not "{m_str}"'
+        modes.append({s: int(v) for s, v in zip(order, m_str)})
+
+    return modes
+
+
+
 
 def get_simulator(circuit_config_dict):
     test_config_filename = circuit_config_dict['test_config_file']
@@ -475,7 +503,9 @@ def parse_config(circuit_config_dict):
 
     extras = parse_extras(circuit_config_dict['extras'])
 
-    t = TemplateClass(UserCircuit, simulator, signals, sample_groups, extras)
+    digital_modes = parse_digital_modes(circuit_config_dict['digital_modes'], signals)
+
+    t = TemplateClass(UserCircuit, simulator, signals, sample_groups, extras, digital_modes)
 
     parse_optional_input_info(circuit_config_dict, t.tests)
 

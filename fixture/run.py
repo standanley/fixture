@@ -51,8 +51,6 @@ def _run(circuit_config_dict):
 
 
     t = config_parse.parse_config(circuit_config_dict)
-    #TODO this might be a good place to build up nonlinear expressions
-    #config_parse.parse_optional_input_info(circuit_config_dict, t.tests)
 
     checkpoint = Checkpoint(t, 'checkpoint_folder')
 

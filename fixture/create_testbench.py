@@ -153,7 +153,14 @@ class Testbench():
         #true_digital = [s for s in self.test.signals if isinstance(s, SignalIn) and s.type_ == 'true_digital']
         true_digital = self.test.signals.true_digital()
         num_digital = len(true_digital)
-        self.true_digital_modes = list(product(range(2), repeat=num_digital))
+        #self.true_digital_modes = list(product(range(2), repeat=num_digital))
+        #self.true_digital_modes = [(0, 0), (1, 1)]
+
+        def convert_mode(mode_dict):
+            assert set(true_digital) == set(mode_dict)
+            return tuple(mode_dict[s] for s in true_digital)
+        self.true_digital_modes = [convert_mode(md) for md in self.template.digital_modes]
+
         for digital_mode in self.true_digital_modes:
             self.set_digital_mode(digital_mode, self.template.extras.get('mode_settle_time', 0))
             #for v_optional, v_test in zip(self.optional_vectors, self.test_vectors):

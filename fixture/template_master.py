@@ -32,7 +32,7 @@ class TemplateMaster():
             except KeyError as err:
                 raise AttributeError(err)
 
-    def __init__(self, circuit, simulator, signal_manager, sample_groups, extras={}):
+    def __init__(self, circuit, simulator, signal_manager, sample_groups, extras, digital_modes):
         '''
         circuit: The magma circuit
         port_mapping: a dictionary of {template_name: circuit_name} for required pins
@@ -45,6 +45,7 @@ class TemplateMaster():
         self.extras = extras
         self.simulator = simulator
         self.sample_groups = sample_groups
+        self.digital_modes = digital_modes
 
         # by the time the template is instantiated, a child should have added this
         assert hasattr(self, 'required_ports')
