@@ -8,7 +8,7 @@ import yaml
 import fixture.cfg_cleaner as cfg_cleaner
 from fixture import Representation, templates
 from fixture.optional_fit import get_optional_expression_from_influences, \
-    LinearExpression, HeirarchicalExpression, get_expression_from_string, \
+    HierarchicalExpression, get_expression_from_string, \
     get_ast_from_string
 from fixture.sampler import SamplerConst, SamplerAnalog, get_sampler_for_signal, \
     SamplerConstrained
@@ -434,6 +434,8 @@ def parse_stimulus_generation(signals, stim_dict):
     return sample_groups
 
 def parse_digital_modes(mode_config, signals):
+    if mode_config == {}:
+        return {}
     true_digital = signals.true_digital()
     assert set(mode_config) == {'order', 'modes'}, f'Keys for mode_config must be "order" and "modes", not {list(signals.keys())}'
     order_str = mode_config['order']
@@ -503,7 +505,8 @@ def parse_config(circuit_config_dict):
 
     extras = parse_extras(circuit_config_dict['extras'])
 
-    digital_modes = parse_digital_modes(circuit_config_dict['digital_modes'], signals)
+    digital_modes_orig = circuit_config_dict.get('digital_modes', {})
+    digital_modes = parse_digital_modes(digital_modes_orig, signals)
 
     t = TemplateClass(UserCircuit, simulator, signals, sample_groups, extras, digital_modes)
 
@@ -604,7 +607,7 @@ def parse_optional_input_info(circuit_config_dict, tests):
                 #rhs_new[exp] = multiplier
                 child_expressions_new.append(exp)
             child_dict = {coef: ce for ce, coef in zip(child_expressions_new, rhs.parent_expression.coefs)}
-            rhs_new = HeirarchicalExpression(rhs.parent_expression, child_dict, rhs.name)
+            rhs_new = HierarchicalExpression(rhs.parent_expression, child_dict, rhs.name)
 
 
             # coefficient counts for determining how many sample points
@@ -635,7 +638,7 @@ def parse_optional_input_info(circuit_config_dict, tests):
     #            combined_expression_inputs.append(multiplier[0])
     #            combined_expression_children.append(param_expr)
     #        combined_expression_algebra = LinearExpression(combined_expression_inputs, f'{lhs}_combiner')
-    #        combined_expression = HeirarchicalExpression(combined_expression_algebra, combined_expression_children, lhs)
+    #        combined_expression = HierarchicalExpression(combined_expression_algebra, combined_expression_children, lhs)
     #        parameter_algebra_final[lhs] = combined_expression
     #    test.parameter_algebra_final = parameter_algebra_final
 

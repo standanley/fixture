@@ -1,19 +1,6 @@
-import itertools
-from collections import defaultdict
-from functools import reduce
-
-import pandas.core.computation.ops
-import statsmodels.formula.api as smf
-import pandas
-from itertools import combinations, product
-import magma
-import re
-from ast import literal_eval
-
+# TODO these import are unused but they fix a weird import error issue
 from fixture.signals import SignalArray, SignalIn, CenteredSignalIn
-import operator
-
-from fixture.optional_fit import get_optional_expression_from_influences, LinearExpression, HeirarchicalExpression
+from fixture.optional_fit import get_optional_expression_from_influences, HierarchicalExpression
 
 
 class Regression:

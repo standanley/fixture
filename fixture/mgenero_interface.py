@@ -3,7 +3,7 @@ from collections import defaultdict
 import yaml
 import os
 
-from fixture.optional_fit import Expression, HeirarchicalExpression
+from fixture.optional_fit import Expression, HierarchicalExpression
 from fixture.signals import SignalIn, SignalOut, SignalArray
 from fixture.regression import Regression
 import re
@@ -37,7 +37,7 @@ def dump_yaml(template, lhs_by_mode, mapping, requested_params):
         assert isinstance(expression, Expression)
         if expression.name == name:
             return expression
-        elif isinstance(expression, HeirarchicalExpression):
+        elif isinstance(expression, HierarchicalExpression):
             # we are not careful about duplicates; we just take the first match
             for child in expression.child_expressions:
                 res = search_for_param(name, child)
