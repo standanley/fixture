@@ -62,6 +62,7 @@ class Checkpoint:
         folder = os.path.join(self.filepath, str(test))
         os.makedirs(folder, exist_ok=True)
         filename = os.path.join(folder, filename)
+        print(f'Writing to checkpoint file {filename}')
         if os.path.exists(filename):
             print(f'Overwriting file {filename}')
 
@@ -178,7 +179,6 @@ class Checkpoint:
         f = self._get_save_file(test, 'regression_results.yaml')
         yaml.dump(rbm_dict, f)
         f.close()
-        print('finished saving regression results')
 
     def load_regression_results(self, test):
         # loads regression results into rr and returns it
@@ -188,9 +188,7 @@ class Checkpoint:
 
         if True or self.data[test]['regression_results'] is None:
             f = self._get_load_file(test, 'regression_results.yaml')
-            print('about to load rr')
             rbm = yaml.safe_load(f)
-            print('finished loading rr')
             f.close()
             rbm_clean = {}
             for mode in rbm:

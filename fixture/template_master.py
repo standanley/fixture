@@ -249,8 +249,6 @@ class TemplateMaster():
                                                       self.parameters,
                                                       bounds_dict=self.bounds_dict)
                     self.parameter_algebra_vectored[lhs_signal] = expr
-                print(expr)
-
 
             return
 

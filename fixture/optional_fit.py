@@ -411,7 +411,6 @@ class SympyExpression(Expression):
 
     def verilog(self, lhs, coef_names):
         assert isinstance(lhs, str)
-        print('TODO: SympyExpression verilog')
         coef_subs = zip(self.coefs, [Symbol(c) for c in coef_names])
         ast_coef_names = self.ast.subs(coef_subs)
         return [lhs + '=' + str(ast_coef_names)]

@@ -26,7 +26,6 @@ class PlotHelper:
         self.mode_prefix = mode_prefix
         self.expr_dataframe = expr_dataframe
         self.expr_fit = expr_fit
-        print('expr_fit', expr_fit)
 
     def get_column(self, target, overrides=None, lhs_pred=False, param_meas=False):
         '''

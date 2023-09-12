@@ -815,7 +815,6 @@ def visualize(samples):
     # an extra time here
     plt.grid()
     PlotHelper.save_current_plot('sample_test')
-    print('created sample_test plot')
 
 
 if __name__ == '__main__':
