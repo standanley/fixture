@@ -452,6 +452,7 @@ class SympyExpression(Expression):
             fallback_name_count[0] += num
             for sym in syms:
                 all_new_coefs.append(sym)
+                self.bounds_dict[sym] = (-1, 1)
 
             size = '+'.join(f'{sym.name}**2' for sym in syms)
             final_str = f'sqrt(1-({size}))'
