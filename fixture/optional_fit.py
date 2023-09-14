@@ -442,6 +442,46 @@ class SympyExpression(Expression):
 
         all_new_coefs = []
 
+        # this should be an integer, but I need a pointer to an integer to do
+        # some globalish variable hack
+        fallback_name_count = [0]
+        def fallback_expr():
+            num = len(new_signals) - 1
+            syms = [Symbol(f'{signal.friendly_name()}_vec{i}')
+                    for i in range(fallback_name_count[0], fallback_name_count[0]+num)]
+            fallback_name_count[0] += num
+            for sym in syms:
+                all_new_coefs.append(sym)
+
+            size = '+'.join(f'{sym.name}**2' for sym in syms)
+            final_str = f'sqrt(1-({size}))'
+            final = sympy.parse_expr(final_str)
+            ast = Add(*[Mul(c, s) for c, s in zip(syms+[final], new_signals_sym)])
+            return ast
+
+        def replace_one_signal(ast, sub):
+            # walk the ast and subs the first occurrence of signal_sym you find
+            if ast == signal_sym:
+                return sub
+            else:
+                done = False
+                new_args = []
+                for arg in ast.args:
+                    if done:
+                        new_args.append(arg)
+                    elif signal_sym in arg.free_symbols:
+                        new_arg = replace_one_signal(arg, sub)
+                        new_args.append(new_arg)
+                        done = True
+                    else:
+                        new_args.append(arg)
+                assert done, f'Failed to replace_one_signal, could not find {signal_sym} in {ast}'
+                ans = ast.func(*new_args)
+                return ans
+
+
+
+
         def vector_coef(coef_to_vector):
             new_coefs = [Symbol(f'{coef_to_vector.name}_{s.friendly_name()}')
                          for s in new_signals]
@@ -457,9 +497,6 @@ class SympyExpression(Expression):
             c = Symbol(n)
             all_new_coefs.append(c)
             return c
-
-        def fallback(ast):
-            assert False, 'todo'
 
 
         def distribute(coef, tree):
@@ -585,6 +622,15 @@ class SympyExpression(Expression):
 
         case, tree = vec(self.ast)
         self.ast = tree[0]
+
+
+        # Fallback replacement
+
+        while signal_sym in self.ast.free_symbols:
+            # still another occurrence that was not vectored
+            fallback = fallback_expr()
+            self.ast = replace_one_signal(self.ast, fallback)
+
 
         old_coefs = [c for c in self.coefs if c not in self.ast.free_symbols]
         self.vector_cleanup(signal, new_signals, new_signals_sym, old_coefs, all_new_coefs)
@@ -1200,6 +1246,11 @@ class HierarchicalExpression(SympyExpression):
 
     @x_init.setter
     def x_init(self, x_init):
+        if x_init is None:
+            self.parent_expression.x_init = None
+            for c in self.child_expressions.values():
+                c.x_init = None
+            return
         if not all(isinstance(c, ConstExpression)
                    for c in self.child_expressions):
             #raise NotImplementedError('Cannot set heirarchical x_init directly')

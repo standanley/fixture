@@ -9,14 +9,14 @@ checkpoint_controller:
     #    run_analysis: True
     #    run_post_process: True
     #    run_regression: True
-    DCTest: False
-    DynamicTFTest: 
-        choose_inputs: False
-        run_sim: False
-        run_analysis: True
-        run_post_process: True
-        run_regression: True
-    #DCTest: True
+    #DCTest: False
+    DynamicTFTest: False
+    #    choose_inputs: False
+    #    run_sim: False
+    #    run_analysis: True
+    #    run_post_process: True
+    #    run_regression: True
+    DCTest: True
 
 
 

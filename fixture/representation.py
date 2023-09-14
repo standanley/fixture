@@ -155,7 +155,7 @@ class Representation:
                 # TODO does it makes sense to calculate the value from refs?
                 # I think not, but I don't know the right way to handle this
                 assert isinstance(ref_signal, SignalIn)
-                self.parent_signal.type_ = ref_signal.type_
+                self.parent_signal.is_true_digital = ref_signal.is_true_digital
                 self.parent_signal.get_random = ref_signal.get_random
                 self.parent_signal.auto_set = ref_signal.auto_set
                 self.parent_signal.optional_expr = ref_signal.optional_expr

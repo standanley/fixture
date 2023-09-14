@@ -143,7 +143,7 @@ def create_input_domain_signal(name, value, spice_pin=None,
     return SignalIn(
         value,
         'nominal_should_be_unused_for_template_signal',
-        'analog',
+        False,
         type(value) == tuple,
         spice_pin is not None,
         spice_pin,
