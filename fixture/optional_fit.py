@@ -90,7 +90,7 @@ class Expression(ABC):
                     continue
 
                 # we were able to use this trick! we are done
-                print(f'Successfully fit {self} using {fit_trick}')
+                #print(f'Successfully fit {self} using {fit_trick}')
                 self.x_opt = result
                 return result
 
@@ -116,7 +116,7 @@ class Expression(ABC):
         #cProfile.runctx('to_profile()', None, locals())
         import time
         start = time.time()
-        print('Minimizing', self.name)
+        #print('Minimizing', self.name)
         assert x0 is not None
         #result = minimize(error, x0, method='Nelder-Mead', options={
         #    #'ftol': 1e-8, # Powell
@@ -162,7 +162,7 @@ class Expression(ABC):
             else:
                 bounds.append((None, None))
 
-        print(f'Error before:', error(x0))
+        #print(f'Error before:', error(x0))
         result = basinhopping(
             error,
             x0,
@@ -183,11 +183,11 @@ class Expression(ABC):
         )
         x_opt = result.x
 
-        print('minimization took', time.time() - start, 'error', error(x_opt))
+        #print('minimization took', time.time() - start, 'error', error(x_opt))
         self.x_opt = x_opt
-        print(x0)
-        print(x_opt)
-        print()
+        #print(x0)
+        #print(x_opt)
+        #print()
 
 
         if False:
@@ -939,10 +939,10 @@ class HierarchicalExpression(SympyExpression):
                 self.parent_expression.fit(point_data, point_data_res,
                                            parent_by_group_x_init)
 
-                print(f'Result for group={sg}, sweep_id={si}:')
-                print(self.parent_expression.coefs)
-                print(self.parent_expression.x_opt)
-                print()
+                #print(f'Result for group={sg}, sweep_id={si}:')
+                #print(self.parent_expression.coefs)
+                #print(self.parent_expression.x_opt)
+                #print()
 
                 parent_by_group_x_init = self.parent_expression.x_opt
                 group_results.append(self.parent_expression.x_opt)
