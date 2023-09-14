@@ -105,14 +105,6 @@ class Testbench():
                 if hasattr(s, 'spice_pin'):
                     test_inputs[s.spice_pin] = self.test_vectors[s][i]
 
-        # TODO do we want to do this? we should be careful of bit ordering, but I think this is ok
-        '''
-        # turn lists of bits into magma BitVector types
-        for name, val in test_inputs.items():
-            if type(val) == list:
-                test_inputs[name] = BitVector[len(val)](val)
-        '''
-
         # Condense vectored inputs into a single entry in test_inputs
         for s in self.test.signals:
             if isinstance(s, SignalArray):
@@ -150,10 +142,8 @@ class Testbench():
         self.result_processing_list = []
         self.set_pinned_inputs()
 
-        #true_digital = [s for s in self.test.signals if isinstance(s, SignalIn) and s.type_ == 'true_digital']
         true_digital = self.test.signals.true_digital()
         num_digital = len(true_digital)
-        #self.true_digital_modes = [(0, 0), (1, 1)]
 
         def convert_mode(mode_dict):
             assert set(true_digital) == set(mode_dict)
@@ -165,9 +155,6 @@ class Testbench():
 
         for digital_mode in self.true_digital_modes:
             self.set_digital_mode(digital_mode, self.template.extras.get('mode_settle_time', 0))
-            #for v_optional, v_test in zip(self.optional_vectors, self.test_vectors):
-            #    reads = self.run_test_vector(v_test, v_optional)
-            #    self.result_processing_list.append((digital_mode, v_test, v_optional, reads))
             for i in range(self.test_vectors.shape[0]):
                 reads = self.run_test_point(i)
                 self.result_processing_list.append((digital_mode, i, reads))
@@ -273,7 +260,6 @@ class Testbench():
             # Note loop_i != result_i when there are multiple digital modes
 
             vectored_outputs = self.test.signals.vectored_out()
-            #out_vec_name_mapping = {}
             if len(vectored_outputs) == 0:
                 # no vectored output
                 results_out_req = self.call_analysis(reads_template)
@@ -293,15 +279,7 @@ class Testbench():
                 self.tester.clear_vector_read_mode(vectored_output)
 
 
-            #for k,v in results_out_req.items():
-            #    if type(v) == np.ndarray:
-            #        results_out_req[k] = float(v)
-
             results_out_opt = self.process_optional_outputs(reads_optional)
-            # TODO this loop is copy/pasted from a few lines above
-            #for k,v in results_out_opt.items():
-            #    if type(v) == np.ndarray:
-            #        results_out_opt[k] = float(v)
 
             # put results_analysis into lists
             if loop_i == 0:
@@ -336,17 +314,6 @@ class Testbench():
         # and they will double up when you try to concatenate copies
         results_test_vectors = {k: pandas.concat([v]*num_modes, ignore_index=True)
                                 for k, v in self.test_vectors_all.items()}
-
-        # TODO I don't think this block is necessary because that info was
-        #  already in self.test_vectors_all
-        ## add additional rows to results_test_vectors to include the decimal value of binary buses
-        #for s in self.test.signals.random_qa():
-        #    # possible to not be an array if bits are declared separately I think...
-        #    if isinstance(s, SignalArray):
-        #        results_binary = [results_test_vectors[b] for b in s]
-        #        results_decimal = s.get_decimal_value(results_binary)
-        #        results_test_vectors[s] = results_decimal
-
 
 
         results_comb = {**results_test_vectors,

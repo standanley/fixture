@@ -321,13 +321,6 @@ class SignalManager:
                 continue
 
             assert len(entries) > 0
-            # For circuit names we cared about this stuff, but now we don't
-            #brackets_rep = entries[0].bus_info.brackets
-            #assert all(e.bus_info.brackets == brackets_rep for e in entries), f'Mismatched number of dimensions, index direction, or bracket type for bus "{bus_name}"'
-            #type_rep = entries[0].bus_info.type_
-            #assert all(e.bus_info.type_ == type_rep for e in entries), f'Mismatched number of dimensions, index direction, or bracket type for bus "{bus_name}"'
-            #first_one_rep = entries[0].bus_info.first_one
-            #assert all(e.bus_info.first_one == first_one_rep for e in entries), f'Mismatched number of dimensions, index direction, or bracket type for bus "{bus_name}"'
 
             all_indices = np.array(list(e[1] for e in entries))
             indices_limits_lower = np.min(all_indices, 0)
@@ -349,7 +342,6 @@ class SignalManager:
             #bi_total = BusInfo(bus_name, indices_limits_upper_exclusive, brackets_rep, type_rep, first_one_rep)
             bi_total = None
             sa = SignalArray(array, bi_total, None, bus_name)
-            #signals.append(sa)
             self.signals_by_template_name[bus_name] = sa
 
 
@@ -422,25 +414,6 @@ class SignalManager:
                 a = a[i]
             return a
 
-    def from_str(self, name):
-        assert False, 'unused'
-        # TODO this is based on assumptions about the various __str__ methods
-        if name[0] != '<' or name[-1] != '>':
-            raise KeyError(name)
-        name = name[1:-1]
-        tokens = name.split(' -- ')
-        if len(tokens) == 2:
-            t_name, c_name = tokens
-        else:
-            t_name, c_name, indices = tokens
-
-        if t_name != 'None':
-            return self.from_template_name(t_name)
-        elif c_name != 'None':
-            return self.from_circuit_name(c_name)
-        else:
-            assert False, 'looking for signal without name'
-
 
     def inputs(self):
         for s in self.signals:
@@ -512,12 +485,6 @@ class SignalManager:
                 and isinstance(s.value, tuple)):
                 ans.append(s)
         return ans
-        ##ans = [x for x in self.signals if getattr(x, 'optional_expr', None)]
-        #ans = [x for x in self.signals
-        #       if isinstance(x, (SignalIn, SignalArray)) and x.optional_expr]
-        #for x in ans:
-        #    assert x.type_ in ['analog', 'binary_analog']
-        #return ans
 
     def optional_quantized_analog(self):
         for x in self.optional_expr():

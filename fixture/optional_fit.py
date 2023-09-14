@@ -1253,7 +1253,6 @@ class HierarchicalExpression(SympyExpression):
             return
         if not all(isinstance(c, ConstExpression)
                    for c in self.child_expressions):
-            #raise NotImplementedError('Cannot set heirarchical x_init directly')
             assert len(x_init) == len(self.coefs)
             results = {c: v for c, v in zip(self.coefs, x_init)}
             nominal_parent_values = {}
@@ -1278,14 +1277,8 @@ class HierarchicalExpression(SympyExpression):
                     p.x_init[index] = nominal
 
             return
-
-        if self.NUM_COEFFICIENTS != len(self.child_expressions):
-            raise NotImplementedError('Cannot set heirarchical x_init directly')
-        assert len(x_init) == self.NUM_COEFFICIENTS
-        assert False, 'TODO new child_expressions'
-        for x, c in zip(x_init, self.child_expressions):
-            c.x_init = [x]
-        assert list(x_init) == list(self.x_init)
+        else:
+            assert False, 'TODO: unexpected case'
 
 
     def _search(self, target_name):
@@ -1331,38 +1324,13 @@ class HierarchicalExpression(SympyExpression):
         lines += self.parent_expression.verilog(lhs_str, parent_coef_names)
 
         # all the child expressions
-        #coef_count = 0
         for ce in self.child_expressions.values():
-            #slice_len = ce.NUM_COEFFICIENTS
-            #if self.manage_offsets and ce.last_coef_is_offset:
-            #    slice_len -= 1
-            #child_coefs = coef_names[coef_count : coef_count + slice_len]
-            #if self.manage_offsets and ce.last_coef_is_offset:
-            #    child_coefs = list(child_coefs) + ['0']
-            #coef_count += slice_len
-
             child_coefs = [coef_name_map[c] for c in ce.coefs]
             lines += ce.verilog(name(ce), child_coefs)
-        #if self.manage_offsets:
-        #    lines.append(f'{name_nominal} = {coef_names[coef_count]};')
-        #    coef_count += 1
-        #assert coef_count == len(coef_names)
-
-        #lines += [f'TODO: check that all the coefficients for the parent made it in: {self.parent_expression.ast}']
-
-        # TODO I want to reverse this properly so the c numbers are in order,
-        #  But I'm afraid I will mess it up and they'll be mismatched
-        #return lines[::-1]
         return lines
 
     def recompile(self):
         # just check that things make sense and then do the normal recompile
-        #parent_inputs = set(self.parent_expression.input_signals)
-        #parent_coefs = set(self.parent_expression.coefs)
-        #parent_child_syms = set(self.child_expressions.values())
-        #parent_all_syms = parent_inputs | parent_coefs | parent_child_syms
-        #assert len(parent_all_syms) == len(parent_inputs) + len(parent_coefs) + len(parent_child_syms)
-        #assert parent_all_syms == self.parent_expression.ast.free_symbols
         input_symbols = set(self.io_symbols.values())
         for parent_sym in self.parent_expression.ast.free_symbols:
             assert (parent_sym in input_symbols
@@ -1371,22 +1339,11 @@ class HierarchicalExpression(SympyExpression):
 
         super().recompile()
 
-    #def copy(self, param_suffix):
-    #    # for use with vectoring outputs, copy this whole tree but rename the
-    #    # parameters with the given suffix
-    #    parent = self.parent_expression.copy(param_suffix)
-    #    children = [c.copy(param_suffix) for c in self.child_expressions]
-    #    name = f'{self.name}_{param_suffix}'
-    #    ans = HierarchicalExpression(parent, children, name)
-    #    return ans
 
 class SumExpression(SympyExpression):
     input_signals = []
 
     def __init__(self, n, name):
-        #self.name = name
-        #self.NUM_COEFFICIENTS = n
-
         io_symbols = {}
         coefs = [Symbol(f'{name}_c{i}') for i in range(n)]
         ast = sum(coefs)
@@ -1398,192 +1355,11 @@ class SumExpression(SympyExpression):
         e.x_opt = self.x_opt
         return e
 
-    #def predict(self, opt_values, coefs):
-    #    assert len(opt_values) == 0
-    #    return sum(coefs)
-
     def verilog(self, lhs, coef_names):
         opt_names = [self.friendly_name(s) for s in self.input_signals]
         assert len(opt_names) == 0
         assert len(coef_names) == self.NUM_COEFFICIENTS
         ans = ' + '.join(f'{cn}' for cn in coef_names)
-        return [f'{lhs} = {ans};']
-
-#class CenterExpression(Expression):
-#
-#    def __init__(self, s):
-#        self.input_signals = [s]
-#        self.name = f'{s.friendly_name()}_deviation'
-#        self.NUM_COEFFICIENTS = 0
-#
-#    def predict(self, opt_values, coefs):
-#        assert len(opt_values) == 1
-#        assert len(coefs) == 0
-#        return opt_values[0] - self.input_signals[0].nominal
-#
-#    def verilog(self, lhs, coef_names):
-#        opt_names = [self.friendly_name(s) for s in self.input_signals]
-#        assert len(coef_names) == 0
-#        return [f'{self.name} = {opt_names[0]} - {self.input_signals[0].nominal};']
-
-
-def center_expression_inputs(ExpressionUncentered, signals_to_center):
-    '''
-    Given an Expression class, return a modified version of the class that
-    centers the signals in signals_to_center before using them. The generated
-    Verilog will include extra lines to do this centering.
-    '''
-    assert False
-    assert issubclass(ExpressionUncentered, SympyExpression)
-    name_mapping = {s: f'{s.friendly_name()}_deviation'
-                    for s in signals_to_center}
-    ast = ExpressionUncentered
-
-    #class ExpressionCentered(ExpressionUncentered):
-    #    def __init__(self, *args, **kwargs):
-    #        temp = super().__init__(*args, **kwargs)
-
-    #        # we precompute offsets to make predict() faster
-    #        offsets = [-s.nominal if s in signals_to_center else 0
-    #                   for s in self.input_signals]
-    #        self.centering_offsets = np.array(offsets)
-
-    #        # it's tempting to edit self.signals here so we take in
-    #        # s_deviation instead of s, but that confuses things when we are
-    #        # a child in a Heirarchical thing and the parent needs to know
-    #        # to pass us s rather than s_deviation
-    #        return temp
-
-    #    def predict(self, opt_values, coefs):
-    #        assert len(opt_values) == len(self.input_signals)
-    #        if isinstance(opt_values, list):
-    #            opt_values = np.array(opt_values)
-    #        return super().predict(opt_values - self.centering_offsets, coefs)
-
-    #    def fit(self, optional_data, result_data):
-    #        optional_data_centered = optional_data.copy()
-    #        for s in signals_to_center:
-    #            optional_data_centered[name_mapping[s]] = optional_data[s] - s.nominal
-    #        return super().fit(optional_data_centered, result_data)
-
-    #    def verilog(self, lhs, coef_names):
-
-    #        lines = []
-    #        for s in signals_to_center:
-    #            lines.append(f'{name_mapping[s]} = {s.friendly_name()} - {s.nominal};')
-
-
-    #        # we want to temporarily change the names of our signals so the
-    #        # call to ExpressionUncentered's verilog uses s_deviation
-    #        input_signals_uncentered = self.input_signals
-    #        self.input_signals = [name_mapping[s] if s in signals_to_center else s
-    #                              for s in input_signals_uncentered]
-    #        lines += super().verilog(lhs, coef_names)
-    #        self.input_signals = input_signals_uncentered
-
-    #        return lines
-
-    #return ExpressionCentered
-
-
-
-
-
-class ReciprocalExpression(SympyExpression):
-    __doc__ = '''
-The constructor takes in a list of inputs. This is intended to model the
-resistance of a bank of resistors. 
-1/(ctrl[0]/R0 + ctrl[1]/R1 + ... + 1/Rnom)
-Issue is that this expression is difficult to zero out for parameters that don't
-depend on R. An alternative is:
-Rnom/(ctrl[0]/X0 + ctrl[1]/X1 + ... + 1)
-Issue with that one is that it's difficult if the crtl=0 resistance is 0.
-We end up going with this weird version:
-G/(ctrl[0] + ctrl[1]/X1 + ... + Y)
-I still consider this a work-in-progress. I think it makes sense if you 
-interpret G as a sort of "global conductance multiplier" for each bit
-1/(ctrl[0]/Rnom + ctrl[1]/(Rnom*X1) + ctrl[2]/(Rnom*X2) + ... + Y/Rnom)
-Computationally, we pull Rnom on the top to avoid precision weirdness
-Note that Y is on the top of that last term because Y=0 is common, Y=inf is not
-For ctrl[5:0], coefs = [Rnom, X1, X2, X3, X4, X5, Y]
-Also, there is a additional additive offset at the end
-For ctrl[5:0], coefs = [Rnom, X1, X2, X3, X4, X5, Y, offset]
-'''
-    last_coef_is_offset = True
-
-    def __init__(self, inputs, name):
-        assert False
-        #self.name = name
-        #self.input_signals = inputs
-        #self.NUM_COEFFICIENTS = len(inputs) + 2
-        self.x_init = np.ones(self.NUM_COEFFICIENTS)
-
-        ## TODO get rid of this
-        #self.x_init[0] = 1500
-        #self.x_init[1] = 2
-        #self.x_init[2] = 4
-        #self.x_init[3] = 8
-        #self.x_init[4] = 8
-        #self.x_init[5] = 8
-        #self.x_init[6] = 0
-
-        io_symbols = {s: Symbol(s.friendly_name()) for s in inputs}
-        coefs = [Symbol(f'{name}_c{i}') for i in range(len(inputs)+2)]
-        opt_values = [io_symbols[s] for s in inputs]
-        denominator = opt_values[0] + sum(o / c for o, c in zip(opt_values[1:], coefs[1:-2])) + coefs[-2]
-        ast = coefs[0] / denominator + coefs[-1]
-        super().__init__(ast, io_symbols, coefs, name)
-
-
-    #def predict(self, opt_values, coefs):
-    #    # opt_values are essentially input_values
-    #    assert len(opt_values) == len(self.input_signals)
-    #    assert len(coefs) == len(opt_values) + 2
-    #    denominator = opt_values[0] + sum(o / c for o, c in zip(opt_values[1:], coefs[1:-2])) + coefs[-2]
-    #    return coefs[0] / denominator + coefs[-1]
-
-    def get_x_init(self, optional_data, result_data):
-        # we want to get a rough fit before we go to the solver
-        # we can guess that the bits are thermometer or binary up/down
-        # If we know the ratios between bits, we can do linear regression
-        assert False, 'trying to phase this out, right?'
-
-    def fit(self, optional_data, result_data):
-        def quick_fit(xs, ys):
-            result = linregress(xs, ys)
-            return result.rvalue**2, result.slope, result.intercept
-        bits = [optional_data[s] for s in self.input_signals]
-        denom_coefss = []
-        therm = [1 for i in range(1, len(bits))] + [1e-3]
-        denom_coefss.append(therm)
-        binary_inc = [2**i for i in range(1, len(bits))] + [1e-3]
-        denom_coefss.append(binary_inc)
-        binary_dec = [(1/2)**i for i in range(1, len(bits))] + [1e-3]
-        denom_coefss.append(binary_dec)
-
-        # r2_value, slope, intercept, denom_coefs
-        # r2_value is first so we can use comparison to find the highest
-        fits = []
-        for denom_coefs in denom_coefss:
-            denom = sum(b/c for b, c in zip(bits, [1]+denom_coefs[:-1])) + denom_coefs[-1]
-            xs = 1/denom
-            result = quick_fit(xs, result_data)
-            fits.append((*result, denom_coefs))
-        fit = max(fits, key=lambda info: info[0])
-        r2_value, slope, intercept, denom_coefs = fit
-
-        coefs = [slope] + denom_coefs + [intercept]
-        self.x_init = coefs
-        return super().fit(optional_data, result_data)
-
-    def verilog(self, lhs, coef_names):
-        opt_names = [self.friendly_name(s) for s in self.input_signals]
-        assert len(opt_names) == self.NUM_COEFFICIENTS - 2
-        assert len(coef_names) == self.NUM_COEFFICIENTS
-        bit_weights = ['1'] + list(coef_names[1:-2])
-        denom = ' + '.join(f'{on}/{cn}' for on, cn in zip(opt_names, bit_weights))
-        denom += f' + {coef_names[-2]}'
-        ans = f'{coef_names[0]} / ({denom}) + {coef_names[-1]}'
         return [f'{lhs} = {ans};']
 
 
@@ -1811,42 +1587,6 @@ def get_centered_expression(expr):
             assert expr.offset not in simplify(desired_offset.free_symbols)
         assert False, 'TODO'
 
-
-
-
-def get_optional_expression_from_signal(s, name):
-    assert False
-    if isinstance(s, SignalArray):
-        print('TODO fix SignalArray behavior, right now defaulting to ReciprocalExpression')
-        #return LinearExpression(list(s), name)
-        #io_signals = {b: Symbol(b.friendly_name()) for b in list(s)}
-        #offset = Symbol(f'{name}_offset')
-        #coefs = [Symbol(f'{name}_{io_signals[b].name}') for b in list(s)] + [offset]
-        #input_symbols = [io_signals[b] for b in list(s)] + [1]
-        #ast = sum(c*b_sym for c, b_sym in zip(coefs, input_symbols))
-        #le = SympyExpression(ast, io_signals, coefs, name)
-        #return le
-        return ReciprocalExpression(list(s), name)
-
-    else:
-        assert isinstance(s, SignalIn)
-        # TODO trying to phase out usage of s.type_
-        #assert s.type_ in ['real', 'current'], 'TODO'
-        assert isinstance(s.value, (list, tuple)), f'Trying to model as a function of {s}, but it has pinned value {s.value} instead of a range'
-        assert len(s.value) == 2, f'Trying to model as a function of {s}, but it has value {s.value} instead of a range'
-
-        if s.nominal != 0:
-            #return center_expression_inputs(AnalogExpression, [s])(s, name)
-            return AnalogExpression(s, name, centering_offset=s.nominal)
-        else:
-            return AnalogExpression(s, name)
-
-
-#def get_coef_counts(expr):
-#    # this is almost as easy as
-#    # return {s: len(coefs) for s in input_signals}
-#    # except we want to condense buses
-#
 
 def get_optional_expression_from_influences(influence_list, name, all_signals):
     '''

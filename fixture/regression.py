@@ -8,8 +8,6 @@ class Regression:
     # ones, so we manually add a column of ones with the following name
     one_literal = 'const_1'
 
-
-
     @staticmethod
     def clean_string(s):
         # discrepency between the way spice and magma do braces
@@ -17,16 +15,6 @@ class Regression:
         temp = s.replace('<', '_').replace('>', '_')
         final = temp.replace('[', '_').replace(']', '_')
         return final
-
-    #@staticmethod
-    #def regression_name(s):
-    #    if type(s) == str:
-    #        return Regression.clean_string(s)
-    #    if s.template_name is not None:
-    #        return Regression.clean_string(s.template_name)
-    #    else:
-    #        assert s.spice_name is not None, f'Signal {s} has neither template nor spice name!'
-    #        return Regression.clean_string(s.spice_name)
 
     @staticmethod
     def vector_parameter_name_output(name, vec_i, signal):
@@ -84,18 +72,13 @@ class Regression:
             verilog_const_names = [f'c[{i}]' for i in range(total_expr.NUM_COEFFICIENTS)]
             verilog = total_expr.verilog(lhs.friendly_name(), verilog_const_names)
 
-            # TODO these next 3 lines were commented out and I'm not sure why
-            #  I was using lhs_data in place of expr_fit_data
-            #  Update: I think it's because fit does this lookup internally
-            #input_names = [self.regression_name(s) for s in total_expr.input_signals]
-            #expr_fit_data = [df_filtered[input_name] for input_name in input_names]
-            #expr_fit_data = np.array(expr_fit_data)
             lhs_data = df_filtered[lhs]
 
             # do the regression!
             print('Starting parameter fit')
+            # we don't need to look at coefs_fit because they're already
+            # assigned to total_expr.x_opt
             coefs_fit = total_expr.fit_by_group(df_filtered, lhs_data, mode_prefix)
-            #total_expr.coefs_fit = coefs_fit
             for line in verilog:
                 print(line)
             for n, v in zip(verilog_const_names, total_expr.x_opt):
