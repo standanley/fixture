@@ -465,9 +465,10 @@ class AmplifierTemplate(TemplateMaster):
         #AbsoluteValue,
     ]
 
+    # default to DCTest only; users can ask for more with checkpoint_controller
     tests = [
         DCTest,
-        DynamicTFTest,
+        #DynamicTFTest,
         #CubicCompression,
         #AbsoluteValue,
     ]

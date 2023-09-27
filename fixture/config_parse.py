@@ -572,7 +572,9 @@ def parse_optional_input_info(circuit_config_dict, tests):
 
     # let's edit the expressions in place to replace const versions of
     # params with more complicated expressions when needed
-    # we create a copy and then delete entries as we use them to find unused
+    # TODO it looks like we don't actually edit in place
+    # we create a copy  of optional_input_info and then delete entries as we
+    # use them to find unused
     info_copy = optional_input_info.copy()
     for test in tests:
         parameter_algebra_expr = {}
@@ -582,6 +584,7 @@ def parse_optional_input_info(circuit_config_dict, tests):
             for param_expression in rhs.child_expressions:
                 param = param_expression.name
                 params.append(param)
+                param_bounds = rhs.bounds_dict.get(param_expression)
                 #params[param] = (test, lhs)
                 # get optional expression for param
                 # TODO: rename this like signals_or_str_expressions
@@ -603,11 +606,14 @@ def parse_optional_input_info(circuit_config_dict, tests):
                     signal_or_expr_list = test.signals.optional_expr()
                     print(f'Using default effect model for {param}, which includes {signal_or_expr_list}')
 
-                exp = get_optional_expression_from_influences(signal_or_expr_list, param, test.signals)
+                exp = get_optional_expression_from_influences(signal_or_expr_list, param, test.signals, param_bounds)
                 #rhs_new[exp] = multiplier
                 child_expressions_new.append(exp)
             child_dict = {coef: ce for ce, coef in zip(child_expressions_new, rhs.parent_expression.coefs)}
-            rhs_new = HierarchicalExpression(rhs.parent_expression, child_dict, rhs.name)
+            rhs_new = HierarchicalExpression(rhs.parent_expression,
+                                             child_dict,
+                                             rhs.name,
+                                             bounds_dict=rhs.bounds_dict)
 
 
             # coefficient counts for determining how many sample points

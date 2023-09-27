@@ -16,6 +16,9 @@ from fixture.sampler import SampleManager
 from fixture.signals import SignalArray, SignalIn, CenteredSignalIn, Signal
 from fixture.plot_helper import plt, PlotHelper
 
+import warnings
+warnings.simplefilter('error')
+
 PLOT = True
 
 class Expression(ABC):
@@ -102,13 +105,35 @@ class Expression(ABC):
                     #assert self.x_init is None, 'TODO double suggestion'
                     self.x_init = suggested_init
 
+        def guess_init():
+            x0 = np.ones(self.NUM_COEFFICIENTS)
+            for i, c in enumerate(self.coefs):
+                if c in self.bounds_dict:
+                    bound = self.bounds_dict[c]
+                    if (bound[0] is not None
+                        and np.isfinite(bound[0])
+                        and bound[1] is not None
+                        and np.isfinite(bound[1])):
+                        x0[i] = sum(bound) * 0.75
+            return x0
+
         if x_init is not None:
             x0 = x_init
         else:
             x0 = self.x_init
         if x0 is None:
-            x0 = np.ones(self.NUM_COEFFICIENTS)
+            x0 = guess_init()
+
         x0 = np.array(x0)
+
+
+        bounds = []
+        for coef in self.coefs:
+            if coef in self.bounds_dict:
+                bounds.append(self.bounds_dict[coef])
+            else:
+                bounds.append((None, None))
+
 
         #import cProfile
         #def to_profile():
@@ -140,9 +165,15 @@ class Expression(ABC):
         #                                    interval=3,
         #                                    factor=0.1,
         #                                    verbose=False)
+
+        bounds_min = np.array([b[0] if b[0] is not None else -np.inf
+                               for b in bounds])
+        bounds_max = np.array([b[1] if b[1] is not None else np.inf
+                               for b in bounds])
         def random_step(x):
             # modifies x in place and returns it
             # most a coef can change in 1 step is a factor of "factor"
+            # unless it's near zero, in which case it's uniform in [-0.5, 0.5]
             factor = 3
             for i in range(len(x)):
                 if abs(x[i]) < 1e-16:
@@ -152,15 +183,9 @@ class Expression(ABC):
                 else:
                     x[i] *= factor ** (np.random.rand()*2 - 1)
 
-            return x
+            x_clipped = np.clip(x, bounds_min, bounds_max)
+            return x_clipped
 
-
-        bounds = []
-        for coef in self.coefs:
-            if coef in self.bounds_dict:
-                bounds.append(self.bounds_dict[coef])
-            else:
-                bounds.append((None, None))
 
         #print(f'Error before:', error(x0))
         result = basinhopping(
@@ -245,7 +270,7 @@ class Expression(ABC):
 
 
 class SympyExpression(Expression):
-    def __init__(self, ast, io_symbols, coefs, name, bounds_dict={}):
+    def __init__(self, ast, io_symbols, coefs, name, bounds_dict=None):
         '''
         ast: sympy ast
         io_symbols: dict mapping from signals to symbols
@@ -260,7 +285,7 @@ class SympyExpression(Expression):
         self.coefs = coefs
         self.NUM_COEFFICIENTS = len(coefs)
         self.name = name
-        self.bounds_dict = bounds_dict
+        self.bounds_dict = {} if bounds_dict is None else bounds_dict
 
         self.offset = 'should_be_set_in_recompile'
         self.nominal = 'should_be_set_in_recompile'
@@ -692,18 +717,18 @@ def get_default_expr_from_signal(signal, name):
 
 
 class ConstExpression(SympyExpression):
-    def __init__(self, name):
+    def __init__(self, name, bounds_dict=None):
+        self.bounds_dict = {} if bounds_dict is None else bounds_dict
         sym = Symbol(name)
         super().__init__(sym, {}, [sym], name)
 
     def copy(self):
-        e = ConstExpression(self.name)
+        e = ConstExpression(self.name, bounds_dict=self.bounds_dict)
         e.x_init = self.x_init
         e.x_opt = self.x_opt
         return e
 
 
-# TODO fix the spelling lol
 class HierarchicalExpression(SympyExpression):
     '''
     The most confusing thing about the HierarchicalExpression is the way it
@@ -714,7 +739,7 @@ class HierarchicalExpression(SympyExpression):
     and I think it's easier to explain to the end user this way.
     '''
     def __init__(self, parent_expression, child_expressions, name,
-                 bounds_dict={}):
+                 bounds_dict=None):
         # TODO this never calls super().__init__() and it probably should
         # each coefficient in the parent expression is the result of evaluating
         # a child expression
@@ -785,7 +810,10 @@ class HierarchicalExpression(SympyExpression):
         for sym in self.ast.free_symbols:
             assert sym in input_syms or sym in self.coefs
 
-        self.bounds_dict = bounds_dict
+        self.bounds_dict = {} if bounds_dict is None else bounds_dict
+        self.bounds_dict.update(self.parent_expression.bounds_dict)
+        for c in self.child_expressions.values():
+            self.bounds_dict.update(c.bounds_dict)
 
         self.recompile()
 
@@ -1349,14 +1377,16 @@ class HierarchicalExpression(SympyExpression):
 class SumExpression(SympyExpression):
     input_signals = []
 
-    def __init__(self, n, name):
+    def __init__(self, n, name, bounds_dict=None):
         io_symbols = {}
         coefs = [Symbol(f'{name}_c{i}') for i in range(n)]
         ast = sum(coefs)
+        self.bounds_dict = {} if bounds_dict is None else bounds_dict
         super().__init__(ast, io_symbols, coefs, name)
 
     def copy(self):
-        e = SumExpression(len(self.coefs), self.name)
+        e = SumExpression(len(self.coefs), self.name,
+                          bounds_dict=self.bounds_dict)
         e.x_init = self.x_init
         e.x_opt = self.x_opt
         return e
@@ -1594,7 +1624,8 @@ def get_centered_expression(expr):
         assert False, 'TODO'
 
 
-def get_optional_expression_from_influences(influence_list, name, all_signals):
+def get_optional_expression_from_influences(influence_list, name, all_signals,
+                                            bounds_desired):
     '''
     If s_list is empty, this is a constant.
     If s_list is not empty, it's a sum of expressions for each signal
@@ -1604,6 +1635,11 @@ def get_optional_expression_from_influences(influence_list, name, all_signals):
     def clean_expression_for_name(expression):
         return expression.replace('/', '_over_')
     individual = [ConstExpression(f'{name}_nominal')]
+
+    # TODO it's challenging to transfer the bounds over, so we only do it if
+    #  this is const
+    if influence_list == [] and bounds_desired is not None:
+        individual[0].bounds_dict[individual[0].coefs[0]] = bounds_desired
 
     # used for determining how many sample points to collect
     coefficient_counts = Counter()
