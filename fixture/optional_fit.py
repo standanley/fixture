@@ -1062,10 +1062,10 @@ class HierarchicalExpression(SympyExpression):
                         f'{grandchild.name}_individualfit'
                     )
                     grandchild_with_offset.fit(example_data, child_results)
-                    print(f'Result for sg={sg} i={i}:')
-                    print(grandchild_with_offset.coefs)
-                    print(grandchild_with_offset.x_opt)
-                    print()
+                    #print(f'Result for sg={sg} i={i}:')
+                    #print(grandchild_with_offset.coefs)
+                    #print(grandchild_with_offset.x_opt)
+                    #print()
 
                     if PLOT:
                         # plotting secondary fits, from using fit params as goals
@@ -1162,6 +1162,11 @@ class HierarchicalExpression(SympyExpression):
             plt.ylabel(f'{self.name}')
             plt.show()
         print()
+
+        predict_data = optional_data[self.input_signals]
+        predictions = self.predict_many(predict_data, self.x_opt)
+        error = np.sqrt(np.sum((predictions - result_data)**2))
+        return error
 
     def predict(self, opt_values, coefs):
         # first, use the child expressions to find each param

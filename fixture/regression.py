@@ -75,11 +75,11 @@ class Regression:
             lhs_data = df_filtered[lhs]
 
             # do the regression!
-            print(f'Starting parameter fit for {total_expr}')
-            # we don't need to look at coefs_fit because they're already
-            # assigned to total_expr.x_opt
-            coefs_fit = total_expr.fit_by_group(df_filtered, lhs_data, mode_prefix)
-            print(f'Finished parameter fit for {total_expr}')
+            print(f'Starting parameter fit for {total_expr}...')
+            # fit coefficients go into total_expr.x_opt
+            mse = total_expr.fit_by_group(df_filtered, lhs_data, mode_prefix)
+            print(f'Finished parameter fit for {total_expr}.')
+            print(f'Mean Square Error: {mse}')
             for line in verilog:
                 print(line)
             for n, v in zip(verilog_const_names, total_expr.x_opt):
