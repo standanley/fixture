@@ -1,54 +1,55 @@
 name: myamp
 filepath: ../spice/myamp_diff_to_single.sp
 template: AmplifierTemplate
-pin:
+
+physical_pins:
     vdd:
-        direction: input
-        datatype: analog
-        #value: (2.7, 3.3)
-        value: 3.0
-    #vss:
-    #    direction: input
-    #    datatype: real
-    #    value: 0
+        direction: in
+        datatype: real
     inp:
-        direction: input
+        direction: in
         datatype: real
     inn:
-        direction: input
+        direction: in
         datatype: real
     out:
-        direction: output
+        direction: out
         datatype: real
 
 proxy_signals:
 
     indiff:
-        #value: (-0.25, 0.25)
-        value: (-0.02, 0.02)
         style: linear_combination_in
         components: [inp, inn]
         coefficients: [1, -1]
     incm:
-        #value: (1.4, 1.6)
-        value: (0.5, 2.5)
         style: linear_combination_in
         components: [inp, inn]
         coefficients: [0.5, 0.5]
 
-
-    input_test:
+    input_vec:
         style: vector
         components: [indiff, incm]
 
+stimulus_generation:
+    vdd: 3.0
+    indiff: (-0.02, 0.02)
+    #incm: (0.5, 2.5)
+    incm: (1.3, 2.0)
+
 template_pins:
-    input: input_test
+    input: input_vec
     output: out
 
 extras:
     approx_settling_time: 10e-6
-    limits_diff: (-0.03, 0.03)
-    #limits_cm: (1.15, 1.25)
+
+
+parameter_hints:
+    in_gain3_indiff_nominal: 17
+    #in_sq_gain3_nominal: 4
+    #offset3_nominal: 2.0
+    input_vec_vec0_nominal: -0.999
 
 #test_config_file: ngspice_small_tstep.yaml
 test_config_file: ngspice.yaml
