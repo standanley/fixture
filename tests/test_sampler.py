@@ -4,6 +4,7 @@ from fixture import Sampler
 import pytest
 import random
 
+from fixture.sampler import SampleManager, SamplerAnalog
 from fixture.signals import create_input_domain_signal
 
 
@@ -47,15 +48,20 @@ def test_analog_signals():
             b = random.random()*20 - 10
             values.append((min(a, b), max(a, b)))
 
-        sigs = [create_input_domain_signal(f'test{i}', v)
-                for i, v in enumerate(values)]
-        samples = Sampler.get_samples(sigs, N)
-        assert len(samples ) == d
+        signals = [create_input_domain_signal(f'test{i}', v)
+                   for i, v in enumerate(values)]
+        samplers = [SamplerAnalog(s, s.value, s.nominal)
+                    for s in signals]
+        samples = SampleManager.sample_all(N, samplers, [])
+        assert len(samples) == N
 
-        for s, xs in samples.items():
-            assert len(xs) == N
-            v = s.value
+        #for s, xs in samples.items():
+        for sampler in samplers:
+
+            v = sampler.signal.value
             assert v in values
+
+            xs = samples[sampler.signal]
 
             lhs_width = (v[1] - v[0]) / N
             assert v[0] <= min(xs) <= v[0] + lhs_width
@@ -128,10 +134,10 @@ def test_qa_binary():
     for test in range(100):
         W = random.randrange(1, 12)
         N = random.randrange(W + 1, 1000)
-        print(f'Testing {W}-bit thermometer, {N} samples')
+        print(f'Testing {W}-bit binary, {N} samples')
 
         xs = [x[0] for x in Sampler.get_orthogonal_samples(1, N)]
-        bs = Sampler.convert_qa_binary(xs, W)
+        bs = Sampler.convert_qa_binary(xs, W, 'high')
         assert len(bs) == N
         assert len(bs[0]) == W
 
@@ -177,6 +183,6 @@ def test_qa_binary():
 if __name__ == '__main__':
     #test_assert_fifty_fifty()
     #test_analog()
-    #test_analog_signals()
+    test_analog_signals()
     #test_qa_therm()
-    test_qa_binary()
+    #test_qa_binary()

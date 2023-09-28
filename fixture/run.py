@@ -80,7 +80,7 @@ def _run(circuit_config_dict):
     checkpoint_controller = {}
     if 'checkpoint_controller' in circuit_config_dict:
         cc_str = circuit_config_dict['checkpoint_controller']
-        test_mapping = {str(test): test for test in t.tests}
+        test_mapping = {str(test): test for test in t.tests_all}
         for test_str, val in cc_str.items():
             assert test_str in test_mapping, f'Unknown test "{test_str}" in checkpoint controller'
             test = test_mapping[test_str]
@@ -93,9 +93,10 @@ def _run(circuit_config_dict):
             else:
                 assert False, f'Confused by type of "{val}" in checkpoint controller for test "{test_str}"'
     else:
-        print(f'No tests specified, defaulting to all tests: {[str(test) for test in t.tests]}')
-        for test in t.tests:
-            checkpoint_controller[test] = all_checkpoints
+        print(f'No tests specified, defaulting to: {[str(test) for test in t.tests_default]}')
+        for test_class in t.tests_default:
+            test_obj = [to for to in t.tests_all if type(to) == test_class][0]
+            checkpoint_controller[test_obj] = all_checkpoints
 
     params_by_mode = t.go(checkpoint, checkpoint_controller)
 

@@ -7,10 +7,10 @@ template: PhaseBlenderTemplate_C
 
 checkpoint_controller:
     Test1:
-        choose_inputs: False
-        run_sim: False
-        run_analysis: False
-        run_post_process: False
+        choose_inputs: True
+        run_sim: True
+        run_analysis: True
+        run_post_process: True
         run_regression: True
     
 
@@ -73,7 +73,7 @@ extras:
 
     #phase_offset_range: [.10, 0.100001]
 
-mgenero: pb_mgenero.yaml
+#mgenero: pb_mgenero.yaml
 
 #test_config_file: ngspice.yaml
 test_config_file: ngspice_osc.yaml

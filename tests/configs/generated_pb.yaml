@@ -7,8 +7,8 @@ template: PhaseBlenderTemplate_C
 
 checkpoint_controller:
     GlitchTest:
-        choose_inputs: False
-        run_sim: False
+        choose_inputs: True
+        run_sim: True
         run_analysis: True
         run_post_process: True
         run_regression: True

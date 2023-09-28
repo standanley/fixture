@@ -1480,7 +1480,7 @@ class SamplerTemplate(TemplateMaster):
             return {}
 
 
-    tests = [
+    tests_all = [
              StaticNonlinearityTest,
              #ApertureTest,
              #ChannelTest,
@@ -1489,3 +1489,6 @@ class SamplerTemplate(TemplateMaster):
              #KickbackTest
             ]
 
+    tests_default = [
+        StaticNonlinearityTest,
+    ]

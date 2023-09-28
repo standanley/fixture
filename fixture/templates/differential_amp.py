@@ -313,6 +313,7 @@ class DifferentialAmpTemplate(TemplateMaster):
 
 
     #tests = [GainTest, DynamicTest]
-    tests = [GainTest]
+    tests_all = [GainTest]
+    tests_default = [GainTest]
     #tests = [DynamicTest]
 

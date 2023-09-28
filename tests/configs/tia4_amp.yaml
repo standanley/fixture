@@ -123,7 +123,7 @@ optional_input_info:
     #dcgain0_out0_outdiff_indiff: [vdd, '1/(rfadj+c100)']
     dcgain0_out0_outdiff_indiff: ['1/(rfadj+c100)']
     #gain2_out2_outdiff_indiff: [vdd, '1/(rfadj+c100)']
-    const_pole1_pole1_outdiff: ['cfadj/(rfadj+reciprocal_offset)']
+    #const_pole1_pole1_outdiff: ['cfadj/(rfadj+reciprocal_offset)']
 
 extras:
     #approx_settling_time: 2e-9

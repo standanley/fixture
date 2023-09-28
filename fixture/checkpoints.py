@@ -16,7 +16,7 @@ class Checkpoint:
         self.template = template
         self.filepath = filepath
         self.data = {}
-        for test in self.template.tests:
+        for test in self.template.tests_all:
             test_data = {
                 'input_vectors': None,
                 'sim_result_folder': None,

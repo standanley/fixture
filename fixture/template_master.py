@@ -47,9 +47,10 @@ class TemplateMaster():
         assert hasattr(self, 'required_ports')
         self.check_required_ports()
 
-        assert hasattr(self, 'tests')
+        assert hasattr(self, 'tests_all'), f'Template {self} must include a list of all Tests'
+        assert hasattr(self, 'tests_default'), f'Template {self} must include a list of default Tests to run'
         # replace test classes with instance
-        self.tests = [T(self) for T in self.tests]
+        self.tests_all = [T(self) for T in self.tests_all]
 
     def required_port_info(self):
         # TODO: this should give more info than just the names of the ports

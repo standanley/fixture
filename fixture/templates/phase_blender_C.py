@@ -438,9 +438,13 @@ class PhaseBlenderTemplate_C(TemplateMaster):
             last_glitch = (g_end+1) / N
             return {'first_glitch': first_glitch, 'last_glitch': last_glitch}
 
-    tests = [
-        #Test1,
+    tests_all = [
+        Test1,
         GlitchTest,
+    ]
+    tests_default = [
+        Test1,
+        #GlitchTest,
     ]
 
 

@@ -510,10 +510,10 @@ def parse_config(circuit_config_dict):
 
     t = TemplateClass(UserCircuit, simulator, signals, sample_groups, extras, digital_modes)
 
-    parse_optional_input_info(circuit_config_dict, t.tests)
+    parse_optional_input_info(circuit_config_dict, t.tests_all)
 
     parameter_hints = circuit_config_dict.get('parameter_hints', {})
-    parse_parameter_hints(t.tests, parameter_hints)
+    parse_parameter_hints(t.tests_all, parameter_hints)
 
     return t
 

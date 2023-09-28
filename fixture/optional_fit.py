@@ -16,8 +16,8 @@ from fixture.sampler import SampleManager
 from fixture.signals import SignalArray, SignalIn, CenteredSignalIn, Signal
 from fixture.plot_helper import plt, PlotHelper
 
-import warnings
-warnings.simplefilter('error')
+#import warnings
+#warnings.simplefilter('error')
 
 PLOT = True
 

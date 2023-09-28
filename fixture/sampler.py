@@ -222,6 +222,8 @@ class SamplerConst(SampleStyle):
 
 class SamplerAnalog(SampleStyle):
     def __init__(self, signal, limits, nominal):
+        # TODO is there a reason I don't pull limits and nominal from
+        #  signal.value and signal.nominal?
         assert nominal is not None, 'Nominal must be defined before SamplerAnalog'
         assert isinstance(limits, tuple), 'Internal error in config_parse?'
         assert len(limits) == 2, 'Bad limits in SamplerAnalog'
