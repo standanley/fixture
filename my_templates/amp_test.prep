@@ -1,0 +1,30 @@
+// Throwing together a simple amplifier template
+{{def()}}
+
+{{script}}
+import fixture_preppy as fp
+fp.module_params([
+    'parameter myparam = 5'
+])
+
+fp.required_io([
+    'input wire clk',
+    'input real in',
+    'output wire out',
+])
+
+temp = '''
+
+real gain;
+real offset;
+'''
+
+fp.test()
+{{endscript}}
+
+
+assign out = gain * in;
+
+endmodule
+
+

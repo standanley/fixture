@@ -1,0 +1,691 @@
+TODO rename info to bus_info or vice versa
+TODO get rid of SignalArray.value if it is not used
+TODO rename info to bus_info or vice versa
+TODO get rid of SignalArray.value if it is not used
+TODO rename info to bus_info or vice versa
+TODO get rid of SignalArray.value if it is not used
+param_symbols:  [amplitude1, gain1]
+param_symbols:  [amplitude1, gain1]
+out1_outcm
+TODO rename info to bus_info or vice versa
+TODO get rid of SignalArray.value if it is not used
+TODO rename info to bus_info or vice versa
+TODO get rid of SignalArray.value if it is not used
+param_symbols:  [const_numerator1]
+param_symbols:  [const_numerator1]
+numerator1_outcm
+param_symbols:  [const_denominator1]
+param_symbols:  [const_denominator1]
+denominator1_outcm
+param_symbols:  [const_denominator2]
+param_symbols:  [const_denominator2]
+denominator2_outcm
+param_symbols:  [c1, c2]
+param_symbols:  [c0]
+Using default effect model for gain1_out1_outdiff_incm, which includes [<fixture.signals.SignalIn object at 0x7f30f0532340>, <fixture.signals.SignalArray object at 0x7f30f0532730>]
+param_symbols:  [c1, c2]
+param_symbols:  [c0]
+Using default effect model for amplitude1_out1_outcm, which includes [<fixture.signals.SignalIn object at 0x7f30f0532340>, <fixture.signals.SignalArray object at 0x7f30f0532730>]
+Using default effect model for gain1_out1_outcm_incm, which includes [<fixture.signals.SignalIn object at 0x7f30f0532340>, <fixture.signals.SignalArray object at 0x7f30f0532730>]
+Using default effect model for gain1_out1_outcm_indiff, which includes [<fixture.signals.SignalIn object at 0x7f30f0532340>, <fixture.signals.SignalArray object at 0x7f30f0532730>]
+Using default effect model for const_numerator1_numerator1_outdiff, which includes [<fixture.signals.SignalIn object at 0x7f30f0532340>, <fixture.signals.SignalArray object at 0x7f30f0532730>]
+Using default effect model for const_numerator1_numerator1_outcm, which includes [<fixture.signals.SignalIn object at 0x7f30f0532340>, <fixture.signals.SignalArray object at 0x7f30f0532730>]
+Using default effect model for const_denominator1_denominator1_outdiff, which includes [<fixture.signals.SignalIn object at 0x7f30f0532340>, <fixture.signals.SignalArray object at 0x7f30f0532730>]
+Using default effect model for const_denominator1_denominator1_outcm, which includes [<fixture.signals.SignalIn object at 0x7f30f0532340>, <fixture.signals.SignalArray object at 0x7f30f0532730>]
+Using default effect model for const_denominator2_denominator2_outdiff, which includes [<fixture.signals.SignalIn object at 0x7f30f0532340>, <fixture.signals.SignalArray object at 0x7f30f0532730>]
+Using default effect model for const_denominator2_denominator2_outcm, which includes [<fixture.signals.SignalIn object at 0x7f30f0532340>, <fixture.signals.SignalArray object at 0x7f30f0532730>]
+Overwriting file checkpoint_folder/DCTest/input_vectors.csv
+calling with sim dict {'vsup': 1.2, 't_tr': 1e-11, 'model_paths': [PosixPath('/home/dstanley/research/fixture/tests/spice/tia6.sp')]}
+ROTATING TICKS
+Overwriting file checkpoint_folder/DCTest/extracted_data_unprocessed.csv
+Overwriting file checkpoint_folder/DCTest/extracted_data.csv
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+Starting parameter fit
+Minimizing out1_outdiff_combiner
+minimization took 0.11834383010864258 error 0.00244804497538878
+[1. 1. 1.]
+[   41.40139905 -1246.46612786  2306.73147308]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.09975194931030273 error 1.5091571834758317e-05
+[   41.40139905 -1246.46612786  2306.73147308]
+[1.16085937e-01 1.60329113e+03 1.84009771e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.09977602958679199 error 2.459526635495736e-06
+[1.16085937e-01 1.60329113e+03 1.84009771e+03]
+[ 1.09572232e-01 -2.40770037e+00  1.29213025e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10107612609863281 error 5.0893894147051304e-05
+[ 1.09572232e-01 -2.40770037e+00  1.29213025e+03]
+[ 1.30295523e-01 -2.17868683e+00  1.12256021e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.09997224807739258 error 4.667397909888602e-06
+[ 1.30295523e-01 -2.17868683e+00  1.12256021e+03]
+[ 1.05490576e-01 -1.03343460e-01  2.81767887e+03]
+
+Result for group=rfadj, sweep_id=0.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[ 1.05490576e-01 -1.03343460e-01  2.81767887e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.09902501106262207 error 1.9064145018686244e-05
+[ 1.05490576e-01 -1.03343460e-01  2.81767887e+03]
+[ 9.67815241e-02 -1.16671857e-01  1.93392499e+03]
+
+Result for group=rfadj, sweep_id=1.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[ 9.67815241e-02 -1.16671857e-01  1.93392499e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.1013798713684082 error 1.657707050625874e-06
+[ 9.67815241e-02 -1.16671857e-01  1.93392499e+03]
+[ 1.09645725e-01 -7.37064722e-01  1.29189208e+03]
+
+Result for group=rfadj, sweep_id=2.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[ 1.09645725e-01 -7.37064722e-01  1.29189208e+03]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10077977180480957 error 5.354122076489612e-05
+[ 1.09645725e-01 -7.37064722e-01  1.29189208e+03]
+[ 1.25588957e-01 -7.48039957e-01  1.12614469e+03]
+
+Result for group=rfadj, sweep_id=3.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[ 1.25588957e-01 -7.48039957e-01  1.12614469e+03]
+
+Warning: using only 4 datapoints to fit 7 coefficients for c0_amplitude1_out1_outdiff + rfadj<0>*rfadj_amplitude1_out1_outdiff_w0 + rfadj<1>*rfadj_amplitude1_out1_outdiff_w1 + rfadj<2>*rfadj_amplitude1_out1_outdiff_w2 + rfadj<3>*rfadj_amplitude1_out1_outdiff_w3 + rfadj<4>*rfadj_amplitude1_out1_outdiff_w4 + rfadj<5>*rfadj_amplitude1_out1_outdiff_w5
+Minimizing amplitude1_out1_outdiff_<1_over_(rfadj+c0)>_individualfit
+minimization took 0.02892613410949707 error 2.5018537765542006e-17
+[3.04917236 0.75245081 1.96471886 1.11168797 2.26948708 0.
+ 3.04917236 0.19944589]
+[3.04917236 0.75245081 1.96471886 1.11168797 2.26948708 0.
+ 3.04917236 0.19944589]
+
+Result for sg=rfadj i=0:
+[c0_amplitude1_out1_outdiff, rfadj_amplitude1_out1_outdiff_w0, rfadj_amplitude1_out1_outdiff_w1, rfadj_amplitude1_out1_outdiff_w2, rfadj_amplitude1_out1_outdiff_w3, rfadj_amplitude1_out1_outdiff_w4, rfadj_amplitude1_out1_outdiff_w5, grandchild_offset]
+[3.04917236 0.75245081 1.96471886 1.11168797 2.26948708 0.
+ 3.04917236 0.19944589]
+
+
+Warning: using only 4 datapoints to fit 7 coefficients for gain1_out1_outdiff_incm_rfadj_w0*rfadj<0> + gain1_out1_outdiff_incm_rfadj_w1*rfadj<1> - gain1_out1_outdiff_incm_rfadj_w1 + gain1_out1_outdiff_incm_rfadj_w2*rfadj<2> + gain1_out1_outdiff_incm_rfadj_w3*rfadj<3> + gain1_out1_outdiff_incm_rfadj_w4*rfadj<4> + gain1_out1_outdiff_incm_rfadj_w5*rfadj<5> + grandchild_offset
+Successfully fit gain1_out1_outdiff_incm_rfadj_individualfit using <class 'fixture.fitting_tricks.FitLinear'>
+Result for sg=rfadj i=1:
+[gain1_out1_outdiff_incm_rfadj_w0, gain1_out1_outdiff_incm_rfadj_w1, gain1_out1_outdiff_incm_rfadj_w2, gain1_out1_outdiff_incm_rfadj_w3, gain1_out1_outdiff_incm_rfadj_w4, gain1_out1_outdiff_incm_rfadj_w5, grandchild_offset]
+[-0.5065544   0.11383847  0.12716686  0.1381421   0.         -0.12740698
+ -0.12740698]
+
+
+Warning: using only 4 datapoints to fit 7 coefficients for c0_gain1_out1_outdiff_indiff + rfadj<0>*rfadj_gain1_out1_outdiff_indiff_w0 + rfadj<1>*rfadj_gain1_out1_outdiff_indiff_w1 + rfadj<2>*rfadj_gain1_out1_outdiff_indiff_w2 + rfadj<3>*rfadj_gain1_out1_outdiff_indiff_w3 + rfadj<4>*rfadj_gain1_out1_outdiff_indiff_w4 + rfadj<5>*rfadj_gain1_out1_outdiff_indiff_w5
+Minimizing gain1_out1_outdiff_indiff_<1_over_(rfadj+c0)>_individualfit
+minimization took 0.028431177139282227 error 8.507543922801099e-13
+[ 2.34178082e-04  4.19392804e-04  1.62417478e-04  2.36389003e-07
+ -1.13690507e-04  0.00000000e+00  2.34178082e-04  2.52146040e+03]
+[ 2.34178082e-04  4.19392804e-04  1.62417478e-04  2.36389003e-07
+ -1.13690507e-04  0.00000000e+00  2.34178082e-04  2.52146040e+03]
+
+Result for sg=rfadj i=2:
+[c0_gain1_out1_outdiff_indiff, rfadj_gain1_out1_outdiff_indiff_w0, rfadj_gain1_out1_outdiff_indiff_w1, rfadj_gain1_out1_outdiff_indiff_w2, rfadj_gain1_out1_outdiff_indiff_w3, rfadj_gain1_out1_outdiff_indiff_w4, rfadj_gain1_out1_outdiff_indiff_w5, grandchild_offset]
+[ 2.34178082e-04  4.19392804e-04  1.62417478e-04  2.36389003e-07
+ -1.13690507e-04  0.00000000e+00  2.34178082e-04  2.52146040e+03]
+
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10317683219909668 error 0.00031026054103095206
+[1. 1. 1.]
+[  484.34380721 38657.82140919  1208.64208765]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10187005996704102 error 0.0030116298926021546
+[  484.34380721 38657.82140919  1208.64208765]
+[  104.84847095 50804.05710637  1195.90685856]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10172152519226074 error 0.00031025625477078863
+[  104.84847095 50804.05710637  1195.90685856]
+[  105.54662499 38664.23315562  1208.59268291]
+
+Result for group=vdd, sweep_id=0.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[  105.54662499 38664.23315562  1208.59268291]
+
+Minimizing out1_outdiff_combiner
+minimization took 0.10699081420898438 error 0.00016502644969305943
+[  105.54662499 38664.23315562  1208.59268291]
+[1.04495219e-01 6.98561890e+03 2.47151412e+03]
+
+Result for group=vdd, sweep_id=1.0:
+[amplitude1_out1_outdiff, gain1_out1_outdiff_incm, gain1_out1_outdiff_indiff]
+[1.04495219e-01 6.98561890e+03 2.47151412e+03]
+
+Warning: using only 2 datapoints to fit 3 coefficients for c1_amplitude1_out1_outdiff*(vdd - 3.0) + 9.0*c2_amplitude1_out1_outdiff*(0.333333333333333*vdd - 1)**2 + grandchild_offset
+Successfully fit amplitude1_out1_outdiff_<c1*vdd + c2*vdd**2>_individualfit using <class 'fixture.fitting_tricks.FitLinear'>
+Result for sg=vdd i=0:
+[c1_amplitude1_out1_outdiff, c2_amplitude1_out1_outdiff, grandchild_offset]
+[-779.72610702  155.41084515  -27.00086955]
+
+
+Successfully fit gain1_out1_outdiff_incm_vdd_individualfit using <class 'fixture.fitting_tricks.FitLinear'>
+Result for sg=vdd i=1:
+[gain1_out1_outdiff_incm_vdd_w, grandchild_offset]
+[-243554.82783866   -1423.13463346]
+
+
+Warning: using only 2 datapoints to fit 3 coefficients for c1_gain1_out1_outdiff_indiff*(vdd - 3.0) + 9.0*c2_gain1_out1_outdiff_indiff*(0.333333333333333*vdd - 1)**2 + grandchild_offset
+Successfully fit gain1_out1_outdiff_indiff_<c1*vdd + c2*vdd**2>_individualfit using <class 'fixture.fitting_tricks.FitLinear'>
+Result for sg=vdd i=2:
+[c1_gain1_out1_outdiff_indiff, c2_gain1_out1_outdiff_indiff, grandchild_offset]
+[ 9336.39196124 -1874.93159009  2796.08882134]
+
+
+Minimizing out1_outdiff
+minimization took 0.1781778335571289 error 0.0701893436888714
+[-1.34007118e+01  3.04917236e+00  2.34178082e-04 -7.79726107e+02
+  9.33639196e+03  1.55410845e+02 -1.87493159e+03 -7.11631020e+02
+ -5.06554400e-01  1.13838465e-01  1.27166862e-01  1.38142097e-01
+  0.00000000e+00 -1.27406977e-01 -2.43554828e+05  2.65877461e+03
+  7.52450806e-01  1.96471886e+00  1.11168797e+00  2.26948708e+00
+  0.00000000e+00  3.04917236e+00  4.19392804e-04  1.62417478e-04
+  2.36389003e-07 -1.13690507e-04  0.00000000e+00  2.34178082e-04]
+[-1.34976964e+01  3.06503828e+00  2.31572432e-04 -7.89426467e+02
+  9.36514930e+03  1.54288004e+02 -1.89229784e+03 -7.84154097e+02
+ -5.13057093e-01  1.14718924e-01  1.29336293e-01  1.38240079e-01
+ -2.07355735e-05 -1.28716963e-01 -2.45844081e+05  2.24635702e+03
+  7.50491860e-01  1.97074183e+00  1.10561821e+00  2.25473296e+00
+ -4.32744423e-06  3.03669118e+00  4.21664969e-04  1.58918568e-04
+  2.39549073e-07 -1.13725269e-04  1.64902642e-04  2.37773264e-04]
+
+
+amplitude1_out1_outdiff_nominal=c[0]
+c1_amplitude1_out1_outdiff=c[3]
+c2_amplitude1_out1_outdiff=c[5]
+vdd_centered=vdd - 3.0
+amplitude1_out1_outdiff_<c1*vdd + c2*vdd**2>=c1_amplitude1_out1_outdiff*vdd_centered + c2_amplitude1_out1_outdiff*vdd_centered**2
+TODO: check that all the coefficients for the parent made it in: c1_amplitude1_out1_outdiff*vdd_centered + c2_amplitude1_out1_outdiff*vdd_centered**2
+c0_amplitude1_out1_outdiff=c[1]
+rfadj_bus=c[16]*rfadj<0> + c[17]*rfadj<1> + c[18]*rfadj<2> + c[19]*rfadj<3> + c[20]*rfadj<4> + c[21]*rfadj<5>
+amplitude1_out1_outdiff_<1_over_(rfadj+c0)>_centering=1/(c[17] + c[1])
+amplitude1_out1_outdiff_<1_over_(rfadj+c0)>=-amplitude1_out1_outdiff_<1_over_(rfadj+c0)>_centering + 1/(c0_amplitude1_out1_outdiff + rfadj_bus)
+TODO: check that all the coefficients for the parent made it in: -amplitude1_out1_outdiff_<1_over_(rfadj+c0)>_centering + 1/(c0_amplitude1_out1_outdiff + rfadj_bus)
+amplitude1_out1_outdiff = amplitude1_out1_outdiff_nominal + amplitude1_out1_outdiff_<c1*vdd + c2*vdd**2> + amplitude1_out1_outdiff_<1_over_(rfadj+c0)>;
+TODO: check that all the coefficients for the parent made it in: amplitude1_out1_outdiff_summer_c0 + amplitude1_out1_outdiff_summer_c1 + amplitude1_out1_outdiff_summer_c2
+gain1_out1_outdiff_incm_nominal=c[7]
+gain1_out1_outdiff_incm_vdd=c[14]*(vdd - 3.0)
+gain1_out1_outdiff_incm_rfadj=c[10]*rfadj<2> + c[11]*rfadj<3> + c[12]*rfadj<4> + c[13]*rfadj<5> + c[8]*rfadj<0> + c[9]*rfadj<1> - c[9]
+gain1_out1_outdiff_incm = gain1_out1_outdiff_incm_nominal + gain1_out1_outdiff_incm_vdd + gain1_out1_outdiff_incm_rfadj;
+TODO: check that all the coefficients for the parent made it in: gain1_out1_outdiff_incm_summer_c0 + gain1_out1_outdiff_incm_summer_c1 + gain1_out1_outdiff_incm_summer_c2
+gain1_out1_outdiff_indiff_nominal=c[15]
+c1_gain1_out1_outdiff_indiff=c[4]
+c2_gain1_out1_outdiff_indiff=c[6]
+vdd_centered=vdd - 3.0
+gain1_out1_outdiff_indiff_<c1*vdd + c2*vdd**2>=c1_gain1_out1_outdiff_indiff*vdd_centered + c2_gain1_out1_outdiff_indiff*vdd_centered**2
+TODO: check that all the coefficients for the parent made it in: c1_gain1_out1_outdiff_indiff*vdd_centered + c2_gain1_out1_outdiff_indiff*vdd_centered**2
+c0_gain1_out1_outdiff_indiff=c[2]
+rfadj_bus=c[22]*rfadj<0> + c[23]*rfadj<1> + c[24]*rfadj<2> + c[25]*rfadj<3> + c[26]*rfadj<4> + c[27]*rfadj<5>
+gain1_out1_outdiff_indiff_<1_over_(rfadj+c0)>_centering=1/(c[23] + c[2])
+gain1_out1_outdiff_indiff_<1_over_(rfadj+c0)>=-gain1_out1_outdiff_indiff_<1_over_(rfadj+c0)>_centering + 1/(c0_gain1_out1_outdiff_indiff + rfadj_bus)
+TODO: check that all the coefficients for the parent made it in: -gain1_out1_outdiff_indiff_<1_over_(rfadj+c0)>_centering + 1/(c0_gain1_out1_outdiff_indiff + rfadj_bus)
+gain1_out1_outdiff_indiff = gain1_out1_outdiff_indiff_nominal + gain1_out1_outdiff_indiff_<c1*vdd + c2*vdd**2> + gain1_out1_outdiff_indiff_<1_over_(rfadj+c0)>;
+TODO: check that all the coefficients for the parent made it in: gain1_out1_outdiff_indiff_summer_c0 + gain1_out1_outdiff_indiff_summer_c1 + gain1_out1_outdiff_indiff_summer_c2
+out1_outdiff=amplitude1_out1_outdiff*tanh((gain1_out1_outdiff_incm*incm + gain1_out1_outdiff_indiff*indiff)/Abs(amplitude1_out1_outdiff))
+TODO: check that all the coefficients for the parent made it in: amplitude1_out1_outdiff*tanh((gain1_out1_outdiff_incm*incm + gain1_out1_outdiff_indiff*indiff)/Abs(amplitude1_out1_outdiff))
+c[0] = -13.497696426842808;
+c[1] = 3.065038281532402;
+c[2] = 0.00023157243185033944;
+c[3] = -789.4264672710938;
+c[4] = 9365.149303520997;
+c[5] = 154.28800441324296;
+c[6] = -1892.2978416959759;
+c[7] = -784.1540966325258;
+c[8] = -0.5130570928931981;
+c[9] = 0.11471892392810978;
+c[10] = 0.12933629279041092;
+c[11] = 0.1382400792027748;
+c[12] = -2.073557352468307e-05;
+c[13] = -0.1287169629438033;
+c[14] = -245844.08130628476;
+c[15] = 2246.357019700221;
+c[16] = 0.7504918596754093;
+c[17] = 1.9707418284919962;
+c[18] = 1.1056182087797688;
+c[19] = 2.254732959888149;
+c[20] = -4.327444228239142e-06;
+c[21] = 3.036691184879503;
+c[22] = 0.0004216649691295264;
+c[23] = 0.00015891856802149163;
+c[24] = 2.3954907317066075e-07;
+c[25] = -0.00011372526901871406;
+c[26] = 0.0001649026419038926;
+c[27] = 0.00023777326416977057;
+
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+Starting parameter fit
+Minimizing out1_outcm_combiner
+minimization took 0.09230160713195801 error 2.3038733793176225
+[1. 1. 1.]
+[  5581.31834385 391422.08455128  12006.21980736]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09220123291015625 error 2.2965899733771993
+[  5581.31834385 391422.08455128  12006.21980736]
+[ 935474.39670121 1683181.95221116  -61862.25316727]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09213781356811523 error 2.188374115250903
+[ 935474.39670121 1683181.95221116  -61862.25316727]
+[6514351.01781722 2251289.57927583  -49727.51683225]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09202194213867188 error 0.49373945963819543
+[6514351.01781722 2251289.57927583  -49727.51683225]
+[ 6907409.25750252 13997172.83657705  -213236.49799245]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09173154830932617 error 2.3038733792529156
+[ 6907409.25750252 13997172.83657705  -213236.49799245]
+[-6.74790021e+07 -3.91425188e+05 -1.20063477e+04]
+
+Result for group=rfadj, sweep_id=0.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[-6.74790021e+07 -3.91425188e+05 -1.20063477e+04]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09167861938476562 error 2.2965899732413098
+[-6.74790021e+07 -3.91425188e+05 -1.20063477e+04]
+[15797192.05176106  1683403.46488268   -61868.00377332]
+
+Result for group=rfadj, sweep_id=1.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[15797192.05176106  1683403.46488268   -61868.00377332]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09171485900878906 error 2.1883741152285334
+[15797192.05176106  1683403.46488268   -61868.00377332]
+[10588472.41859764  2251311.59730564   -49728.2543179 ]
+
+Result for group=rfadj, sweep_id=2.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[10588472.41859764  2251311.59730564   -49728.2543179 ]
+
+Minimizing out1_outcm_combiner
+minimization took 0.0924537181854248 error 0.4937396496781092
+[10588472.41859764  2251311.59730564   -49728.2543179 ]
+[ -2456062.02611279 -13997113.1877659     213247.01931163]
+
+Result for group=rfadj, sweep_id=3.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[ -2456062.02611279 -13997113.1877659     213247.01931163]
+
+Warning: using only 4 datapoints to fit 7 coefficients for amplitude1_out1_outcm_rfadj_w0*rfadj<0> + amplitude1_out1_outcm_rfadj_w1*rfadj<1> - amplitude1_out1_outcm_rfadj_w1 + amplitude1_out1_outcm_rfadj_w2*rfadj<2> + amplitude1_out1_outcm_rfadj_w3*rfadj<3> + amplitude1_out1_outcm_rfadj_w4*rfadj<4> + amplitude1_out1_outcm_rfadj_w5*rfadj<5> + grandchild_offset
+Successfully fit amplitude1_out1_outcm_rfadj_individualfit using <class 'fixture.fitting_tricks.FitLinear'>
+Result for sg=rfadj i=0:
+[amplitude1_out1_outcm_rfadj_w0, amplitude1_out1_outcm_rfadj_w1, amplitude1_out1_outcm_rfadj_w2, amplitude1_out1_outcm_rfadj_w3, amplitude1_out1_outcm_rfadj_w4, amplitude1_out1_outcm_rfadj_w5, grandchild_offset]
+[ 39620391.32483386  44829110.95799731 -38447083.16960651
+ -25402548.72489611         0.          20599870.38832858
+  20599870.38832858]
+
+
+Warning: using only 4 datapoints to fit 7 coefficients for gain1_out1_outcm_incm_rfadj_w0*rfadj<0> + gain1_out1_outcm_incm_rfadj_w1*rfadj<1> - gain1_out1_outcm_incm_rfadj_w1 + gain1_out1_outcm_incm_rfadj_w2*rfadj<2> + gain1_out1_outcm_incm_rfadj_w3*rfadj<3> + gain1_out1_outcm_incm_rfadj_w4*rfadj<4> + gain1_out1_outcm_incm_rfadj_w5*rfadj<5> + grandchild_offset
+Successfully fit gain1_out1_outcm_incm_rfadj_individualfit using <class 'fixture.fitting_tricks.FitLinear'>
+Result for sg=rfadj i=1:
+[gain1_out1_outcm_incm_rfadj_w0, gain1_out1_outcm_incm_rfadj_w1, gain1_out1_outcm_incm_rfadj_w2, gain1_out1_outcm_incm_rfadj_w3, gain1_out1_outcm_incm_rfadj_w4, gain1_out1_outcm_incm_rfadj_w5, grandchild_offset]
+[-3634707.85531804 -4202615.98774099 -6277444.64084278  9970980.14422877
+        0.         -4143788.33967304 -4143788.33967304]
+
+
+Warning: using only 4 datapoints to fit 7 coefficients for gain1_out1_outcm_indiff_rfadj_w0*rfadj<0> + gain1_out1_outcm_indiff_rfadj_w1*rfadj<1> - gain1_out1_outcm_indiff_rfadj_w1 + gain1_out1_outcm_indiff_rfadj_w2*rfadj<2> + gain1_out1_outcm_indiff_rfadj_w3*rfadj<3> + gain1_out1_outcm_indiff_rfadj_w4*rfadj<4> + gain1_out1_outcm_indiff_rfadj_w5*rfadj<5> + grandchild_offset
+Successfully fit gain1_out1_outcm_indiff_rfadj_individualfit using <class 'fixture.fitting_tricks.FitLinear'>
+Result for sg=rfadj i=2:
+[gain1_out1_outcm_indiff_rfadj_w0, gain1_out1_outcm_indiff_rfadj_w1, gain1_out1_outcm_indiff_rfadj_w2, gain1_out1_outcm_indiff_rfadj_w3, gain1_out1_outcm_indiff_rfadj_w4, gain1_out1_outcm_indiff_rfadj_w5, grandchild_offset]
+[  62525.30921053   50385.55975511  100247.2158368  -162728.05779273
+       0.           50430.02700971   50430.02700971]
+
+
+Minimizing out1_outcm_combiner
+minimization took 0.09916257858276367 error 2.105031964344185
+[1. 1. 1.]
+[-1.93778736e+02  7.87551968e+05 -1.99718477e+04]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09369754791259766 error 0.9906837080058045
+[-1.93778736e+02  7.87551968e+05 -1.99718477e+04]
+[   -42551.67009549 -17417232.55341899    241431.54238558]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09125423431396484 error 2.1050306981016846
+[   -42551.67009549 -17417232.55341899    241431.54238558]
+[  61984.48445456 -786877.03851255   19956.47154078]
+
+Result for group=vdd, sweep_id=0.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[  61984.48445456 -786877.03851255   19956.47154078]
+
+Minimizing out1_outcm_combiner
+minimization took 0.09116005897521973 error 0.9906837064965291
+[  61984.48445456 -786877.03851255   19956.47154078]
+[  827528.74556636 17416527.4192173   -241422.80944936]
+
+Result for group=vdd, sweep_id=1.0:
+[amplitude1_out1_outcm, gain1_out1_outcm_incm, gain1_out1_outcm_indiff]
+[  827528.74556636 17416527.4192173   -241422.80944936]
+
+Successfully fit amplitude1_out1_outcm_vdd_individualfit using <class 'fixture.fitting_tricks.FitLinear'>
+Result for sg=vdd i=0:
+[amplitude1_out1_outcm_vdd_w, grandchild_offset]
+[5885737.27463848 1030734.38332603]
+
+
+Successfully fit gain1_out1_outcm_incm_vdd_individualfit using <class 'fixture.fitting_tricks.FitLinear'>
+Result for sg=vdd i=1:
+[gain1_out1_outcm_incm_vdd_w, grandchild_offset]
+[1.39953314e+08 2.22484289e+07]
+
+
+Successfully fit gain1_out1_outcm_indiff_vdd_individualfit using <class 'fixture.fitting_tricks.FitLinear'>
+Result for sg=vdd i=2:
+[gain1_out1_outcm_indiff_vdd_w, grandchild_offset]
+[-2009563.46365613  -310803.17867012]
+
+
+Minimizing out1_outcm
+minimization took 0.1611945629119873 error 5.808048641474779
+[ 1.08153024e+07  3.96203913e+07  4.48291110e+07 -3.84470832e+07
+ -2.54025487e+07  0.00000000e+00  2.05998704e+07  5.88573727e+06
+  9.05232026e+06 -3.63470786e+06 -4.20261599e+06 -6.27744464e+06
+  9.97098014e+06  0.00000000e+00 -4.14378834e+06  1.39953314e+08
+ -1.30186576e+05  6.25253092e+04  5.03855598e+04  1.00247216e+05
+ -1.62728058e+05  0.00000000e+00  5.04300270e+04 -2.00956346e+06]
+[ 1.09717233e+07  4.13667660e+07  4.35258291e+07 -3.89532122e+07
+ -2.58559969e+07  9.12157951e-05  2.17660009e+07  5.86363638e+06
+  8.66626261e+06 -3.34466430e+06 -4.13996676e+06 -6.64517105e+06
+  8.46127910e+06  1.06053514e-04 -4.34881366e+06  1.33968717e+08
+ -1.35183846e+05  6.21575854e+04  5.03475683e+04  1.04788899e+05
+ -1.62915940e+05  5.59554937e-05  5.16597901e+04 -1.99218185e+06]
+
+
+amplitude1_out1_outcm_nominal=c[0]
+amplitude1_out1_outcm_vdd=c[7]*(vdd - 3.0)
+amplitude1_out1_outcm_rfadj=c[1]*rfadj<0> + c[2]*rfadj<1> - c[2] + c[3]*rfadj<2> + c[4]*rfadj<3> + c[5]*rfadj<4> + c[6]*rfadj<5>
+amplitude1_out1_outcm = amplitude1_out1_outcm_nominal + amplitude1_out1_outcm_vdd + amplitude1_out1_outcm_rfadj;
+TODO: check that all the coefficients for the parent made it in: amplitude1_out1_outcm_summer_c0 + amplitude1_out1_outcm_summer_c1 + amplitude1_out1_outcm_summer_c2
+gain1_out1_outcm_incm_nominal=c[8]
+gain1_out1_outcm_incm_vdd=c[15]*(vdd - 3.0)
+gain1_out1_outcm_incm_rfadj=c[10]*rfadj<1> - c[10] + c[11]*rfadj<2> + c[12]*rfadj<3> + c[13]*rfadj<4> + c[14]*rfadj<5> + c[9]*rfadj<0>
+gain1_out1_outcm_incm = gain1_out1_outcm_incm_nominal + gain1_out1_outcm_incm_vdd + gain1_out1_outcm_incm_rfadj;
+TODO: check that all the coefficients for the parent made it in: gain1_out1_outcm_incm_summer_c0 + gain1_out1_outcm_incm_summer_c1 + gain1_out1_outcm_incm_summer_c2
+gain1_out1_outcm_indiff_nominal=c[16]
+gain1_out1_outcm_indiff_vdd=c[23]*(vdd - 3.0)
+gain1_out1_outcm_indiff_rfadj=c[17]*rfadj<0> + c[18]*rfadj<1> - c[18] + c[19]*rfadj<2> + c[20]*rfadj<3> + c[21]*rfadj<4> + c[22]*rfadj<5>
+gain1_out1_outcm_indiff = gain1_out1_outcm_indiff_nominal + gain1_out1_outcm_indiff_vdd + gain1_out1_outcm_indiff_rfadj;
+TODO: check that all the coefficients for the parent made it in: gain1_out1_outcm_indiff_summer_c0 + gain1_out1_outcm_indiff_summer_c1 + gain1_out1_outcm_indiff_summer_c2
+out1_outcm=amplitude1_out1_outcm*tanh((gain1_out1_outcm_incm*incm + gain1_out1_outcm_indiff*indiff)/Abs(amplitude1_out1_outcm))
+TODO: check that all the coefficients for the parent made it in: amplitude1_out1_outcm*tanh((gain1_out1_outcm_incm*incm + gain1_out1_outcm_indiff*indiff)/Abs(amplitude1_out1_outcm))
+c[0] = 10971723.308135845;
+c[1] = 41366765.95804857;
+c[2] = 43525829.07738373;
+c[3] = -38953212.21544248;
+c[4] = -25855996.867474213;
+c[5] = 9.121579511428641e-05;
+c[6] = 21766000.894719414;
+c[7] = 5863636.380325932;
+c[8] = 8666262.612985916;
+c[9] = -3344664.2972461497;
+c[10] = -4139966.7637216803;
+c[11] = -6645171.052102549;
+c[12] = 8461279.09997246;
+c[13] = 0.00010605351359632218;
+c[14] = -4348813.655815424;
+c[15] = 133968717.46193963;
+c[16] = -135183.8460012888;
+c[17] = 62157.58543867424;
+c[18] = 50347.56831863019;
+c[19] = 104788.89881976659;
+c[20] = -162915.93984580558;
+c[21] = 5.595549371498341e-05;
+c[22] = 51659.79006524422;
+c[23] = -1992181.8512479505;
+
+TODO: plot optional effects - here or later?
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+aboutto save rr
+Overwriting file checkpoint_folder/DCTest/regression_results.yaml
+finished saving rr
+about to load rr
+finished loading rr
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+
+
+Results for DCTest:
+	Model for <out1_outdiff>:
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+		amplitude1_out1_outdiff_nominal=c0
+		c1_amplitude1_out1_outdiff=c3
+		c2_amplitude1_out1_outdiff=c5
+		vdd_centered=vdd - 3.0
+		amplitude1_out1_outdiff_<c1*vdd + c2*vdd**2>=c1_amplitude1_out1_outdiff*vdd_centered + c2_amplitude1_out1_outdiff*vdd_centered**2
+		TODO: check that all the coefficients for the parent made it in: c1_amplitude1_out1_outdiff*vdd_centered + c2_amplitude1_out1_outdiff*vdd_centered**2
+		c0_amplitude1_out1_outdiff=c1
+		rfadj_bus=c16*rfadj<0> + c17*rfadj<1> + c18*rfadj<2> + c19*rfadj<3> + c20*rfadj<4> + c21*rfadj<5>
+		amplitude1_out1_outdiff_<1_over_(rfadj+c0)>_centering=1/(c1 + c17)
+		amplitude1_out1_outdiff_<1_over_(rfadj+c0)>=-amplitude1_out1_outdiff_<1_over_(rfadj+c0)>_centering + 1/(c0_amplitude1_out1_outdiff + rfadj_bus)
+		TODO: check that all the coefficients for the parent made it in: -amplitude1_out1_outdiff_<1_over_(rfadj+c0)>_centering + 1/(c0_amplitude1_out1_outdiff + rfadj_bus)
+		amplitude1_out1_outdiff = amplitude1_out1_outdiff_nominal + amplitude1_out1_outdiff_<c1*vdd + c2*vdd**2> + amplitude1_out1_outdiff_<1_over_(rfadj+c0)>;
+		TODO: check that all the coefficients for the parent made it in: amplitude1_out1_outdiff_summer_c0 + amplitude1_out1_outdiff_summer_c1 + amplitude1_out1_outdiff_summer_c2
+		gain1_out1_outdiff_incm_nominal=c7
+		gain1_out1_outdiff_incm_vdd=c14*(vdd - 3.0)
+		gain1_out1_outdiff_incm_rfadj=c10*rfadj<2> + c11*rfadj<3> + c12*rfadj<4> + c13*rfadj<5> + c8*rfadj<0> + c9*rfadj<1> - c9
+		gain1_out1_outdiff_incm = gain1_out1_outdiff_incm_nominal + gain1_out1_outdiff_incm_vdd + gain1_out1_outdiff_incm_rfadj;
+		TODO: check that all the coefficients for the parent made it in: gain1_out1_outdiff_incm_summer_c0 + gain1_out1_outdiff_incm_summer_c1 + gain1_out1_outdiff_incm_summer_c2
+		gain1_out1_outdiff_indiff_nominal=c15
+		c1_gain1_out1_outdiff_indiff=c4
+		c2_gain1_out1_outdiff_indiff=c6
+		vdd_centered=vdd - 3.0
+		gain1_out1_outdiff_indiff_<c1*vdd + c2*vdd**2>=c1_gain1_out1_outdiff_indiff*vdd_centered + c2_gain1_out1_outdiff_indiff*vdd_centered**2
+		TODO: check that all the coefficients for the parent made it in: c1_gain1_out1_outdiff_indiff*vdd_centered + c2_gain1_out1_outdiff_indiff*vdd_centered**2
+		c0_gain1_out1_outdiff_indiff=c2
+		rfadj_bus=c22*rfadj<0> + c23*rfadj<1> + c24*rfadj<2> + c25*rfadj<3> + c26*rfadj<4> + c27*rfadj<5>
+		gain1_out1_outdiff_indiff_<1_over_(rfadj+c0)>_centering=1/(c2 + c23)
+		gain1_out1_outdiff_indiff_<1_over_(rfadj+c0)>=-gain1_out1_outdiff_indiff_<1_over_(rfadj+c0)>_centering + 1/(c0_gain1_out1_outdiff_indiff + rfadj_bus)
+		TODO: check that all the coefficients for the parent made it in: -gain1_out1_outdiff_indiff_<1_over_(rfadj+c0)>_centering + 1/(c0_gain1_out1_outdiff_indiff + rfadj_bus)
+		gain1_out1_outdiff_indiff = gain1_out1_outdiff_indiff_nominal + gain1_out1_outdiff_indiff_<c1*vdd + c2*vdd**2> + gain1_out1_outdiff_indiff_<1_over_(rfadj+c0)>;
+		TODO: check that all the coefficients for the parent made it in: gain1_out1_outdiff_indiff_summer_c0 + gain1_out1_outdiff_indiff_summer_c1 + gain1_out1_outdiff_indiff_summer_c2
+		out1_outdiff=amplitude1_out1_outdiff*tanh((gain1_out1_outdiff_incm*incm + gain1_out1_outdiff_indiff*indiff)/Abs(amplitude1_out1_outdiff))
+		TODO: check that all the coefficients for the parent made it in: amplitude1_out1_outdiff*tanh((gain1_out1_outdiff_incm*incm + gain1_out1_outdiff_indiff*indiff)/Abs(amplitude1_out1_outdiff))
+		c0 = -13.497696426842808;
+		c1 = 3.065038281532402;
+		c2 = 0.00023157243185033944;
+		c3 = -789.4264672710938;
+		c4 = 9365.149303520997;
+		c5 = 154.28800441324296;
+		c6 = -1892.2978416959759;
+		c7 = -784.1540966325258;
+		c8 = -0.5130570928931981;
+		c9 = 0.11471892392810978;
+		c10 = 0.12933629279041092;
+		c11 = 0.1382400792027748;
+		c12 = -2.073557352468307e-05;
+		c13 = -0.1287169629438033;
+		c14 = -245844.08130628476;
+		c15 = 2246.357019700221;
+		c16 = 0.7504918596754093;
+		c17 = 1.9707418284919962;
+		c18 = 1.1056182087797688;
+		c19 = 2.254732959888149;
+		c20 = -4.327444228239142e-06;
+		c21 = 3.036691184879503;
+		c22 = 0.0004216649691295264;
+		c23 = 0.00015891856802149163;
+		c24 = 2.3954907317066075e-07;
+		c25 = -0.00011372526901871406;
+		c26 = 0.0001649026419038926;
+		c27 = 0.00023777326416977057;
+
+	Model for <out1_outcm>:
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+TODO: SympyExpression verilog
+		amplitude1_out1_outcm_nominal=c0
+		amplitude1_out1_outcm_vdd=c7*(vdd - 3.0)
+		amplitude1_out1_outcm_rfadj=c1*rfadj<0> + c2*rfadj<1> - c2 + c3*rfadj<2> + c4*rfadj<3> + c5*rfadj<4> + c6*rfadj<5>
+		amplitude1_out1_outcm = amplitude1_out1_outcm_nominal + amplitude1_out1_outcm_vdd + amplitude1_out1_outcm_rfadj;
+		TODO: check that all the coefficients for the parent made it in: amplitude1_out1_outcm_summer_c0 + amplitude1_out1_outcm_summer_c1 + amplitude1_out1_outcm_summer_c2
+		gain1_out1_outcm_incm_nominal=c8
+		gain1_out1_outcm_incm_vdd=c15*(vdd - 3.0)
+		gain1_out1_outcm_incm_rfadj=c10*rfadj<1> - c10 + c11*rfadj<2> + c12*rfadj<3> + c13*rfadj<4> + c14*rfadj<5> + c9*rfadj<0>
+		gain1_out1_outcm_incm = gain1_out1_outcm_incm_nominal + gain1_out1_outcm_incm_vdd + gain1_out1_outcm_incm_rfadj;
+		TODO: check that all the coefficients for the parent made it in: gain1_out1_outcm_incm_summer_c0 + gain1_out1_outcm_incm_summer_c1 + gain1_out1_outcm_incm_summer_c2
+		gain1_out1_outcm_indiff_nominal=c16
+		gain1_out1_outcm_indiff_vdd=c23*(vdd - 3.0)
+		gain1_out1_outcm_indiff_rfadj=c17*rfadj<0> + c18*rfadj<1> - c18 + c19*rfadj<2> + c20*rfadj<3> + c21*rfadj<4> + c22*rfadj<5>
+		gain1_out1_outcm_indiff = gain1_out1_outcm_indiff_nominal + gain1_out1_outcm_indiff_vdd + gain1_out1_outcm_indiff_rfadj;
+		TODO: check that all the coefficients for the parent made it in: gain1_out1_outcm_indiff_summer_c0 + gain1_out1_outcm_indiff_summer_c1 + gain1_out1_outcm_indiff_summer_c2
+		out1_outcm=amplitude1_out1_outcm*tanh((gain1_out1_outcm_incm*incm + gain1_out1_outcm_indiff*indiff)/Abs(amplitude1_out1_outcm))
+		TODO: check that all the coefficients for the parent made it in: amplitude1_out1_outcm*tanh((gain1_out1_outcm_incm*incm + gain1_out1_outcm_indiff*indiff)/Abs(amplitude1_out1_outcm))
+		c0 = 10971723.308135845;
+		c1 = 41366765.95804857;
+		c2 = 43525829.07738373;
+		c3 = -38953212.21544248;
+		c4 = -25855996.867474213;
+		c5 = 9.121579511428641e-05;
+		c6 = 21766000.894719414;
+		c7 = 5863636.380325932;
+		c8 = 8666262.612985916;
+		c9 = -3344664.2972461497;
+		c10 = -4139966.7637216803;
+		c11 = -6645171.052102549;
+		c12 = 8461279.09997246;
+		c13 = 0.00010605351359632218;
+		c14 = -4348813.655815424;
+		c15 = 133968717.46193963;
+		c16 = -135183.8460012888;
+		c17 = 62157.58543867424;
+		c18 = 50347.56831863019;
+		c19 = 104788.89881976659;
+		c20 = -162915.93984580558;
+		c21 = 5.595549371498341e-05;
+		c22 = 51659.79006524422;
+		c23 = -1992181.8512479505;
+

@@ -10,19 +10,26 @@ def file_relative_to_test(fname):
     return os.path.join(os.path.dirname(__file__), fname)
 
 
+# Commented out things are likely not yet updated to the new config style
 tests = [
     ('configs/amplifier_vectored.yaml', None),
     ('configs/amplifier_diff_to_single.yaml', None),
-    ('configs/amplifier_diff_to_single_two_stage.yaml', None),
-    ('configs/tia1.yaml', None),
+    #('configs/amplifier_diff_to_single_two_stage.yaml', None),
+    #('configs/tia1.yaml', None),
     ('configs/parameterized_amp_amplifier.yaml', None),
+    #('configs/tia2.yaml', None),
     ('configs/tia3.yaml', None),
+    ('configs/tia4.yaml', None),
+    ('configs/tia4_amp.yaml', None),
+    ('configs/tia3_amp.yaml', None),
+    ('configs/tia6_amp.yaml', None),
 
 ]
 
 @pytest.mark.parametrize('test', tests)
 def test_by_config(test):
     config, req = test
+    print('Testing ', config)
     if req is not None and not shutil.which(req):
         pytest.skip(f'Requirement "{req}" not installed here')
         return
@@ -31,5 +38,5 @@ def test_by_config(test):
     fixture.run(circuit_fname)
 
 if __name__ == '__main__':
-    test_by_config(tests[5])
+    test_by_config(tests[1])
 

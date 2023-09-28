@@ -1,0 +1,94 @@
+name: myamp
+filepath: ../spice/tia3.sp
+template: DifferentialAmpTemplate
+
+checkpoint_controller:
+    GainTest:
+        choose_inputs: True
+        run_sim: True
+        run_analysis: True
+        run_post_process: True
+        run_regression: True
+        #run_post_regression: save
+
+physical_pins:
+    vdd:
+        direction: in
+        datatype: real 
+        # this amp breaks completely when vdd>3.2 or so
+        #value: 3.0
+        #value: (2.7, 3.1)
+    #vss:
+    #    direction: in
+    #    datatype: real
+    #    value: 0
+    inp:
+        direction: in
+        datatype: current
+    inn:
+        direction: in
+        datatype: current 
+    
+    ibias:
+        direction: in
+        datatype: current
+        #value: (2e-6, 10e-6)
+        #value: 6e-6
+
+    rfadj<5:0>:
+        direction: in
+        datatype: bit
+        bus_type: binary
+        first_one: high
+        #value: (10, 63)
+        ##value: 24
+
+    #cfadj<5:0>:
+    #    direction: in
+    #    datatype: bit
+    #    bus_type: binary
+    #    #bus_type: binary
+    #    #first_one: low
+    #    ##value: (0, 63)
+    #    #value: (20, 40)
+    #    ##value: 32
+
+    outp:
+        direction: out
+        datatype: real
+    outn:
+        direction: out
+        datatype: real
+
+template_pins:
+    inp: inp
+    outp: outp
+    inn: inn
+    outn: outn
+
+stimulus_generation:
+    vdd: 3.0
+    ibias: (2e-6, 10e-6)
+    #ibias: 6e-6
+    rfadj: (10, 63)
+    #rfadj: 30
+    ##cfadj: (20, 40)
+    #cfadj: 30
+
+extras:
+    approx_settling_time: 100e-6
+    limits_diff: (-3e-6, 3e-6)
+    limits_cm: (-1e-6, 1e-6)
+
+optional_input_info:
+    gain: [ibias, rfadj]
+    #offset: [ibias]
+    #gain_from_cm: []
+    gain_to_cm: [ibias]
+    cm_gain: [ibias]
+    ##cm_offset: [ibias, vdd, rfadj]
+    cm_offset: [ibias, rfadj]
+
+#test_config_file: ngspice_dynamics.yaml
+#test_config_file: ngspice_small_tstep.yaml
+test_config_file: ngspice.yaml

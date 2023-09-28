@@ -2,6 +2,8 @@ from collections import defaultdict
 
 import yaml
 import os
+
+from fixture.optional_fit import Expression, HierarchicalExpression
 from fixture.signals import SignalIn, SignalOut, SignalArray
 from fixture.regression import Regression
 import re
@@ -30,13 +32,43 @@ def binary(x, y):
     bits = [int(b) for b in bits_str]
     return bits
 
-def dump_yaml(template, params_by_mode, mapping):
+def dump_yaml(template, lhs_by_mode, mapping, requested_params):
+    def search_for_param(name, expression):
+        assert isinstance(expression, Expression)
+        if expression.name == name:
+            return expression
+        elif isinstance(expression, HierarchicalExpression):
+            # we are not careful about duplicates; we just take the first match
+            for child in expression.child_expressions:
+                res = search_for_param(name, child)
+                if res is not None:
+                    return res
+            return None
+        else:
+            return None
+
     d = defaultdict(list)
-    for mode, params in params_by_mode.items():
-        params_flat = {}
-        for rhs in params.values():
-            params_flat.update(rhs)
-#        # TODO I haven't found a good way to deal with required BA, so this is a bit of a hack
+    for mode, lhs_dict in lhs_by_mode.items():
+        requested_expressions = {}
+        for requested_param in requested_params:
+            for lhs, rhs in lhs_dict.items():
+                res = search_for_param(requested_param, rhs)
+                if res is not None:
+                    assert requested_param not in requested_expressions, f'Duplicate {requested_param} found, second in {lhs}'
+                    requested_expressions[requested_param] = res
+            assert requested_param in requested_expressions, f'Could not find {requested_param} in {lhs_by_mode}'
+
+        lhss_flat = {}
+        coef_count = 0
+        for name, expr in requested_expressions.items():
+            coef_names = [f'c{i}' for i in range(coef_count, coef_count + expr.NUM_COEFFICIENTS)]
+            coef_count += expr.NUM_COEFFICIENTS
+            verilog_lines = expr.verilog(name, coef_names)
+            verilog = '\n'.join(verilog_lines)
+            lhss_flat[name] = verilog
+
+        # rhs = {'gain': {list(template.signals)[0]: 42.42}}
+        #        # TODO I haven't found a good way to deal with required BA, so this is a bit of a hack
 #        # Note all params_flat that are part of a bus
 #        buss = defaultdict(list)
 #        for param in params_flat:
@@ -68,54 +100,50 @@ def dump_yaml(template, params_by_mode, mapping):
                         else:
                             return s.template_name
 
-        def convert_term_to_verilog(term):
-            if isinstance(term, SignalIn):
-                term = term.spice_name
-            if isinstance(term, tuple):
-                return ' * '.join(convert_term_to_verilog(x) for x in term)
-            if isinstance(term, SignalArray):
-                assert term.info['datatype'] == 'binary_analog', f'Cannot make verilog for {term} if it is not binary_analog'
-                if term.info['bus_type'] == 'binary_exact':
-                    term_ordered = list(term) if term.info['first_one'] == 'low' else list(term)[::-1]
-                    # TODO I think this should be wrapped in parentheses but they break mGenero
-                    return '(' + '+'.join(f'{2**i}*'+convert_term_to_verilog(b) for i, b in enumerate(term_ordered)) + ')'
-                    #return '+'.join(f'{2**i}*'+convert_term_to_verilog(b) for i, b in enumerate(term_ordered))
-                else:
-                    assert False, 'TODO'
-            if term == Regression.one_literal:
-                return '1'
-            # square
-            term = re.sub('I\\((.*)\\*\\*2\\)', '\\1*\\1', term)
-            # cube
-            term = re.sub('I\\((.*)\\*\\*3\\)', '\\1*\\1*\\1', term)
-            # angle braces ot brackets
-            term = term.replace('<', '[').replace('>', ']')
+        #def convert_term_to_verilog(term):
+        #    if isinstance(term, SignalIn):
+        #        term = term.spice_name
+        #    if isinstance(term, tuple):
+        #        return ' * '.join(convert_term_to_verilog(x) for x in term)
+        #    if isinstance(term, SignalArray):
+        #        assert term.bus_info['datatype'] == 'binary_analog', f'Cannot make verilog for {term} if it is not binary_analog'
+        #        if term.bus_info['bus_type'] == 'binary_exact':
+        #            term_ordered = list(term) if term.bus_info['first_one'] == 'low' else list(term)[::-1]
+        #            # TODO I think this should be wrapped in parentheses but they break mGenero
+        #            return '(' + '+'.join(f'{2**i}*'+convert_term_to_verilog(b) for i, b in enumerate(term_ordered)) + ')'
+        #            #return '+'.join(f'{2**i}*'+convert_term_to_verilog(b) for i, b in enumerate(term_ordered))
+        #        else:
+        #            assert False, 'TODO'
+        #    if term == Regression.one_literal:
+        #        return '1'
+        #    # square
+        #    term = re.sub('I\\((.*)\\*\\*2\\)', '\\1*\\1', term)
+        #    # cube
+        #    term = re.sub('I\\((.*)\\*\\*3\\)', '\\1*\\1*\\1', term)
+        #    # angle braces ot brackets
+        #    term = term.replace('<', '[').replace('>', ']')
 
-            return term
+        #    return term
 
-        for param, terms in params_flat.items():
-            param_mapped = mapping.get(param, param)
-            if len(params_by_mode) == 1:
+        for lhs, verilog in lhss_flat.items():
+            lhs_mapped = mapping.get(lhs, lhs)
+            if len(lhs_by_mode) == 1:
                 mode_dict = {'dummy_digitalmode': 0}
             else:
                 # mode dict keys are true digital pins
                 names = [s.spice_name for s in template.signals if s.type_ == 'true_digital']
                 mode_dict = {name:x for name,x in zip(names, binary(mode, len(names)))}
-            coefs_by_mode = d[param_mapped]
-            terms_verilog = {convert_term_to_verilog(k): v for k,v in terms.items()}
-            coefs_this_mode = {
-                    'mode': mode_dict,
-                    #'coef': terms
-                    'coef': terms_verilog
-            }
-            coefs_by_mode.append(coefs_this_mode)
+            verilog_by_mode = d[lhs_mapped]
+            verilog_this_mode = {'mode': mode_dict,
+                               'raw_verilog': verilog}
+            verilog_by_mode.append(verilog_this_mode)
 
     #print('hello', d['gain'][0]['mode'])
 
     final = {'test1': dict(d)}
     return yaml.dump(final)
 
-def create_interface(template, collateral_dict, params):
+def create_interface(template, collateral_dict, params_unused):
     circuit = template.dut
     special_template_pins_rev = collateral_dict.get('pin_mapping', {})
     special_template_pins = {v: k for k, v in special_template_pins_rev.items()}
@@ -261,10 +289,10 @@ def create_interface(template, collateral_dict, params):
     
 
 
-def create_all(template, config, params):
+def create_all(template, config, extracted_params):
     # TODO:
-    params_text = dump_yaml(template, params, config.get('mapping', {}))
-    interface_text, circuit_text = create_interface(template, config, params)
+    params_text = dump_yaml(template, extracted_params, config.get('mapping', {}), config['requested_params'])
+    interface_text, circuit_text = create_interface(template, config, extracted_params)
     generate_text = get_generate_text(config['template_name'])
     directory = config['build_folder']
 

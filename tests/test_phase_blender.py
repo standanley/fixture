@@ -17,9 +17,6 @@ def test_spectre():
 
     fixture.run(circuit_fname)
 
-# I need to make some updates to fault related to verilog busses being
-# intepreted as a binary number instead of an array of bits
-@pytest.mark.xfail
 def test_generated():
     circuit_fname = file_relative_to_test('configs/generated_pb.yaml')
 
@@ -48,7 +45,8 @@ def test_C_sky130_therm16():
     circuit_fname = file_relative_to_test('configs/pb_C_sky130_therm16.yaml')
     fixture.run(circuit_fname)
 
-@pytest.mark.skipif(not shutil.which('irun'), reason='ncsim not installed')
+#@pytest.mark.skipif(not shutil.which('irun'), reason='ncsim not installed')
+@pytest.mark.skip('I am not sure where this model went')
 def test_therm16_model():
     circuit_fname = file_relative_to_test('configs/pb_C_sky130_therm16_model.yaml')
     fixture.run(circuit_fname)

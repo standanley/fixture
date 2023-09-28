@@ -30,6 +30,7 @@ pin:
         direction: input
         datatype: binary_analog
         bus_type: binary
+        first_one: low
 
 template_pins:
     in_single: in_

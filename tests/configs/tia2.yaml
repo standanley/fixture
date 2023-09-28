@@ -1,0 +1,49 @@
+name: myamp
+filepath: ../spice/tia2.sp
+template: DifferentialAmpTemplate
+pin:
+    vdd:
+        direction: input
+        datatype: analog
+        value: 3.0
+        #value: (2.7, 3.3)
+    #vss:
+    #    direction: input
+    #    datatype: real
+    #    value: 0
+    inp:
+        direction: input
+        datatype: real
+        electricaltype: current
+    inn:
+        direction: input
+        datatype: real
+        electricaltype: current
+    ibias:
+        direction: input
+        datatype: analog
+        electricaltype: current
+        value: (2e-6, 10e-6)
+        #value: 9e-6
+    outp:
+        direction: output
+        datatype: real
+    outn:
+        direction: output
+        datatype: real
+
+template_pins:
+    inp: inp
+    outp: outp
+    inn: inn
+    outn: outn
+
+extras:
+    #approx_settling_time: 2e-9
+    approx_settling_time: 10e-6
+    limits_diff: (-3e-6, 3e-6)
+    limits_cm: (-1e-6, 1e-6)
+
+#test_config_file: ngspice_dynamics.yaml
+#test_config_file: ngspice_small_tstep.yaml
+test_config_file: ngspice.yaml

@@ -1,36 +1,77 @@
+import itertools
 import re
 import numbers
+from collections import defaultdict
+
 import numpy as np
 from functools import reduce
 
-class SignalIn():
+class AmbiguousSliceException(Exception):
+    def __init__(self, slice_):
+        self.slice_ = slice_
+
+    def __str__(self):
+        return f'SignalArray slicing still a work in progress. Not clear what order to return things for your slice {self.slice_}'
+
+
+class Signal:
+    # I wanted to use ABC to require these properties, but it checks that they
+    # exist at the start of __init__, whereas I want to require the template
+    # writer to set them by the end of __init__
+    spice_name = None
+    template_name = None
+
+    def friendly_name(self):
+        return self.template_name if self.spice_name is None else self.spice_name
+
+
+class AnalysisResultSignal(Signal):
+    def __init__(self, name):
+        self.template_name = name
+        self.spice_name = None
+
+    def vector(self, vectored_signals):
+        ans = []
+        for vs in vectored_signals:
+            name = f'{self.template_name}_{vs.friendly_name()}'
+            ans.append(AnalysisResultSignal(name))
+        return ans
+
+    def __str__(self):
+        return f'<{self.template_name}>'
+
+
+class SignalIn(Signal):
     def __init__(self,
                  value,
-                 type_,
+                 nominal,
+                 is_true_digital,
                  get_random,
                  auto_set,
                  spice_name,
                  spice_pin,
                  template_name,
                  optional_expr,
+                 bus_info,
                  representation=None
             ):
         # TODO: do we need bus info?
         self.value = value
-        self.type_ = type_
+        self.nominal = nominal
+        self.is_true_digital = is_true_digital
         self.get_random = get_random
         self.auto_set = auto_set
         self.spice_name = spice_name
         self.spice_pin = spice_pin
         self.template_name = template_name
+        # optional_expr should just be bool, not the actual expression
         self.optional_expr = optional_expr
+        self.bus_info = bus_info
         self.representation = representation
 
     def __str__(self):
-        return f'<{str(self.template_name)} / {self.spice_name}>'
+        return f'<{str(self.template_name)} -- {self.spice_name}>'
 
-    def friendly_name(self):
-        return self.template_name if self.spice_name is None else self.spice_name
 
 
     def __getstate__(self):
@@ -46,6 +87,7 @@ class SignalIn():
 
 class CenteredSignalIn:
     def __init__(self, ref):
+        assert False, 'No longer using CenteredSignalIn'
         self.ref = ref
 
         def name(n):
@@ -54,16 +96,20 @@ class CenteredSignalIn:
         self.template_name = name(ref.template_name)
 
     def __str__(self):
-        return f'<{str(self.template_name)} / {self.spice_name}>'
+        return f'<{str(self.template_name)} -- {self.spice_name}>'
+
+    def friendly_name(self):
+        return self.template_name if self.spice_name is None else self.spice_name
 
 
-class SignalOut():
+class SignalOut(Signal):
     def __init__(self,
                  type_,
                  spice_name,
                  spice_pin,
                  template_name,
                  auto_measure,
+                 bus_info=None,
                  representation=None
                  ):
         self.type_ = type_
@@ -71,10 +117,11 @@ class SignalOut():
         self.spice_pin = spice_pin
         self.template_name = template_name
         self.auto_measure = auto_measure
+        self.bus_info = bus_info
         self.representation = representation
 
     def __str__(self):
-        return f'<{str(self.template_name)} / {self.spice_name}>'
+        return f'<{str(self.template_name)} -- {self.spice_name}>'
 
     def friendly_name(self):
         return self.template_name if self.spice_name is None else self.spice_name
@@ -90,65 +137,20 @@ class SignalOut():
         self.__dict__ = state
 
 
-def create_signal(pin_dict, c_name=None, c_pin=None, t_name=None):
-    type_ = pin_dict.get('datatype', 'analog')
-    assert (c_name is None) == (c_pin is None)
-    spice_pin = c_pin
-    spice_name = c_name
-    template_name = t_name
-
-    if pin_dict['direction'] == 'input':
-        is_proxy_component = pin_dict.get('is_proxy_component', False)
-        if template_name is None:
-            pinned = isinstance(pin_dict.get('value', None), numbers.Number)
-            optional_types = ['analog', 'binary_analog', 'true_digital']
-            assert (pinned
-                    or is_proxy_component
-                    or type_ in optional_types), f'Optional datatype for {spice_name} must be {optional_types}, not {type_}'
-
-        value = pin_dict.get('value', None)
-        get_random = pin_dict.get('get_random',
-                                  not is_proxy_component
-                                  and template_name is None and (
-                                  (type(value) == tuple) or (type_ == 'binary_analog' and value == None)))
-        auto_set = pin_dict.get('auto_set',
-                                get_random or type(value) == int or type(value) == float)
-        optional_expr = get_random
-
-        s = SignalIn(
-            value,
-            type_,
-            get_random,
-            auto_set,
-            spice_name,
-            spice_pin,
-            template_name,
-            optional_expr
-        )
-        return s
-
-    elif pin_dict['direction'] == 'output':
-        s = SignalOut(type_,
-                      spice_name,
-                      spice_pin,
-                      template_name,
-                      (template_name is None
-                       and not pin_dict.get('is_proxy_component', False)))
-        return s
-    else:
-        assert False, 'Unrecognized pin direction' + pin_dict['direction']
 
 def create_input_domain_signal(name, value, spice_pin=None,
                                optional_expr=False):
     return SignalIn(
         value,
-        'analog',
+        'nominal_should_be_unused_for_template_signal',
+        False,
         type(value) == tuple,
         spice_pin is not None,
         spice_pin,
         None if spice_pin is None else str(spice_pin),
         name,
-        optional_expr
+        optional_expr,
+        None
     )
 
 
@@ -216,6 +218,10 @@ def parse_bus(name):
     return bus_name, indices_parsed, info_parsed, names
 
 def parse_name(name):
+    '''
+    'mybus[5][7]' -> ('mybus', (5, 7))
+    'mysingle' -> ('mysingle', ())
+    '''
     indices = re.findall(re_index + '|' + re_index_range, name)
     bus_name = re.sub(re_index + '|' + re_index_range, '', name)
     indices_parsed = []
@@ -226,8 +232,18 @@ def parse_name(name):
             indices_parsed.append(x)
         else:
             m = re.match(re_index_range_groups, index)
+            assert m is not None, f'Unexpected slice "{index}" during parsing of "{name}"'
+            # TODO I think the way forward is to check whether this slice's
+            #  direction agrees with the original bus declaration
+            raise AmbiguousSliceException(index)
             s, e = int(m.group(2)), int(m.group(3))
-            indices_parsed.append((s, e))
+            # Inclusive, like verilog behavior
+            if s <= e:
+                slice_ = slice(s, e+1)
+            else:
+                assert False, 'TODO unclear whether a[2:1] should become (a[2], a[1]) or (a[1], a[2]), should probably checked defined direction in sa.bus_info.brackets'
+                slice_ = slice(s, e-1, -1)
+            indices_parsed.append(slice_)
     return bus_name, tuple(indices_parsed)
 
 def expanded(name):
@@ -267,35 +283,70 @@ def expanded(name):
 
 
 class SignalManager:
-    def __init__(self, signals, signals_by_template_name):
-        if signals is None:
-            self.signals = []
-        else:
-            self.signals = signals
+    def __init__(self, signals):
+        '''
+        If there are SignalArrays, signals should not include the individual bits
+        '''
 
+        self.signals = signals
+        self.rebuild_ref_dicts()
+
+    def rebuild_ref_dicts(self):
+        #assert False, 'why am I missing elements of a bus when I search by template name?'
+        temp = self.signals
+        self.signals = []
         self.signals_by_circuit_name = {}
-        for s_or_a in self.signals:
-            if isinstance(s_or_a, SignalArray):
-                for s in s_or_a.flatten():
-                    if s.spice_name is not None:
-                        self.signals_by_circuit_name[s.spice_pin] = s
+        self.signals_by_template_name = {}
+        for s in temp:
+            self.add(s)
 
-                if s_or_a.spice_name is not None:
-                    self.signals_by_circuit_name[s_or_a.spice_name] = s_or_a
-            else:
-                if s_or_a.spice_name is not None:
-                    self.signals_by_circuit_name[s_or_a.spice_name] = s_or_a
+        # add will put individual signals into the dicts, but now we need to
+        # look for entire buses
+        # TODO I copied this from config_parse - I think we should somehow
+        #  leverage this version and delete the one there
+        #  However, I think template doesn't care so much about bus_info
+        # bus_name values are lists of (bit_signal, bit_signal_indices)
+        bus_names = defaultdict(list)
+        for s in self.flat():
+            if s.template_name is None:
+                continue
+            bus_name, indices = parse_name(s.template_name)
+            if len(indices) == 0:
+                continue
+            bus_names[bus_name].append((s, indices))
 
-        if signals_by_template_name is None:
-            self.signals_by_template_name = {}
-        else:
-            self.signals_by_template_name = signals_by_template_name
+        # now go through each bus and collect its entries into an array
+        for bus_name, entries in bus_names.items():
+            if bus_name in self.signals_by_template_name:
+                continue
+
+            assert len(entries) > 0
+
+            all_indices = np.array(list(e[1] for e in entries))
+            indices_limits_lower = np.min(all_indices, 0)
+            for axis, lim in enumerate(indices_limits_lower):
+                assert lim == 0, f'Lower limit for axis {axis} for bus "{bus_name}" must be 0, but it is {lim}'
+
+            # like verilog, but not python, indices_limits_upper is INCLUSIVE
+            indices_limits_upper = np.max(all_indices, 0)
+            indices_limits_upper_exclusive = indices_limits_upper + 1
+            array = np.empty(indices_limits_upper_exclusive, dtype=object)
+            for bit, indices in entries:
+                loc = indices
+                assert array[loc] is None, f'Duplicate definition of "{bit.template_name}"'
+                array[loc] = bit
+
+            for loc in itertools.product(*list(range(b) for b in array.shape)):
+                assert array[loc] is not None, f'Missing definition for "{bus_name}" at index {loc} for bus with shape {array.shape}'
+
+            #bi_total = BusInfo(bus_name, indices_limits_upper_exclusive, brackets_rep, type_rep, first_one_rep)
+            bi_total = None
+            sa = SignalArray(array, bi_total, None, bus_name)
+            self.signals_by_template_name[bus_name] = sa
+
 
     def add(self, signal):
-        # TODO should we allow SignalArray here?
-        assert isinstance(signal, (SignalIn, SignalOut))
-        #assert signal.spice_name is None
-        #assert signal.template_name is not None
+        assert isinstance(signal, Signal)
 
         self.signals.append(signal)
         if signal.template_name is not None:
@@ -303,17 +354,35 @@ class SignalManager:
         if signal.spice_name is not None:
             self.signals_by_circuit_name[signal.spice_name] = signal
 
+        if isinstance(signal, SignalArray):
+            for bit in signal:
+                if (signal.template_name is None
+                        and bit.template_name is not None):
+                    self.signals_by_template_name[bit.template_name] = bit
+                if (signal.spice_name is None
+                        and bit.spice_name is not None):
+                    self.signals_by_circuit_name[bit.spice_name] = bit
+
+    #def update(self, signal):
+    #    # if the user edits the circuit or template name (happens during config parsing)
+    #    # TODO technically I should check if this signal is still in the dicts
+    #    #  under another name, but for now this function is intended to be used
+    #    #  by adding a name, not changing it, so that's not necessary
+    #    assert signal in self.signals, f'"{signal}" already in signals; use add() instead'
+    #    self.signals.remove(signal)
+    #    self.add(signal)
+
+
 
     def copy(self):
         # the intention is for the template writer to add signals to the copy
         # without changing the original
         signals_copy = self.signals.copy()
-        by_template_copy = self.signals_by_template_name.copy()
-        # by_circuit_name will be rebuilt automatically
-        return SignalManager(signals_copy, by_template_copy)
+        return SignalManager(signals_copy)
 
     def from_template_name(self, name):
         # return a Signal or SignalArray of signals according to template name
+        # TODO abc I had an issue here with the phase_blender test? But I fixed it?
         bus_name, indices = parse_name(name)
         if len(indices) == 0:
             return self.signals_by_template_name[name]
@@ -332,6 +401,7 @@ class SignalManager:
             else:
                 if x.spice_pin is pin:
                     return x
+        raise KeyError(f'No signal corresponding to circuit pin {pin}')
 
     def from_circuit_name(self, name):
         # return a Signal or SignalArray of signals according to template name
@@ -340,26 +410,9 @@ class SignalManager:
             return self.signals_by_circuit_name[name]
         else:
             a = self.signals_by_circuit_name[bus_name]
-            s_or_ss = a[tuple(indices)]
-            return s_or_ss
-
-    def from_str(self, name):
-        # TODO this is based on assumptions about the various __str__ methods
-        if name[0] != '<' or name[-1] != '>':
-            raise KeyError(name)
-        name = name[1:-1]
-        tokens = name.split(' / ')
-        if len(tokens) == 2:
-            t_name, c_name = tokens
-        else:
-            t_name, c_name, indices = tokens
-
-        if t_name != 'None':
-            return self.from_template_name(t_name)
-        elif c_name != 'None':
-            return self.from_circuit_name(c_name)
-        else:
-            assert False, 'looking for signal without name'
+            for i in indices:
+                a = a[i]
+            return a
 
 
     def inputs(self):
@@ -385,15 +438,17 @@ class SignalManager:
                     ans.add(x)
             elif isinstance(x, SignalArray):
                 if x.type_ == 'binary_analog':
-                    assert x.get_random == True, 'qa that is not random?'
-                    ans.add(x)
+                    # it's weird, but the user could pin a bus to a value
+                    #assert x.get_random == True, 'qa that is not random?'
+                    if x.get_random:
+                        ans.add(x)
                 else:
                     # we can't include it as one SA, but we should check bits
                     for bit in x.flatten():
                         assert bit.type_ != 'binary analog', f'mixed qa/not in {x}'
                         if getattr(bit, 'get_random', None):
                             ans.add(bit)
-        return list(ans)
+        return list(sorted(ans, key=lambda s: s.friendly_name()))
 
 
     def random_qa(self):
@@ -418,13 +473,17 @@ class SignalManager:
 
     def true_digital(self):
         # return a list of signals - no SignalArrays
-        ans = [s for s in self.flat() if s.type_ == 'true_digital']
+        ans = [s for s in self.flat() if isinstance(s, SignalIn) and s.is_true_digital]
         return ans
 
     def optional_expr(self):
-        ans = [x for x in self.signals if getattr(x, 'optional_expr', None)]
-        for x in ans:
-            assert x.type_ in ['analog', 'binary_analog']
+        # TODO I'm not sure that looking at value is okay here
+        ans = []
+        for s in self.signals:
+            if (isinstance(s, (SignalIn, SignalArray))
+                and s.auto_set
+                and isinstance(s.value, tuple)):
+                ans.append(s)
         return ans
 
     def optional_quantized_analog(self):
@@ -475,47 +534,82 @@ class SignalManager:
             raise AttributeError
 
 
-class SignalArray:
-    attributes_from_children = ['value',
-                                'type_',
+class SignalArray(Signal):
+    attributes_from_children = ['type_',
                                 'get_random',
                                 'auto_set',
-                                'spice_name',
-                                'spice_pin',
-                                'template_name',
+                                #'spice_name',
+                                #'spice_pin',
+                                #'template_name',
                                 'optional_expr',
                                 ]
 
-    def __init__(self, signal_array, info, template_name=None, spice_name=None,
+    def __init__(self, signal_array, bus_info, template_name=None, spice_name=None,
                  is_vectored_input=False):
+        print('TODO rename info to bus_info or vice versa')
+        print('TODO get rid of SignalArray.value if it is not used')
         self.array = signal_array
-        self.info = info
+        assert bus_info is None or 'BusInfo' in str(type(bus_info)), 'TODO havent thought through all usages of bus_info yet'
+        self.bus_info = bus_info
         self.template_name = template_name
         self.spice_name = spice_name
         self.is_vectored_input = is_vectored_input
         self.representation = None
 
+        # TODO nested buses
+        def guess_value():
+            if bus_info['datatype'] == 'true_digital':
+                return None
+            low = self.get_decimal_value([0]*len(self.array))
+            high = self.get_decimal_value([1]*len(self.array))
+            return (low, high)
+        # can't use get here because we don't want to fun guess_value if not necessary
+        #self.value = self.info.get('value', guess_value())
+        #self.value = self.info['value'] if 'value' in self.info else guess_value()
+        self.value = None
+        self.nominal = None
+        #self.nominal = self.info.get('nominal')
+        #if self.nominal is None and self.value is not None:
+        #    # we can guess the nominal
+        #    if isinstance(self.value, int):
+        #        self.nominal = self.value
+        #    elif len(self.value) == 1:
+        #        self.nominal = self.value[0]
+        #    elif len(self.value) == 2:
+        #        self.nominal = sum(self.value) // 2
+        #    else:
+        #        raise ValueError(f'Could not guess nominal for <{self.template_name}/{self.spice_name}>')
+        if self.nominal is not None:
+            print('TODO: unexpected case in SignalArray init')
+            #assert False, 'I think this is never used because nominal gets set while doing stimulus_generation'
+            # distribute to children
+            binary = self.get_binary_value(self.nominal)
+            for b, s in zip(binary, self.array):
+                s.nominal = b
+
+
     def map(self, fun):
         return np.vectorize(fun)(self.array)
 
     def get_decimal_value(self, data):
-        assert self.info['datatype'] == 'binary_analog'
+        assert self.bus_info['datatype'] == 'binary_analog'
         if isinstance(data, dict):
-            assert False, 'TODO'
+            data = [data[s] for s in self.array]
+            data = np.array(data)
         else:
             data = np.array(data)
 
-        if self.info['bus_type'] == 'binary' or self.info['bus_type'] == 'binary_exact':
+        if self.bus_info['bus_type'] == 'binary' or self.bus_info['bus_type'] == 'binary_exact':
             # TODO I don't like making the assumption here, but it should only affect plots, not functionality
-            first_one = self.info.get('first_one', 'low')
+            first_one = self.bus_info.get('first_one', 'low')
             assert first_one in ['low', 'high']
             def to_dec(seq):
                 seq_ordered = seq if first_one == 'low' else seq[::-1]
                 val = sum(2**i*x for i, x in enumerate(seq_ordered))
                 return val
-        elif self.info['bus_type'] == 'signed_magnitude':
+        elif self.bus_info['bus_type'] == 'signed_magnitude':
             # NOTE we assume the sign bit is the highest-order, i.e. not the "first_one"
-            first_one = self.info.get('first_one', 'low')
+            first_one = self.bus_info.get('first_one', 'low')
             assert first_one in ['low', 'high']
             def to_dec(seq):
                 if first_one == 'low':
@@ -536,30 +630,56 @@ class SignalArray:
             return ans
 
     def get_binary_value(self, decimal):
-        assert self.info['datatype'] in ['binary_analog', 'bit']
-        assert isinstance(decimal, int)
+        # need to allow int and np.int64
+        assert isinstance(decimal, numbers.Integral)
 
-        if self.info['bus_type'] == 'binary':
-            first_one = self.info.get('first_one', None)
+        if self.bus_info.type_ == 'binary':
+            first_one = self.bus_info.first_one
+            if first_one is None:
+                first_one = 'low'
             assert first_one in ['low', 'high'], f'{self} must set first_one to be "low" or "high"'
             ans_str = bin(decimal)[2:]
             ans = [0]*(self.shape[0] - len(ans_str)) + [int(x) for x in ans_str]
             if first_one == 'low':
                 ans = ans[::-1]
             return ans
-        elif self.info['bus_type'] == 'signed_magnitude':
+        elif self.bus_info.type_ == 'thermometer':
+            first_one = self.bus_info.first_one
+            if first_one is None:
+                first_one = 'low'
+            assert first_one in ['low', 'high'], f'{self} must set first_one to be "low" or "high"'
+            N = self.shape[0]
+            assert 0 <= decimal <= N
+            ans = [0]*(N-decimal) + [1]*decimal
+            if first_one == 'low':
+                ans = ans[::-1]
+            return ans
+        elif self.bus_info.type_ == 'signed_magnitude':
             assert False, 'TODO'
+        elif self.bus_info.type_ is None:
+            assert False, f'Cannot interpret decimal value for bus {self.friendly_name()}, please declare its bus_type in the physical_pin section'
         else:
             assert False, 'TODO'
 
+    def map_over_bits(self, fun, values):
+        # TODO I think you can replace this entire function with
+        # return np.vectorize(fun)(self.array, values)
+        values = np.array(values)
+        values = np.broadcast_to(values, self.array.shape)
+        #zipped = np.stack((self.array, values), -1)
+        fun_v = np.vectorize(fun, signature='(),()->()')
+        result = fun_v(self.array, values)
+        return result
 
-    def __getitem__(self, key):
-        slice = self.array[key]
-        if isinstance(slice, np.ndarray):
-            # TODO should slice inherit the info? For the info we currently use, no
-            return SignalArray(slice, {})
+    def __getitem__(self, item):
+        # reproduce more verilog-like behavior
+        if isinstance(item, slice):
+            # TODO inherit bus_info from self, but I'm not sure how loc should
+            #  get translated, so for now I'm passing None and if anyone ever
+            #  needs to use bus_info they can figure out what is necessary
+            return SignalArray(self.array[item], None)
         else:
-            return slice
+            return self.array[item]
 
     def __getattr__(self, name):
         # if you're stuck in a loop here, self probably has no .array
@@ -572,8 +692,13 @@ class SignalArray:
             return getattr(self.array, name)
 
     def __setattr__(self, name, value):
-        # TODO
-        if False and name in self.attributes_from_children:
+        # TODO I wish this didn't have so many weird cases
+        if name == 'nominal' and value is not None:
+            binary = self.get_binary_value(value)
+            np.vectorize(lambda b, v: setattr(b, 'nominal', v))(self.array, binary)
+            super().__setattr__(name, value)
+
+        elif name in self.attributes_from_children:
             for child in self.array.flatten():
                 child.__setattr__(name, value)
         else:
@@ -600,7 +725,7 @@ class SignalArray:
         self.__dict__ = state
 
     def __str__(self):
-        return f'<{str(self.template_name)} / {self.spice_name} / {self.array.shape}>'
+        return f'<{str(self.template_name)} -- {self.spice_name} -- {self.array.shape}>'
 
     def friendly_name(self):
         return self.template_name if self.spice_name is None else self.spice_name

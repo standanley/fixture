@@ -1,0 +1,131 @@
+name: myamp
+filepath: ../spice/tia3.sp
+template: AmplifierTemplate
+
+checkpoint_controller:
+    DCTest:
+        choose_inputs: True
+        run_sim: True
+        run_analysis: True
+        run_post_process: True
+        run_regression: True
+    #DCTest: False
+    #DynamicTFTest: 
+    #    choose_inputs: True
+    #    run_sim: True
+    #    run_analysis: True
+    #    run_post_process: True
+    #    run_regression: True
+    #DCTest: True
+
+
+
+
+physical_pins:
+    vdd:
+        direction: in
+        datatype: real
+        #value: 3.0
+        #value: (2.7, 3.3)
+    inp:
+        direction: in
+        datatype: current
+    inn:
+        direction: in
+        datatype: current
+    
+    ibias:
+        direction: in
+        datatype: current
+        #value: (2e-6, 10e-6)
+        #value: 6e-6
+    #rfadj<5>:
+    #    direction: in
+    #    datatype: real
+    #    value: 3
+    rfadj<5:0>:
+        direction: in
+        datatype: bit
+        bus_type: binary
+        first_one: high
+        #value: (10, 63)
+
+
+    outp:
+        direction: out
+        datatype: real
+    outn:
+        direction: out
+        datatype: real
+
+proxy_signals:
+
+    # test doesn't work right now because I purposely disallow this type of slicing
+    #test:
+    #    style: linear_combination_in
+    #    components: ["rfadj<2>", "rfadj<1:3>"]
+    #    coefficients: [42, 42]
+
+    indiff:
+        #value: (-3e-6, 3e-6)
+        style: linear_combination_in
+        components: [inp, inn]
+        coefficients: [1, -1]
+    incm:
+        #value: (-1e-6, 1e-6)
+        style: linear_combination_in
+        components: [inp, inn]
+        coefficients: [0.5, 0.5]
+
+    outdiff:
+        style: linear_combination_out
+        components: [outp, outn]
+        coefficients: [1, -1]
+
+    outcm:
+        style: linear_combination_out
+        components: [outp, outn]
+        coefficients: [0.5, 0.5]
+
+
+
+    input_test:
+        style: vector
+        components: [indiff, incm]
+    output_test:
+        style: vector
+        components: [outdiff, outcm]
+
+
+template_pins:
+    input: input_test
+    output: output_test
+
+stimulus_generation:
+    #indiff: (-3e-6, 3e-6)
+    indiff: (-200e-6, 200e-6)
+    incm: (-1e-6, 1e-6)
+    vdd: (2.8, 3.0, 3.1)
+    #vdd: 3.0
+    ibias: 6e-6
+    #ibias: (2e-6, 10e-6)
+    #rfadj: 32
+    rfadj: (10, 63)
+    #rfadj: (30, 50)
+
+
+optional_input_info:
+    dcgain0_out0_outdiff_indiff: ['c0 + c1*vdd + c2*vdd**2', rfadj]
+
+extras:
+    #approx_settling_time: 2e-9
+    approx_settling_time: 10e-6
+
+# NOTES: approx_settling_time=10e-6 was good for rfadj=42
+# at the time I had the ngspice timestep at 10e-9
+
+#test_config_file: ngspice_dynamics.yaml
+# small_timestep is too small
+#test_config_file: ngspice_small_tstep.yaml
+test_config_file: ngspice.yaml
+#test_config_file: ngspice_tia3.yaml

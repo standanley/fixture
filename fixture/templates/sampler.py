@@ -8,7 +8,7 @@ from fixture import TemplateMaster, PlotHelper
 from fixture import template_creation_utils
 from fixture import signals
 import fixture
-from fixture.signals import SignalOut
+from fixture.signals import SignalOut, Signal
 
 Regression = fixture.regression.Regression
 import math
@@ -77,7 +77,9 @@ class SamplerTemplate(TemplateMaster):
 
     def read_value(self, tester, port, wait):
         tester.delay(wait)
-        s = self.signals.from_circuit_pin(port)
+        #s = self.signals.from_circuit_pin(port)
+        assert isinstance(port, Signal)
+        s = port
         return tester.get_value(s)
 
     def interpret_value(self, read):
@@ -217,9 +219,12 @@ class SamplerTemplate(TemplateMaster):
             print("STATIC INIT")
             # set parameter algebra before parent checks it
             nl_points = args[0].nonlinearity_points
+
+            self.analysis_outputs = [f'nl_{i}' for i in range(nl_points)]
+            self.parameters = [f'nonlinearity_{i}' for i in range(nl_points)]
             self.parameter_algebra = {}
             for i in range(nl_points):
-                self.parameter_algebra[f'nl_{i}'] = {f'nonlinearity_{i}': '1'}
+                self.parameter_algebra[f'nl_{i}'] = f'nonlinearity_{i}'
 
             super().__init__(*args, **kwargs)
 
@@ -1475,12 +1480,15 @@ class SamplerTemplate(TemplateMaster):
             return {}
 
 
-    tests = [
+    tests_all = [
              StaticNonlinearityTest,
              #ApertureTest,
              #ChannelTest,
              #SineTest,
-             DelayTest,
-             KickbackTest
+             #DelayTest,
+             #KickbackTest
             ]
 
+    tests_default = [
+        StaticNonlinearityTest,
+    ]

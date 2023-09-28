@@ -1,0 +1,28 @@
+module_name: my_user_amp
+
+included_tests:
+  clamping: False
+
+pin:
+  circuit_in:
+    direction: input
+    datatype: real
+  circuit_out:
+    direction: output
+    datatype: real
+  ibias:
+    direction: input
+    datatype: real
+
+fixture_params:
+  gain:
+    raw_verilog: gain = 42 + 2.5*ibias;
+  offset:
+    raw_verilog: offset = 0.6 + 1e5*ibias;
+
+io_mapping:
+  in: circuit_in
+  out: circuit_out
+
+module_params:
+  nodefault: 6.0

@@ -1,0 +1,6 @@
+target: spice
+simulator: ngspice
+#ic: {vss: 0}
+vsup: 1.2
+t_step: 50e-9
+t_tr: .00000000005

@@ -37,22 +37,28 @@ def run(circuit_config_filename):
 
 def _run(circuit_config_dict):
 
-    UserCircuit, template_name, signal_manager, test_config_dict, extras = config_parse.parse_config(circuit_config_dict)
-    tester = fault.Tester(UserCircuit)
-    TemplateClass = getattr(templates, template_name)
+    ##UserCircuit, template_name, signal_manager, test_config_dict, optional_input_info, extras = config_parse.parse_config(circuit_config_dict)
+    #tester = fault.Tester(UserCircuit)
+    #TemplateClass = getattr(templates, template_name)
 
-    circuit_filepath = circuit_config_dict['filepath']
-    simulator = Simulator(test_config_dict, circuit_filepath)
+    #circuit_filepath = circuit_config_dict['filepath']
+    #assert os.path.exists(circuit_filepath), f'Circuit filepath "{circuit_filepath}" not found'
+    #simulator = Simulator(test_config_dict, circuit_filepath)
 
 
-    t = TemplateClass(UserCircuit, simulator, signal_manager, extras)
+    #t = TemplateClass(UserCircuit, simulator, signal_manager, extras)
+
+
+
+    t = config_parse.parse_config(circuit_config_dict)
+
     checkpoint = Checkpoint(t, 'checkpoint_folder')
 
     # TODO figure out UI for saving and loading
     #checkpoint.save(t, 'pickletest4.json')
     #t = checkpoint.load('pickletest4.json')
 
-    # TODO maybe reorganize heirarchy for better checkpoints?
+    # TODO maybe reorganize hierarchy for better checkpoints?
     #params = {} # extras?
     #for Test in t.tests:
     #    test = Test(params)
@@ -62,7 +68,7 @@ def _run(circuit_config_dict):
 
 
 
-    all_checkpionts = {
+    all_checkpoints = {
         'choose_inputs': True,
         'run_sim': True,
         'run_analysis': True,
@@ -70,22 +76,43 @@ def _run(circuit_config_dict):
         'run_regression': True,
     }
 
+    # TODO move this block to config_parse
+    checkpoint_controller = {}
     if 'checkpoint_controller' in circuit_config_dict:
         cc_str = circuit_config_dict['checkpoint_controller']
-        test_mapping = {str(test): test for test in t.tests}
-        checkpoint_controller = {test_mapping[test_name]: x for test_name, x in cc_str.items()}
+        test_mapping = {str(test): test for test in t.tests_all}
+        for test_str, val in cc_str.items():
+            assert test_str in test_mapping, f'Unknown test "{test_str}" in checkpoint controller'
+            test = test_mapping[test_str]
+            if isinstance(val, bool):
+                if val:
+                    checkpoint_controller[test] = all_checkpoints
+            elif isinstance(val, dict):
+                assert set(val) == set(all_checkpoints), f'If specifying checkpoints for a test, must specify all keys. You gave {set(val)}, should be {set(all_checkpoints)}'
+                checkpoint_controller[test] = val
+            else:
+                assert False, f'Confused by type of "{val}" in checkpoint controller for test "{test_str}"'
     else:
-        checkpoint_controller = {test: all_checkpionts for test in t.tests}
+        print(f'No tests specified, defaulting to: {[str(test) for test in t.tests_default]}')
+        for test_class in t.tests_default:
+            test_obj = [to for to in t.tests_all if type(to) == test_class][0]
+            checkpoint_controller[test_obj] = all_checkpoints
 
     params_by_mode = t.go(checkpoint, checkpoint_controller)
 
-    for mode, results in params_by_mode.items():
-        print('For mode', mode)
-        print('category\tparam\tterm\tcoef')
-        for category, result_batch in results.items():
-            for param, d in result_batch.items():
-                for partial_term_optional, coef in d.items():
-                    print('%s\t%s\t%s\t%.3e' % (category, param, partial_term_optional, coef))
+
+
+    # We no longer print here, instead we do it right after we fit the model
+    #for test in checkpoint_controller.keys():
+    #    print(f'Results for {test}:')
+    #    for lhs, rhs in test.parameter_algebra_final.items():
+    #        print(f'\tModel for {lhs}:')
+    #        coef_names = [f'c{i}' for i in range(rhs.NUM_COEFFICIENTS)]
+    #        for line in rhs.verilog(lhs, coef_names):
+    #            print(f'\t\t{line}')
+    #        for name, val in zip(coef_names, rhs.x_opt):
+    #            print(f'\t\t{name} = {val};')
+    #        print()
 
     if 'mgenero' in circuit_config_dict:
         mgenero_config_dir = circuit_config_dict['mgenero']

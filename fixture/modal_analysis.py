@@ -48,6 +48,9 @@ class ModalAnalysis:
         return t, h_step
 
     def debug_plot(self, ps, NZ):
+        def format(ps):
+            return ', '.join(np.format_float_scientific(p, 2) for p in ps)
+
         global PLOT_COUNTER
         if PLOT_COUNTER == 20:
             return
@@ -55,16 +58,19 @@ class ModalAnalysis:
         h_step_est = self.step_response_from_pz(ps, zs, dc)
         print('Plotting ps, zs, dc', ps, zs, dc)
         t = self.t*self.scale
-        END = len(t)//3
+        END = len(t)#//3
 
         plt.figure()
         plt.plot(t[:END], self.h_step[:END], 'o')
         plt.plot(t[:END], h_step_est[:END], '+')
         plt.legend(['Step response', 'Fit'])
+        plt.title('Extracted poles: ' + format(ps/self.scale/(2*np.pi)))
+        debug_coefs = self.step_coefs_from_pz(ps, zs, dc)
+        plt.xlabel('Step coefs: ' + format(debug_coefs))
         plt.grid()
         #plt.show()
         ps_txt = ''#'_'.join(f'{abs(p/self.scale):.1f}' for p in ps).replace('.', 'p')
-        PlotHelper.save_current_plot(f'step_debug_{PLOT_COUNTER}_{ps_txt}')
+        PlotHelper.save_current_plot(f'step_debug/step_debug_{PLOT_COUNTER}_{ps_txt}')
         PLOT_COUNTER += 1
 
 
@@ -144,6 +150,18 @@ class ModalAnalysis:
             h_step_est = h_step_est + scale * coef * np.exp(pole*self.t)
             #print('Added coef', scale*coef, 'for pole', pole)
         return h_step_est
+
+    def step_coefs_from_pz(self, ps, zs, dc):
+        zs = zs[np.isfinite(zs)]
+        ps = ps[np.isfinite(ps)]
+
+        from scipy.signal import residue
+        r, p, k = residue(np.poly(zs), np.poly(ps))
+
+        scale = self.get_scale(ps, zs, dc)[0]
+
+        cs = [scale*c for c in r]
+        return cs
 
     def error_from_poles(self, poles, NZ):
         zs, dc = self.get_zeros(poles, NZ)

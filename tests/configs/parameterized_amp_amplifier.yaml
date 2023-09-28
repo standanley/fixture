@@ -1,0 +1,75 @@
+name: myamp_params
+filepath: ../spice/myamp_params.sp
+template: AmplifierTemplate
+
+
+
+checkpoint_controller:
+    #DCTest: True
+    DCTest:
+        choose_inputs: True
+        run_sim: True
+        run_analysis: True
+        run_post_process: True
+        run_regression: True
+
+physical_pins:
+    vdd:
+        direction: in
+        datatype: real
+    vss:
+        direction: in
+        datatype: real
+    my_in:
+        direction: in
+        datatype: real
+        value: (0.45, 0.7)
+    adj:
+        direction: in
+        datatype: real
+    ba<3:0>:
+        direction: in
+        datatype: bit
+        bus_type: binary
+        first_one: low
+    ctrl<1:0>:
+        direction: in
+        is_true_digital: True
+        datatype: bit
+        bus_type: binary
+    my_out:
+        direction: out
+        datatype: real
+    vdd_internal:
+        direction: out
+        datatype: real
+
+template_pins:
+    input: my_in
+    output: my_out
+
+stimulus_generation:
+    vdd: 1.2
+    vss: 0
+    #my_in: (.2, 1.0)
+    #my_in: (0.45, 0.7)
+    my_in: (0.5, 0.6)
+    adj: (0.45, 0.55)
+    #adj: 0.5
+    #ba: (0, 15)
+    ba: 7
+    #ctrl: 0
+
+#optional_input_info:
+#    dcgain: ['c0*adj + c1*adj**2']
+#    #offset: [ibias]
+
+digital_modes:
+    order: [ctrl<1>, ctrl<0>]
+    modes: ['00', '01', '10']
+
+
+extras:
+    approx_settling_time: 1e-3
+
+test_config_file: ngspice.yaml

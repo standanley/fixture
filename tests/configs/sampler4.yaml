@@ -2,45 +2,54 @@ name: sampler4
 filepath: ../spice/sampler4.sp
 #template: SamplerCustomTemplate
 template: SamplerTemplate
-pin:
+
+
+checkpoint_controller:
+    StaticNonlinearityTest:
+        choose_inputs: True
+        run_sim: True
+        run_analysis: True
+        run_post_process: True
+        run_regression: True
+
+
+physical_pins:
     in_:
-        direction: input
+        direction: in
         datatype: real
         # NMOS vth is 0.4 and vdd is 1.2, max pull up is 0.8
-        value: (0.6, 0.7)
     clk_v2t<0:1>:
-        direction: input
+        direction: in
         datatype: bit
     clk_v2tb<0:1>:
-        direction: input
+        direction: in
         datatype: bit
     clk_v2t_e<0:1>:
-        direction: input
+        direction: in
         datatype: bit
     clk_v2t_eb<0:1>:
-        direction: input
+        direction: in
         datatype: bit
     clk_v2t_l<0:1>:
-        direction: input
+        direction: in
         datatype: bit
     clk_v2t_lb<0:1>:
-        direction: input
+        direction: in
         datatype: bit
     clk_v2t_gated<0:1>:
-        direction: input
+        direction: in
         datatype: bit
     clk_v2tb_gated<0:1>:
-        direction: input
+        direction: in
         datatype: bit
     out<0:1>:
-        direction: output
+        direction: out
         datatype: real
     vdd:
-        direction: input
+        direction: in
         datatype: real
-        value: 1.2
     z_debug:
-        direction: output
+        direction: out
         datatype: real
 
 proxy_signals:
@@ -50,10 +59,14 @@ proxy_signals:
 
 template_pins:
    in_: in_
+   # TODO make the bus-wise assignment work
    #out<0:1>: out<0:1>
    out<0>: out_0_proxy
    out<1>: out<1>
-   clk<0:1>: clk_v2t<0:1>
+   clk: clk_v2t
+   #clk<0:1>: clk_v2t<0:1>
+   #clk<0>: clk_v2t<0>
+   #clk<1>: clk_v2t<1>
 
    # With the new SignalArray I can't leae ignore[0:1] blank
    # so I moved clk_v2tb_gated into the [0:1] spot
@@ -68,11 +81,19 @@ template_pins:
    #ignore[14:15]: clk_v2tb_gated<0:1>
    debug: z_debug
 
+stimulus_generation:
+    in_: (0.6, 0.7)
+    #vdd: 1.2
+    vdd: (1.1, 1.3)
+
+    
 
 
 test_config_file: ngspice_sampler.yaml
 
 extras:
+    # TODO not sure why StaticNonliearityTest is asking for cycle_time
+    cycle_time: 1e-5
     #approx_settling_time: 50e-6
     #max_slope: 19.7e9 # 3.125G sine wave
     max_slope: 0.5e6

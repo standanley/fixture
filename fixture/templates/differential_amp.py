@@ -23,9 +23,22 @@ class DifferentialAmpTemplate(TemplateMaster):
     #@debug
     class GainTest(TemplateMaster.Test):
         parameter_algebra = {
-            'out_diff': {'gain':'in_diff', 'gain_from_cm':'in_cm', 'offset':'1'},
-            'out_cm': {'gain_to_cm':'in_diff', 'cm_gain':'in_cm', 'cm_offset':'1'},
+            'out_diff': 'gain*in_diff + gain_from_cm*in_cm + offset',
+            'out_cm': 'gain_to_cm*in_diff + cm_gain*in_cm + cm_offset'
         }
+        parameters = [
+            'gain', 'gain_from_cm', 'offset',
+            'gain_to_cm', 'cm_gain', 'cm_offset'
+        ]
+        analysis_outputs = [
+            'out_diff', 'out_cm',
+            #'in_diff', 'in_cm'
+            'outp', 'outn', 'inp', 'inn',
+        ]
+        #parameter_algebra = {
+        #    'out_diff': {'gain':'in_diff', 'gain_from_cm':'in_cm', 'offset':'1'},
+        #    'out_cm': {'gain_to_cm':'in_diff', 'cm_gain':'in_cm', 'cm_offset':'1'},
+        #}
         required_info = {
             'approx_settling_time': 'Approximate time it takes for amp to settle within 99% (s)',
             'limits_diff': 'Minimum and maximum differential input (V), e.g. (-0.8, 0.8)',
@@ -300,6 +313,7 @@ class DifferentialAmpTemplate(TemplateMaster):
 
 
     #tests = [GainTest, DynamicTest]
-    tests = [GainTest]
+    tests_all = [GainTest]
+    tests_default = [GainTest]
     #tests = [DynamicTest]
 

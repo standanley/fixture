@@ -20,3 +20,10 @@ modelparam:
     datatype: real
     value: 0.0001
 
+requested_params:
+  - gain
+  - gain_from_cm
+  - offset
+  - gain_to_cm
+  - cm_gain
+  - cm_offset

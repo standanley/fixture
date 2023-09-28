@@ -7,3 +7,5 @@ kratos
 vcdvcd
 matplotlib
 jsonpickle
+sympy
+pytest

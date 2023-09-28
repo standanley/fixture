@@ -9,7 +9,7 @@ from .regression import Regression
 from .template_master import TemplateMaster
 from .plot_helper import PlotHelper
 from .sampler import Sampler
-from .templates import *
+#from .templates import *
 from .create_testbench import Testbench
 from .dump_yaml import dummy_dump
 from .mgenero_interface import dump_yaml

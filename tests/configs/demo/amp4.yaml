@@ -1,0 +1,102 @@
+name: myamp
+filepath: ../spice/tia3.sp
+template: AmplifierTemplate
+
+checkpoint_controller:
+    DCTest: True
+    DynamicTFTest: True
+
+physical_pins:
+    vdd:
+        direction: in
+        datatype: real
+    inp:
+        direction: in
+        datatype: current
+    inn:
+        direction: in
+        datatype: current
+    
+    ibias:
+        direction: in
+        datatype: current
+
+    rfadj<5:0>:
+        direction: in
+        datatype: bit
+        bus_type: binary
+        first_one: high
+    cfadj<5:0>:
+        direction: in
+        datatype: bit
+        bus_type: binary
+        first_one: high
+
+    outp:
+        direction: out
+        datatype: real
+    outn:
+        direction: out
+        datatype: real
+
+proxy_signals:
+    indiff:
+        style: linear_combination_in
+        components: [inp, inn]
+        coefficients: [1, -1]
+    incm:
+        style: linear_combination_in
+        components: [inp, inn]
+        coefficients: [0.5, 0.5]
+
+    outdiff:
+        style: linear_combination_out
+        components: [outp, outn]
+        coefficients: [1, -1]
+
+    outcm:
+        style: linear_combination_out
+        components: [outp, outn]
+        coefficients: [0.5, 0.5]
+
+
+
+    input_test:
+        style: vector
+        components: [indiff, incm]
+    output_test:
+        style: vector
+        components: [outdiff, outcm]
+
+
+template_pins:
+    input: input_test
+    output: output_test
+
+stimulus_generation:
+    indiff: (-3e-6, 3e-6)
+    incm: (-1e-6, 1e-6)
+    vdd: (2.7, 3.0, 3.1)
+    ibias: 6e-6
+    (cfadj, rfadj):
+        cfadj: (0, 63)
+        rfadj: (0, 63)
+        filter_fun: '1000 < cfadj*rfadj < 2000'
+
+
+optional_input_info:
+    differential_gain: [ibias, '1/rfadj']
+    differential_offset: []
+    cm_gain: [ibias]
+    cm_offset: [ibias, '1/rfadj']
+
+    fp1: ['1/rfadj*cfadj']
+    fp1: ['1/rfadj*cfadj']
+    fz1: ['1/rfadj*cfadj']
+
+
+
+extras:
+    approx_settling_time: 10e-6
+
+test_config_file: ngspice_tia3.yaml
