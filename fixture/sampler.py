@@ -478,7 +478,7 @@ def get_sampler_for_signal(signal):
 class Sampler:
     seed = 4
     # the 3 here is just empirical; it seems to be big enough
-    SAMPLE_COUNT_MULTIPLIER = 3.0
+    SAMPLE_COUNT_MULTIPLIER = 30.0
 
     @classmethod
     def num_sample_points(cls, group, parameter_algebra):

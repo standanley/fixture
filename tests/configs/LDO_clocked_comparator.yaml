@@ -1,0 +1,80 @@
+name: LDO_COMPARATOR_LATCH 
+filepath: ../spice/LDO_COMPARATOR_LATCH.spice
+template: ClockedComparatorTemplate
+
+checkpoint_controller:
+    TimingTest:
+        choose_inputs: True
+        run_sim: True
+        run_analysis: True
+        run_post_process: True
+        run_regression: True
+
+
+physical_pins:
+    vgnd:
+        direction: in
+        datatype: real
+    vpwr:
+        direction: in
+        datatype: real
+    VREF:
+        direction: in
+        datatype: real
+    VREG:
+        direction: in
+        datatype: real
+    CLK:
+        direction: in
+        datatype: bit
+    outp:
+        direction: out
+        datatype: real
+    outn:
+        direction: out
+        datatype: real
+
+        
+
+
+
+
+#proxy_signals:
+
+
+template_pins:
+    in_pos: VREF
+    in_neg: VREG
+    out_pos: outp
+    out_neg: outn
+    clk: CLK
+
+stimulus_generation:
+    vgnd: 0
+    vpwr: (3.0, 3.6)
+
+
+#optional_input_info:
+#    #dcgain0_out0_outdiff_indiff: ['c0 + c1*vdd + c2*vdd**2', radj]
+#    #dcgain0_out0_outdiff_indiff: ['c0 + c1*vdd + c2*vdd**2', radj]
+#    #amplitude1_out1_outdiff: ['c0 + c1*vdd + c2*vdd**2', radj]
+#    #gain1_out1_outdiff_indiff: ['c0 + c1*vdd + c2*vdd**2', radj]
+#    dcgain0_out0_outdiff_indiff: ['c1*vdd + c2*vdd**2', 'c0/(radj + 1)']
+#    #amplitude1_out1_outdiff: ['c1*vdd + c2*vdd**2', '1/(radj+c0)']
+#    #gain1_out1_outdiff_indiff: ['c1*vdd + c2*vdd**2', '1/(radj+c0)']
+#    #gain2_out2_outdiff_indiff: [vdd, '1/(radj+c100)']
+
+extras:
+    approx_settling_time: 5e-9
+    common_mode_nominal: 1.65
+    differential_max: 1.0
+    time_for_growth_measurement: 1e-9
+
+#parameter_hints:
+#    dcgain0_out0_outdiff_indiff_nominal: 10
+#    #v_min2_out2_outdiff_nominal: -0.10
+#    #v_max2_out2_outdiff_nominal: 0.10
+#    #gain2_out2_outdiff_indiff_nominal: 4000
+
+test_config_file: ngspice_sky130_clocked_comparator.yaml
+

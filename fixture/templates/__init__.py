@@ -4,3 +4,4 @@ from .phase_blender_C import PhaseBlenderTemplate_C
 from .sampler import SamplerTemplate
 from fixture.templates.in_progress.cap_dac import DACTemplate
 from .amplifier import AmplifierTemplate
+from .clocked_comparator import ClockedComparatorTemplate
