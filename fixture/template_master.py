@@ -47,6 +47,15 @@ class TemplateMaster():
         assert hasattr(self, 'required_ports')
         self.check_required_ports()
 
+        assert hasattr(self, 'required_info')
+        for name in self.required_info:
+            if name not in self.extras:
+                print('\nRequired parameters for "extras" dictionary:')
+                for name, description in self.required_info.items():
+                    print(f'{name}: {description}')
+                assert False, f'Missing required info for "{name}" in extras dict. See above output for a list of required information.'
+
+
         assert hasattr(self, 'tests_all'), f'Template {self} must include a list of all Tests'
         assert hasattr(self, 'tests_default'), f'Template {self} must include a list of default Tests to run'
         # replace test classes with instance
